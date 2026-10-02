@@ -17,5 +17,11 @@ paths = ['''kadro/apps/mobile/tests/auth-(units|api|screens)\.test\.tsx?''']
 targetRules = ['generic-api-key']
 
 [[allowlists]]
+description = "Fixed dummy Apple identity tokens in the mobile profile tests"
+condition = "AND"
+paths = ['''kadro/apps/mobile/tests/profile-(units|screens)\.test\.tsx?''']
+targetRules = ['generic-api-key', 'jwt']
+
+[[allowlists]]
 description = "Generated build output (Next.js preview and server-action keys) and installed dependencies"
 paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''']
