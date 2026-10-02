@@ -7,7 +7,7 @@ import { errorMessage } from '../i18n/error-copy';
 import { useTheme } from '../theme';
 import { Button, Screen, Text, TextField, type TextFieldProps } from '../ui';
 import { type ProviderOutcome, type ProviderSignIn } from './providers';
-import { useAsyncAction } from './use-async-action';
+import { type AsyncAction } from './use-async-action';
 import { VALIDATION_PARAMS } from './validation';
 
 /** Page frame of every auth screen: scrolling form that moves above the keyboard. */
@@ -145,14 +145,18 @@ export function PasswordField({
  */
 export function ProviderButtons({
   providers,
-  disabled = false,
+  action,
 }: {
   readonly providers: ProviderSignIn;
-  readonly disabled?: boolean;
+  /**
+   * The screen's one action, shared with its own submit: while either runs, the other cannot
+   * start, so two sign-ins never race to establish a session. The screen shows `action.error`.
+   */
+  readonly action: AsyncAction;
 }) {
   const { t } = useTranslation('auth');
   const theme = useTheme();
-  const action = useAsyncAction();
+  const [active, setActive] = useState<'apple' | 'google' | null>(null);
   const [appleReady, setAppleReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const googleReady = providers.googleAvailable();
@@ -176,13 +180,19 @@ export function ProviderButtons({
     return null;
   }
 
-  const start = (signIn: () => Promise<ProviderOutcome>): void => {
+  const start = (which: 'apple' | 'google', signIn: () => Promise<ProviderOutcome>): void => {
+    if (action.busy) {
+      return;
+    }
     setUnavailable(false);
-    void action.run(async () => {
-      if ((await signIn()) === 'unavailable') {
-        setUnavailable(true);
-      }
-    });
+    setActive(which);
+    void action
+      .run(async () => {
+        if ((await signIn()) === 'unavailable') {
+          setUnavailable(true);
+        }
+      })
+      .finally(() => setActive(null));
   };
 
   return (
@@ -195,7 +205,6 @@ export function ProviderButtons({
       >
         {t('provider.or')}
       </Text>
-      <FormError error={action.error} />
       {unavailable ? (
         <Text
           tone="danger"
@@ -211,9 +220,9 @@ export function ProviderButtons({
           label={t('provider.apple')}
           accessibilityHint={t('provider.appleHint')}
           variant="secondary"
-          disabled={disabled}
-          loading={action.busy}
-          onPress={() => start(() => providers.signInWithApple())}
+          disabled={action.busy}
+          loading={active === 'apple'}
+          onPress={() => start('apple', () => providers.signInWithApple())}
           testID="apple-sign-in"
           style={{ marginBottom: theme.spacing['3'] }}
         />
@@ -223,9 +232,9 @@ export function ProviderButtons({
           label={t('provider.google')}
           accessibilityHint={t('provider.googleHint')}
           variant="secondary"
-          disabled={disabled}
-          loading={action.busy}
-          onPress={() => start(() => providers.signInWithGoogle())}
+          disabled={action.busy}
+          loading={active === 'google'}
+          onPress={() => start('google', () => providers.signInWithGoogle())}
           testID="google-sign-in"
         />
       ) : null}

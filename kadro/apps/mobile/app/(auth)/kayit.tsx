@@ -142,7 +142,7 @@ export default function SignUpScreen() {
         onPress={() => void submit()}
         testID="sign-up-submit"
       />
-      <ProviderButtons providers={providerSignIn} disabled={action.busy} />
+      <ProviderButtons providers={providerSignIn} action={action} />
       <View style={{ marginTop: theme.spacing['5'] }}>
         <Text tone="muted">{t('signUp.haveAccount')}</Text>
         <TextLink label={t('signUp.signInLink')} onPress={() => router.replace('/giris')} />

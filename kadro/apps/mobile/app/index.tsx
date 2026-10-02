@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { ProviderButtons } from '../src/auth/components';
+import { FormError, ProviderButtons } from '../src/auth/components';
 import { providerSignIn } from '../src/auth/instance';
+import { useAsyncAction } from '../src/auth/use-async-action';
 import { useTheme } from '../src/theme';
 import { Button, Screen, Text } from '../src/ui';
 
@@ -12,6 +13,7 @@ export default function WelcomeScreen() {
   const { t } = useTranslation('auth');
   const theme = useTheme();
   const router = useRouter();
+  const action = useAsyncAction();
   return (
     <Screen scroll testID="welcome-screen">
       <View style={{ paddingHorizontal: theme.spacing['6'], paddingTop: theme.spacing['10'] }}>
@@ -34,7 +36,8 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/kayit')}
             testID="welcome-sign-up"
           />
-          <ProviderButtons providers={providerSignIn} />
+          <FormError error={action.error} />
+          <ProviderButtons providers={providerSignIn} action={action} />
         </View>
       </View>
     </Screen>

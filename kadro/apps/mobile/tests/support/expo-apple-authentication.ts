@@ -17,6 +17,7 @@ type Outcome =
 let available = true;
 let outcome: Outcome = { kind: 'cancel' };
 let calls: AppleSignInCall[] = [];
+let gate: Promise<void> | null = null;
 
 export async function isAvailableAsync(): Promise<boolean> {
   return available;
@@ -30,6 +31,9 @@ export async function signInAsync(options?: {
   fullName: { givenName: string | null; familyName: string | null } | null;
 }> {
   calls.push({ nonce: options?.nonce, scopes: options?.requestedScopes });
+  if (gate !== null) {
+    await gate;
+  }
   if (outcome.kind === 'cancel') {
     throw Object.assign(new Error('canceled'), { code: 'ERR_REQUEST_CANCELED' });
   }
@@ -45,7 +49,13 @@ export async function signInAsync(options?: {
   };
 }
 
-export function __scriptApple(next: { available?: boolean; outcome?: Outcome }): void {
+export function __scriptApple(next: {
+  available?: boolean;
+  outcome?: Outcome;
+  /** The sheet stays open until this promise settles. */
+  gate?: Promise<void>;
+}): void {
+  gate = next.gate ?? gate;
   available = next.available ?? available;
   outcome = next.outcome ?? outcome;
 }
@@ -58,4 +68,5 @@ export function resetAppleDouble(): void {
   available = true;
   outcome = { kind: 'cancel' };
   calls = [];
+  gate = null;
 }
