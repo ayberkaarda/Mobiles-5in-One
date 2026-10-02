@@ -127,7 +127,8 @@
     "legalSample": "These texts are samples and will be updated after legal review.",
     "legalUnavailable": "Links to the legal texts are not set up in this version.",
     "opensBrowser": "Opens in the browser.",
-    "signOutScope": "Signs out of this device only. Sessions on your other devices stay open."
+    "signOutScope": "Signs out of this device only. Sessions on your other devices stay open.",
+    "pushOpenSettings": "Open phone settings"
   },
   "deletion": {
     "entryTitle": "Delete my account",
@@ -173,5 +174,11 @@
     },
     "noRequestTitle": "No deletion request",
     "noRequest": "No account deletion was requested on this device. Taking you to your profile."
+  },
+  "pushPrompt": {
+    "title": "Don't miss your matches",
+    "message": "Should we notify you about match reminders, lineup changes and open-call applications? Notifications never show other players' names.",
+    "enable": "Turn on notifications",
+    "later": "Not now"
   }
 }

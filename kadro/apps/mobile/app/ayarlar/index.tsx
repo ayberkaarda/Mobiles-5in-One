@@ -191,6 +191,15 @@ function PushSettings() {
           style={{ marginTop: theme.spacing['3'] }}
         />
       ) : null}
+      {shown === 'denied' ? (
+        <Button
+          label={t('settings.pushOpenSettings')}
+          variant="secondary"
+          onPress={() => void Linking.openSettings()}
+          testID="push-open-settings"
+          style={{ marginTop: theme.spacing['3'] }}
+        />
+      ) : null}
     </View>
   );
 }

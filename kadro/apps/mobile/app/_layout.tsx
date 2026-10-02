@@ -8,7 +8,8 @@ import {
   Stack,
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect } from 'react';
 import { useStore } from 'zustand';
 import { I18nextProvider } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +19,15 @@ import { session } from '../src/api/instance';
 import { authStore, routeAccess, useAuthStatus } from '../src/auth-store';
 import { errorMessage } from '../src/i18n/error-copy';
 import { i18n } from '../src/i18n/instance';
+import { pendingLink } from '../src/links/instance';
+import { usePendingLink } from '../src/links/use-pending-link';
+import { matchesApi } from '../src/matches/instance';
+import { matchDetailQuery } from '../src/matches/queries';
+import {
+  configureForegroundNotifications,
+  useNotificationRouting,
+} from '../src/notifications/native';
+import { usePushRefresh } from '../src/notifications/use-push-refresh';
 import {
   cacheBusterFor,
   clearQueryCaches,
@@ -40,6 +50,7 @@ const appVersion = Constants.expoConfig?.version ?? 'dev';
 session.onSignOut(() => clearQueryCaches(queryClient, queryPersister));
 // The language chosen in the settings, if any, replaces the device language.
 void restoreLanguage(i18n, AsyncStorage);
+configureForegroundNotifications();
 
 /** Last-resort screen for a render error outside every screen boundary. */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -54,9 +65,27 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+/**
+ * Links and notifications that lead into the app (ADR-0075): a link held across the sign-in, the
+ * tapped notification, and the start-up push token refresh.
+ */
+function useIncomingNavigation(): void {
+  const status = useAuthStatus();
+  const queryClient = useQueryClient();
+  const loadMatchTeam = useCallback(
+    async (matchId: string) =>
+      (await queryClient.fetchQuery(matchDetailQuery(matchesApi, matchId))).team.id,
+    [queryClient],
+  );
+  usePendingLink(pendingLink, status);
+  useNotificationRouting(status, loadMatchTeam);
+  usePushRefresh(status);
+}
+
 function RootStack() {
   const theme = useTheme();
   const access = routeAccess(useAuthStatus());
+  useIncomingNavigation();
   return (
     <NavigationThemeProvider value={navigationTheme(theme)}>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />

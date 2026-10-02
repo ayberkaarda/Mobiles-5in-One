@@ -8,6 +8,7 @@ import { api } from '../../../src/api/instance';
 import { formatDateTime } from '../../../src/i18n/format';
 import { matchHref, teamMatchesHref } from '../../../src/matches/components';
 import { tabMatches } from '../../../src/matches/list';
+import { PushPrompt } from '../../../src/notifications/PushPrompt';
 import {
   type ListQueryState,
   ListQueryView,
@@ -63,6 +64,7 @@ export default function MatchesTab() {
 
   return (
     <Screen title={t('tabs.matches')}>
+      <PushPrompt />
       {teams.length === 0 ? null : (
         <View
           style={{

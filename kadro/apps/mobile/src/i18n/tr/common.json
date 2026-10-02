@@ -127,7 +127,8 @@
     "legalSample": "Bu metinler örnek metindir; hukuki inceleme sonrası güncellenecektir.",
     "legalUnavailable": "Yasal metinlerin bağlantısı bu sürümde ayarlı değil.",
     "opensBrowser": "Tarayıcıda açılır.",
-    "signOutScope": "Yalnızca bu cihazdan çıkış yapılır. Diğer cihazlardaki oturumların açık kalır."
+    "signOutScope": "Yalnızca bu cihazdan çıkış yapılır. Diğer cihazlardaki oturumların açık kalır.",
+    "pushOpenSettings": "Telefon ayarlarını aç"
   },
   "deletion": {
     "entryTitle": "Hesabımı sil",
@@ -173,5 +174,11 @@
     },
     "noRequestTitle": "Silme isteği yok",
     "noRequest": "Bu cihazda bir hesap silme isteği yapılmadı. Profiline yönlendiriliyorsun."
+  },
+  "pushPrompt": {
+    "title": "Maçlarını kaçırma",
+    "message": "Maç hatırlatmaları, kadro değişiklikleri ve ilan başvuruları için bildirim gönderelim mi? Bildirimlerde başka oyuncuların adı görünmez.",
+    "enable": "Bildirimleri aç",
+    "later": "Şimdi değil"
   }
 }
