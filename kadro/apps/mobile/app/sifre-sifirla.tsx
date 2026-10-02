@@ -26,12 +26,20 @@ function InvalidLink() {
   const { t } = useTranslation('auth');
   const theme = useTheme();
   const router = useRouter();
+  const status = useAuthStatus();
+  // The forgot-password route belongs to the signed-out side of the router guard, so a signed-in
+  // user is signed out on this device first; otherwise the navigation would land in the tabs.
+  const requestNew = (): void => {
+    void (status === 'signedIn' ? session.signOut() : Promise.resolve()).finally(() =>
+      router.replace('/sifremi-unuttum'),
+    );
+  };
   return (
     <AuthScreen title={t('reset.invalidTitle')} testID="reset-invalid">
       <Text accessibilityRole="alert" style={{ marginBottom: theme.spacing['5'] }}>
         {t('reset.invalidMessage')}
       </Text>
-      <Button label={t('reset.requestNew')} onPress={() => router.replace('/sifremi-unuttum')} />
+      <Button label={t('reset.requestNew')} onPress={requestNew} />
     </AuthScreen>
   );
 }
@@ -54,11 +62,12 @@ function ResetFlow({ token }: { readonly token: string }) {
   const submit = handleSubmit((values) => {
     void action.run(async () => {
       await authApi.resetPassword({ token, password: values.password });
-      setDone(true);
       if (status === 'signedIn') {
-        // The server revoked every session of the account, this device's included.
+        // The server revoked every session of the account, this device's included. Signed out
+        // before "done" is shown, so a quick tap on "Sign in" cannot land in the tabs.
         await session.signOut({ revokeRemote: false, reason: 'expired' });
       }
+      setDone(true);
     });
   });
 
