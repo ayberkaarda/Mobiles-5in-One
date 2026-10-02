@@ -13,6 +13,21 @@ import { type CoalescedPushType, pushResends, users } from './schema/index.js';
 
 type Executor = Database | Transaction;
 
+/** How long a worker transaction waits for a lock before failing with SQLSTATE 55P03. */
+export const LOCK_TIMEOUT_MS = 5_000;
+
+/**
+ * Bounds every lock wait (row, advisory) of the caller's transaction to `timeoutMs`, so a blocked
+ * lock fails fast with `lock_not_available` (55P03) instead of hanging a worker; the job is
+ * retried. Transaction-local: it ends with the commit or rollback. Run it as the first statement.
+ */
+export async function setLockTimeout(
+  tx: Transaction,
+  timeoutMs: number = LOCK_TIMEOUT_MS,
+): Promise<void> {
+  await tx.execute(sql`select set_config('lock_timeout', ${String(Math.trunc(timeoutMs))}, true)`);
+}
+
 /** Takes the per-key lock until the end of the caller's transaction. */
 export async function lockPushResend(tx: Executor, singletonKey: string): Promise<void> {
   await tx.execute(
@@ -34,7 +49,7 @@ function recipientLockKey(userId: string) {
 }
 
 /**
- * Account hard delete (ADR-0032, ADR-0044): the first statement of the deletion transaction. Waits
+ * Account hard delete (ADR-0032, ADR-0044): the first lock of the deletion transaction (after `setLockTimeout`). Waits
  * until every producer transaction that recorded a change for this user has ended (a producer keeps
  * its shared lock until its commit or rollback), and makes later ones skip until the deletion has
  * committed or rolled back. Taken before any other lock, so it never waits while
