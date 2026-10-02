@@ -1,4 +1,9 @@
-import { JOB_QUEUES } from '@kadro/contracts';
+import {
+  BILLING_JOB_QUEUES,
+  JOB_PAYLOAD_SCHEMAS,
+  JOB_QUEUES,
+  SUBSCRIPTION_RECONCILE_CRON,
+} from '@kadro/contracts';
 import { emailTokens, newId } from '@kadro/db';
 import { eq } from 'drizzle-orm';
 import pg from 'pg';
@@ -50,7 +55,7 @@ describe('queue bootstrap (ADR-0028)', () => {
     const queues = await worker.runtime.boss.getQueues();
     const names = queues.map((queue) => queue.name).sort();
     expect(names).toEqual(allQueueNames().sort());
-    expect(JOB_QUEUES).toHaveLength(9);
+    expect(JOB_QUEUES).toHaveLength(11);
   });
 
   it('applies the retry, backoff, expiry and dead-letter table of ADR-0028', async () => {
@@ -79,6 +84,9 @@ describe('queue bootstrap (ADR-0028)', () => {
       retryBackoff: true,
       localConcurrency: 4,
     });
+    for (const name of BILLING_JOB_QUEUES) {
+      expect(QUEUE_DEFINITIONS[name], name).toMatchObject({ name, stage: 'active' });
+    }
     expect(QUEUE_DEFINITIONS['account.hard_delete']).toMatchObject({
       retryLimit: 10,
       retryDelaySeconds: 300,
@@ -87,7 +95,7 @@ describe('queue bootstrap (ADR-0028)', () => {
     });
   });
 
-  it('registers the hourly schedules in the Europe/Istanbul time zone', async () => {
+  it('registers the hourly schedules in Europe/Istanbul and the nightly reconciliation in UTC', async () => {
     const schedules = await worker.runtime.boss.getSchedules();
     const byName = Object.fromEntries(schedules.map((schedule) => [schedule.name, schedule]));
     expect(byName['opencall.expire']).toMatchObject({
@@ -99,7 +107,23 @@ describe('queue bootstrap (ADR-0028)', () => {
       cron: '35 * * * *',
       timezone: SCHEDULE_TIME_ZONE,
     });
-    expect(Object.keys(byName).sort()).toEqual(['maintenance.sweep', 'opencall.expire']);
+    expect(byName['subscription.reconcile']).toMatchObject({
+      cron: SUBSCRIPTION_RECONCILE_CRON,
+      timezone: 'UTC',
+      data: { userId: null, idempotencyKey: 'schedule:subscription.reconcile' },
+    });
+    expect(Object.keys(byName).sort()).toEqual([
+      'maintenance.sweep',
+      'opencall.expire',
+      'subscription.reconcile',
+    ]);
+    // The scheduled payload satisfies the strict job contract.
+    expect(
+      JOB_PAYLOAD_SCHEMAS['subscription.reconcile'].safeParse(
+        byName['subscription.reconcile']?.data,
+      ).success,
+    ).toBe(true);
+    expect(SUBSCRIPTION_RECONCILE_CRON).toBe('17 3 * * *');
   });
 
   it('runs every worker session as kadro_worker, which owns the pg-boss tables', async () => {
@@ -120,7 +144,7 @@ describe('queue bootstrap (ADR-0028)', () => {
     try {
       const queues = await second.runtime.boss.getQueues();
       expect(queues).toHaveLength(allQueueNames().length);
-      expect(await second.runtime.boss.getSchedules()).toHaveLength(2);
+      expect(await second.runtime.boss.getSchedules()).toHaveLength(3);
     } finally {
       await second.runtime.stop();
     }
