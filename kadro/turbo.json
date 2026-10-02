@@ -16,7 +16,7 @@
     },
     "@kadro/mobile#build": {
       "dependsOn": ["^build"],
-      "env": ["EXPO_PUBLIC_APP_ENV", "EXPO_PUBLIC_API_URL"],
+      "env": ["EXPO_PUBLIC_APP_ENV", "EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_WEB_ORIGIN"],
       "outputs": ["dist/**"]
     },
     "@kadro/web#lint": {

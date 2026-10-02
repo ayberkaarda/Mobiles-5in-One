@@ -6,16 +6,18 @@ Kadro iOS and Android app: Expo SDK 57, Expo Router, React Native 0.86.
 
 Run from `kadro/apps/mobile` (or with `pnpm --filter @kadro/mobile <script>` from `kadro/`).
 
-| Command          | What it does                                                                 |
-| ---------------- | ---------------------------------------------------------------------------- |
-| `pnpm start`     | Metro dev server (needs the public environment below)                        |
-| `pnpm typecheck` | `tsc --noEmit`                                                               |
-| `pnpm lint`      | ESLint, zero warnings                                                        |
-| `pnpm test`      | Vitest, including the build configuration test                               |
-| `pnpm build`     | `expo export` for Android and iOS (bundle check; local-only values if unset) |
+| Command          | What it does                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `pnpm start`     | Metro dev server (needs the public environment below)                                  |
+| `pnpm typecheck` | `tsc --noEmit`                                                                         |
+| `pnpm lint`      | ESLint, zero warnings                                                                  |
+| `pnpm test`      | Vitest, including the build configuration test                                         |
+| `pnpm build`     | `expo export` bundle check (`--bundle-check`: local-only defaults for unset variables) |
+| `pnpm export`    | strict `expo export`: missing or invalid public environment fails                      |
 
 `@kadro/config` must be built first (`pnpm --filter @kadro/config build`); turbo does this for
-`build`, `typecheck`, `lint` and `test`.
+`build`, `typecheck`, `lint` and `test`, and the `eas-build-post-install` script does it on EAS Build
+(`dist/` is not committed, and `app.config.ts` imports the built module).
 
 ## Public environment
 
@@ -32,7 +34,8 @@ invalid.
 
 ## EAS Build profiles
 
-`eas.json` defines `development`, `preview` and `production`. Each profile sets only
+`eas.json` defines `development` (a Debug build that loads Metro; no dev client package is used),
+`preview` and `production`. Each profile sets only
 `EXPO_PUBLIC_APP_ENV` and selects the matching EAS environment (`development`, `preview`,
 `production`). The other values are not stored in the repository: create them as EAS environment
 variables (or EAS secrets) per environment, for example:

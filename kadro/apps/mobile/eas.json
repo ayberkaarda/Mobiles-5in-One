@@ -6,11 +6,16 @@
   },
   "build": {
     "development": {
-      "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
-      "android": { "buildType": "apk" },
-      "ios": { "simulator": true },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Debug"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "local"
       }
@@ -19,7 +24,9 @@
       "distribution": "internal",
       "environment": "preview",
       "channel": "preview",
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview"
       }
@@ -29,7 +36,9 @@
       "environment": "production",
       "channel": "production",
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production"
       }

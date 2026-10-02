@@ -145,10 +145,22 @@ describe('app.config.ts', () => {
     expect(app.ios?.associatedDomains).toBeUndefined();
   });
 
-  it('keeps secrets out of extra and defines no update code signing without a certificate', () => {
+  it('allows only the router extra and carries no non-public environment value into the config', () => {
+    const sentinel = 'sentinel-not-for-the-binary';
+    stubPublicEnv();
+    vi.stubEnv('REVENUECAT_API_KEY', sentinel);
+    vi.stubEnv('DATABASE_URL', sentinel);
+    vi.stubEnv('EXPO_PUBLIC_UNLISTED_SECRET', sentinel);
+    const app = resolvedConfig();
+    // expo-router registers an empty `router` object; nothing else may appear in extra.
+    expect(app.extra).toEqual({ router: {} });
+    expect(JSON.stringify(app)).not.toContain(sentinel);
+    expect(JSON.stringify(app)).not.toContain(VALID_PUBLIC_ENV.EXPO_PUBLIC_API_URL);
+  });
+
+  it('defines no update code signing without a certificate', () => {
     stubPublicEnv();
     const app = resolvedConfig();
-    expect(JSON.stringify(app.extra ?? {})).not.toMatch(/secret|token|password|private/i);
     expect(app.updates?.codeSigningCertificate).toBeUndefined();
     expect(app.updates?.codeSigningMetadata).toBeUndefined();
   });
