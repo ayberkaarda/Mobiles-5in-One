@@ -59,7 +59,39 @@ function captureError(fn: () => unknown): EnvValidationError {
 
 describe('parseWorkerEnv', () => {
   it('accepts the documented local values', () => {
-    expect(parseWorkerEnv(validWorker)).toEqual({ ...validWorker, PUSH_HOURLY_CAP: 5_000 });
+    expect(parseWorkerEnv(validWorker)).toEqual({
+      ...validWorker,
+      PUSH_HOURLY_CAP: 5_000,
+      REVENUECAT_API_BASE_URL: 'https://api.revenuecat.com',
+    });
+  });
+
+  it('keeps the RevenueCat REST key optional and validates it without echoing it', () => {
+    expect(parseWorkerEnv(deployedWorker()).REVENUECAT_API_KEY).toBeUndefined();
+    const key = ['s', 'k_', randomBytes(16).toString('hex')].join('');
+    expect(
+      parseWorkerEnv({ ...deployedWorker(), REVENUECAT_API_KEY: key }).REVENUECAT_API_KEY,
+    ).toBe(key);
+    const bad = `pk_${randomBytes(16).toString('hex')}`;
+    const error = captureError(() => parseWorkerEnv({ ...validWorker, REVENUECAT_API_KEY: bad }));
+    expect(error.issues.map((issue) => issue.key)).toEqual(['REVENUECAT_API_KEY']);
+    expect(error.message).not.toContain(bad);
+  });
+
+  it('allows a loopback RevenueCat fake server only locally', () => {
+    expect(
+      parseWorkerEnv({ ...validWorker, REVENUECAT_API_BASE_URL: 'http://localhost:4010' })
+        .REVENUECAT_API_BASE_URL,
+    ).toBe('http://localhost:4010');
+    const error = captureError(() =>
+      parseWorkerEnv({ ...deployedWorker(), REVENUECAT_API_BASE_URL: 'http://localhost:4010' }),
+    );
+    expect(error.issues.map((issue) => issue.key)).toEqual(['REVENUECAT_API_BASE_URL']);
+    expect(
+      captureError(() =>
+        parseWorkerEnv({ ...validWorker, REVENUECAT_API_BASE_URL: 'https://api.example/v1' }),
+      ).issues.map((issue) => issue.key),
+    ).toEqual(['REVENUECAT_API_BASE_URL']);
   });
 
   it('defaults the transports to log and the push cap to 5 000', () => {
@@ -270,6 +302,8 @@ const validProductionWeb = {
   R2_SECRET_ACCESS_KEY: randomBytes(32).toString('hex'),
   R2_INCOMING_BUCKET: 'kadro-uploads-incoming',
   MEDIA_PUBLIC_BASE_URL: 'https://media.kadro.app',
+  REVENUECAT_WEBHOOK_SECRET: randomBytes(32).toString('base64url'),
+  TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),
 };
 
 const localWebStorage = {
@@ -595,6 +629,66 @@ describe('parseWebEnv', () => {
     expect(error.issues.map((issue) => issue.key)).toEqual(['R2_SECRET_ACCESS_KEY']);
     expect(error.message).not.toContain(secret);
   });
+
+  it('leaves the webhook secret and TOTP key optional locally, required outside local', () => {
+    const env = parseWebEnv(validWeb);
+    expect(env.REVENUECAT_WEBHOOK_SECRET).toBeUndefined();
+    expect(env.TOTP_ENCRYPTION_KEY).toBeUndefined();
+    expect(
+      webIssueKeys({
+        ...validProductionWeb,
+        REVENUECAT_WEBHOOK_SECRET: undefined,
+        TOTP_ENCRYPTION_KEY: undefined,
+      }).sort(),
+    ).toEqual(['REVENUECAT_WEBHOOK_SECRET', 'TOTP_ENCRYPTION_KEY']);
+  });
+
+  it('requires a 32-byte TOTP key and distinct secrets, without echoing them', () => {
+    expect(webIssueKeys({ TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64url') })).toEqual(
+      [],
+    );
+    for (const value of [
+      randomBytes(31).toString('base64url'),
+      randomBytes(48).toString('base64url'),
+      `${'a'.repeat(42)}+`,
+    ]) {
+      const error = captureError(() => parseWebEnv({ ...validWeb, TOTP_ENCRYPTION_KEY: value }));
+      expect(error.issues.map((issue) => issue.key)).toEqual(['TOTP_ENCRYPTION_KEY']);
+      expect(error.message).not.toContain(value);
+    }
+    // 43 characters whose last one carries bits beyond 32 bytes do not decode exactly.
+    expect(webIssueKeys({ TOTP_ENCRYPTION_KEY: `${'A'.repeat(42)}B` })).toEqual([
+      'TOTP_ENCRYPTION_KEY',
+    ]);
+    expect(webIssueKeys({ REVENUECAT_WEBHOOK_SECRET: 'short' })).toEqual([
+      'REVENUECAT_WEBHOOK_SECRET',
+    ]);
+    expect(webIssueKeys({ REVENUECAT_WEBHOOK_SECRET: validWeb.CSRF_SECRET })).toEqual([
+      'REVENUECAT_WEBHOOK_SECRET',
+    ]);
+  });
+
+  it('validates the app-linking identifiers and keeps them optional', () => {
+    const env = parseWebEnv(validProductionWeb);
+    expect(env.APPLE_TEAM_ID).toBeUndefined();
+    expect(env.ANDROID_CERT_SHA256_FINGERPRINTS).toBeUndefined();
+    const fingerprint = () =>
+      randomBytes(32).toString('hex').toUpperCase().match(/.{2}/g)?.join(':') ?? '';
+    const first = fingerprint();
+    const second = fingerprint();
+    const parsed = parseWebEnv({
+      ...validWeb,
+      APPLE_TEAM_ID: 'ABCDE12345',
+      APPLE_APP_STORE_ID: '1234567890',
+      ANDROID_CERT_SHA256_FINGERPRINTS: `${first}, ${second}`,
+    });
+    expect(parsed.ANDROID_CERT_SHA256_FINGERPRINTS).toEqual([first, second]);
+    expect(webIssueKeys({ APPLE_TEAM_ID: 'abcde12345' })).toEqual(['APPLE_TEAM_ID']);
+    expect(webIssueKeys({ APPLE_APP_STORE_ID: 'id123456' })).toEqual(['APPLE_APP_STORE_ID']);
+    expect(webIssueKeys({ ANDROID_CERT_SHA256_FINGERPRINTS: first.toLowerCase() })).toEqual([
+      'ANDROID_CERT_SHA256_FINGERPRINTS.0',
+    ]);
+  });
 });
 
 describe('parseMobilePublicEnv', () => {
@@ -607,10 +701,13 @@ describe('parseMobilePublicEnv', () => {
     ).toBe('http://localhost:3000');
   });
 
+  const WEB_ORIGIN = { EXPO_PUBLIC_WEB_ORIGIN: 'https://kadro.app' };
+
   it('requires https for preview and production builds', () => {
     for (const appEnv of ['preview', 'production']) {
       const error = captureError(() =>
         parseMobilePublicEnv({
+          ...WEB_ORIGIN,
           EXPO_PUBLIC_APP_ENV: appEnv,
           EXPO_PUBLIC_API_URL: 'http://kadro.app',
         }),
@@ -619,6 +716,7 @@ describe('parseMobilePublicEnv', () => {
     }
     expect(
       parseMobilePublicEnv({
+        ...WEB_ORIGIN,
         EXPO_PUBLIC_APP_ENV: 'production',
         EXPO_PUBLIC_API_URL: 'https://kadro.app',
       }).EXPO_PUBLIC_APP_ENV,
@@ -632,10 +730,65 @@ describe('parseMobilePublicEnv', () => {
       'https://kadro.app/#x',
     ]) {
       const error = captureError(() =>
-        parseMobilePublicEnv({ EXPO_PUBLIC_APP_ENV: 'production', EXPO_PUBLIC_API_URL: url }),
+        parseMobilePublicEnv({
+          ...WEB_ORIGIN,
+          EXPO_PUBLIC_APP_ENV: 'production',
+          EXPO_PUBLIC_API_URL: url,
+        }),
       );
       expect(error.issues.map((issue) => issue.key)).toEqual(['EXPO_PUBLIC_API_URL']);
     }
+  });
+
+  it('requires a non-loopback https web origin outside local and allows none locally', () => {
+    const local = { EXPO_PUBLIC_APP_ENV: 'local', EXPO_PUBLIC_API_URL: 'http://localhost:3000' };
+    expect(parseMobilePublicEnv(local).EXPO_PUBLIC_WEB_ORIGIN).toBeUndefined();
+    expect(
+      parseMobilePublicEnv({ ...local, EXPO_PUBLIC_WEB_ORIGIN: 'http://localhost:3000' })
+        .EXPO_PUBLIC_WEB_ORIGIN,
+    ).toBe('http://localhost:3000');
+    const production = {
+      EXPO_PUBLIC_APP_ENV: 'production',
+      EXPO_PUBLIC_API_URL: 'https://kadro.app',
+    };
+    for (const value of [undefined, 'http://kadro.app', 'https://localhost:3000']) {
+      const error = captureError(() =>
+        parseMobilePublicEnv({ ...production, EXPO_PUBLIC_WEB_ORIGIN: value }),
+      );
+      expect(error.issues.map((issue) => issue.key)).toEqual(['EXPO_PUBLIC_WEB_ORIGIN']);
+    }
+    for (const value of ['https://kadro.app/', 'https://kadro.app/mac', 'kadro.app']) {
+      const error = captureError(() =>
+        parseMobilePublicEnv({ ...local, EXPO_PUBLIC_WEB_ORIGIN: value }),
+      );
+      expect(error.issues.map((issue) => issue.key)).toEqual(['EXPO_PUBLIC_WEB_ORIGIN']);
+    }
+  });
+
+  it('accepts only public RevenueCat SDK keys of the matching platform', () => {
+    const local = { EXPO_PUBLIC_APP_ENV: 'local', EXPO_PUBLIC_API_URL: 'http://localhost:3000' };
+    const ios = `appl_${randomBytes(12).toString('hex')}`;
+    const android = `goog_${randomBytes(12).toString('hex')}`;
+    const env = parseMobilePublicEnv({
+      ...local,
+      EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ios,
+      EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: android,
+    });
+    expect(env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY).toBe(ios);
+    expect(env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY).toBe(android);
+    const secretShaped = ['s', 'k_', randomBytes(12).toString('hex')].join('');
+    const error = captureError(() =>
+      parseMobilePublicEnv({
+        ...local,
+        EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: android,
+        EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: secretShaped,
+      }),
+    );
+    expect(error.issues.map((issue) => issue.key).sort()).toEqual([
+      'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY',
+      'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY',
+    ]);
+    expect(error.message).not.toContain(secretShaped);
   });
 
   it('rejects non-http schemes and treats an empty URL as missing', () => {

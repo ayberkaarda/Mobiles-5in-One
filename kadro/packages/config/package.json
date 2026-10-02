@@ -13,7 +13,9 @@
     },
     "./mobile": {
       "types": "./dist/mobile.d.ts",
-      "import": "./dist/mobile.js"
+      "import": "./dist/mobile.js",
+      "require": "./dist/mobile.js",
+      "default": "./dist/mobile.js"
     }
   },
   "files": [
