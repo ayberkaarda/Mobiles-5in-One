@@ -40,7 +40,8 @@ function utf8(text: string): number[] {
 /**
  * SHA-256 of a string as lower-case hex. Sign in with Apple needs the digest of the raw nonce on
  * the device, and no crypto module is a dependency of the app yet; this is the plain FIPS 180-4
- * algorithm, compared with Node's implementation in tests.
+ * algorithm, compared with Node's implementation in tests. Input domain: well-formed text (the
+ * app hashes its own hex nonce); a lone surrogate is not valid UTF-8 and is not handled like Node.
  */
 export function sha256Hex(text: string): string {
   const bytes = utf8(text);

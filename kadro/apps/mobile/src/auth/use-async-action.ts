@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export interface AsyncAction {
   /** `true` while the action runs; the submit button shows it and ignores presses. */
@@ -12,20 +12,12 @@ export interface AsyncAction {
 
 /**
  * One in-flight action per form: a second press while the first runs is ignored (no double
- * submit of a single-use token or a registration), and nothing is set after the screen unmounted.
+ * submit of a single-use token or a registration),.
  */
 export function useAsyncAction(): AsyncAction {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const running = useRef(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
 
   const run = useCallback(async (task: () => Promise<void>): Promise<boolean> => {
     if (running.current) {
@@ -38,15 +30,11 @@ export function useAsyncAction(): AsyncAction {
       await task();
       return true;
     } catch (caught) {
-      if (mounted.current) {
-        setError(caught);
-      }
+      setError(caught);
       return false;
     } finally {
       running.current = false;
-      if (mounted.current) {
-        setBusy(false);
-      }
+      setBusy(false);
     }
   }, []);
 

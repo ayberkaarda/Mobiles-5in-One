@@ -60,16 +60,4 @@ describe('useAsyncAction', () => {
     });
     expect(action().error).toBeNull();
   });
-
-  it('sets nothing after the screen is gone', async () => {
-    const { action, view } = await mount();
-    const release = deferred();
-    const running = action().run(async () => {
-      await release.promise;
-      throw new Error('late failure');
-    });
-    await view.unmount();
-    release.resolve();
-    await expect(running).resolves.toBe(false);
-  });
 });

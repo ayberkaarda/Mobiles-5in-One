@@ -16,7 +16,7 @@ import { type Language } from '../src/i18n';
 import { queryKeys } from '../src/query/keys';
 import { deferred } from './support/deferred';
 import { issueTokens, problem } from './support/api';
-import { __scriptApple } from './support/expo-apple-authentication';
+import { __scriptApple, appleSignInCalls } from './support/expo-apple-authentication';
 import { __setLinkingURL } from './support/expo-linking';
 import { __setSearchParams, routerCalls } from './support/expo-router';
 import { secureStoreContents } from './support/expo-secure-store';
@@ -247,6 +247,50 @@ describe('sign-in screen', () => {
     expect(bodies).toHaveLength(1);
   });
 
+  it('does not start Apple sign-in while the form submit runs', async () => {
+    const release = deferred();
+    watch('/api/v1/auth/login', async () => {
+      await release.promise;
+      return signedInResponse();
+    });
+    __scriptApple({ outcome: { kind: 'credential', identityToken: MOCK_IDENTITY_TOKEN } });
+    await render(<SignInScreen />);
+    const apple = await screen.findByRole('button', { name: 'Apple ile devam et' });
+    await type('E-posta', 'ayse@example.com');
+    await type('Şifre', 'correct horse battery');
+    await press('Giriş yap');
+    await screen.findByRole('button', { name: 'Giriş yap', busy: true });
+
+    expect(screen.getByRole('button', { name: 'Apple ile devam et', disabled: true })).toBeTruthy();
+    await fireEvent.press(apple);
+    expect(appleSignInCalls()).toHaveLength(0);
+
+    release.resolve();
+    await waitFor(() => expect(authStore.getState().status).toBe('signedIn'));
+  });
+
+  it('does not submit the form while Apple sign-in runs', async () => {
+    const sheet = deferred();
+    const bodies = watch('/api/v1/auth/login', signedInResponse);
+    watch('/api/v1/auth/apple', signedInResponse);
+    __scriptApple({
+      outcome: { kind: 'credential', identityToken: MOCK_IDENTITY_TOKEN },
+      gate: sheet.promise,
+    });
+    await render(<SignInScreen />);
+    await type('E-posta', 'ayse@example.com');
+    await type('Şifre', 'correct horse battery');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Apple ile devam et' }));
+    await waitFor(() => expect(appleSignInCalls()).toHaveLength(1));
+
+    await press('Giriş yap');
+    expect(bodies).toHaveLength(0);
+
+    sheet.resolve();
+    await waitFor(() => expect(authStore.getState().status).toBe('signedIn'));
+    expect(bodies).toHaveLength(0);
+  });
+
   it('hides the password until asked and announces the switch state', async () => {
     await render(<SignInScreen />);
     expect(screen.getByLabelText('Şifre').props.secureTextEntry).toBe(true);
@@ -436,6 +480,40 @@ describe('reset-password screen', () => {
     expect(secureStoreContents().has(REFRESH_TOKEN_KEY)).toBe(false);
   });
 
+  it('has finished signing the device out by the time "done" shows', async () => {
+    watch('/api/v1/auth/reset');
+    await renderSignedInSession();
+    // A sign-out cleanup that takes a moment, like clearing the caches.
+    let cleanedUp = false;
+    const { session } = await import('../src/api/instance');
+    session.onSignOut(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      cleanedUp = true;
+    });
+    __setLinkingURL(linkWith(TOKEN));
+    await render(<ResetPasswordScreen />);
+    await type('Yeni şifre', 'a brand new password');
+    await press('Şifreyi değiştir');
+    await screen.findByRole('header', { name: 'Şifren değişti' });
+    // No waiting: a quick tap on "Sign in" must already find the signed-out side, caches cleared.
+    expect(authStore.getState().status).toBe('signedOut');
+    expect(cleanedUp).toBe(true);
+  });
+
+  it('signs a signed-in user out before asking for a new link, which lives on the signed-out side', async () => {
+    mswServer.use(http.post(apiUrl('/api/v1/auth/reset'), () => problem(401, 'token_invalid')));
+    await renderSignedInSession();
+    __setLinkingURL(linkWith(TOKEN));
+    await render(<ResetPasswordScreen />);
+    await type('Yeni şifre', 'a brand new password');
+    await press('Şifreyi değiştir');
+    await press('Yeni bağlantı iste');
+    await waitFor(() =>
+      expect(routerCalls()).toEqual([{ method: 'replace', href: '/sifremi-unuttum' }]),
+    );
+    expect(authStore.getState().status).toBe('signedOut');
+  });
+
   it('turns a rejected token into the "link invalid" state', async () => {
     mswServer.use(http.post(apiUrl('/api/v1/auth/reset'), () => problem(401, 'token_invalid')));
     __setLinkingURL(linkWith(TOKEN));
@@ -580,6 +658,36 @@ describe('verify-email screen', () => {
     await render(<VerifyEmailScreen />);
     expect(await screen.findByRole('header', { name: 'Bağlantı geçersiz' })).toBeTruthy();
     expect(bodies).toHaveLength(0);
+  });
+
+  it('retries the same token after a transient failure and keeps verify-once after success', async () => {
+    const bodies: unknown[] = [];
+    let calls = 0;
+    mswServer.use(
+      http.post(apiUrl('/api/v1/auth/verify-email'), async ({ request }) => {
+        bodies.push(await request.json());
+        calls += 1;
+        return calls === 1
+          ? problem(503, 'service_unavailable')
+          : new HttpResponse(null, { status: 204 });
+      }),
+    );
+    __setLinkingURL(linkWith(TOKEN));
+    await render(<VerifyEmailScreen />);
+    expect(await screen.findByRole('header', { name: 'Doğrulanamadı' })).toBeTruthy();
+
+    await press('Tekrar dene');
+    expect(await screen.findByRole('header', { name: 'E-postan doğrulandı' })).toBeTruthy();
+    expect(bodies).toEqual([{ token: TOKEN }, { token: TOKEN }]);
+    expect(screen.queryByRole('button', { name: 'Tekrar dene' })).toBeNull();
+  });
+
+  it('offers no retry for a rejected token', async () => {
+    watch('/api/v1/auth/verify-email', () => problem(401, 'token_invalid'));
+    __setLinkingURL(linkWith(TOKEN));
+    await render(<VerifyEmailScreen />);
+    await screen.findByRole('header', { name: 'Bağlantı geçersiz' });
+    expect(screen.queryByRole('button', { name: 'Tekrar dene' })).toBeNull();
   });
 
   it('reports a transport failure with the catalog copy', async () => {

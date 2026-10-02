@@ -133,10 +133,13 @@ describe('register, forgot, reset, verify', () => {
     expect(requests[0]?.body).toEqual({ email: 'ayse@example.com' });
   });
 
-  it('reset sends the token and the new password and keeps the device session untouched', async () => {
+  it('reset sends the token and the new password and leaves the session state alone', async () => {
     const { requests } = serve('/api/v1/auth/reset', NO_CONTENT);
-    await setup().authApi.resetPassword({ token: TOKEN, password: 'a brand new password' });
+    const { authApi, store } = setup();
+    await authApi.resetPassword({ token: TOKEN, password: 'a brand new password' });
     expect(requests[0]?.body).toEqual({ token: TOKEN, password: 'a brand new password' });
+    expect(store.getState().status).toBe('unknown');
+    expect(secureStoreContents().size).toBe(0);
   });
 
   it('reset and verify surface token_invalid', async () => {

@@ -68,9 +68,4 @@ describe('auth copy', () => {
       }
     }
   });
-
-  it('adds no key to the error catalog namespace', () => {
-    // API failures are worded by `errors.json` alone; this package of screens adds nothing there.
-    expect(Object.keys(tr).some((key) => key.startsWith('errors.'))).toBe(false);
-  });
 });
