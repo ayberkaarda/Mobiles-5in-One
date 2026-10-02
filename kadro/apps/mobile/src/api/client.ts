@@ -67,7 +67,9 @@ function defaultSleep(ms: number): Promise<void> {
 function buildUrl(baseUrl: string, path: string, query: RequestOptions['query']): string {
   // Only relative API paths are accepted, so no caller can point the client (and the bearer
   // token) at another host or escape the API prefix.
-  if (!API_PATH.test(path) || path.includes('..') || path.includes('//')) {
+  // No trailing slash either: the web server answers it with a 308 redirect, which keeps the
+  // method and body, and React Native follows redirects natively (ADR-0047).
+  if (!API_PATH.test(path) || path.includes('..') || path.includes('//') || path.endsWith('/')) {
     throw new TypeError('API path must be a relative /api/v1/ path');
   }
   // Built by hand: React Native's URL and URLSearchParams implementations are partial.
@@ -187,13 +189,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
-        // The API never redirects; a redirect is treated as an error, cookies are never sent.
+        // Honoured by standard fetch implementations. React Native's fetch (whatwg-fetch over
+        // XMLHttpRequest) ignores it and the native layer follows redirects (ADR-0047).
         redirect: 'error',
         credentials: 'omit',
         signal: controller.signal,
       });
-      // React Native's networking layer follows redirects on its own, whatever `redirect` says.
-      // A response from another origin is never trusted.
+      // The request may already have been forwarded; this check only guarantees that a response
+      // reached through a redirect or from another origin is never parsed or trusted.
       const responseUrl = response.url ?? '';
       if (response.redirected || (responseUrl !== '' && originOf(responseUrl) !== apiOrigin)) {
         throw new ApiError({ kind: 'invalid_response', status: response.status });

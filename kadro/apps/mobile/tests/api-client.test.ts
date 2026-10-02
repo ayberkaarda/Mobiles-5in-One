@@ -58,7 +58,19 @@ describe('request headers and transport', () => {
     await expect(api.request('//evil.example/api/v1/me')).rejects.toThrow(TypeError);
   });
 
-  it('does not follow redirects, so the token never reaches the redirect target', async () => {
+  it('refuses a trailing slash, which the web server answers with a 308 redirect', async () => {
+    const { api } = await signedIn();
+    // Next.js redirects `/api/v1/teams/` to `/api/v1/teams` (308 keeps method and body), so such
+    // a path could carry a refresh token through a redirect that the native layer follows.
+    await expect(api.request('/api/v1/teams/')).rejects.toThrow(TypeError);
+    await expect(
+      api.request('/api/v1/auth/refresh/', { method: 'POST', auth: 'none', body: {} }),
+    ).rejects.toThrow(TypeError);
+  });
+
+  // Node's fetch honours `redirect: 'error'`. React Native's fetch does not (see ADR-0047): this
+  // test covers the Node runtime only and is no evidence for iOS or Android.
+  it('in Node, rejects a redirect without calling its target', async () => {
     const { api } = await signedIn();
     let targetHit = false;
     mswServer.use(
@@ -72,6 +84,27 @@ describe('request headers and transport', () => {
     );
     await expect(api.request('/api/v1/me')).rejects.toMatchObject({ kind: 'network' });
     expect(targetHit).toBe(false);
+  });
+
+  it('rejects a response the native layer reached through a redirect, keeping the session', async () => {
+    const tokens = issueTokens();
+    // A transport that follows redirects itself, as React Native's networking layer does.
+    const redirectedResponse = {
+      ok: true,
+      status: 200,
+      redirected: true,
+      url: 'https://elsewhere.test.kadro.invalid/collect',
+      json: async () => ({ tokens: issueTokens() }),
+    } as unknown as Response;
+    const followingFetch: typeof fetch = async () => redirectedResponse;
+    const context = createTestApi({ fetchImpl: followingFetch });
+    await context.session.establish(tokens);
+
+    await expect(context.api.request('/api/v1/teams')).rejects.toMatchObject({
+      kind: 'invalid_response',
+    });
+    expect(context.store.getState().status).toBe('signedIn');
+    expect(secureStoreContents().get(REFRESH_TOKEN_KEY)?.value).toBe(tokens.refreshToken);
   });
 
   it('fails a required-auth call locally with 401 when there is no session', async () => {
