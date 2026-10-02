@@ -42,7 +42,9 @@ status" and blocks the merge.
   browser and the database, which are not task inputs, so a cache hit could replay a green run
   that did not happen. `@kadro/web#test` also depends on its own `build`, so the build-backed
   suites always have `.next`. `CI`, `KADRO_TEST_BROWSER`, `DOCKER_HOST` and `DOCKER_CONTEXT` pass
-  through to the test tasks.
+  through to the test tasks. The job runs `pnpm test --continue=dependencies-successful`, so one
+  failing package does not stop the other test tasks and a single run shows every failure; any
+  failed task still fails the step.
 - **No path filter, one gate.** The workflow runs on every pull request and every push to `main`.
   A `changes` job diffs the pull request (merge commit against its first parent) or the pushed
   range against `kadro/`, `.github/workflows/kadro-*.yml` and `.gitleaks.toml`; `verify` and

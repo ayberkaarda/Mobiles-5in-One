@@ -194,8 +194,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Keeps running the other packages' tests after one fails, so a single run reports every
+      # failure; any failed task still makes turbo, and this step, exit non-zero.
       - name: Test
-        run: pnpm test
+        run: pnpm test --continue=dependencies-successful
 
   # The only check to mark as required on main. "changes" must succeed and report kadro=true
   # or kadro=false. true: verify and test must both succeed. false: both must be skipped.

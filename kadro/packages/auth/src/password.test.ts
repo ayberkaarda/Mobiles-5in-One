@@ -38,27 +38,36 @@ describe('verifyPassword', () => {
     expect(await verifyPassword('$argon2id$garbage', PASSWORD)).toBe(false);
   });
 
-  it('spends comparable time on unknown accounts and on wrong passwords', async () => {
+  // Coarse smoke check only. The equal-work guarantee is asserted structurally, without timing,
+  // in password-work.test.ts. Wall-clock time is noisy on shared machines (other test files and
+  // packages hash in parallel on a 2-core CI runner), so even interleaved samples can drift by
+  // up to ~2x either way; the 3x bounds catch only gross regressions, such as the unknown-account
+  // path skipping Argon2id altogether, and must not be tightened.
+  it('spends roughly the same time on unknown accounts and on wrong passwords', async () => {
     await warmUpPasswordHashing();
     const stored = await hashPassword(PASSWORD);
 
-    async function median(run: () => Promise<boolean>): Promise<number> {
-      const samples: number[] = [];
-      for (let index = 0; index < 5; index += 1) {
-        const start = performance.now();
-        await run();
-        samples.push(performance.now() - start);
-      }
-      samples.sort((a, b) => a - b);
-      return samples[2] ?? 0;
+    async function elapsed(run: () => Promise<boolean>): Promise<number> {
+      const start = performance.now();
+      await run();
+      return performance.now() - start;
+    }
+    function median(samples: number[]): number {
+      const sorted = [...samples].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)] ?? 0;
     }
 
-    const known = await median(() => verifyPassword(stored, 'wrong password!'));
-    const unknown = await median(() => verifyPassword(null, 'wrong password!'));
-    const ratio = unknown / known;
-    expect(ratio).toBeGreaterThan(0.5);
-    expect(ratio).toBeLessThan(2);
-  });
+    // Interleaved pairs, so a change in machine load during the test hits both paths alike.
+    const known: number[] = [];
+    const unknown: number[] = [];
+    for (let index = 0; index < 15; index += 1) {
+      known.push(await elapsed(() => verifyPassword(stored, 'wrong password!')));
+      unknown.push(await elapsed(() => verifyPassword(null, 'wrong password!')));
+    }
+    const ratio = median(unknown) / median(known);
+    expect(ratio).toBeGreaterThan(1 / 3);
+    expect(ratio).toBeLessThan(3);
+  }, 30_000);
 });
 
 describe('passwordNeedsRehash', () => {
