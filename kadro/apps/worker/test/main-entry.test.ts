@@ -37,6 +37,7 @@ describe('worker entry point', () => {
         cwd: WORKER_DIR,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
+          // eslint-disable-next-line no-restricted-properties -- child inherits the test runner's PATH, not application configuration
           ...process.env,
           NODE_ENV: 'test',
           BUILD_SHA: 'test',

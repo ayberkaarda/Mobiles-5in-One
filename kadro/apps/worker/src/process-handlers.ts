@@ -4,19 +4,27 @@ const MAX_FRAMES = 25;
 const FRAME_LINE = /^\s+at\s/;
 const EMAIL = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+/g;
 
+const BACKSLASH = String.fromCharCode(92);
+const NODE_MODULES = '/node_modules/';
+
+function shortenToken(token: string): string {
+  const dependency = token.lastIndexOf(NODE_MODULES);
+  if (dependency !== -1) {
+    // Dependencies: keep the package-relative part only.
+    return `node_modules/${token.slice(dependency + NODE_MODULES.length)}`;
+  }
+  const absolute = token.startsWith('/') || /^[A-Za-z]:\//.test(token);
+  // System paths and home directories keep their last three segments.
+  return absolute ? token.split('/').slice(-3).join('/') : token;
+}
+
 function shortenPath(frame: string): string {
-  let text = frame.replace(/file:\/\/\/?/g, '').replaceAll('\\', '/');
-  const cwd = process.cwd().replaceAll('\\', '/');
-  text = text.split(`${cwd}/`).join('');
-  // Dependencies: keep the package-relative part only.
-  text = text.replace(
-    /[^\s(]*\/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?/g,
-    'node_modules/',
-  );
-  // Anything still absolute (system paths, a home directory) keeps its last three segments.
-  return text.replace(/(?<![^\s(])(?:[A-Za-z]:)?\/[^\s():]+(?:\/[^\s():]+)+/g, (path) =>
-    path.split('/').slice(-3).join('/'),
-  );
+  const cwd = process.cwd().replaceAll(BACKSLASH, '/');
+  const text = frame.replace('file:///', '').replaceAll(BACKSLASH, '/').split(`${cwd}/`).join('');
+  return text
+    .split(/([\s()])/)
+    .map(shortenToken)
+    .join('');
 }
 
 /**
@@ -61,7 +69,12 @@ export interface ProcessHandlerOptions {
   readonly shutdown: () => Promise<void>;
   readonly graceMs?: number;
   /** Test seams. */
-  readonly target?: Pick<NodeJS.Process, 'on'>;
+  readonly target?: {
+    on(
+      event: 'uncaughtException' | 'unhandledRejection',
+      listener: (arg: unknown) => void,
+    ): unknown;
+  };
   readonly exit?: (code: number) => void;
 }
 
