@@ -92,6 +92,9 @@ ADR asks for it.
   `<singletonKey>:<windowOpenedEpochMilliseconds>`. A window opens with the first event that finds
   no queued or active job and ends when that job has run, so the next event after a delivery opens
   a new window and is sent instead of being dropped as a duplicate for the 30-day receipt lifetime.
+- Update (ADR-0044): a repeat dropped while the job is active is not lost. The producer records it
+  in `push_resends`; when the job has read its state before the change, the worker enqueues the
+  next window's job (10 minutes after that delivery at the earliest) as it completes the job.
 - Producers are bounded by the API rate limits (groups O, C, G); a single user cannot cause more
   pushes than their mutations allow.
 

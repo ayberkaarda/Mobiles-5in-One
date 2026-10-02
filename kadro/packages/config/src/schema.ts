@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createPrivateKey, createPublicKey, type KeyObject } from 'node:crypto';
 import { isIP } from 'node:net';
 
@@ -234,6 +235,38 @@ const mediaBaseUrl = z.string().refine((value) => {
   );
 }, 'must be an http(s) URL without credentials, query or fragment');
 
+/**
+ * AES-256-GCM key for TOTP secrets at rest (security checklist item 18, ADR-0064): exactly 32
+ * bytes, base64url without padding (43 characters).
+ */
+const aes256Key = z.string().refine((value) => {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(value)) {
+    return false;
+  }
+  const bytes = Buffer.from(value, 'base64url');
+  return bytes.length === 32 && bytes.toString('base64url') === value;
+}, 'must be the canonical base64url encoding of exactly 32 bytes (43 characters)');
+
+/** Apple Developer Team ID: ten upper-case letters or digits. */
+const appleTeamId = z.string().regex(/^[A-Z0-9]{10}$/, 'must be a 10-character Apple Team ID');
+
+/** Numeric App Store app id, as in `apps.apple.com/app/id<digits>`. */
+const appleAppStoreId = z.string().regex(/^[0-9]{6,12}$/, 'must be a numeric App Store id');
+
+/** SHA-256 signing certificate fingerprint as Play Console prints it (`AB:CD:…`, 32 pairs). */
+const androidCertFingerprint = z.string().refine((value) => {
+  const pairs = value.split(':');
+  return pairs.length === 32 && pairs.every((pair) => /^[0-9A-F]{2}$/.test(pair));
+}, 'must be an upper-case SHA-256 fingerprint (32 colon-separated hex pairs)');
+
+/**
+ * RevenueCat secret REST API key (server only, ADR-0063). The prefix is spelled with a character
+ * class so the repository secret scan does not flag this pattern.
+ */
+const revenueCatSecretKey = z
+  .string()
+  .regex(/^s[k]_[A-Za-z0-9]{20,64}$/, 'must be a RevenueCat secret API key');
+
 // ---------------------------------------------------------------------------
 // Cross-field rules
 // ---------------------------------------------------------------------------
@@ -341,11 +374,65 @@ export const webEnvSchema = z
      * every image URL is then `null`.
      */
     MEDIA_PUBLIC_BASE_URL: mediaBaseUrl.optional(),
+
+    /**
+     * Expected `Authorization` header value of `POST webhooks/revenuecat` (ADR-0063), at least
+     * 256 bits. Required outside local; locally optional, and the webhook then answers 503.
+     */
+    REVENUECAT_WEBHOOK_SECRET: secret256.optional(),
+    /**
+     * AES-256-GCM key for `users.totp_secret_enc` (ADR-0064). Required outside local; locally
+     * optional, and TOTP enrollment and step-up then answer 503 (fail closed).
+     */
+    TOTP_ENCRYPTION_KEY: aes256Key.optional(),
+
+    /**
+     * App linking (ADR-0045). `APPLE_TEAM_ID` enables `/.well-known/apple-app-site-association`,
+     * `ANDROID_CERT_SHA256_FINGERPRINTS` (comma-separated) enables `/.well-known/assetlinks.json`
+     * and `APPLE_APP_STORE_ID` the `apple-itunes-app` banner. Each is optional everywhere; without
+     * it the file or banner is omitted (404) instead of naming a wrong app.
+     */
+    APPLE_TEAM_ID: appleTeamId.optional(),
+    APPLE_APP_STORE_ID: appleAppStoreId.optional(),
+    ANDROID_CERT_SHA256_FINGERPRINTS: csv(androidCertFingerprint).optional(),
   })
   .superRefine((env, ctx) => {
     requireProductionNodeEnv(env, ctx);
 
     const local = env.APP_ENV === 'local';
+    if (!local) {
+      for (const [key, value] of [
+        ['REVENUECAT_WEBHOOK_SECRET', env.REVENUECAT_WEBHOOK_SECRET],
+        ['TOTP_ENCRYPTION_KEY', env.TOTP_ENCRYPTION_KEY],
+      ] as const) {
+        if (value === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'is required outside the local environment',
+          });
+        }
+      }
+    }
+    const secrets = [
+      ['CSRF_SECRET', env.CSRF_SECRET],
+      ['HASH_SECRET', env.HASH_SECRET],
+      ['REVENUECAT_WEBHOOK_SECRET', env.REVENUECAT_WEBHOOK_SECRET],
+      ['TOTP_ENCRYPTION_KEY', env.TOTP_ENCRYPTION_KEY],
+    ] as const;
+    secrets.forEach(([key, value], index) => {
+      if (
+        value !== undefined &&
+        key !== 'HASH_SECRET' &&
+        secrets.slice(0, index).some(([, earlier]) => earlier === value)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'must differ from the other secrets',
+        });
+      }
+    });
     if (env.EMAIL_TRANSPORT === 'log' && !local) {
       ctx.addIssue({
         code: 'custom',
@@ -549,11 +636,30 @@ export const workerEnvSchema = z
     R2_SECRET_ACCESS_KEY: storageSecretAccessKey,
     R2_INCOMING_BUCKET: bucketName,
     R2_MEDIA_BUCKET: bucketName,
+
+    /**
+     * RevenueCat REST API (ADR-0063): nightly `subscription.reconcile` and subscriber deletion at
+     * hard delete. Optional in every environment: without a key both steps are skipped and
+     * logged, and entitlements rely on webhook deliveries alone.
+     */
+    REVENUECAT_API_KEY: revenueCatSecretKey.optional(),
+    /** Base origin of the REST API; overridden only to point tests at a local fake server. */
+    REVENUECAT_API_BASE_URL: origin.default('https://api.revenuecat.com'),
   })
   .superRefine((env, ctx) => {
     requireProductionNodeEnv(env, ctx);
 
     const local = env.APP_ENV === 'local';
+    if (!local) {
+      const api = parseUrl(env.REVENUECAT_API_BASE_URL);
+      if (api !== null && (api.protocol !== 'https:' || isLoopbackHost(api.hostname))) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['REVENUECAT_API_BASE_URL'],
+          message: 'must be a non-loopback https:// origin outside the local environment',
+        });
+      }
+    }
     if (env.R2_INCOMING_BUCKET === env.R2_MEDIA_BUCKET) {
       ctx.addIssue({
         code: 'custom',

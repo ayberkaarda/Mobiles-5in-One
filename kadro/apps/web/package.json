@@ -9,6 +9,10 @@
     "#auth-warm-up": {
       "edge-light": "./lib/server/auth/warm-up.edge.ts",
       "default": "./lib/server/auth/warm-up.ts"
+    },
+    "#process-handlers": {
+      "edge-light": "./lib/server/process-handlers.edge.ts",
+      "default": "./lib/server/process-handlers.node.ts"
     }
   },
   "scripts": {

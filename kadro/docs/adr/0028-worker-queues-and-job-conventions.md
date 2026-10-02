@@ -53,6 +53,9 @@ ADRs of those phases. Every queue has a dead-letter queue named `<queue>.dead`.
   `singletonKey`, so a duplicate enqueue while the first job is still queued or active is dropped
   by pg-boss. Exception: coalesced notifications (ADR-0031) use a per-object `singletonKey` and an
   `idempotencyKey` that also names the coalescing window, because a receipt outlives the window.
+  Update (ADR-0044): a dropped coalesced enqueue also writes a `push_resends` row in the same
+  transaction, and the `push.send` handler completes a coalesced job itself, inside the transaction
+  that checks that row, so a change made during an active delivery is carried to the next one.
 
 ### Idempotent handlers
 
@@ -140,6 +143,21 @@ rules above make safe. The container stop grace period is 40 s.
 - New tables: `job_receipts` (handoff `decisions-to-db-001`). New package files:
   `packages/contracts/src/jobs.ts`. New web helper: `apps/web/lib/server/jobs.ts`.
 - The worker gains the configuration for Resend, R2 and Expo (handoff `decisions-to-config-001`).
+
+## Process-level handlers
+
+- The worker installs `uncaughtException` and `unhandledRejection` handlers
+  (`apps/worker/src/process-handlers.ts`). They log one `fatal` record (error type, code and
+  sanitized stack frames; never the message), run the graceful stop, then exit with code 1 so the
+  process supervisor restarts the worker. The 5 second limit is a timer, so it holds only while
+  the event loop keeps running; a blocked loop needs the supervisor's own kill timeout. The
+  handler runs once and never throws.
+- Logger calls inside event listeners (pg-boss `error` and `warning`, the web send-only client) go
+  through `safeLog`: a logger that throws synchronously must not become an uncaught exception.
+  Asynchronous transport failures are not covered.
+- The web server installs the same hooks from `instrumentation.ts` on the Node.js runtime only:
+  `uncaughtException` is logged at `fatal` and exits with code 1; `unhandledRejection` is logged at
+  `error` and the server keeps serving.
 
 ## Rejected alternatives
 
