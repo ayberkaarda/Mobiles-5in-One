@@ -19,7 +19,15 @@ const LINK_PATH = 'e-posta-dogrula';
 
 type VerifyState = 'verifying' | 'done' | 'invalid' | 'failed';
 
-function Outcome({ state, error }: { readonly state: VerifyState; readonly error: unknown }) {
+function Outcome({
+  state,
+  error,
+  onRetry,
+}: {
+  readonly state: VerifyState;
+  readonly error: unknown;
+  readonly onRetry?: () => void;
+}) {
   const { t } = useTranslation('auth');
   const theme = useTheme();
   const router = useRouter();
@@ -63,6 +71,14 @@ function Outcome({ state, error }: { readonly state: VerifyState; readonly error
     return (
       <AuthScreen title={t('verify.failedTitle')} testID="verify-failed">
         <FormError error={error} />
+        {onRetry === undefined ? null : (
+          <Button
+            label={t('state.tryAgain')}
+            onPress={onRetry}
+            testID="verify-retry"
+            style={{ marginBottom: theme.spacing['3'] }}
+          />
+        )}
         <Button
           label={signedIn ? t('verify.continueSignedIn') : t('verify.continueSignedOut')}
           variant="secondary"
@@ -87,15 +103,17 @@ function Outcome({ state, error }: { readonly state: VerifyState; readonly error
 function VerifyFlow({ token }: { readonly token: string }) {
   const queryClient = useQueryClient();
   const action = useAsyncAction();
-  const started = useRef(false);
+  const startedAttempt = useRef(-1);
+  // Bumped by the retry button: a transport or server failure did not consume the token.
+  const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<VerifyState>('verifying');
 
-  // One request per mounted flow: the token is single use, so a re-render must not repeat it.
+  // One request per attempt: the token is single use, so a re-render must not repeat it.
   useEffect(() => {
-    if (started.current) {
+    if (startedAttempt.current === attempt) {
       return;
     }
-    started.current = true;
+    startedAttempt.current = attempt;
     void action
       .run(() => authApi.verifyEmail(token))
       .then((ok) => {
@@ -105,13 +123,19 @@ function VerifyFlow({ token }: { readonly token: string }) {
           void queryClient.invalidateQueries({ queryKey: queryKeys.me() });
         }
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per token (the flow is keyed by it)
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per attempt (the flow is keyed by the token)
+  }, [attempt]);
 
   const error = action.error;
   if (error !== null) {
     const rejected = error instanceof ApiError && error.code === 'token_invalid';
-    return <Outcome state={rejected ? 'invalid' : 'failed'} error={error} />;
+    return (
+      <Outcome
+        state={rejected ? 'invalid' : 'failed'}
+        error={error}
+        onRetry={rejected ? undefined : () => setAttempt((current) => current + 1)}
+      />
+    );
   }
   return <Outcome state={state} error={null} />;
 }
