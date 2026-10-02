@@ -102,10 +102,22 @@ client:
   the server, used at once); a Google-only account, or an Apple account on a device without Apple
   sign-in, is sent to the web deletion page, because Google sign-in is not wired (ADR-0049). Staff
   accounts also enter the TOTP code.
-- The request is sent only after a second confirmation. A 401 clears the proof fields and shows
-  the catalog copy; nothing changes locally. On 202 the date is stored in memory, the notice
-  screen opens, then the device signs out without a logout call (the server already revoked every
-  session); the sign-out listeners drop the query caches and the push state.
+- The request is sent only after a second confirmation. A refused proof (`reauth_required`),
+  a missing or wrong TOTP code (`step_up_required`), `last_admin` and `rate_limited` show the
+  screen's own copy (`common:deletion.errors.*`), so the message is specific even without an error
+  catalog; the typed password and code stay in the form; nothing changes locally. Other failures
+  use the error catalog with the request id.
+- On 202 the date is stored in memory, the notice screen opens, then the device signs out without
+  a logout call (the server already revoked every session); the sign-out runs even when opening
+  the notice fails. The sign-out listeners drop the query caches and the push state.
+- A repeat after a lost 202 (timeout, dropped connection) finds the deletion already started:
+  409 `deletion_pending`, or 401 `account_deactivated` (the client's refresh is then refused and
+  the session already ends). Both are handled as a successful request without a date: notice,
+  local sign-out.
+- The notice store also says that a request was made in this run. The entry screen shows the
+  grace explanation while it is set, in case the notice screen does not survive the switch of
+  the route guards; the notice route sends a signed-in visitor without such a request to the
+  profile.
 - The API client no longer refreshes and replays a request whose 401 carries `reauth_required` or
   `step_up_required`: those refuse the proof, not the access token, and a replay would verify the
   same password a second time against rate limit D.
@@ -117,7 +129,7 @@ client:
 - The product spec fixes the i18n namespaces (§8), so the profile, statistics, settings and
   deletion copy lives in `common` (`profile`, `stats`, `profileEdit`, `settings`, `deletion`);
   position and level names are reused from `opencalls`. Failures use the error catalog
-  (ADR-0048).
+  (ADR-0048), except the deletion codes above.
 
 ## Consequences
 
@@ -125,10 +137,15 @@ client:
   existing contract; the 7-day grace and cancel-by-sign-in are explained where the user sees
   them.
 - Known limits, recorded as handoffs: no image picker dependency (photo upload stops at the
-  picker port); `GET me/stats`, `GET districts` and `GET uploads/:id` are in the contracts but
-  not yet served by the web app; no endpoint to delete a pending upload; no global sign-out; no
-  push project id or FCM configuration in the build; no reactivation flag on the sign-in answer;
-  Google re-authentication needs the Google port of ADR-0049.
+  picker port); `GET me/stats` and `GET districts` are in the contracts but not yet served by
+  the web app; no endpoint to delete a pending upload; no global sign-out; no push project id or
+  FCM configuration in the build; no reactivation flag on the sign-in answer; Google
+  re-authentication needs the Google port of ADR-0049.
+- Open item: no way to unregister a push token. After an ordinary sign-out the device token stays
+  bound to the old account on the server (only a deletion removes it), so that account may still
+  get pushes on this device. Needs a contract change: `DELETE me/push-tokens/:token` called before
+  the local sign-out, or a server rule that registering a token re-binds it (already the case for
+  `POST me/push-tokens` from another account) plus a revoke on logout.
 
 ## Rejected alternatives
 
