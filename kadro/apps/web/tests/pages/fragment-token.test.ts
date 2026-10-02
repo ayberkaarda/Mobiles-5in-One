@@ -65,8 +65,8 @@ describe('takeFragmentToken', () => {
     const browser = fakeBrowser('/sifre-sifirla', `#token=${token}`, '?x=1');
     const result = takeFragmentToken(browser.location, browser.history);
     expect(result).toEqual({ kind: 'valid', token });
-    expect(browser.history.replaceState).toHaveBeenCalledTimes(1);
-    expect(browser.history.replaceState).toHaveBeenCalledWith(null, '', '/sifre-sifirla');
+    expect(browser.native.replaceState).toHaveBeenCalledTimes(1);
+    expect(browser.native.replaceState).toHaveBeenCalledWith(null, '', '/sifre-sifirla');
     expect(browser.location.href).toBe('https://kadro.test/sifre-sifirla');
     expect(browser.history.entries.join(' ')).not.toContain(token);
   });
@@ -75,20 +75,20 @@ describe('takeFragmentToken', () => {
     const browser = fakeBrowser('/e-posta-dogrula', '#token=short');
     expect(takeFragmentToken(browser.location, browser.history).kind).toBe('malformed');
     expect(browser.location.hash).toBe('');
-    expect(browser.history.replaceState).toHaveBeenCalledTimes(1);
+    expect(browser.native.replaceState).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a URL without fragment alone', () => {
     const browser = fakeBrowser('/e-posta-dogrula', '');
     expect(takeFragmentToken(browser.location, browser.history).kind).toBe('missing');
-    expect(browser.history.replaceState).not.toHaveBeenCalled();
+    expect(browser.native.replaceState).not.toHaveBeenCalled();
   });
 
   it('never passes the token to replaceState', () => {
     const token = freshToken();
     const browser = fakeBrowser('/sifre-sifirla', `#token=${token}`);
     takeFragmentToken(browser.location, browser.history);
-    expect(JSON.stringify(browser.history.replaceState.mock.calls)).not.toContain(token);
+    expect(JSON.stringify(browser.native.replaceState.mock.calls)).not.toContain(token);
   });
 });
 
@@ -114,7 +114,7 @@ describe('createTokenCapture', () => {
     for (const pathname of ['/', '/giris', '/sss', '/sifre-sifirla/x']) {
       const browser = fakeBrowser(pathname, `#token=${freshToken()}`);
       const capture = createTokenCapture(browser);
-      expect(browser.history.replaceState, pathname).not.toHaveBeenCalled();
+      expect(browser.native.replaceState, pathname).not.toHaveBeenCalled();
       expect(capture.read(pathname)).toEqual({ kind: 'missing' });
     }
   });
@@ -147,6 +147,7 @@ describe('page-wide capture module', () => {
     vi.stubGlobal('window', {
       location: browser.location,
       history: browser.history,
+      addEventListener: browser.addEventListener,
       localStorage: local.storage,
       sessionStorage: session.storage,
       document,
@@ -158,7 +159,7 @@ describe('page-wide capture module', () => {
 
     const capture = await import('../../lib/client/token-capture');
     // Step 2: evaluation alone removed the fragment, before any export is used.
-    expect(browser.history.replaceState).toHaveBeenCalledTimes(1);
+    expect(browser.native.replaceState).toHaveBeenCalledTimes(1);
     expect(browser.location.href).not.toContain(token);
     expect(capture.pageTokenCapture.read('/e-posta-dogrula')).toEqual({ kind: 'valid', token });
 

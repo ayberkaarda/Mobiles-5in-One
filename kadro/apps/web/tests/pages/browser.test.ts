@@ -145,6 +145,39 @@ interface PageSnapshot {
   readonly hasForm: boolean;
 }
 
+async function snapshotOf(cdp: Cdp): Promise<PageSnapshot> {
+  return JSON.parse(await cdp.evaluate<string>(SNAPSHOT)) as PageSnapshot;
+}
+
+interface SentRequest {
+  readonly url: string;
+  readonly postData?: string;
+}
+
+function apiRequests(cdp: Cdp, path = '/api/'): SentRequest[] {
+  return cdp.events
+    .filter((event) => event.method === 'Network.requestWillBeSent')
+    .map((event) => event.params?.request as SentRequest)
+    .filter((request) => request.url.includes(path));
+}
+
+async function historyUrls(cdp: Cdp): Promise<string> {
+  const history = await cdp.send('Page.getNavigationHistory');
+  return ((history.result?.entries ?? []) as { url: string }[]).map((entry) => entry.url).join(' ');
+}
+
+/** Types a valid new password into the reset form and submits it. */
+async function submitNewPassword(cdp: Cdp): Promise<void> {
+  await cdp.evaluate(`(() => {
+    const input = document.getElementById('new-password');
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(input, 'Uzun-ve-yeni-sifre-2026');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('button[type="submit"]').click();
+    return true;
+  })()`);
+}
+
 const SNAPSHOT = `JSON.stringify({
   href: location.href,
   historyLength: history.length,
@@ -343,6 +376,154 @@ describe.skipIf(!ENABLED)(
             String((event.params?.request as { url: string }).url).includes('/api/'),
         );
         expect(posts).toEqual([]);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/sifre-sifirla: a second link opened in the same document replaces the token', async () => {
+      const first = freshToken();
+      const second = freshToken();
+      const cdp = await openPage();
+      try {
+        await cdp.send('Page.navigate', { url: `${base}/sifre-sifirla#token=${first}` });
+        await waitFor(async () => (await snapshotOf(cdp)).hasForm, 'reset form');
+        // Same path, new fragment: a same-document navigation (hashchange), no reload.
+        await cdp.evaluate(
+          `(location.href = ${JSON.stringify(`${base}/sifre-sifirla#token=${second}`)}, true)`,
+        );
+        await delay(500);
+        expect((await snapshotOf(cdp)).href).toBe(`${base}/sifre-sifirla`);
+        expect(await historyUrls(cdp)).not.toContain(second);
+        await submitNewPassword(cdp);
+        await waitFor(
+          () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/reset').length > 0),
+          'reset request',
+        );
+        const [post] = apiRequests(cdp, '/api/v1/auth/reset');
+        expect(post?.postData).toContain(second);
+        expect(post?.postData).not.toContain(first);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/e-posta-dogrula: a second link in the same document is redeemed once', async () => {
+      const first = freshToken();
+      const second = freshToken();
+      const cdp = await openPage();
+      try {
+        await cdp.send('Page.navigate', { url: `${base}/e-posta-dogrula#token=${first}` });
+        await waitFor(
+          async () => !(await snapshotOf(cdp)).text.includes('doğrulanıyor'),
+          'first verification',
+        );
+        await cdp.evaluate(
+          `(location.href = ${JSON.stringify(`${base}/e-posta-dogrula#token=${second}`)}, true)`,
+        );
+        await waitFor(
+          () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/verify-email').length > 1),
+          'second verification',
+        );
+        await delay(500);
+        const posts = apiRequests(cdp, '/api/v1/auth/verify-email');
+        expect(posts.map((post) => post.postData)).toEqual([
+          JSON.stringify({ token: first }),
+          JSON.stringify({ token: second }),
+        ]);
+        expect((await snapshotOf(cdp)).href).toBe(`${base}/e-posta-dogrula`);
+        expect(await historyUrls(cdp)).not.toContain(second);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/sifre-sifirla: a fragment written through the router history stays out of the URL', async () => {
+      const first = freshToken();
+      const routed = freshToken();
+      const cdp = await openPage();
+      try {
+        await cdp.send('Page.navigate', { url: `${base}/sifre-sifirla#token=${first}` });
+        await waitFor(async () => (await snapshotOf(cdp)).hasForm, 'reset form');
+        // pushState goes through the router's history patch, which records the URL as its own.
+        await cdp.evaluate(
+          `(history.pushState(null, '', ${JSON.stringify(`/sifre-sifirla#token=${routed}`)}), true)`,
+        );
+        await delay(1000);
+        expect((await snapshotOf(cdp)).href).toBe(`${base}/sifre-sifirla`);
+        expect(await historyUrls(cdp)).not.toContain(routed);
+        await submitNewPassword(cdp);
+        await waitFor(
+          () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/reset').length > 0),
+          'reset request',
+        );
+        expect(apiRequests(cdp, '/api/v1/auth/reset')[0]?.postData).toContain(routed);
+        expect((await snapshotOf(cdp)).href).toBe(`${base}/sifre-sifirla`);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/sifre-sifirla: after pagehide and a back/forward-cache pageshow the link must be reopened', async () => {
+      const cdp = await openPage();
+      try {
+        await cdp.send('Page.navigate', { url: `${base}/sifre-sifirla#token=${freshToken()}` });
+        await waitFor(async () => (await snapshotOf(cdp)).hasForm, 'reset form');
+        await cdp.evaluate(`(() => {
+          window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+          window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+          return true;
+        })()`);
+        await waitFor(
+          async () => (await snapshotOf(cdp)).text.includes('geçersiz'),
+          'invalid link',
+        );
+        const snapshot = await snapshotOf(cdp);
+        expect(snapshot.hasForm).toBe(false);
+        expect(apiRequests(cdp)).toEqual([]);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/e-posta-dogrula: pagehide cancels the pending verification request', async () => {
+      const cdp = await openPage();
+      try {
+        // Hold the verification request in the browser so it is still pending at pagehide.
+        await cdp.send('Fetch.enable', {
+          patterns: [{ urlPattern: '*/api/v1/auth/verify-email' }],
+        });
+        await cdp.send('Page.navigate', { url: `${base}/e-posta-dogrula#token=${freshToken()}` });
+        await waitFor(
+          () => Promise.resolve(cdp.events.some((event) => event.method === 'Fetch.requestPaused')),
+          'paused verification',
+        );
+        const sent = cdp.events.find(
+          (event) =>
+            event.method === 'Network.requestWillBeSent' &&
+            String((event.params?.request as { url: string }).url).endsWith(
+              '/api/v1/auth/verify-email',
+            ),
+        );
+        await cdp.evaluate(
+          `(window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })), true)`,
+        );
+        await waitFor(
+          () =>
+            Promise.resolve(
+              cdp.events.some(
+                (event) =>
+                  event.method === 'Network.loadingFailed' &&
+                  event.params?.requestId === sent?.params?.requestId &&
+                  event.params?.canceled === true,
+              ),
+            ),
+          'cancelled verification',
+        );
+        await waitFor(
+          async () => (await snapshotOf(cdp)).text.includes('geçersiz'),
+          'invalid link',
+        );
       } finally {
         cdp.close();
       }
