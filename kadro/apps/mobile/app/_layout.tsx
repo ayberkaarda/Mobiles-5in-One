@@ -77,6 +77,9 @@ function RootStack() {
           {/* Open calls: a call opened from the Eksik Var list, and the call of a match (staff). */}
           <Stack.Screen name="ilan/[id]" />
           <Stack.Screen name="ilan/mac/[matchId]" />
+          {/* Venue directory: a venue (`/saha/<slug>`, the app-link path) and the add form. */}
+          <Stack.Screen name="saha/[slug]" />
+          <Stack.Screen name="saha/yeni" />
         </Stack.Protected>
         {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>

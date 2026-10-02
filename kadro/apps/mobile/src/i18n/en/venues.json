@@ -1,0 +1,142 @@
+{
+  "list": {
+    "searchLabel": "Search pitches",
+    "searchHelp": "Type {{min}}-{{max}} characters of the pitch name.",
+    "search": "Search",
+    "districtShow": "Choose district",
+    "districtSet": "District chosen",
+    "districtHint": "Shows or hides the district filter.",
+    "districtAll": "All districts",
+    "add": "Add a pitch",
+    "reset": "Clear filters",
+    "openHint": "Opens the pitch details and reviews.",
+    "emptyTitle": "No pitches yet",
+    "emptyMessage": "Pitches added to the directory are listed here. You can add one you know.",
+    "emptyFilteredTitle": "No pitch matches this search",
+    "emptyFilteredMessage": "Try another name or district, or clear the filters."
+  },
+  "badge": {
+    "sample": "[ÖRNEK] Sample, not a real pitch",
+    "verified": "Verified",
+    "unverified": "Not verified"
+  },
+  "rating": {
+    "none": "No reviews yet",
+    "few": "{{number}} reviews (a rating is shown from {{min}} reviews)",
+    "average": "{{average}} / 5 · {{number}} reviews"
+  },
+  "facts": {
+    "district": "District",
+    "type": "Pitch type",
+    "indoor": "Indoor",
+    "outdoor": "Outdoor",
+    "price": "Price per hour",
+    "priceUnknown": "Not given",
+    "rating": "Rating",
+    "address": "Address",
+    "phone": "Phone",
+    "call": "Call: {{phone}}",
+    "featuresPresent": "Has",
+    "featuresAbsent": "No",
+    "featuresUnknown": "Unknown"
+  },
+  "feature": {
+    "lighting": "Floodlights",
+    "changingRoom": "Changing room",
+    "shower": "Shower",
+    "parking": "Parking"
+  },
+  "detail": {
+    "missingTitle": "Pitch not found",
+    "missingMessage": "This pitch was removed or can no longer be viewed.",
+    "toList": "Back to the pitch list",
+    "retry": "Try again",
+    "sampleNotice": "This is a sample entry, not a real pitch. It is shown so you can try the app.",
+    "unverifiedNotice": "This pitch is not verified yet. Until it is, only you can see it; phone and address become public after verification."
+  },
+  "matchHere": {
+    "title": "Set up a match here",
+    "label": "Set up a match here",
+    "hintTeam": "Opens the new match form for {{team}} at this pitch.",
+    "hintChoose": "Lets you choose the team for the match.",
+    "forTeam": "Set up with {{team}}",
+    "none": "To set up a match you need to be captain or co-captain of a team.",
+    "teamsMissing": "Your teams could not be loaded."
+  },
+  "review": {
+    "mineTitle": "Your review",
+    "othersTitle": "Recent reviews",
+    "othersEmpty": "No other reviews for this pitch.",
+    "partial": "Showing the latest {{shown}} reviews of {{number}}.",
+    "offline": "Reviews need a connection. The pitch details are shown as last saved.",
+    "meMissing": "Your account details could not be loaded.",
+    "mine": "Your review",
+    "eligibility": "You can review this pitch only if you said \"I'm in\" for a played match here.",
+    "unverified": "Verify your email address to write a review.",
+    "ratingLabel": "Your rating",
+    "ratingSpoken": "{{rating}} out of 5",
+    "textLabel": "Your review (optional)",
+    "textHelp": "Up to {{max}} characters, plain text.",
+    "submit": "Send review",
+    "cancel": "Cancel",
+    "rewrite": "Rewrite review",
+    "rewriteHint": "Reviews cannot be edited: your old review is deleted and the new one is sent.",
+    "rewriteNotice": "Reviews cannot be edited. When you send, your old review is deleted and the new one is saved.",
+    "rewriteSubmit": "Delete and send new",
+    "rewriteDeleted": "Your old review was deleted but the new one could not be saved. Your text is below; you can send it again.",
+    "delete": "Delete review",
+    "deleteQuestion": "Delete your review? This cannot be undone.",
+    "deleteConfirm": "Yes, delete"
+  },
+  "add": {
+    "title": "Add a pitch",
+    "unverifiedNotice": "The pitch you add is saved as not verified. Until a moderator verifies it, only you can see it; phone and address become public after verification.",
+    "unverifiedEmail": "Verify your email address to add a pitch.",
+    "name": "Pitch name",
+    "nameHelp": "{{min}}-{{max}} characters.",
+    "districtNone": "No district chosen yet.",
+    "location": "Location (latitude, longitude)",
+    "locationHelp": "Paste the coordinates from a map app, for example 40.98765, 29.02345.",
+    "address": "Address (optional)",
+    "addressHelp": "Up to {{addressMax}} characters.",
+    "phone": "Phone (optional)",
+    "phoneHelp": "{{phoneMin}}-{{phoneMax}} characters: digits and spaces, optionally starting with +.",
+    "priceMin": "Lowest price per hour (TL, optional)",
+    "priceMax": "Highest price per hour (TL, optional)",
+    "priceHelp": "For example 1.500 or 1500,50.",
+    "featuresTitle": "Facilities",
+    "featureChoice": {
+      "yes": "Yes",
+      "no": "No",
+      "unknown": "Don't know"
+    },
+    "submit": "Send pitch"
+  },
+  "validation": {
+    "nameTooShort": "The pitch name needs at least {{min}} characters.",
+    "nameTooLong": "The pitch name can have at most {{max}} characters.",
+    "textInvalid": "Remove invisible or special characters.",
+    "districtRequired": "Choose a district.",
+    "locationInvalid": "Enter the location as latitude and longitude, for example 40.98765, 29.02345.",
+    "addressTooLong": "The address can have at most {{addressMax}} characters.",
+    "phoneInvalid": "Enter the phone number in digits, for example 0216 000 00 00.",
+    "indoorRequired": "Choose whether the pitch is indoor or outdoor.",
+    "priceInvalid": "Enter the price in lira, for example 1.500 or 1500,50.",
+    "priceTooHigh": "This price is too high.",
+    "priceOrder": "The lowest price cannot be above the highest price.",
+    "ratingRequired": "Choose a rating from 1 to 5.",
+    "reviewTooLong": "The review can have at most {{max}} characters.",
+    "reviewInvalid": "Remove invisible or special characters.",
+    "searchTooShort": "Type at least {{min}} characters.",
+    "searchTooLong": "You can type at most {{max}} characters.",
+    "searchInvalid": "Remove invisible or special characters."
+  },
+  "errors": {
+    "review_not_eligible": "To review this pitch you need to have said \"I'm in\" for a played match here.",
+    "already_reviewed": "You already reviewed this pitch. Your review is shown below.",
+    "venue_exists": "A pitch with this name already exists in this district. Try searching for it by name.",
+    "email_unverified": "Verify your email address first.",
+    "rateLimitedVenue": "You reached today's limit for adding pitches. Try again tomorrow.",
+    "rateLimitedReview": "You reached today's limit for reviews. Try again tomorrow."
+  }
+}
