@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 
 import { type Logger } from '../logging';
+import { safeLog } from '../safe-log';
 
 /**
  * Send-only pg-boss client of the web process (ADR-0028). The worker owns the `pgboss` schema,
@@ -54,7 +55,7 @@ export function createSendOnlyClient(options: SendOnlyClientOptions): SendOnlyCl
       max: 2,
     });
     boss.on('error', (error) => {
-      options.logger.error({ err: error }, 'job queue client error');
+      safeLog(() => options.logger.error({ err: error }, 'job queue client error'));
     });
     await boss.start();
     return boss;
