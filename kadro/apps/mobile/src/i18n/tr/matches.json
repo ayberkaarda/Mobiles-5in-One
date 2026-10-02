@@ -1,0 +1,200 @@
+{
+  "nav": {
+    "back": "Geri"
+  },
+  "common": {
+    "cancel": "Vazgeç"
+  },
+  "tab": {
+    "teamMatches": "{{team}} maçları",
+    "teamMatchesHint": "Takımın bütün maçlarını açar.",
+    "openHint": "Maçın ayrıntılarını açar.",
+    "voting": "MVP oylaması açık"
+  },
+  "status": {
+    "draft": "Taslak",
+    "open": "Açık",
+    "locked": "Kilitli",
+    "played": "Oynandı",
+    "cancelled": "İptal edildi"
+  },
+  "team": {
+    "title": "Maçlar",
+    "create": "Maç kur",
+    "locked": "Takım salt okunur olduğu için yeni maç kurulamaz.",
+    "slots": "{{confirmed}}/{{slots}}",
+    "emptyTitle": "Henüz maç yok",
+    "emptyMessage": "Kaptanın maç kurduğunda burada görürsün.",
+    "emptyStaff": "İlk maçı sen kur: saha, gün ve saat yeter.",
+    "missingTitle": "Takım bulunamadı",
+    "missingMessage": "Bu takım silinmiş ya da artık takımda değilsin."
+  },
+  "create": {
+    "title": "Maç kur",
+    "staffOnly": "Maçı yalnızca kaptan ve yardımcı kaptan kurabilir.",
+    "publish": "Kaydet ve yayınla",
+    "draft": "Taslak olarak kaydet"
+  },
+  "edit": {
+    "title": "Maçı düzenle",
+    "notAllowed": "Bu maçı düzenleyemezsin.",
+    "save": "Değişiklikleri kaydet"
+  },
+  "form": {
+    "venue": "Saha",
+    "venueDirectory": "Saha rehberinden",
+    "venueText": "Kendim yazayım",
+    "venueTextLabel": "Saha adı ya da adresi",
+    "venueTextHint": "{{min}}–{{max}} karakter.",
+    "venuePicked": "Seçilen saha: {{venue}}",
+    "venueSearch": "Saha ara",
+    "venueSearchHint": "Sahanın adından birkaç harf yaz.",
+    "venueSearchSubmit": "Ara",
+    "venueNone": "Bu aramayla eşleşen saha yok. Sahayı kendin de yazabilirsin.",
+    "venueSelected": "Seçili",
+    "venuePickHint": "Bu sahayı maç için seçer.",
+    "reference": "Hata kodu",
+    "date": "Gün",
+    "dateHint": "GG.AA.YYYY",
+    "datePlaceholder": "25.10.2026",
+    "time": "Saat",
+    "timeHint": "SS:DD",
+    "timePlaceholder": "21:00",
+    "termsFrozen": "Maç bir kez kilitlendiği için format, kontenjan ve ücret artık değişmez. Gün, saat ve sahayı değiştirebilirsin.",
+    "format": "Format",
+    "slots": "Kontenjan",
+    "slotsHint": "{{slotsMin}}–{{slotsMax}} oyuncu.",
+    "fee": "Toplam saha ücreti (TL)",
+    "feeHint": "Kişi başı pay, gelen oyuncu sayısına göre hesaplanır.",
+    "feePlaceholder": "1.500"
+  },
+  "validation": {
+    "venueRequired": "Rehberden bir saha seç ya da sahayı kendin yaz.",
+    "venueTextTooShort": "Saha en az {{min}} karakter olmalı.",
+    "venueTextTooLong": "Saha en fazla {{max}} karakter olabilir.",
+    "venueTextInvalid": "Saha adında görünmeyen karakter olamaz.",
+    "searchTooShort": "Aramak için en az {{searchMin}} karakter yaz.",
+    "searchTooLong": "Arama en fazla {{searchMax}} karakter olabilir.",
+    "searchInvalid": "Aramada görünmeyen karakter olamaz.",
+    "dateInvalid": "Günü GG.AA.YYYY biçiminde yaz, örneğin 25.10.2026.",
+    "timeInvalid": "Saati SS:DD biçiminde yaz, örneğin 21:00.",
+    "startsInPast": "Maç ileri bir tarihte olmalı.",
+    "slotsInvalid": "Kontenjan {{slotsMin}} ile {{slotsMax}} arasında bir sayı olmalı.",
+    "feeInvalid": "Ücreti TL olarak yaz, örneğin 1.500 ya da 1500,50.",
+    "feeTooHigh": "Bu ücret çok yüksek."
+  },
+  "detail": {
+    "missingTitle": "Maç bulunamadı",
+    "missingMessage": "Bu maç silinmiş ya da artık bu maça erişimin yok.",
+    "status": "Durum",
+    "venue": "Saha",
+    "format": "Format",
+    "squad": "Gelen",
+    "squadValue": "{{confirmed}}/{{slots}}",
+    "waitlist": "Yedek listesi",
+    "fee": "Toplam ücret",
+    "share": "Kişi başı",
+    "myShare": "Senin payın",
+    "lineup": "Kadro dizilişi",
+    "payments": "Ödemeler"
+  },
+  "rsvp": {
+    "title": "Katılımın",
+    "none": "Henüz yanıt vermedin.",
+    "mine": "Yanıtın: {{status}}",
+    "state": {
+      "in": "Geliyorum",
+      "out": "Gelmiyorum",
+      "maybe": "Belki",
+      "waitlist": "Yedek listedeyim"
+    },
+    "choice": {
+      "in": "Geliyorum",
+      "maybe": "Belki",
+      "out": "Gelmiyorum"
+    },
+    "waitlistNotice": "Kadro dolu, yedek listedesin. Biri çıkarsa sırası gelen yedek otomatik olarak kadroya alınır.",
+    "lockedNotice": "Maç kilitlendi. Artık yalnızca \"Gelmiyorum\" diyebilirsin.",
+    "startedNotice": "Maç başladı, yanıt artık değişmez.",
+    "closedNotice": "Bu maça artık yanıt verilemez."
+  },
+  "mvp": {
+    "title": "Maçın oyuncusu",
+    "hint": "Oylama {{date}} tarihinde kapanır. Sonuç oylama bitince görünür.",
+    "candidates": "Maçın oyuncusu adayları",
+    "submit": "Oyumu ver",
+    "question": "Oyunu {{name}} için veriyorsun. Verilen oy sonradan değişmez.",
+    "confirm": "Oyu ver",
+    "voted": "Oyunu {{name}} için verdin. Sonuç oylama bitince görünür.",
+    "notEligible": "Oylamaya yalnızca maçta oynayanlar katılır.",
+    "none": "Bu maçta maçın oyuncusu seçilmedi.",
+    "winners": "Maçın oyuncusu",
+    "unknownPlayer": "Bir oyuncu"
+  },
+  "manage": {
+    "title": "Maçı yönet",
+    "edit": "Maçı düzenle",
+    "publish": "Yayınla",
+    "lock": "Kadroyu kilitle",
+    "reopen": "Kilidi aç",
+    "played": "Oynandı olarak işaretle",
+    "playedQuestion": "Maç oynandı olarak işaretlenecek ve 24 saatlik MVP oylaması başlayacak. Bu geri alınamaz.",
+    "playedConfirm": "Oynandı olarak işaretle",
+    "delete": "Taslağı sil",
+    "deleteQuestion": "Bu taslak silinecek. Emin misin?",
+    "deleteConfirm": "Taslağı sil",
+    "cancel": "Maçı iptal et",
+    "cancelQuestion": "Maç iptal edilecek ve katılımcılara haber verilecek. Bu geri alınamaz.",
+    "cancelConfirm": "Maçı iptal et"
+  },
+  "participants": {
+    "title": "Katılımcılar",
+    "empty": "Henüz kimse yanıt vermedi.",
+    "group": "{{status}} ({{number}})",
+    "status": {
+      "in": "Gelenler",
+      "waitlist": "Yedek listesi",
+      "maybe": "Belki gelenler",
+      "out": "Gelmeyenler"
+    },
+    "you": "{{name}} (sen)"
+  },
+  "lineup": {
+    "title": "Kadro dizilişi",
+    "side": "{{side}} takımı",
+    "sideShort": "{{side}} takımı",
+    "sideCount": "{{side}} takımı: {{number}}/{{capacity}}",
+    "bench": "Yedek",
+    "empty": "Henüz gelen oyuncu yok. Diziliş, gelen oyuncularla kurulur.",
+    "editHint": "Her oyuncu için A, B ya da yedek seç. Kaydet'e basana kadar hiçbir şey gönderilmez.",
+    "assign": "{{name}} için taraf",
+    "assignOption": "{{name}}: {{side}}",
+    "unsaved": "Kaydedilmemiş değişiklik var.",
+    "autoBalance": "Mevkiye göre otomatik dağıt",
+    "save": "Dizilişi kaydet",
+    "sideEmpty": "Bu tarafta oyuncu yok.",
+    "readOnly": "Dizilişi kaptan ve yardımcı kaptan belirler."
+  },
+  "payments": {
+    "title": "Ödemeler",
+    "membersOnly": "Ödeme bilgileri yalnızca takım üyelerine görünür.",
+    "paidCount": "Ödeyen",
+    "paidCountValue": "{{paid}}/{{total}}",
+    "collected": "Toplanan",
+    "noMoney": "Uygulama içinde para el değiştirmez; burada yalnızca kimin payını ödediği işaretlenir.",
+    "notWritable": "Ödemeler kadro kilitlendikten sonra işaretlenir.",
+    "empty": "Henüz gelen oyuncu yok.",
+    "paid": "Ödedi",
+    "unpaid": "Ödemedi",
+    "markPaid": "Ödedi olarak işaretle",
+    "markUnpaid": "Ödemedi olarak işaretle",
+    "markPaidFor": "{{name}} ödedi olarak işaretle",
+    "markUnpaidFor": "{{name}} ödemedi olarak işaretle",
+    "selfByCaptain": "Kendi ödemeni kaptan işaretler.",
+    "collectedAtLeast": "Toplanan (en az)",
+    "uneven": "Ücret oyuncu sayısına tam bölünmüyor: bazı paylar 1 kuruş fazladır. Satırlarda taban pay, senin satırında kesin payın görünür."
+  },
+  "role": {
+    "errorTitle": "Takımdaki rolün yüklenemedi"
+  }
+}

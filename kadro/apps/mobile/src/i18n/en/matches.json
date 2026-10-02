@@ -1,0 +1,200 @@
+{
+  "nav": {
+    "back": "Back"
+  },
+  "common": {
+    "cancel": "Cancel"
+  },
+  "tab": {
+    "teamMatches": "{{team}} matches",
+    "teamMatchesHint": "Opens all matches of the team.",
+    "openHint": "Opens the match details.",
+    "voting": "MVP vote open"
+  },
+  "status": {
+    "draft": "Draft",
+    "open": "Open",
+    "locked": "Locked",
+    "played": "Played",
+    "cancelled": "Cancelled"
+  },
+  "team": {
+    "title": "Matches",
+    "create": "Create match",
+    "locked": "The team is read-only, so no new match can be created.",
+    "slots": "{{confirmed}}/{{slots}}",
+    "emptyTitle": "No matches yet",
+    "emptyMessage": "You will see matches here once your captain creates one.",
+    "emptyStaff": "Create the first match: a pitch, a day and a time are enough.",
+    "missingTitle": "Team not found",
+    "missingMessage": "This team was deleted or you are no longer on it."
+  },
+  "create": {
+    "title": "Create match",
+    "staffOnly": "Only the captain and co-captains can create matches.",
+    "publish": "Save and publish",
+    "draft": "Save as draft"
+  },
+  "edit": {
+    "title": "Edit match",
+    "notAllowed": "You cannot edit this match.",
+    "save": "Save changes"
+  },
+  "form": {
+    "venue": "Pitch",
+    "venueDirectory": "From the pitch guide",
+    "venueText": "Type it myself",
+    "venueTextLabel": "Pitch name or address",
+    "venueTextHint": "{{min}}–{{max}} characters.",
+    "venuePicked": "Selected pitch: {{venue}}",
+    "venueSearch": "Search pitches",
+    "venueSearchHint": "Type a few letters of the pitch name.",
+    "venueSearchSubmit": "Search",
+    "venueNone": "No pitch matches this search. You can also type the pitch yourself.",
+    "venueSelected": "Selected",
+    "venuePickHint": "Selects this pitch for the match.",
+    "reference": "Reference",
+    "date": "Day",
+    "dateHint": "DD.MM.YYYY",
+    "datePlaceholder": "25.10.2026",
+    "time": "Time",
+    "timeHint": "HH:MM",
+    "timePlaceholder": "21:00",
+    "termsFrozen": "The match was locked once, so format, slots and fee no longer change. You can still change the day, time and pitch.",
+    "format": "Format",
+    "slots": "Slots",
+    "slotsHint": "{{slotsMin}}–{{slotsMax}} players.",
+    "fee": "Total pitch fee (TRY)",
+    "feeHint": "Each player's share follows the number of confirmed players.",
+    "feePlaceholder": "1500"
+  },
+  "validation": {
+    "venueRequired": "Pick a pitch from the guide or type it yourself.",
+    "venueTextTooShort": "The pitch needs at least {{min}} characters.",
+    "venueTextTooLong": "The pitch can have at most {{max}} characters.",
+    "venueTextInvalid": "The pitch cannot contain invisible characters.",
+    "searchTooShort": "Type at least {{searchMin}} characters to search.",
+    "searchTooLong": "A search can have at most {{searchMax}} characters.",
+    "searchInvalid": "A search cannot contain invisible characters.",
+    "dateInvalid": "Write the day as DD.MM.YYYY, for example 25.10.2026.",
+    "timeInvalid": "Write the time as HH:MM, for example 21:00.",
+    "startsInPast": "The match must be in the future.",
+    "slotsInvalid": "Slots must be a number from {{slotsMin}} to {{slotsMax}}.",
+    "feeInvalid": "Write the fee in lira, for example 1500 or 1500.50.",
+    "feeTooHigh": "This fee is too high."
+  },
+  "detail": {
+    "missingTitle": "Match not found",
+    "missingMessage": "This match was deleted or you no longer have access to it.",
+    "status": "Status",
+    "venue": "Pitch",
+    "format": "Format",
+    "squad": "Confirmed",
+    "squadValue": "{{confirmed}}/{{slots}}",
+    "waitlist": "Waitlist",
+    "fee": "Total fee",
+    "share": "Per player",
+    "myShare": "Your share",
+    "lineup": "Lineup",
+    "payments": "Payments"
+  },
+  "rsvp": {
+    "title": "Your answer",
+    "none": "You have not answered yet.",
+    "mine": "Your answer: {{status}}",
+    "state": {
+      "in": "I'm in",
+      "out": "I'm out",
+      "maybe": "Maybe",
+      "waitlist": "On the waitlist"
+    },
+    "choice": {
+      "in": "I'm in",
+      "maybe": "Maybe",
+      "out": "I'm out"
+    },
+    "waitlistNotice": "The squad is full, you are on the waitlist. When someone drops out, the next player on the waitlist moves into the squad automatically.",
+    "lockedNotice": "The match is locked. You can only answer \"I'm out\" now.",
+    "startedNotice": "The match has started; your answer no longer changes.",
+    "closedNotice": "This match no longer takes answers."
+  },
+  "mvp": {
+    "title": "Player of the match",
+    "hint": "Voting closes on {{date}}. The result shows once voting ends.",
+    "candidates": "Player of the match candidates",
+    "submit": "Cast my vote",
+    "question": "You are voting for {{name}}. A vote cannot be changed later.",
+    "confirm": "Vote",
+    "voted": "You voted for {{name}}. The result shows once voting ends.",
+    "notEligible": "Only players who played the match can vote.",
+    "none": "No player of the match was chosen.",
+    "winners": "Player of the match",
+    "unknownPlayer": "A player"
+  },
+  "manage": {
+    "title": "Manage match",
+    "edit": "Edit match",
+    "publish": "Publish",
+    "lock": "Lock the squad",
+    "reopen": "Unlock",
+    "played": "Mark as played",
+    "playedQuestion": "The match will be marked as played and the 24-hour MVP vote starts. This cannot be undone.",
+    "playedConfirm": "Mark as played",
+    "delete": "Delete draft",
+    "deleteQuestion": "This draft will be deleted. Are you sure?",
+    "deleteConfirm": "Delete draft",
+    "cancel": "Cancel match",
+    "cancelQuestion": "The match will be cancelled and participants notified. This cannot be undone.",
+    "cancelConfirm": "Cancel match"
+  },
+  "participants": {
+    "title": "Participants",
+    "empty": "Nobody has answered yet.",
+    "group": "{{status}} ({{number}})",
+    "status": {
+      "in": "Confirmed",
+      "waitlist": "Waitlist",
+      "maybe": "Maybe",
+      "out": "Not coming"
+    },
+    "you": "{{name}} (you)"
+  },
+  "lineup": {
+    "title": "Lineup",
+    "side": "Side {{side}}",
+    "sideShort": "Side {{side}}",
+    "sideCount": "Side {{side}}: {{number}}/{{capacity}}",
+    "bench": "Bench",
+    "empty": "No confirmed players yet. The lineup is built from confirmed players.",
+    "editHint": "Pick A, B or bench for each player. Nothing is sent until you press save.",
+    "assign": "Side for {{name}}",
+    "assignOption": "{{name}}: {{side}}",
+    "unsaved": "There are unsaved changes.",
+    "autoBalance": "Auto-balance by position",
+    "save": "Save lineup",
+    "sideEmpty": "No players on this side.",
+    "readOnly": "The captain and co-captains set the lineup."
+  },
+  "payments": {
+    "title": "Payments",
+    "membersOnly": "Payment details are visible to team members only.",
+    "paidCount": "Paid",
+    "paidCountValue": "{{paid}}/{{total}}",
+    "collected": "Collected",
+    "noMoney": "No money moves inside the app; this only marks who has paid their share.",
+    "notWritable": "Payments are marked once the squad is locked.",
+    "empty": "No confirmed players yet.",
+    "paid": "Paid",
+    "unpaid": "Not paid",
+    "markPaid": "Mark as paid",
+    "markUnpaid": "Mark as not paid",
+    "markPaidFor": "Mark {{name}} as paid",
+    "markUnpaidFor": "Mark {{name}} as not paid",
+    "selfByCaptain": "The captain marks your own payment.",
+    "collectedAtLeast": "Collected (at least)",
+    "uneven": "The fee does not split evenly: some shares are 1 kuruş higher. Rows show the base share; your own row shows your exact share."
+  },
+  "role": {
+    "errorTitle": "Your team role could not be loaded"
+  }
+}
