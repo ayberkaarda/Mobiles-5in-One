@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { dehydrate, QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -41,8 +41,20 @@ import {
   MISSING_COUNT_MAX,
   publishBlocker,
 } from '../src/calls/permissions';
-import { applicationsQuery, callKeys, findListedCall, openCallQuery } from '../src/calls/queries';
-import { shouldPersistQuery } from '../src/query/persistence';
+import {
+  applicationsQuery,
+  callKeys,
+  findListedCall,
+  findListedCallForMatch,
+  OPEN_CALL_PRIVATE_ROOT,
+  openCallQuery,
+} from '../src/calls/queries';
+import {
+  createQueryPersister,
+  PERSISTED_QUERY_ROOTS,
+  persistOptions,
+  shouldPersistQuery,
+} from '../src/query/persistence';
 import { createTestApi, issueTokens, problem } from './support/api';
 import { apiUrl, mswServer } from './support/msw';
 
@@ -254,6 +266,14 @@ describe('form rules mirror the contracts', () => {
     }
   });
 
+  it('offers publishing exactly when an expiry can be chosen (one threshold)', () => {
+    for (let minutes = 0; minutes <= 30; minutes += 0.5) {
+      const startsAt = new Date(NOW + minutes * 60 * 1000).toISOString();
+      const blocked = publishBlocker('captain', false, matchFacts({ startsAt }), NOW) === 'tooLate';
+      expect(blocked, `${minutes} min`).toBe(availableExpiries(startsAt, NOW).length === 0);
+    }
+  });
+
   it('checks the missing count against the free places', () => {
     expect(missingIssue(1, 4)).toBeNull();
     expect(missingIssue(4, 4)).toBeNull();
@@ -355,6 +375,15 @@ describe('queries', () => {
     });
     expect(findListedCall(client, CALL_ID)?.missingCount).toBe(1);
     expect(findListedCall(client, 'other')).toBeUndefined();
+    expect(
+      findListedCallForMatch(client, {
+        team: { name: 'Moda Gençlik' },
+        startsAt: '2026-10-06T18:00:00Z',
+      })?.id,
+    ).toBe(CALL_ID);
+    expect(
+      findListedCallForMatch(client, { team: { name: 'Başka' }, startsAt: '2026-10-06T18:00:00Z' }),
+    ).toBeUndefined();
     expect(await client.fetchQuery(openCallQuery(client, CALL_ID))).toMatchObject({
       missingCount: 1,
     });
@@ -390,14 +419,8 @@ describe('queries', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
-  it('keeps every open-call key under a persisted root', () => {
-    for (const key of [
-      callKeys.list(NO_FILTERS),
-      callKeys.call(CALL_ID),
-      callKeys.applications(CALL_ID),
-      callKeys.matchCall(MATCH_ID),
-      callKeys.districts(),
-    ]) {
+  it('persists lists, calls and districts, never applications or the staff view', () => {
+    for (const key of [callKeys.list(NO_FILTERS), callKeys.call(CALL_ID), callKeys.districts()]) {
       expect(
         shouldPersistQuery({
           queryKey: key,
@@ -406,6 +429,33 @@ describe('queries', () => {
         JSON.stringify(key),
       ).toBe(true);
     }
+    expect([...PERSISTED_QUERY_ROOTS]).not.toContain(OPEN_CALL_PRIVATE_ROOT);
+    // What the persister would write: the dehydrated state with the app's persist options.
+    const client = new QueryClient();
+    client.setQueryData(callKeys.list(NO_FILTERS), {
+      pages: [{ items: [publicCall()], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    client.setQueryData(callKeys.applications(CALL_ID), {
+      pages: [
+        {
+          items: [application(OTHER_ID, { message: 'Numaram 0555 000 00 00' })],
+          nextCursor: null,
+          related: true,
+        },
+      ],
+      pageParams: [undefined],
+    });
+    client.setQueryData(callKeys.matchCall(MATCH_ID), { id: CALL_ID, matchId: MATCH_ID });
+    const storage = {
+      getItem: () => Promise.resolve(null),
+      setItem: () => Promise.resolve(),
+      removeItem: () => Promise.resolve(),
+    };
+    const options = persistOptions(createQueryPersister(storage), 'v1:test');
+    const state = dehydrate(client, options.dehydrateOptions);
+    expect(state.queries.map((query) => query.queryKey[0])).toEqual(['open-calls']);
+    expect(JSON.stringify(state)).not.toContain('0555');
   });
 
   it('builds routes outside the district link path', () => {

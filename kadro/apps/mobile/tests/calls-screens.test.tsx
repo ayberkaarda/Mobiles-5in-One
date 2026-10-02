@@ -488,6 +488,58 @@ describe('call detail', () => {
     expect(bodies).toEqual([{ status: 'accepted' }]);
   });
 
+  it('accepting from the call screen refreshes the match and the kept call', async () => {
+    serveMe();
+    serveDistricts();
+    serveMatch();
+    const deniz = application(APP_ID, DENIZ_ID, 'Deniz');
+    const applications = serveApplications(page([deniz]));
+    servePatchApplication(() => {
+      const accepted = { ...deniz, status: 'accepted' as const };
+      applications.set(page([accepted]));
+      return HttpResponse.json(accepted);
+    });
+    const client = clientWithCall();
+    client.setQueryData(callKeys.matchCall(MATCH_ID), storedCall({ missingCount: 1 }));
+    client.setQueryData(['matches', 'detail', MATCH_ID], match());
+    openCall();
+    await render(<CallDetailScreen />, client);
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Deniz adlı oyuncuyu kabul et' }),
+    );
+    await waitFor(() =>
+      expect(client.getQueryData<OpenCall>(callKeys.matchCall(MATCH_ID))).toMatchObject({
+        missingCount: 0,
+        status: 'closed',
+      }),
+    );
+    expect(client.getQueryState(['matches', 'detail', MATCH_ID])?.isInvalidated).toBe(true);
+  });
+
+  it('without a kept call, accepting marks every cached match detail stale', async () => {
+    serveMe();
+    serveDistricts();
+    const deniz = application(APP_ID, DENIZ_ID, 'Deniz');
+    const applications = serveApplications(page([deniz]));
+    servePatchApplication(() => {
+      const accepted = { ...deniz, status: 'accepted' as const };
+      applications.set(page([accepted]));
+      return HttpResponse.json(accepted);
+    });
+    const client = clientWithCall();
+    client.setQueryData(['matches', 'detail', MATCH_ID], match());
+    client.setQueryData(['matches', 'team', TEAM_ID], { items: [], nextCursor: null });
+    openCall();
+    await render(<CallDetailScreen />, client);
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Deniz adlı oyuncuyu kabul et' }),
+    );
+    await waitFor(() =>
+      expect(client.getQueryState(['matches', 'detail', MATCH_ID])?.isInvalidated).toBe(true),
+    );
+    expect(client.getQueryState(['matches', 'team', TEAM_ID])?.isInvalidated).toBe(false);
+  });
+
   it('turns already_participant into the "you are in this team" state', async () => {
     serveMe();
     serveDistricts();
@@ -670,14 +722,70 @@ describe('match call (staff)', () => {
     await render(<MatchCallScreen />);
     await fireEvent.press(await screen.findByRole('button', { name: 'İlanı yayınla' }));
     expect(await screen.findByTestId('call-exists')).toBeTruthy();
-    expect(screen.getByText('Bu maçın açık bir ilanı var.')).toBeTruthy();
+    // The publish form is hidden while a call this device cannot see is live.
+    expect(screen.queryByTestId('publish-form')).toBeNull();
+    expect(screen.getByTestId('publish-hidden')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'İlanı kapat' }));
+    // Closing warns that pending applicants (unseen here) are rejected.
+    expect(screen.getByText(/Burada göremediğin bekleyen başvurular da reddedilecek/)).toBeTruthy();
     await fireEvent.press(lastButton('İlanı kapat'));
     expect(await screen.findByTestId('last-call-status')).toBeTruthy();
     expect(closeBodies).toEqual([{ status: 'closed' }]);
     expect(screen.queryByTestId('call-exists')).toBeNull();
     expect(screen.getByText('Kapandı')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'İlanı yayınla' })).toBeTruthy();
+  });
+
+  it('recognizes a live call from the cached list, hides the form and opens the call', async () => {
+    const value = match();
+    serveMatch(value);
+    serveTeam(team('co_captain'));
+    serveMe();
+    serveDistricts();
+    const bodies = servePublish(() => HttpResponse.json(storedCall(), { status: 201 }));
+    const listed = publicCall({
+      id: CALL_2_ID,
+      teamName: 'Yıldızlar FK',
+      startsAt: value.startsAt,
+    });
+    const client = clientWithCall(listed);
+    openMatchCall();
+    await render(<MatchCallScreen />, client);
+    expect(await screen.findByTestId('call-exists-listed')).toBeTruthy();
+    expect(screen.queryByTestId('publish-form')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'İlanı ve başvuruları aç' }));
+    expect(routerCalls().at(-1)).toEqual({ method: 'push', href: `/ilan/${CALL_2_ID}` });
+    await settle();
+    expect(bodies).toEqual([]);
+  });
+
+  it('treats a kept open call as ended once the match left open: no accept offered', async () => {
+    serveMatch(match({ status: 'locked' }));
+    serveTeam();
+    serveMe();
+    serveDistricts();
+    serveApplications(page([application(APP_ID, DENIZ_ID, 'Deniz')]));
+    const client = createTestQueryClient();
+    client.setQueryData(callKeys.matchCall(MATCH_ID), storedCall());
+    openMatchCall();
+    await render(<MatchCallScreen />, client);
+    expect(await screen.findByTestId('last-call-status')).toBeTruthy();
+    expect(screen.getByText('Kapandı')).toBeTruthy();
+    expect(await screen.findByTestId(`application-${APP_ID}`)).toBeTruthy();
+    expect(screen.queryByText('Yayındaki ilan')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Deniz adlı oyuncuyu kabul et' })).toBeNull();
+  });
+
+  it('shows the form only when an expiry can be chosen', async () => {
+    serveMe();
+    serveDistricts();
+    serveTeam();
+    openMatchCall();
+    // 16 minutes ahead: past the 15-minute minimum but before the earliest selectable end.
+    serveMatch(match({ startsAt: new Date(Date.now() + 16 * 60 * 1000).toISOString() }));
+    await render(<MatchCallScreen />);
+    expect(await screen.findByTestId('publish-blocked')).toBeTruthy();
+    expect(screen.queryByTestId('publish-form')).toBeNull();
   });
 
   it('shows a decision refusal and re-reads the applications', async () => {
