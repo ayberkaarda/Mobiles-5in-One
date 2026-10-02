@@ -11,7 +11,15 @@ import { describe, expect, it } from 'vitest';
  */
 
 const APP_DIR = fileURLToPath(new URL('../../', import.meta.url));
-const ROOTS = ['components/auth', 'lib/client', 'app/(app)'];
+const ROOTS = ['components/auth', 'components/seo', 'lib/client', 'app/(app)'];
+
+/**
+ * The one script element the sources may render: the JSON-LD data block (ADR-0055). A data block
+ * is never executed, its text is React children (no `dangerouslySetInnerHTML`) and the helper
+ * escapes `<`, `>`, `&`, U+2028 and U+2029 (`tests/seo/json-ld.test.ts`).
+ */
+const JSON_LD_FILE = 'components/seo/json-ld.tsx';
+const JSON_LD_SCRIPT = '<script type="application/ld+json"';
 
 /** Code only: block and line comments are removed so prose about a rule does not trip it. */
 function withoutComments(text: string): string {
@@ -69,10 +77,21 @@ describe('page source guards', () => {
 
   it('reads no configuration, injects no HTML and renders no script', () => {
     for (const { path, text } of FILES) {
-      expect(text, path).not.toMatch(
+      const checked = path === JSON_LD_FILE ? text.replace(JSON_LD_SCRIPT, '') : text;
+      expect(checked, path).not.toMatch(
         /process\.env|dangerouslySetInnerHTML|<script\b|next\/script|eval\(/,
       );
     }
+  });
+
+  it('renders only the JSON-LD data block, once, from its helper', () => {
+    const helper = file(JSON_LD_FILE);
+    expect(helper.split(JSON_LD_SCRIPT)).toHaveLength(2);
+    expect(helper).not.toMatch(/__html|innerHTML|outerHTML|insertAdjacentHTML|createElement\(/);
+    const others = FILES.filter(
+      ({ path, text }) => path !== JSON_LD_FILE && text.includes('ld+json'),
+    );
+    expect(others.map(({ path }) => path)).toEqual([]);
   });
 
   it('navigates only to constants (no location writes, router only with the fixed target)', () => {

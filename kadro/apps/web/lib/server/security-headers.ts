@@ -18,6 +18,12 @@ export const PERMISSIONS_POLICY_VALUE = 'camera=(), microphone=(), geolocation=(
 export const NOINDEX_VALUE = 'noindex, nofollow';
 export const NO_STORE_VALUE = 'no-store';
 
+/**
+ * Request header through which the proxy hands the response's CSP nonce to server components
+ * (`components/seo/json-ld.tsx`); it is set on the forwarded request only, never on a response.
+ */
+export const NONCE_HEADER = 'x-nonce';
+
 export interface HeaderEntry {
   readonly key: string;
   readonly value: string;

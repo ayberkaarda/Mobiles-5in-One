@@ -8,6 +8,7 @@ import { newRequestId, REQUEST_ID_HEADER } from './request-context';
 import {
   API_CONTENT_SECURITY_POLICY,
   type HeaderEntry,
+  NONCE_HEADER,
   pageContentSecurityPolicy,
   STATIC_SECURITY_HEADERS,
   surfaceFor,
@@ -32,7 +33,7 @@ import {
 
 export type ProxyEnv = Pick<WebEnv, 'NODE_ENV' | 'APP_ENV' | 'WEB_ORIGIN' | 'CORS_ALLOWED_ORIGINS'>;
 
-export const NONCE_HEADER = 'x-nonce';
+export { NONCE_HEADER };
 
 function applyHeaders(target: Headers, entries: readonly HeaderEntry[]): void {
   for (const { key, value } of entries) {
