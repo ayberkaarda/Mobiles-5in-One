@@ -37,7 +37,9 @@ import {
   appleProof,
   createDeletionNoticeStore,
   DELETION_GRACE_DAYS,
+  isDeletionAlreadyPending,
   needsTotp,
+  NO_DELETION_NOTICE,
   passwordProof,
   proofMethod,
   startDeletion,
@@ -614,7 +616,69 @@ describe('account deletion', () => {
       ),
     ).rejects.toMatchObject({ code: 'reauth_required' });
     expect(signedOut).toBe(false);
-    expect(notice.getState().graceUntil).toBeNull();
+    expect(notice.getState()).toEqual(NO_DELETION_NOTICE);
+  });
+
+  it('signs out even when opening the notice screen throws', async () => {
+    const notice = createDeletionNoticeStore();
+    let signedOut = false;
+    await expect(
+      startDeletion(
+        {
+          profile: { deleteAccount: async () => ({ graceUntil: '2026-10-10T10:00:00.000Z' }) },
+          session: {
+            signOut: async () => {
+              signedOut = true;
+            },
+          },
+          notice,
+          showNotice: () => {
+            throw new Error('navigation failed');
+          },
+        },
+        { password: 'secret' },
+      ),
+    ).rejects.toThrow('navigation failed');
+    expect(signedOut).toBe(true);
+    expect(notice.getState()).toEqual({ pending: true, graceUntil: '2026-10-10T10:00:00.000Z' });
+  });
+
+  it('treats deletion_pending and account_deactivated as an already pending deletion', async () => {
+    for (const refusal of [
+      new ApiError({ kind: 'problem', status: 409, code: 'deletion_pending' }),
+      new ApiError({ kind: 'problem', status: 401, code: 'account_deactivated' }),
+    ]) {
+      const notice = createDeletionNoticeStore();
+      const order: string[] = [];
+      const graceUntil = await startDeletion(
+        {
+          profile: {
+            deleteAccount: async () => {
+              throw refusal;
+            },
+          },
+          session: {
+            signOut: async () => {
+              order.push('signOut');
+            },
+          },
+          notice,
+          showNotice: () => {
+            order.push('notice');
+          },
+        },
+        { password: 'secret' },
+      );
+      expect(graceUntil).toBeNull();
+      expect(order).toEqual(['notice', 'signOut']);
+      expect(notice.getState()).toEqual({ pending: true, graceUntil: null });
+    }
+    expect(
+      isDeletionAlreadyPending(
+        new ApiError({ kind: 'problem', status: 401, code: 'reauth_required' }),
+      ),
+    ).toBe(false);
+    expect(isDeletionAlreadyPending(new ApiError({ kind: 'network' }))).toBe(false);
   });
 });
 

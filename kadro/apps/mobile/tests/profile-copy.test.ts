@@ -86,6 +86,15 @@ describe('profile and settings copy', () => {
         'failed',
       ].map((state) => `settings.pushState.${state}`),
       ...LEGAL_PAGES.map((page) => `settings.legalPage.${page.key}`),
+      ...[
+        'reauth_required',
+        'step_up_required',
+        'deletion_pending',
+        'last_admin',
+        'rate_limited',
+      ].map((code) => `deletion.errors.${code}`),
+      'deletion.doneMessage',
+      'deletion.doneCancel',
     ];
     for (const key of dynamic) {
       expect(tr[key], `tr ${key}`).toBeTypeOf('string');

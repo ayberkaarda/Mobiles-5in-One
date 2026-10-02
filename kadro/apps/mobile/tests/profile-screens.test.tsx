@@ -23,7 +23,11 @@ import { type AvatarPicker } from '../src/profile/avatar-upload';
 import { type MeResponse, type MeStatsResponse } from '../src/profile/contracts';
 import { profileKeys } from '../src/profile/queries';
 import { queryKeys } from '../src/query/keys';
-import { deletionNotice, pushStore } from '../src/settings/instance';
+import WelcomeScreen from '../app/index';
+import { authStore } from '../src/auth-store/store';
+import { NO_DELETION_NOTICE } from '../src/settings/deletion';
+import { pushStore } from '../src/settings/instance';
+import { deletionNotice } from '../src/settings/notice';
 import { type LegalLink } from '../src/settings/legal';
 import { type PushPermission, type PushPort } from '../src/settings/push';
 import { issueTokens, problem } from './support/api';
@@ -33,7 +37,7 @@ import { __scriptApple, appleSignInCalls } from './support/expo-apple-authentica
 import { __resetOpenedURLs, openedURLs } from './support/expo-linking';
 import { routerCalls } from './support/expo-router';
 import { secureStoreContents } from './support/expo-secure-store';
-import { appResources, createTestI18n } from './support/i18n';
+import { createTestI18n } from './support/i18n';
 import { apiUrl, mswServer } from './support/msw';
 import { createTestQueryClient, renderWithProviders } from './support/render';
 
@@ -67,7 +71,6 @@ vi.mock('../src/profile/instance', async () => {
 // Settings wiring without the native push module and the build-time web origin.
 vi.mock('../src/settings/instance', async () => {
   const { createPushStore } = await import('../src/settings/push');
-  const { createDeletionNoticeStore } = await import('../src/settings/deletion');
   return {
     get appLegalLinks() {
       return holder.legal;
@@ -76,7 +79,6 @@ vi.mock('../src/settings/instance', async () => {
       return holder.push;
     },
     pushStore: createPushStore(),
-    deletionNotice: createDeletionNoticeStore(),
   };
 });
 
@@ -87,23 +89,11 @@ const UPLOAD_ID = '0192a0b0-0000-7000-8000-0000000000a9';
 const STORAGE_URL = 'https://incoming.storage.test.invalid/avatar/object?signature=abc';
 const GRACE_UNTIL = '2026-10-10T10:00:00.000Z';
 
-const ERROR_CATALOG = {
-  reauth_required: 'Şifren doğrulanamadı.',
-  step_up_required: 'Doğrulama kodu gerekli.',
-  validation_failed: 'Bazı bilgiler geçersiz.',
-  deletion_pending: 'Silme isteğin zaten alındı.',
-  network_error: 'Bağlantı kurulamadı.',
-  server_error: 'Sunucuda bir sorun oluştu.',
-  unknown: 'Bir sorun oluştu.',
-};
-
-function i18nWithCatalog() {
-  const resources = appResources();
-  return createTestI18n('tr', { ...resources, tr: { ...resources.tr, errors: ERROR_CATALOG } });
-}
+/** Only the shipped copy: there is no error catalog file on this branch (generic fallback). */
+const GENERIC_ERROR = 'Beklenmeyen bir hata oluştu. Biraz sonra tekrar dene.';
 
 function render(ui: ReactElement, queryClient: QueryClient = createTestQueryClient()) {
-  return renderWithProviders(ui, { i18n: i18nWithCatalog(), queryClient });
+  return renderWithProviders(ui, { i18n: createTestI18n(), queryClient });
 }
 
 function me(overrides: Partial<MeResponse> = {}): MeResponse {
@@ -225,7 +215,8 @@ beforeEach(async () => {
   holder.legal = [];
   holder.push = fakePush('undetermined');
   pushStore.setState({ registered: false });
-  deletionNotice.setState({ graceUntil: null });
+  deletionNotice.setState(NO_DELETION_NOTICE);
+  authStore.setState({ status: 'unknown' });
   __resetOpenedURLs();
   __scriptApple({ available: true, outcome: { kind: 'cancel' } });
   await session.establish(issueTokens());
@@ -244,7 +235,7 @@ describe('profile tab', () => {
     await render(<ProfileTab />);
     expect(screen.getByTestId('profile-loading')).toBeTruthy();
     expect(await screen.findByTestId('profile-error')).toBeTruthy();
-    expect(screen.getByText('Sunucuda bir sorun oluştu.')).toBeTruthy();
+    expect(screen.getByText(GENERIC_ERROR)).toBeTruthy();
     expect(screen.getByText(/req-me-1/)).toBeTruthy();
     // Settings (sign-out, deletion) stay reachable while the profile cannot be loaded.
     expect(screen.getByTestId('profile-settings')).toBeTruthy();
@@ -380,7 +371,7 @@ describe('edit profile', () => {
     await fireEvent.changeText(await screen.findByLabelText('Görünen ad'), 'Ali Yeni');
     await fireEvent.press(screen.getByRole('button', { name: 'Kaydet' }));
     expect(await screen.findByText('Bu değer kabul edilmedi.')).toBeTruthy();
-    expect(screen.getByText('Bazı bilgiler geçersiz.')).toBeTruthy();
+    expect(screen.getByText(GENERIC_ERROR)).toBeTruthy();
     expect(screen.getByText(/req-patch-1/)).toBeTruthy();
     expect(routerCalls()).toEqual([]);
   });
@@ -465,7 +456,7 @@ describe('edit profile', () => {
 
 describe('settings', () => {
   it('switches the language at once and remembers it on the device', async () => {
-    const i18n = i18nWithCatalog();
+    const i18n = createTestI18n();
     await renderWithProviders(<SettingsScreen />, { i18n });
     await fireEvent.press(screen.getByRole('radio', { name: 'English' }));
     expect(await screen.findByText('Settings')).toBeTruthy();
@@ -518,7 +509,7 @@ describe('settings', () => {
     await render(<SettingsScreen />);
     expect(await screen.findByTestId('push-granted')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Bu cihazı kaydet' }));
-    expect(await screen.findByText('Sunucuda bir sorun oluştu.')).toBeTruthy();
+    expect(await screen.findByText(GENERIC_ERROR)).toBeTruthy();
     expect(pushStore.getState().registered).toBe(false);
     expect(screen.getByTestId('push-enable')).toBeTruthy();
   });
@@ -593,7 +584,7 @@ describe('account deletion', () => {
       await waitFor(() => expect(session.hasSession()).toBe(false));
       expect(bodies).toEqual([{ password: 'my-current-password' }]);
       expect(deleteAccountRequestSchema.safeParse(bodies[0]).success).toBe(true);
-      expect(deletionNotice.getState().graceUntil).toBe(GRACE_UNTIL);
+      expect(deletionNotice.getState()).toEqual({ pending: true, graceUntil: GRACE_UNTIL });
       expect(routerCalls()).toEqual([{ method: 'replace', href: '/ayarlar/hesap-silindi' }]);
       // The server already revoked every session: no logout call, tokens and caches gone.
       expect(logouts()).toBe(0);
@@ -604,7 +595,7 @@ describe('account deletion', () => {
     }
   });
 
-  it('keeps the session and clears the password when the server refuses it, without a refresh', async () => {
+  it('keeps the session and the typed password and says the password was refused, without a refresh', async () => {
     serveMe();
     const refreshes = countRefresh();
     const bodies = serveDelete(() => problem(401, 'reauth_required', 'req-del-1'));
@@ -613,13 +604,18 @@ describe('account deletion', () => {
     await fireEvent.changeText(screen.getByLabelText('Şifren'), 'wrong-password');
     await fireEvent.press(screen.getByRole('button', { name: 'Hesabımı sil' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Evet, hesabımı sil' }));
-    expect(await screen.findByText('Şifren doğrulanamadı.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Şifren ya da kimlik doğrulaman kabul edilmedi. Kontrol edip tekrar dene.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(GENERIC_ERROR)).toBeNull();
     expect(screen.getByText(/req-del-1/)).toBeTruthy();
     expect(bodies).toHaveLength(1);
     expect(refreshes()).toBe(0);
     expect(session.hasSession()).toBe(true);
-    expect(screen.getByLabelText('Şifren').props.value).toBe('');
-    expect(deletionNotice.getState().graceUntil).toBeNull();
+    expect(screen.getByLabelText('Şifren').props.value).toBe('wrong-password');
+    expect(deletionNotice.getState()).toEqual(NO_DELETION_NOTICE);
     expect(routerCalls()).toEqual([]);
   });
 
@@ -738,6 +734,66 @@ describe('account deletion', () => {
     expect(bodies).toEqual([]);
   });
 
+  it('shows specific copy for a missing TOTP code, the last admin and too many attempts', async () => {
+    serveMe(me({ role: 'admin' }));
+    const answers = [
+      problem(401, 'step_up_required', 'req-a'),
+      problem(409, 'last_admin', 'req-b'),
+      problem(429, 'rate_limited', 'req-c'),
+    ];
+    serveDelete(() => answers.shift() ?? problem(500, 'server_error'));
+    await render(<DeleteAccountScreen />);
+    await reachProof();
+    await fireEvent.changeText(screen.getByLabelText('Şifren'), 'my-current-password');
+    await fireEvent.changeText(screen.getByLabelText('Doğrulama kodu'), '123456');
+    const expected = [
+      'Doğrulama kodu eksik ya da hatalı. Uygulamandaki güncel kodu gir.',
+      'Son yönetici hesabı silinemez. Önce başka bir yönetici ata.',
+      'Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.',
+    ];
+    for (const message of expected) {
+      await fireEvent.press(screen.getByRole('button', { name: 'Hesabımı sil' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Evet, hesabımı sil' }));
+      expect(await screen.findByText(message)).toBeTruthy();
+    }
+    expect(screen.getByLabelText('Doğrulama kodu').props.value).toBe('123456');
+    expect(session.hasSession()).toBe(true);
+  });
+
+  it('treats a repeat after a lost answer (deletion_pending) as a pending deletion', async () => {
+    serveMe();
+    const logouts = countLogout();
+    serveDelete(() => problem(409, 'deletion_pending'));
+    await render(<DeleteAccountScreen />);
+    await reachProof();
+    await fireEvent.changeText(screen.getByLabelText('Şifren'), 'my-current-password');
+    await fireEvent.press(screen.getByRole('button', { name: 'Hesabımı sil' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Evet, hesabımı sil' }));
+    await waitFor(() => expect(session.hasSession()).toBe(false));
+    expect(deletionNotice.getState()).toEqual({ pending: true, graceUntil: null });
+    expect(routerCalls()).toEqual([{ method: 'replace', href: '/ayarlar/hesap-silindi' }]);
+    expect(logouts()).toBe(0);
+    expect(secureStoreContents().size).toBe(0);
+  });
+
+  it('treats account_deactivated on the repeat as a pending deletion too', async () => {
+    serveMe();
+    const refreshes = countRefresh();
+    serveDelete(() => problem(401, 'account_deactivated'));
+    await render(<DeleteAccountScreen />);
+    await reachProof();
+    await fireEvent.changeText(screen.getByLabelText('Şifren'), 'my-current-password');
+    await fireEvent.press(screen.getByRole('button', { name: 'Hesabımı sil' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Evet, hesabımı sil' }));
+    await waitFor(() =>
+      expect(deletionNotice.getState()).toEqual({ pending: true, graceUntil: null }),
+    );
+    expect(routerCalls()).toEqual([{ method: 'replace', href: '/ayarlar/hesap-silindi' }]);
+    expect(session.hasSession()).toBe(false);
+    // The client tried one refresh for the rejected token, which the server refused.
+    expect(refreshes()).toBe(1);
+  });
+
   it('offers a retry, not the form, when the profile cannot be loaded', async () => {
     mswServer.use(http.get(apiUrl('/api/v1/me'), () => problem(500, 'server_error', 'req-me-9')));
     await render(<DeleteAccountScreen />);
@@ -749,7 +805,7 @@ describe('account deletion', () => {
 
 describe('after the deletion request', () => {
   it('shows the end of the grace period and how to cancel, then goes to the entry screen', async () => {
-    deletionNotice.setState({ graceUntil: GRACE_UNTIL });
+    deletionNotice.setState({ pending: true, graceUntil: GRACE_UNTIL });
     await render(<DeletionNoticeScreen />);
     expect(screen.getByText(/tarihinde kalıcı olarak silinecek/)).toBeTruthy();
     expect(
@@ -759,11 +815,39 @@ describe('after the deletion request', () => {
     ).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Giriş ekranına dön' }));
     expect(routerCalls()).toEqual([{ method: 'replace', href: '/' }]);
-    expect(deletionNotice.getState().graceUntil).toBeNull();
+    expect(deletionNotice.getState()).toEqual(NO_DELETION_NOTICE);
   });
 
   it('explains the grace period without a date after a cold start', async () => {
     await render(<DeletionNoticeScreen />);
+    expect(
+      screen.getByText('Silme isteğini aldık. Hesabın 7 gün sonra kalıcı olarak silinecek.'),
+    ).toBeTruthy();
+  });
+
+  it('sends a signed-in visitor without a request on this device to the profile', async () => {
+    authStore.setState({ status: 'signedIn' });
+    await render(<DeletionNoticeScreen />);
+    expect(screen.getByTestId('deletion-done-stray')).toBeTruthy();
+    expect(screen.queryByText('Hesabın kapatıldı')).toBeNull();
+    await waitFor(() => expect(routerCalls()).toEqual([{ method: 'replace', href: '/profil' }]));
+  });
+
+  it('keeps explaining a request made on this device while still signed in', async () => {
+    authStore.setState({ status: 'signedIn' });
+    deletionNotice.setState({ pending: true, graceUntil: null });
+    await render(<DeletionNoticeScreen />);
+    expect(screen.getByText('Hesabın kapatıldı')).toBeTruthy();
+    expect(routerCalls()).toEqual([]);
+  });
+
+  it('shows the grace explanation on the entry screen when the notice screen did not survive', async () => {
+    const first = await render(<WelcomeScreen />);
+    expect(screen.queryByTestId('welcome-deletion-pending')).toBeNull();
+    await first.unmount();
+    deletionNotice.setState({ pending: true, graceUntil: null });
+    await render(<WelcomeScreen />);
+    expect(screen.getByTestId('welcome-deletion-pending')).toBeTruthy();
     expect(
       screen.getByText('Silme isteğini aldık. Hesabın 7 gün sonra kalıcı olarak silinecek.'),
     ).toBeTruthy();
