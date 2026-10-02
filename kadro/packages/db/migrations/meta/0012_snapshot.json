@@ -2728,11 +2728,11 @@
           "method": "btree",
           "with": {}
         },
-        "push_resends_requested_at_idx": {
-          "name": "push_resends_requested_at_idx",
+        "push_resends_updated_at_idx": {
+          "name": "push_resends_updated_at_idx",
           "columns": [
             {
-              "expression": "requested_at",
+              "expression": "updated_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

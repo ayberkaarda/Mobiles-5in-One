@@ -3,12 +3,13 @@ import {
   deletionRequests,
   emailTokens,
   jobReceipts,
+  lockPushResend,
   pushResends,
   pushTokens,
   rateLimitBuckets,
   refreshTokens,
 } from '@kadro/db';
-import { type SQL, and, asc, inArray, isNull, lt, or } from 'drizzle-orm';
+import { type SQL, and, asc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { type PgColumn, type PgTable } from 'drizzle-orm/pg-core';
 import { type PgBoss } from 'pg-boss';
 
@@ -29,8 +30,9 @@ export const RETENTION = {
   rateLimitWindowsMs: 2 * DAY_MS,
   jobReceiptsMs: 30 * DAY_MS,
   /**
-   * Pending push re-sends (ADR-0044). A row lives until the job holding its key completes, minutes
-   * later; one this old was left by a dead-lettered job, and its push would be stale (6 h) anyway.
+   * Pending push re-sends (ADR-0044), by last change. A row lives until the job holding its key
+   * completes, minutes later; one untouched this long was left by a dead-lettered job, and its push
+   * would be stale (6 h) anyway.
    */
   pushResendsMs: DAY_MS,
   /** Push tokens whose app has not checked in (ADR-0031). */
@@ -80,6 +82,37 @@ async function deleteInBatches(
   return total;
 }
 
+/**
+ * Deletes pending push re-sends not touched since `cutoff` (ADR-0044). Each row is re-checked under
+ * its key's lock, the one the web producer holds while it records a change: a leftover row that a
+ * new change refreshed, or is refreshing, belongs to a live window and stays.
+ */
+async function sweepPushResends(db: Database, cutoff: Date): Promise<number> {
+  let total = 0;
+  for (let round = 0; round < MAX_ROUNDS; round += 1) {
+    const candidates = await db
+      .select({ id: pushResends.id, singletonKey: pushResends.singletonKey })
+      .from(pushResends)
+      .where(lt(pushResends.updatedAt, cutoff))
+      .orderBy(asc(pushResends.updatedAt))
+      .limit(SWEEP_BATCH);
+    for (const candidate of candidates) {
+      total += await db.transaction(async (tx) => {
+        await lockPushResend(tx, candidate.singletonKey);
+        const deleted = await tx
+          .delete(pushResends)
+          .where(and(eq(pushResends.id, candidate.id), lt(pushResends.updatedAt, cutoff)))
+          .returning({ id: pushResends.id });
+        return deleted.length;
+      });
+    }
+    if (candidates.length < SWEEP_BATCH) {
+      break;
+    }
+  }
+  return total;
+}
+
 /** `account.hard_delete` key, identical to the one the web app uses (ADR-0032). */
 export function hardDeleteIdempotencyKey(deletionRequestId: string): string {
   return `delete:${deletionRequestId}`;
@@ -121,12 +154,7 @@ export async function sweep(dependencies: SweepDependencies): Promise<SweepResul
     jobReceipts.id,
     lt(jobReceipts.createdAt, before(RETENTION.jobReceiptsMs)),
   );
-  const resendRows = await deleteInBatches(
-    db,
-    pushResends,
-    pushResends.id,
-    lt(pushResends.requestedAt, before(RETENTION.pushResendsMs)),
-  );
+  const resendRows = await sweepPushResends(db, before(RETENTION.pushResendsMs));
   const pushTokenRows = await deleteInBatches(
     db,
     pushTokens,

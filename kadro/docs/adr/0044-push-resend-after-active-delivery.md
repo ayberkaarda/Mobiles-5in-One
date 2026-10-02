@@ -43,8 +43,8 @@ the state read becomes the next window's job.
   before its state read is deleted without a follow-up.
 - Accumulation: one row per key at most (unique key, `version` counts changes). Rows live until
   the job holding the key completes. A job that dead-letters leaves its row; the next window's job
-  clears it, and the maintenance sweep deletes rows older than a day (a push that old is stale
-  under the 6-hour rule anyway).
+  clears it, and the maintenance sweep deletes rows not changed for a day (a push that old is
+  stale under the 6-hour rule anyway).
 - Transaction boundary: the row is written in the domain transaction with the enqueue; the
   worker's completion, row check and follow-up enqueue commit together. One new table and one
   migration.
@@ -85,7 +85,7 @@ Option (a).
 `id` uuid v7, `singleton_key` text unique (1–128), `type` text in (`rsvp.changed`,
 `application.received`), `user_id` uuid, `ref_id` uuid, `requested_at` timestamptz (first dropped
 change since the row was cleared), `version` integer ≥ 1, `created_at`, `updated_at`; index on
-`requested_at`. No foreign keys: the columns mirror a job payload, which has none either; rows are
+`updated_at`. No foreign keys: the columns mirror a job payload, which has none either; rows are
 short-lived and swept. Grants: `kadro_app` SELECT, INSERT, UPDATE (insert or bump); `kadro_worker`
 SELECT, DELETE. The migration only creates; reverting it is dropping the table, which no
 migration does automatically.
@@ -145,8 +145,10 @@ nothing (its completion is fenced to the attempt and only touches `active` jobs)
   would need a state version the domain does not keep.
 - Every dropped repeat costs one upsert and an advisory lock in the domain transaction.
 - `JobContext` gains `singletonKey`; the worker's `enqueue` accepts a coalescing key.
-- The maintenance sweep reports `pushResends` and deletes rows whose `requested_at` is more than
-  a day old.
+- The maintenance sweep reports `pushResends` and deletes rows whose `updated_at` is more than a
+  day old, each under its key's lock and re-checked there. Not `requested_at`: a new change on a
+  row a dead-lettered job left keeps the old `requested_at`, and sweeping by it would delete the
+  live window's record; the lock keeps a change that is still committing.
 - Tests: `apps/worker/test/push.test.ts` holds the Expo request after the state read (a barrier,
   not a delay) and commits the change there, for both types; it failed before this change (no
   follow-up job) and covers the queued window, the exact 10-minute boundary, two concurrent

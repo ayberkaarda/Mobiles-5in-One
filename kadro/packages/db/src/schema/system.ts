@@ -179,7 +179,7 @@ export const pushResends = pgTable(
   },
   (t) => [
     uniqueIndex('push_resends_singleton_key_key').on(t.singletonKey),
-    index('push_resends_requested_at_idx').on(t.requestedAt),
+    index('push_resends_updated_at_idx').on(t.updatedAt),
     check(
       'push_resends_singleton_key_length',
       sql`char_length(${t.singletonKey}) between 1 and 128`,
