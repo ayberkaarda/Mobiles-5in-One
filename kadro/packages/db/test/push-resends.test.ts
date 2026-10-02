@@ -8,11 +8,14 @@ import {
   lockPushResend,
   recordPushResend,
   recordPushResendForRecipient,
+  LOCK_TIMEOUT_MS,
+  setLockTimeout,
 } from '../src/push-resends.js';
 import { newId, pushResends, users } from '../src/schema/index.js';
 import {
   PG_CHECK_VIOLATION,
   PG_INSUFFICIENT_PRIVILEGE,
+  PG_LOCK_NOT_AVAILABLE,
   PG_UNIQUE_VIOLATION,
   type TestDatabase,
   createMigratedDatabase,
@@ -298,5 +301,112 @@ describe('recordPushResendForRecipient', () => {
     await deleting;
     expect(await rowOf(pending.singletonKey)).toBeUndefined();
     expect(await asRole('kadro_app', (tx) => recordPushResendForRecipient(tx, pending))).toBe(true);
+  });
+
+  describe('lock timeout (SQLSTATE 55P03)', () => {
+    const TIMEOUT_MS = 300;
+
+    /** Holds `hold` open in its own transaction until the returned `release` is called. */
+    async function holding(hold: (tx: Transaction) => Promise<void>) {
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let ready: () => void = () => undefined;
+      let failed: (error: unknown) => void = () => undefined;
+      const isReady = new Promise<void>((resolve, reject) => {
+        ready = resolve;
+        failed = reject;
+      });
+      const holder = db.transaction(async (tx) => {
+        try {
+          await hold(tx);
+        } catch (error) {
+          failed(error);
+          throw error;
+        }
+        ready();
+        await gate;
+      });
+      // Avoid an unhandled rejection when `hold` fails; the failure surfaces through `isReady`.
+      holder.catch(() => undefined);
+      await isReady;
+      return { release, done: holder };
+    }
+
+    it('uses a short default bound', () => {
+      expect(LOCK_TIMEOUT_MS).toBeGreaterThan(0);
+      expect(LOCK_TIMEOUT_MS).toBeLessThanOrEqual(10_000);
+    });
+
+    it('fails a blocked advisory lock after the timeout instead of waiting', async () => {
+      const key = `rsvp:${newId()}:${newId()}`;
+      const blocker = await holding((tx) => lockPushResend(tx, key));
+      try {
+        const started = Date.now();
+        await expectPgError(
+          db.transaction(async (tx) => {
+            await setLockTimeout(tx, TIMEOUT_MS);
+            await lockPushResend(tx, key);
+          }),
+          PG_LOCK_NOT_AVAILABLE,
+        );
+        const waited = Date.now() - started;
+        expect(waited).toBeGreaterThanOrEqual(TIMEOUT_MS - 50);
+        expect(waited).toBeLessThan(TIMEOUT_MS + 3_000);
+      } finally {
+        blocker.release();
+      }
+      await blocker.done;
+    });
+
+    it('fails a blocked deletion recipient lock and a blocked row lock the same way', async () => {
+      const userId = await newUser();
+      const producer = await holding(async (tx) => {
+        expect(await recordPushResendForRecipient(tx, { ...request(), userId })).toBe(true);
+      });
+      try {
+        await expectPgError(
+          db.transaction(async (tx) => {
+            await setLockTimeout(tx, TIMEOUT_MS);
+            await lockPushRecipientForDeletion(tx, userId);
+          }),
+          PG_LOCK_NOT_AVAILABLE,
+        );
+      } finally {
+        producer.release();
+      }
+      await producer.done;
+
+      const key = `rsvp:${newId()}:${newId()}`;
+      await recordPushResend(db, { ...request(key), userId });
+      const rowHolder = await holding(async (tx) => {
+        await tx.select().from(pushResends).where(eq(pushResends.singletonKey, key)).for('update');
+      });
+      try {
+        await expectPgError(
+          db.transaction(async (tx) => {
+            await setLockTimeout(tx, TIMEOUT_MS);
+            await tx.delete(pushResends).where(eq(pushResends.singletonKey, key));
+          }),
+          PG_LOCK_NOT_AVAILABLE,
+        );
+      } finally {
+        rowHolder.release();
+      }
+      await rowHolder.done;
+      expect(await rowOf(key)).toBeDefined();
+    });
+
+    it('is transaction-local and lets an uncontended transaction proceed', async () => {
+      await db.transaction(async (tx) => {
+        await setLockTimeout(tx, TIMEOUT_MS);
+        const shown = await tx.execute<{ lock_timeout: string }>(sql`show lock_timeout`);
+        expect(shown.rows[0]?.lock_timeout).toBe('300ms');
+        await lockPushResend(tx, `rsvp:${newId()}:${newId()}`);
+      });
+      const after = await db.execute<{ lock_timeout: string }>(sql`show lock_timeout`);
+      expect(after.rows[0]?.lock_timeout).not.toBe('300ms');
+    });
   });
 });

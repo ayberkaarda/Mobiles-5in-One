@@ -82,6 +82,9 @@ Preconditions, checked under a lock on the deletion request: request exists, `co
    delete the user's pending push re-sends (`push_resends`, no foreign key to cascade). The
    transaction takes the user's push-recipient advisory lock before any other lock so that no
    producer records a new one for the user concurrently.
+   Update (lock timeout): the transaction sets `lock_timeout` (5 s) as its first statement, so a lock
+   held too long by another transaction fails the attempt with `55P03` and the job retries instead of
+   hanging the worker.
 7. Delete the `users` row. Cascades remove `refresh_tokens`, `email_tokens`, `push_tokens`,
    `subscriptions`, `uploads`; `audit_logs.actor_id` and `deletion_requests.user_id` become `NULL`.
 8. Set `deletion_requests.completed_at = now()`; write audit `account.deleted`, actor `NULL`,

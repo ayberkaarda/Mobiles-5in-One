@@ -22,13 +22,17 @@ import {
   venues,
 } from '@kadro/db';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import pino from 'pino';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { TOMBSTONE_DISPLAY_NAME } from '../src/accounts/hard-delete.js';
+import { TOMBSTONE_DISPLAY_NAME, createHardDeleteHandler } from '../src/accounts/hard-delete.js';
 import { DAY_MS, HOUR_MS } from '../src/clock.js';
 import { sha256Hex } from '../src/email/tokens.js';
 import { bossExecutor, enqueue } from '../src/enqueue.js';
-import { hardDeleteIdempotencyKey } from '../src/maintenance/sweep.js';
+import { type JobContext, runJob } from '../src/job-runner.js';
+import { hardDeleteIdempotencyKey, sweepPushResends } from '../src/maintenance/sweep.js';
+import { settleCoalesced } from '../src/push/resend.js';
+import { QUEUE_DEFINITIONS } from '../src/queues.js';
 import {
   type FakeProvider,
   Fixtures,
@@ -788,5 +792,193 @@ describe('account.hard_delete and a concurrent coalesced push producer (ADR-0044
     );
     expect(job.output).toEqual({ outcome: 'deleted' });
     expect(await tracesOf(target.victimId)).toEqual([]);
+  });
+});
+
+describe('lock timeout on blocked locks (SQLSTATE 55P03)', () => {
+  const TIMEOUT_MS = 300;
+  const PG_LOCK_NOT_AVAILABLE = '55P03';
+
+  /** Holds a transaction open (after `hold` ran) until `release` is called. */
+  async function holding(hold: (tx: Transaction) => Promise<void>) {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let ready: () => void = () => undefined;
+    let failed: (error: unknown) => void = () => undefined;
+    const isReady = new Promise<void>((resolve, reject) => {
+      ready = resolve;
+      failed = reject;
+    });
+    const done = db().transaction(async (tx) => {
+      try {
+        await hold(tx);
+      } catch (error) {
+        failed(error);
+        throw error;
+      }
+      ready();
+      await gate;
+    });
+    // Avoid an unhandled rejection when `hold` fails; the failure surfaces through `isReady`.
+    done.catch(() => undefined);
+    await isReady;
+    return { release, done };
+  }
+
+  function sqlStateOf(error: unknown): unknown {
+    let current: unknown = error;
+    for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+      const code = (current as { code?: unknown }).code;
+      if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) {
+        return code;
+      }
+      current = current.cause;
+    }
+    return undefined;
+  }
+
+  const logger = pino({ level: 'silent' });
+  const context = (jobId: string): JobContext => ({
+    jobId,
+    queue: 'push.send',
+    retryCount: 0,
+    createdOn: new Date(),
+    singletonKey: null,
+    logger,
+    signal: new AbortController().signal,
+  });
+
+  it('hard delete fails fast while a producer holds the recipient lock, and nothing is deleted', async () => {
+    const victim = await fixtures.user({ deactivatedAt: new Date(Date.now() - 8 * DAY_MS) });
+    const requestId = await deletionRequest(victim.id, new Date(Date.now() - HOUR_MS));
+    const handler = createHardDeleteHandler({
+      db: db(),
+      boss: worker.runtime.boss,
+      // Never reached: the transaction fails on its first lock, before any external call.
+      storage: {} as never,
+      buckets: { media: TEST_MEDIA_BUCKET, incoming: TEST_INCOMING_BUCKET },
+      emailTransport: { name: 'log', send: () => Promise.reject(new Error('not reached')) },
+      webOrigin: 'https://kadro.test',
+      clock: { now: () => new Date() },
+      metrics: { increment: () => undefined },
+      lockTimeoutMs: TIMEOUT_MS,
+    });
+    const job = {
+      deletionRequestId: requestId,
+      idempotencyKey: `${hardDeleteIdempotencyKey(requestId)}:${newId()}`,
+    };
+    const producer = await holding(async (tx) => {
+      const recorded = await recordPushResendForRecipient(tx, {
+        singletonKey: `rsvp:${newId()}:${victim.id}`,
+        type: 'rsvp.changed',
+        userId: victim.id,
+        refId: newId(),
+        requestedAt: new Date(),
+      });
+      expect(recorded).toBe(true);
+    });
+    try {
+      const started = Date.now();
+      const error = await handler(job, context(newId())).then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+      const waited = Date.now() - started;
+      expect(sqlStateOf(error)).toBe(PG_LOCK_NOT_AVAILABLE);
+      expect(waited).toBeGreaterThanOrEqual(TIMEOUT_MS - 50);
+      expect(waited).toBeLessThan(TIMEOUT_MS + 3_000);
+    } finally {
+      producer.release();
+    }
+    await producer.done;
+    const [stillThere] = await db()
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, victim.id));
+    expect(stillThere?.id).toBe(victim.id);
+  });
+
+  it('settling a coalesced push fails fast while the key lock is held', async () => {
+    const key = `rsvp:${newId()}:${newId()}`;
+    const blocker = await holding((tx) => lockPushResend(tx, key));
+    try {
+      const started = Date.now();
+      const error = await settleCoalesced(
+        { db: db(), boss: worker.runtime.boss, now: new Date(), lockTimeoutMs: TIMEOUT_MS },
+        {
+          type: 'rsvp.changed',
+          userId: newId(),
+          refId: newId(),
+          idempotencyKey: `${key}:1`,
+        },
+        { type: 'rsvp.changed', singletonKey: key },
+        context(newId()),
+        'sent',
+        0,
+      ).then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+      expect(sqlStateOf(error)).toBe(PG_LOCK_NOT_AVAILABLE);
+      expect(Date.now() - started).toBeLessThan(TIMEOUT_MS + 3_000);
+    } finally {
+      blocker.release();
+    }
+    await blocker.done;
+  });
+
+  it('the job runner reports a lock timeout as a retry with its SQLSTATE, not as success', async () => {
+    const lockTimeout = Object.assign(new Error('canceling statement due to lock timeout'), {
+      code: PG_LOCK_NOT_AVAILABLE,
+    });
+    const wrapped = new Error('Failed query', { cause: lockTimeout });
+    const result = await runJob(
+      QUEUE_DEFINITIONS['account.hard_delete'],
+      {
+        id: newId(),
+        data: { deletionRequestId: newId(), idempotencyKey: 'delete:x' },
+        retryCount: 0,
+        retryLimit: 3,
+        createdOn: new Date(),
+        singletonKey: null,
+        signal: new AbortController().signal,
+      } as never,
+      () => Promise.reject(wrapped),
+      { logger, metrics: { increment: () => undefined }, pollingIntervalSeconds: 1 },
+    );
+    expect(result).toMatchObject({ status: 'failed', output: { sqlState: PG_LOCK_NOT_AVAILABLE } });
+  });
+
+  it('the sweep skips a push re-send whose key lock is held and removes the others', async () => {
+    const stuckKey = `rsvp:${newId()}:${newId()}`;
+    const freeKey = `rsvp:${newId()}:${newId()}`;
+    const old = new Date(Date.now() - 3 * DAY_MS);
+    for (const singletonKey of [stuckKey, freeKey]) {
+      await db().insert(pushResends).values({
+        singletonKey,
+        type: 'rsvp.changed',
+        userId: newId(),
+        refId: newId(),
+        requestedAt: old,
+        updatedAt: old,
+      });
+    }
+    const blocker = await holding((tx) => lockPushResend(tx, stuckKey));
+    try {
+      const started = Date.now();
+      const removed = await sweepPushResends(db(), new Date(Date.now() - DAY_MS), TIMEOUT_MS);
+      expect(Date.now() - started).toBeLessThan(TIMEOUT_MS + 3_000);
+      expect(removed).toBeGreaterThanOrEqual(1);
+    } finally {
+      blocker.release();
+    }
+    await blocker.done;
+    const left = await db()
+      .select({ key: pushResends.singletonKey })
+      .from(pushResends)
+      .where(inArray(pushResends.singletonKey, [stuckKey, freeKey]));
+    expect(left.map((row) => row.key)).toEqual([stuckKey]);
   });
 });
