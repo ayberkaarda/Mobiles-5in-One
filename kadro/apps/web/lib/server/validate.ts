@@ -153,15 +153,16 @@ async function readLimited(request: Request, maxBytes: number): Promise<Uint8Arr
  * - more than the limit (declared or streamed) → 413 `payload_too_large`;
  * - a non-empty body that is not `application/json` → 415 `unsupported_media_type`;
  * - invalid UTF-8 or JSON → 400 `validation_failed`.
- * An empty body yields `undefined`, which every object schema rejects.
+ * An empty body yields `undefined`, which every object schema rejects. The raw bytes are returned
+ * with the value for handlers that hash the exact payload (`webhooks/revenuecat`).
  */
-export async function readJsonBody(
+export async function readJsonBodyWithBytes(
   request: Request,
   maxBytes: number = LIMITS.jsonBodyMaxBytes,
-): Promise<unknown> {
+): Promise<{ readonly value: unknown; readonly bytes: Uint8Array }> {
   const bytes = await readLimited(request, maxBytes);
   if (bytes.byteLength === 0) {
-    return undefined;
+    return { value: undefined, bytes };
   }
   const contentType = request.headers.get('content-type');
   if (contentType === null || !isJsonMediaType(contentType)) {
@@ -174,7 +175,7 @@ export async function readJsonBody(
     throw validationError('body', 'invalid_encoding');
   }
   try {
-    return JSON.parse(text) as unknown;
+    return { value: JSON.parse(text) as unknown, bytes };
   } catch {
     throw validationError('body', 'invalid_json');
   }

@@ -28,7 +28,7 @@ import {
   paramsToObject,
   parseInput,
   queryToObject,
-  readJsonBody,
+  readJsonBodyWithBytes,
   validationError,
 } from './validate';
 
@@ -109,6 +109,8 @@ export interface HandlerInput<TParams, TQuery, TBody> {
   readonly params: TParams;
   readonly query: TQuery;
   readonly body: TBody;
+  /** Raw bytes of the JSON body that `body` was parsed from; empty for handlers without a body. */
+  readonly rawBody: Uint8Array;
   readonly ctx: RequestContext;
   readonly runtime: ServerRuntime;
 }
@@ -134,6 +136,13 @@ export interface RouteSpec<
    * and R are not accepted here (group A uses `rateLimit`, R is the refresh endpoint's own).
    */
   readonly limitGroup?: RateLimitGroup | null;
+  /**
+   * Request check of an endpoint authenticated by a shared secret instead of a user principal
+   * (`webhooks/revenuecat`, ADR-0063). Runs after the client check and before params, query and
+   * body are read, so an unauthenticated caller learns nothing about input validation. It throws an
+   * `ApiError` to reject the request. Only allowed with `auth: 'none'`.
+   */
+  readonly verifyRequest?: (request: Request, runtime: ServerRuntime) => void | Promise<void>;
   readonly handler: (
     input: HandlerInput<z.output<TParams>, z.output<TQuery>, BodyOutput<TBody>>,
   ) => Promise<Response> | Response;
@@ -206,6 +215,9 @@ function assertSpec(spec: RouteSpec<z.ZodType, z.ZodType, BodySpec | null>): voi
   }
   if (spec.method === 'GET' && spec.body !== null) {
     throw new TypeError(`${where}: a GET handler cannot declare a body`);
+  }
+  if (spec.verifyRequest !== undefined && spec.auth !== 'none') {
+    throw new TypeError(`${where}: a request check replaces user authentication (auth 'none')`);
   }
   if (spec.rateLimit !== undefined && spec.auth === 'required') {
     throw new TypeError(`${where}: the auth rate-limit group applies to unauthenticated endpoints`);
@@ -302,6 +314,9 @@ export function route<
       } else if (spec.auth === 'required') {
         throw new ApiError('unauthenticated');
       }
+      if (spec.verifyRequest !== undefined) {
+        await spec.verifyRequest(request, runtime);
+      }
 
       // Step 2: params, query and body.
       const params = parseInput('params', spec.params, paramsToObject(await context.params));
@@ -311,6 +326,7 @@ export function route<
         queryToObject(new URL(request.url).searchParams),
       );
       let body: unknown = undefined;
+      let rawBody: Uint8Array = new Uint8Array(0);
       const bodySpec: BodySpec | null = spec.body;
       if (bodySpec === null) {
         await assertNoBody(request);
@@ -319,7 +335,9 @@ export function route<
         if (schema === undefined) {
           throw validationError('headers', 'invalid_value', AUTH_CLIENT_HEADER);
         }
-        body = parseInput('body', schema, await readJsonBody(request));
+        const read = await readJsonBodyWithBytes(request);
+        rawBody = read.bytes;
+        body = parseInput('body', schema, read.value);
       }
       const typedBody = body as BodyOutput<TBody>;
 
@@ -372,6 +390,7 @@ export function route<
         params: params as z.output<TParams>,
         query: query as z.output<TQuery>,
         body: typedBody,
+        rawBody,
         ctx,
         runtime,
       });
