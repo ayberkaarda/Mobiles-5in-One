@@ -400,9 +400,12 @@ describe.skipIf(!ENABLED)(
           () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/reset').length > 0),
           'reset request',
         );
-        const [post] = apiRequests(cdp, '/api/v1/auth/reset');
-        expect(post?.postData).toContain(second);
-        expect(post?.postData).not.toContain(first);
+        await delay(500);
+        // Exactly one reset request, carrying the new token only.
+        const posts = apiRequests(cdp, '/api/v1/auth/reset');
+        expect(posts).toHaveLength(1);
+        expect(posts[0]?.postData).toContain(second);
+        expect(posts[0]?.postData).not.toContain(first);
       } finally {
         cdp.close();
       }
@@ -457,14 +460,20 @@ describe.skipIf(!ENABLED)(
           () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/reset').length > 0),
           'reset request',
         );
-        expect(apiRequests(cdp, '/api/v1/auth/reset')[0]?.postData).toContain(routed);
+        await delay(500);
+        const posts = apiRequests(cdp, '/api/v1/auth/reset');
+        expect(posts).toHaveLength(1);
+        expect(posts[0]?.postData).toContain(routed);
+        expect(posts[0]?.postData).not.toContain(first);
         expect((await snapshotOf(cdp)).href).toBe(`${base}/sifre-sifirla`);
       } finally {
         cdp.close();
       }
     });
 
-    it('/sifre-sifirla: after pagehide and a back/forward-cache pageshow the link must be reopened', async () => {
+    // Synthetic lifecycle events: the page is not really frozen in or restored from the
+    // back/forward cache (the token pages are `no-store`, which headless Chrome may not cache).
+    it('/sifre-sifirla: after synthetic pagehide and pageshow(persisted) the link must be reopened', async () => {
       const cdp = await openPage();
       try {
         await cdp.send('Page.navigate', { url: `${base}/sifre-sifirla#token=${freshToken()}` });
@@ -486,7 +495,55 @@ describe.skipIf(!ENABLED)(
       }
     });
 
-    it('/e-posta-dogrula: pagehide cancels the pending verification request', async () => {
+    it('/e-posta-dogrula: a second link while the first verification is pending cancels it', async () => {
+      const first = freshToken();
+      const second = freshToken();
+      const cdp = await openPage();
+      try {
+        // Hold every verification request so the first one is still pending when the link changes.
+        await cdp.send('Fetch.enable', {
+          patterns: [{ urlPattern: '*/api/v1/auth/verify-email' }],
+        });
+        await cdp.send('Page.navigate', { url: `${base}/e-posta-dogrula#token=${first}` });
+        await waitFor(
+          () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/verify-email').length === 1),
+          'first verification pending',
+        );
+        await cdp.evaluate(
+          `(location.href = ${JSON.stringify(`${base}/e-posta-dogrula#token=${second}`)}, true)`,
+        );
+        await waitFor(
+          () => Promise.resolve(apiRequests(cdp, '/api/v1/auth/verify-email').length > 1),
+          'second verification',
+        );
+        const firstId = cdp.events.find(
+          (event) =>
+            event.method === 'Network.requestWillBeSent' &&
+            (event.params?.request as SentRequest).postData === JSON.stringify({ token: first }),
+        )?.params?.requestId;
+        await waitFor(
+          () =>
+            Promise.resolve(
+              cdp.events.some(
+                (event) =>
+                  event.method === 'Network.loadingFailed' &&
+                  event.params?.requestId === firstId &&
+                  event.params?.canceled === true,
+              ),
+            ),
+          'cancelled first verification',
+        );
+        await delay(500);
+        expect(apiRequests(cdp, '/api/v1/auth/verify-email').map((post) => post.postData)).toEqual([
+          JSON.stringify({ token: first }),
+          JSON.stringify({ token: second }),
+        ]);
+      } finally {
+        cdp.close();
+      }
+    });
+
+    it('/e-posta-dogrula: a synthetic pagehide cancels the pending verification request', async () => {
       const cdp = await openPage();
       try {
         // Hold the verification request in the browser so it is still pending at pagehide.
