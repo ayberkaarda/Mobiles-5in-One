@@ -16,6 +16,7 @@ import type {
   teamMembers,
   teams,
   uploads,
+  venueImports,
   users,
   venueReviews,
   venues,
@@ -70,3 +71,5 @@ export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;
 export type PushResend = typeof pushResends.$inferSelect;
 export type NewPushResend = typeof pushResends.$inferInsert;
+export type VenueImport = typeof venueImports.$inferSelect;
+export type NewVenueImport = typeof venueImports.$inferInsert;
