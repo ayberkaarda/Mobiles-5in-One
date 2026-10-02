@@ -1,0 +1,154 @@
+{
+  "common": {
+    "cancel": "Vazgeç"
+  },
+  "entry": {
+    "label": "Eksik Var ilanı",
+    "hint": "Maç için eksik oyuncu ilanı ver ya da başvuruları yönet."
+  },
+  "list": {
+    "missing": "{{number}} eksik",
+    "openHint": "İlanın ayrıntılarını açar.",
+    "emptyTitle": "Şu an eksik oyuncu ilanı yok",
+    "emptyMessage": "Bir takım oyuncu aradığında ilan burada çıkar.",
+    "emptyFilteredTitle": "Bu filtrelere uyan ilan yok",
+    "emptyFilteredMessage": "Filtreleri genişlet ya da sonra tekrar bak."
+  },
+  "filters": {
+    "show": "Filtrele",
+    "showCount": "Filtrele ({{number}})",
+    "hint": "İlçe, seviye ve mevki filtrelerini açar ya da kapatır.",
+    "reset": "Filtreleri temizle",
+    "anyPosition": "Tüm mevkiler"
+  },
+  "district": {
+    "label": "İlçe",
+    "all": "Tüm ilçeler",
+    "default": "Varsayılan: sahanın ya da takımın ilçesi",
+    "unknown": "Seçili ilçe",
+    "clear": "Temizle",
+    "search": "İlçe ara",
+    "searchHelp": "İlçe ya da il adının ilk harflerini yaz.",
+    "results": "Bulunan ilçeler",
+    "loading": "İlçeler yükleniyor",
+    "loadFailed": "İlçe listesi yüklenemedi.",
+    "retry": "İlçeleri tekrar yükle"
+  },
+  "level": {
+    "any": "Tüm seviyeler",
+    "casual": "Keyfine",
+    "regular": "Düzenli",
+    "competitive": "Rekabetçi"
+  },
+  "position": {
+    "any": "Fark etmez",
+    "GK": "Kaleci",
+    "DEF": "Defans",
+    "MID": "Orta saha",
+    "FWD": "Forvet"
+  },
+  "facts": {
+    "startsAt": "Maç",
+    "place": "Yer",
+    "format": "Format",
+    "missing": "Eksik oyuncu",
+    "position": "Mevki",
+    "level": "Seviye",
+    "expiresAt": "İlan bitişi"
+  },
+  "detail": {
+    "missingTitle": "İlan bulunamadı",
+    "missingMessage": "Bu ilan dolmuş, kapanmış ya da süresi bitmiş olabilir. Listeden güncel ilanlara bak.",
+    "toList": "İlanlara dön",
+    "ended": "Bu ilan kapandı. Yeni başvuru alınmıyor.",
+    "ownTeam": "Bu ilan senin takımının. Başvuruları aşağıdan yönetebilirsin."
+  },
+  "apply": {
+    "title": "Başvuru",
+    "messageLabel": "Kaptana not (isteğe bağlı)",
+    "messageHelp": "En fazla {{max}} karakter. Bağlantılar bağlantı olarak gösterilmez.",
+    "submit": "Başvur",
+    "closed": "İlan kapandığı için başvuru yapılamaz.",
+    "unverified": "Başvurmak için önce e-posta adresini doğrula.",
+    "participant": "Bu maçın takımındasın ya da zaten maçtasın; başvuru gerekmez.",
+    "yourMessage": "Notun: {{message}}",
+    "withdraw": "Başvurumu geri çek",
+    "withdrawQuestion": "Başvurun geri çekilecek. Aynı ilana tekrar başvuramazsın.",
+    "withdrawConfirm": "Geri çek",
+    "state": {
+      "pending": "Başvurun kaptanda. Karar verilince haber vereceğiz.",
+      "accepted": "Başvurun kabul edildi! Maçın kadrosundasın.",
+      "rejected": "Başvurun kabul edilmedi.",
+      "withdrawn": "Başvurunu geri çektin."
+    }
+  },
+  "application": {
+    "status": {
+      "pending": "Bekliyor",
+      "accepted": "Kabul edildi",
+      "rejected": "Reddedildi",
+      "withdrawn": "Geri çekildi"
+    }
+  },
+  "publish": {
+    "title": "Yeni ilan",
+    "missing": "Kaç oyuncu eksik? (en fazla {{max}})",
+    "missingGroup": "Eksik oyuncu sayısı",
+    "expiry": "İlan ne zamana kadar açık kalsın?",
+    "expiryChoice": {
+      "kickoff": "Maç başlayana kadar",
+      "hour1": "Maçtan 1 saat önceye kadar",
+      "hours3": "Maçtan 3 saat önceye kadar",
+      "hours24": "Maçtan 24 saat önceye kadar"
+    },
+    "submit": "İlanı yayınla",
+    "blocked": {
+      "notStaff": "İlanı yalnızca kaptan ve yardımcı kaptan verebilir.",
+      "proLocked": "Takım salt okunur olduğu için yeni ilan verilemez.",
+      "notOpen": "İlan yalnızca açık bir maç için verilebilir.",
+      "tooLate": "Maça çok az kaldı; ilan en az 15 dakika yayında kalmalı.",
+      "full": "Maçta boş yer yok."
+    },
+    "hiddenWhileLive": "Yayındaki ilan kapanmadan yeni ilan verilemez."
+  },
+  "manage": {
+    "title": "Eksik Var ilanı",
+    "loading": "Yükleniyor",
+    "notStaff": "İlanı ve başvuruları yalnızca takımın kaptanı ve yardımcı kaptanları yönetir.",
+    "matchMissingTitle": "Maç bulunamadı",
+    "matchMissingMessage": "Bu maç silinmiş ya da artık erişimin yok.",
+    "liveTitle": "Yayındaki ilan",
+    "lastTitle": "Son ilan",
+    "callStatus": {
+      "closed": "Kapandı",
+      "expired": "Süresi doldu",
+      "removed": "Kaldırıldı"
+    },
+    "exists": "Bu maçın yayında bir ilanı var, ama bu cihaz onu yayınlamadığı için ilanın ayrıntılarını ve başvurularını burada gösteremiyoruz. İlan Eksik Var listesinde görünüyorsa oradan açıp başvuruları yönetebilirsin. Yeni ilan için önce bu ilanı kapatman gerekir.",
+    "close": "İlanı kapat",
+    "closeQuestion": "İlan kapanacak ve bekleyen başvurular reddedilecek. Bu geri alınamaz.",
+    "closeConfirm": "İlanı kapat",
+    "applicationsTitle": "Başvurular",
+    "applicationsCount": "{{total}} başvuru, {{pending}} bekliyor",
+    "applicationsEmpty": "Henüz başvuru yok.",
+    "applicationsCached": "Bağlantı yok. Son kaydedilen başvuruları görüyorsun.",
+    "applicationsMissingTitle": "Başvurular açılamadı",
+    "applicationsMissingMessage": "Bu ilan bulunamadı ya da başvurularını görme yetkin yok.",
+    "accept": "Kabul et",
+    "acceptName": "{{name}} adlı oyuncuyu kabul et",
+    "reject": "Reddet",
+    "rejectQuestion": "{{name}} reddedilecek ve bu ilana tekrar başvuramayacak.",
+    "rejectConfirm": "Reddet",
+    "more": "Daha fazla başvuru",
+    "inactive": "İlan kapandığı için bekleyen başvurular artık karara bağlanamaz.",
+    "existingTitle": "Yayında bir ilan var",
+    "openListed": "İlanı ve başvuruları aç",
+    "closeUnknownQuestion": "Bu maçın yayındaki ilanı kapanacak. Burada göremediğin bekleyen başvurular da reddedilecek ve bu oyuncular aynı ilana tekrar başvuramayacak. Bu geri alınamaz."
+  },
+  "validation": {
+    "messageTooLong": "Not en fazla {{max}} karakter olabilir.",
+    "messageInvalid": "Notta kullanılamayan karakterler var.",
+    "missingInvalid": "Eksik oyuncu sayısı 1 ile {{max}} arasında olmalı.",
+    "expiryInvalid": "Bu bitiş zamanı artık seçilemez; başka bir seçenek seç."
+  }
+}

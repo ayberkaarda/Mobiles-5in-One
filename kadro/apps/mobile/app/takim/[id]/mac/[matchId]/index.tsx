@@ -5,6 +5,7 @@ import { View } from 'react-native';
 
 import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
+import { OpenCallEntry } from '../../../../../src/calls/components';
 import { formatDateTime } from '../../../../../src/i18n/format';
 import {
   ChoiceGroup,
@@ -372,6 +373,7 @@ export default function MatchDetailScreen() {
                 style={{ marginBottom: theme.spacing['3'] }}
               />
             ) : null}
+            <OpenCallEntry match={match} />
             {targets
               .filter((target) => target !== 'played')
               .map((target) => (
