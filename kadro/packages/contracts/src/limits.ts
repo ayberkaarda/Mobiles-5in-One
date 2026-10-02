@@ -66,4 +66,21 @@ export const LIMITS = {
   accountDeletionGraceSeconds: 604_800,
   /** MVP voting stays open for 24 hours after a match is marked played. */
   mvpVoteWindowSeconds: 86_400,
+  /** `GET districts` returns at most this many rows (Turkey has 973 districts). */
+  districtsList: { max: 1_000 },
+  /** RevenueCat webhook fields (ADR-0063). */
+  revenueCatEventId: { max: 128 },
+  revenueCatAppUserId: { max: 256 },
+  /** Upper bound of epoch milliseconds accepted from RevenueCat (year 3000). */
+  revenueCatEpochMsMax: 32_503_680_000_000,
+  /** Admin step-up window after a successful TOTP verification (security checklist item 18). */
+  stepUpWindowSeconds: 900,
+  /** A started TOTP enrollment must be confirmed within this window (ADR-0064). */
+  totpEnrollmentWindowSeconds: 600,
+  /** Venue import CSV (ADR-0064): characters of the inline CSV and data rows per import. */
+  venueImportCsv: { maxChars: 900_000, maxRows: 5_000 },
+  /** Row-level problems an import reports back; the remainder is only counted. */
+  venueImportIssues: { max: 50 },
+  /** Free-text search in admin lists. */
+  adminSearchQuery: { min: 2, max: 60 },
 } as const;

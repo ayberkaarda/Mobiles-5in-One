@@ -16,11 +16,13 @@ import type {
   teamMembers,
   teams,
   uploads,
+  venueImports,
   users,
   venueReviews,
   venues,
   webhookEvents,
   jobReceipts,
+  pushResends,
 } from './schema/index.js';
 
 export type District = typeof districts.$inferSelect;
@@ -67,3 +69,7 @@ export type JobReceipt = typeof jobReceipts.$inferSelect;
 export type NewJobReceipt = typeof jobReceipts.$inferInsert;
 export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;
+export type PushResend = typeof pushResends.$inferSelect;
+export type NewPushResend = typeof pushResends.$inferInsert;
+export type VenueImport = typeof venueImports.$inferSelect;
+export type NewVenueImport = typeof venueImports.$inferInsert;

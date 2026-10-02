@@ -7,6 +7,7 @@ import {
   idSchema,
   isoDateTimeSchema,
 } from './common.js';
+import { entitlementsSchema } from './billing.js';
 import { LIMITS } from './limits.js';
 import { platformRoleSchema } from './roles.js';
 
@@ -53,7 +54,11 @@ export const linkedProvidersSchema = z.strictObject({
 });
 export type LinkedProviders = z.infer<typeof linkedProvidersSchema>;
 
-/** `GET /api/v1/me`: the caller's own profile. */
+/**
+ * `GET /api/v1/me`: the caller's own profile. `entitlements` is the server-side Pro state
+ * (ADR-0063). It is optional only until the entitlement work package makes every profile response
+ * carry it; clients treat a missing member as `NO_ENTITLEMENTS`.
+ */
 export const meResponseSchema = z.strictObject({
   ...userPublicSchema.shape,
   email: z.email(),
@@ -62,8 +67,54 @@ export const meResponseSchema = z.strictObject({
   districtId: idSchema.nullable(),
   providers: linkedProvidersSchema,
   createdAt: isoDateTimeSchema,
+  entitlements: entitlementsSchema.optional(),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
+
+const countSchema = z.int().min(0);
+const rateSchema = z.number().min(0).max(1).nullable();
+
+/** Profile statistics every user gets (spec §3 item 9). */
+export const basicStatsSchema = z.strictObject({
+  /** Matches with status `played` on which the caller's RSVP is `in`. */
+  matchesPlayed: countSchema,
+  /** Played matches whose closed MVP result names the caller (ties count for every winner). */
+  mvpCount: countSchema,
+});
+export type BasicStats = z.infer<typeof basicStatsSchema>;
+
+/** Advanced statistics, Pro only (authorization matrix §7). */
+export const advancedStatsSchema = z.strictObject({
+  /** Played matches in the last 30 days. */
+  matchesPlayedLast30Days: countSchema,
+  /** `mvpCount / matchesPlayed`; `null` without played matches. */
+  mvpRate: rateSchema,
+  /**
+   * Share of the caller's RSVP rows on matches that reached `played` whose status is `in`;
+   * `null` without such rows.
+   */
+  attendanceRate: rateSchema,
+  /** Distinct directory venues of the caller's played matches. */
+  distinctVenues: countSchema,
+  /** Distinct teams of the caller's played matches. */
+  distinctTeams: countSchema,
+});
+export type AdvancedStats = z.infer<typeof advancedStatsSchema>;
+
+/**
+ * `GET /api/v1/me/stats`. `tier` follows the caller's server-side entitlement at request time:
+ * `basic` for free users, `full` with the advanced block for Pro. Every value is computed on the
+ * server from stored rows; the request has no parameters.
+ */
+export const meStatsResponseSchema = z.discriminatedUnion('tier', [
+  z.strictObject({ tier: z.literal('basic'), ...basicStatsSchema.shape }),
+  z.strictObject({
+    tier: z.literal('full'),
+    ...basicStatsSchema.shape,
+    advanced: advancedStatsSchema,
+  }),
+]);
+export type MeStatsResponse = z.infer<typeof meStatsResponseSchema>;
 
 /**
  * `PATCH /api/v1/me` body. Only the self-writable fields of authorization-matrix §4.1 are
@@ -97,7 +148,8 @@ export const registerPushTokenRequestSchema = z.strictObject({
 });
 export type RegisterPushTokenRequest = z.infer<typeof registerPushTokenRequestSchema>;
 
-const totpCodeSchema = z
+/** Six-digit TOTP code (RFC 6238 defaults). */
+export const totpCodeSchema = z
   .string()
   .length(LIMITS.totpCode.length)
   .regex(/^[0-9]+$/, 'must be digits');
@@ -105,6 +157,51 @@ const totpCodeSchema = z
 export const IDENTITY_PROVIDERS = ['apple', 'google'] as const;
 export const identityProviderSchema = z.enum(IDENTITY_PROVIDERS);
 export type IdentityProvider = z.infer<typeof identityProviderSchema>;
+
+/**
+ * Fields of a single-use re-authentication proof (authorization matrix footnote 4), shared by
+ * `DELETE me` and `POST admin/totp/enroll`. Schemas built from it apply `isSingleReauthProof` and
+ * `hasRequiredNonce` as refinements.
+ */
+export const reauthProofShape = {
+  password: currentPasswordSchema.optional(),
+  provider: identityProviderSchema.optional(),
+  identityToken: compactJwsSchema.optional(),
+  nonce: z
+    .string()
+    .min(LIMITS.nonce.min)
+    .max(LIMITS.nonce.max)
+    .regex(/^[A-Za-z0-9._~-]+$/, 'must be URL-safe')
+    .optional(),
+};
+
+export interface ReauthProofFields {
+  password?: string | undefined;
+  provider?: IdentityProvider | undefined;
+  identityToken?: string | undefined;
+  nonce?: string | undefined;
+}
+
+/** Exactly one proof kind: a password, or a provider with its identity token. */
+export function isSingleReauthProof(body: ReauthProofFields): boolean {
+  return body.password !== undefined
+    ? body.provider === undefined && body.identityToken === undefined && body.nonce === undefined
+    : body.provider !== undefined && body.identityToken !== undefined;
+}
+
+/** Apple identity tokens are nonce-bound, so a nonce must accompany them. */
+export function hasRequiredNonce(body: ReauthProofFields): boolean {
+  return body.provider !== 'apple' || body.nonce !== undefined;
+}
+
+export const SINGLE_REAUTH_PROOF_ISSUE = {
+  message: 'send either password or provider with identityToken',
+  path: ['password'],
+};
+export const REQUIRED_NONCE_ISSUE = {
+  message: 'nonce is required for Apple identity tokens',
+  path: ['nonce'],
+};
 
 /**
  * `DELETE /api/v1/me` body: starts account deletion (security checklist item 21, ADR-0032).
@@ -119,30 +216,11 @@ export type IdentityProvider = z.infer<typeof identityProviderSchema>;
  */
 export const deleteAccountRequestSchema = z
   .strictObject({
-    password: currentPasswordSchema.optional(),
-    provider: identityProviderSchema.optional(),
-    identityToken: compactJwsSchema.optional(),
-    nonce: z
-      .string()
-      .min(LIMITS.nonce.min)
-      .max(LIMITS.nonce.max)
-      .regex(/^[A-Za-z0-9._~-]+$/, 'must be URL-safe')
-      .optional(),
+    ...reauthProofShape,
     totpCode: totpCodeSchema.optional(),
   })
-  .refine(
-    (body) =>
-      body.password !== undefined
-        ? body.provider === undefined &&
-          body.identityToken === undefined &&
-          body.nonce === undefined
-        : body.provider !== undefined && body.identityToken !== undefined,
-    { message: 'send either password or provider with identityToken', path: ['password'] },
-  )
-  .refine((body) => body.provider !== 'apple' || body.nonce !== undefined, {
-    message: 'nonce is required for Apple identity tokens',
-    path: ['nonce'],
-  });
+  .refine(isSingleReauthProof, SINGLE_REAUTH_PROOF_ISSUE)
+  .refine(hasRequiredNonce, REQUIRED_NONCE_ISSUE);
 export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;
 
 /** `DELETE /api/v1/me` 202 response. Every session is revoked; the client signs out locally. */

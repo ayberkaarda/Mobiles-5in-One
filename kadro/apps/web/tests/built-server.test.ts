@@ -1,11 +1,13 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { type IncomingHttpHeaders, request } from 'node:http';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { SURFACES } from '../lib/server/security-headers';
 import { testEnvSource } from './support/env';
 import { prerequisite } from './support/prerequisite';
 
@@ -42,6 +44,32 @@ function freePort(): Promise<number> {
 let child: ChildProcess | undefined;
 let base = '';
 
+interface RawResponse {
+  readonly status: number;
+  readonly headers: IncomingHttpHeaders;
+  readonly body: string;
+}
+
+/** GET with the path sent exactly as written: no client-side normalization or re-encoding. */
+function rawGet(path: string): Promise<RawResponse> {
+  const { hostname, port } = new URL(base);
+  return new Promise((resolve, reject) => {
+    const req = request({ host: hostname, port, path, method: 'GET' }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => chunks.push(chunk));
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode ?? 0,
+          headers: res.headers,
+          body: Buffer.concat(chunks).toString('utf8'),
+        });
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 async function waitUntilReady(): Promise<void> {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
@@ -64,6 +92,29 @@ function cspNonce(response: Response): string {
   expect(nonce, csp).toBeDefined();
   return nonce ?? '';
 }
+
+/** Source text without comments, so prose about a call does not count as the call. */
+function code(relative: string): string {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed paths inside this package
+  const text = readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+describe('render mode per surface (ADR-0021, ADR-0055)', () => {
+  it('the root layout leaves the render mode to the surfaces', () => {
+    expect(code('../app/layout.tsx')).not.toMatch(/connection\(|headers\(|cookies\(|dynamic\s*=/);
+  });
+
+  it('every surface layout and every page outside a route group renders per request itself', () => {
+    for (const file of [
+      '../app/(app)/layout.tsx',
+      '../app/(marketing)/layout.tsx',
+      '../app/not-found.tsx',
+    ]) {
+      expect(code(file), file).toContain('await connection();');
+    }
+  });
+});
 
 describe.skipIf(!BUILT)('production build', () => {
   beforeAll(async () => {
@@ -100,6 +151,65 @@ describe.skipIf(!BUILT)('production build', () => {
     for (const tag of scripts) {
       expect(tag).toContain(`nonce="${nonce}"`);
     }
+  });
+
+  it('prerenders no page: a static page could not carry the per-request nonce', () => {
+    const manifest = JSON.parse(
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
+      readFileSync(
+        fileURLToPath(new URL('../.next/prerender-manifest.json', import.meta.url)),
+        'utf8',
+      ),
+    ) as { routes: Record<string, unknown>; dynamicRoutes: Record<string, unknown> };
+    // The global error page is a client component that Next.js always prerenders; it replaces
+    // the root layout only after a render failure.
+    expect(Object.keys(manifest.routes)).toEqual(['/_global-error']);
+    expect(Object.keys(manifest.dynamicRoutes)).toEqual([]);
+  });
+
+  it('puts the CSP nonce on every script of every HTML surface probe', async () => {
+    for (const surface of SURFACES.filter((entry) => entry.csp === 'nonce')) {
+      const response = await fetch(`${base}${surface.probe}`);
+      const nonce = cspNonce(response);
+      const cacheControl = response.headers.get('cache-control') ?? '';
+      expect(cacheControl, surface.probe).toMatch(/private|no-store/);
+      expect(cacheControl, surface.probe).not.toMatch(/public|s-maxage/);
+      const html = await response.text();
+      const scripts = html.match(/<script\b[^>]*>/g) ?? [];
+      expect(scripts.length, surface.probe).toBeGreaterThan(0);
+      for (const tag of scripts) {
+        expect(tag, surface.probe).toContain(`nonce="${nonce}"`);
+      }
+    }
+  });
+
+  it('classifies raw encoded, case and slash variants of a path like the router (ADR-0055)', async () => {
+    const token = ['/sifre%2dsifirla', '/%73ifre-sifirla', '/SIFRE-SIFIRLA', '/x/../sifre-sifirla'];
+    for (const pathname of token) {
+      const response = await rawGet(pathname);
+      expect(response.headers['referrer-policy'], pathname).toBe('no-referrer');
+      // A 404 render replaces the value with Next.js' own `private, no-cache, no-store, …`.
+      expect(response.headers['cache-control'], pathname).toMatch(/(^|, )no-store(,|$)/);
+      expect(response.headers['x-robots-tag'], pathname).toBe('noindex, nofollow');
+    }
+    for (const pathname of ['/sifre-sifirla/', '//sifre-sifirla', '//api/v1/health']) {
+      const response = await rawGet(pathname);
+      // Next.js answers these with a redirect to the canonical path before any page renders.
+      expect(response.status, pathname).toBe(308);
+      expect(response.body, pathname).not.toMatch(/<html/i);
+    }
+    for (const pathname of ['/api%2fv1/health', '/sifre-sifirla%00', '/%E0%A4%A', '/giris%5c']) {
+      const response = await rawGet(pathname);
+      expect(response.status, pathname).toBe(400);
+      expect(response.headers['content-security-policy'], pathname).toBe(
+        "default-src 'none'; frame-ancestors 'none'",
+      );
+      expect(response.body, pathname).toBe('Bad Request');
+    }
+    const api = await rawGet('/%61pi/v1/health');
+    expect(api.headers['content-security-policy']).toBe(
+      "default-src 'none'; frame-ancestors 'none'",
+    );
   });
 
   it('uses a different nonce on the next request', async () => {

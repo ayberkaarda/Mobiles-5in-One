@@ -1,15 +1,19 @@
 import { type AccountHardDeleteJob } from '@kadro/contracts';
 import {
+  LOCK_TIMEOUT_MS,
   type Database,
   type ExternalCleanupTarget,
   type Transaction,
   auditLogs,
   deletionRequests,
+  lockPushRecipientForDeletion,
   matchRsvps,
   matches,
   mvpVotes,
   newId,
   openCallApplications,
+  pushResends,
+  setLockTimeout,
   subscriptions,
   teamMembers,
   teams,
@@ -50,6 +54,8 @@ export interface HardDeleteDependencies {
   readonly webOrigin: string;
   readonly clock: Clock;
   readonly metrics: Metrics;
+  /** Lock wait bound of the deletion transaction; defaults to {@link LOCK_TIMEOUT_MS}. */
+  readonly lockTimeoutMs?: number;
 }
 
 export interface HardDeleteSummary {
@@ -349,6 +355,7 @@ async function repointHistory(tx: Transaction, userId: string, now: Date): Promi
  */
 export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
   const { db, boss, storage, buckets, emailTransport, webOrigin, clock, metrics } = dependencies;
+  const lockTimeoutMs = dependencies.lockTimeoutMs ?? LOCK_TIMEOUT_MS;
 
   return async (job: AccountHardDeleteJob, context: JobContext): Promise<string> => {
     const precheck = await eligibility(db, job.deletionRequestId, clock.now(), false);
@@ -358,6 +365,12 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
     const { userId } = precheck;
 
     const result = await db.transaction(async (tx) => {
+      // A blocked lock fails the attempt with 55P03 after the timeout and the job is retried; the
+      // deletion never hangs a worker behind a stuck transaction.
+      await setLockTimeout(tx, lockTimeoutMs);
+      // First, before any other lock: producers recording a push re-send for this user finish
+      // first, later ones skip (ADR-0044).
+      await lockPushRecipientForDeletion(tx, userId);
       const now = clock.now();
       const check = await eligibility(tx, job.deletionRequestId, now, true);
       if (!check.due) {
@@ -388,6 +401,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
 
       await tx.delete(venueReviews).where(eq(venueReviews.userId, userId));
       await tx.delete(openCallApplications).where(eq(openCallApplications.userId, userId));
+      // Pending re-sends of coalesced pushes to this user carry the id without a foreign key
+      // (ADR-0044); the follow-up would be skipped anyway.
+      await tx.delete(pushResends).where(eq(pushResends.userId, userId));
       await tx
         .update(venues)
         .set({ createdBy: null, updatedAt: now })

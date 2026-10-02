@@ -1,6 +1,30 @@
 import { z } from 'zod';
 
 import {
+  adminIdParamsSchema,
+  adminOpenCallSchema,
+  adminReviewSchema,
+  adminStepUpRequestSchema,
+  adminStepUpResponseSchema,
+  adminTotpConfirmRequestSchema,
+  adminTotpEnrollRequestSchema,
+  adminTotpEnrollResponseSchema,
+  adminUserSchema,
+  adminVenueSchema,
+  auditLogEntrySchema,
+  listAdminOpenCallsQuerySchema,
+  listAdminReviewsQuerySchema,
+  listAdminUsersQuerySchema,
+  listAdminVenuesQuerySchema,
+  listAuditLogsQuerySchema,
+  setUserDeactivatedRequestSchema,
+  setUserRoleRequestSchema,
+  updateAdminVenueRequestSchema,
+  venueImportParamsSchema,
+  venueImportRequestSchema,
+  venueImportSchema,
+} from './admin.js';
+import {
   appleSignInRequestSchema,
   type AuthClient,
   forgotPasswordRequestSchema,
@@ -16,7 +40,9 @@ import {
   webAuthResponseSchema,
   webRefreshResponseSchema,
 } from './auth.js';
+import { revenueCatWebhookBodySchema, revenueCatWebhookResponseSchema } from './billing.js';
 import { acceptedResponseSchema } from './common.js';
+import { listDistrictsQuerySchema, listDistrictsResponseSchema } from './districts.js';
 import { healthResponseSchema } from './health.js';
 import {
   createMatchRequestSchema,
@@ -83,6 +109,7 @@ import {
   deleteAccountRequestSchema,
   deleteAccountResponseSchema,
   meResponseSchema,
+  meStatsResponseSchema,
   registerPushTokenRequestSchema,
   updateMeRequestSchema,
 } from './users.js';
@@ -135,6 +162,10 @@ export type EndpointPolicy =
 
 export type SuccessStatus = 200 | 201 | 202 | 204;
 
+/** Delivery phases of the product spec that add API endpoints. */
+export const ENDPOINT_PHASES = [1, 2, 3, 4, 5] as const;
+export type EndpointPhase = (typeof ENDPOINT_PHASES)[number];
+
 export interface EndpointResponse {
   readonly status: SuccessStatus;
   readonly description: string;
@@ -146,11 +177,14 @@ export const ENDPOINT_TAGS = [
   'health',
   'auth',
   'me',
+  'districts',
   'teams',
   'matches',
   'open-calls',
   'venues',
   'uploads',
+  'webhooks',
+  'admin',
 ] as const;
 export type EndpointTag = (typeof ENDPOINT_TAGS)[number];
 
@@ -161,7 +195,7 @@ export interface EndpointDefinition {
   readonly description?: string;
   readonly tag: EndpointTag;
   /** Delivery phase of the product spec in which the endpoint ships. */
-  readonly phase: 1 | 2;
+  readonly phase: EndpointPhase;
   readonly method: EndpointMethod;
   /** Next.js route pattern, identical to the file location (`/api/v1/teams/[id]`). */
   readonly path: `/api/v1/${string}`;
@@ -170,6 +204,11 @@ export interface EndpointDefinition {
   readonly policy: EndpointPolicy;
   /** Matrix cell marked **V**: 403 `email_unverified` without a verified email. */
   readonly emailVerified: boolean;
+  /**
+   * Admin route behind the TOTP step-up window (authorization matrix §3.8): 401
+   * `step_up_required` without a valid step-up. Absent means `false`.
+   */
+  readonly stepUp?: boolean;
   readonly params: z.ZodObject;
   readonly query: z.ZodObject;
   /** Required for POST / PUT / PATCH, `null` for GET; DELETE may have either. */
@@ -483,6 +522,55 @@ export const ENDPOINTS = {
     response: { status: 204, description: 'Registered', schema: null },
     errors: [],
     rateLimit: 'P',
+  }),
+  getMyStats: defineEndpoint({
+    id: 'getMyStats',
+    summary: "The caller's profile statistics (basic, or full for Pro)",
+    description:
+      'Matches played and MVP count for everyone; the `advanced` block only when the caller holds ' +
+      'Pro at request time (authorization matrix §7). Entitlement comes from `subscriptions` only.',
+    tag: 'me',
+    phase: 3,
+    method: 'GET',
+    path: '/api/v1/me/stats',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'me.read' },
+    emailVerified: false,
+    params: noParams,
+    query: noQuery,
+    body: null,
+    response: { status: 200, description: 'Own statistics', schema: meStatsResponseSchema },
+    errors: [],
+    rateLimit: null,
+  }),
+
+  // -------------------------------------------------------------------------
+  // Districts (reference data)
+  // -------------------------------------------------------------------------
+  listDistricts: defineEndpoint({
+    id: 'listDistricts',
+    summary: 'Provinces and districts (il / ilçe) with their slugs and centroids',
+    description:
+      'Public reference data for pickers and maps; not paginated. `province` narrows the list ' +
+      'to one il. Cacheable for a day.',
+    tag: 'districts',
+    phase: 3,
+    method: 'GET',
+    path: '/api/v1/districts',
+    client: 'required',
+    auth: 'none',
+    policy: {
+      action: null,
+      reason: 'public reference data; no policy action (like health.read, matrix §3.7)',
+    },
+    emailVerified: false,
+    params: noParams,
+    query: listDistrictsQuerySchema,
+    body: null,
+    response: { status: 200, description: 'Districts', schema: listDistrictsResponseSchema },
+    errors: [],
+    rateLimit: null,
   }),
 
   // -------------------------------------------------------------------------
@@ -1251,6 +1339,366 @@ export const ENDPOINTS = {
     errors: ['not_found'],
     rateLimit: null,
   }),
+
+  // -------------------------------------------------------------------------
+  // Webhooks (Phase 5, ADR-0063)
+  // -------------------------------------------------------------------------
+  receiveRevenueCatWebhook: defineEndpoint({
+    id: 'receiveRevenueCatWebhook',
+    summary: 'RevenueCat subscription event delivery',
+    description:
+      'No user principal: cookies and bearer tokens are ignored. The `Authorization` header must ' +
+      'equal `REVENUECAT_WEBHOOK_SECRET` (constant-time comparison over the raw request), else ' +
+      '401 `unauthenticated`; an unset secret answers 503. The event id is stored in ' +
+      '`webhook_events` (replay-safe) and the answer is always 200 with the outcome: `accepted` ' +
+      '(processing job enqueued), `duplicate` (already stored) or `ignored` (unknown or anonymous ' +
+      '`app_user_id`, test or unknown event type, foreign product). Not CORS-enabled, no ' +
+      'per-group rate limit (deliveries arrive in bursts and must not be dropped).',
+    tag: 'webhooks',
+    phase: 5,
+    method: 'POST',
+    path: '/api/v1/webhooks/revenuecat',
+    client: 'exempt',
+    auth: 'none',
+    policy: { action: 'webhook.revenuecat' },
+    emailVerified: false,
+    params: noParams,
+    query: noQuery,
+    body: revenueCatWebhookBodySchema,
+    response: {
+      status: 200,
+      description: 'Delivery outcome',
+      schema: revenueCatWebhookResponseSchema,
+    },
+    errors: ['unauthenticated'],
+    rateLimit: null,
+  }),
+
+  // -------------------------------------------------------------------------
+  // Admin (Phase 5, authorization matrix §3.8, ADR-0064)
+  // -------------------------------------------------------------------------
+  adminStepUp: defineEndpoint({
+    id: 'adminStepUp',
+    summary: 'Verify a TOTP code and open the 15-minute step-up window (staff)',
+    description:
+      '±1 time step, a step cannot be reused, at most 5 attempts per 15 minutes. The window is ' +
+      'bound to the current web session or mobile refresh-token family. Audited on success and ' +
+      'failure.',
+    tag: 'admin',
+    phase: 5,
+    method: 'POST',
+    path: '/api/v1/admin/step-up',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.stepUp' },
+    emailVerified: false,
+    params: noParams,
+    query: noQuery,
+    body: adminStepUpRequestSchema,
+    response: { status: 200, description: 'Step-up active', schema: adminStepUpResponseSchema },
+    errors: ['forbidden', 'totp_not_enrolled', 'totp_invalid'],
+    rateLimit: 'T',
+  }),
+  adminTotpEnroll: defineEndpoint({
+    id: 'adminTotpEnroll',
+    summary: 'Start TOTP enrollment with a re-authentication proof (staff without a secret)',
+    description:
+      'Returns the new secret once; it stays pending until `POST admin/totp/confirm`. A staff ' +
+      'account with an active secret answers 409 `totp_already_enrolled`. Audited.',
+    tag: 'admin',
+    phase: 5,
+    method: 'POST',
+    path: '/api/v1/admin/totp/enroll',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.totpEnroll' },
+    emailVerified: false,
+    params: noParams,
+    query: noQuery,
+    body: adminTotpEnrollRequestSchema,
+    response: {
+      status: 201,
+      description: 'Pending secret',
+      schema: adminTotpEnrollResponseSchema,
+    },
+    errors: ['forbidden', 'reauth_required', 'totp_already_enrolled'],
+    rateLimit: 'T',
+  }),
+  adminTotpConfirm: defineEndpoint({
+    id: 'adminTotpConfirm',
+    summary: 'Activate the pending TOTP secret with a code from it (staff)',
+    description:
+      'No pending secret or an expired enrollment answers 409 `totp_not_enrolled`; a wrong code ' +
+      '401 `totp_invalid`. Activation does not open a step-up window. Audited.',
+    tag: 'admin',
+    phase: 5,
+    method: 'POST',
+    path: '/api/v1/admin/totp/confirm',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.totpEnroll' },
+    emailVerified: false,
+    params: noParams,
+    query: noQuery,
+    body: adminTotpConfirmRequestSchema,
+    response: { status: 204, description: 'TOTP active', schema: null },
+    errors: ['forbidden', 'totp_not_enrolled', 'totp_invalid', 'totp_already_enrolled'],
+    rateLimit: 'T',
+  }),
+  listAdminVenues: defineEndpoint({
+    id: 'listAdminVenues',
+    summary: 'Venues for verification and correction (staff + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/venues',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: listAdminVenuesQuerySchema,
+    body: null,
+    response: {
+      status: 200,
+      description: 'Page of venues',
+      schema: paginatedResponseSchema(adminVenueSchema),
+    },
+    errors: ['forbidden', 'invalid_cursor'],
+    rateLimit: null,
+  }),
+  updateAdminVenue: defineEndpoint({
+    id: 'updateAdminVenue',
+    summary: 'Verify or correct a venue (staff + step-up; audited)',
+    tag: 'admin',
+    phase: 5,
+    method: 'PATCH',
+    path: '/api/v1/admin/venues/[id]',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'venue.verify' },
+    emailVerified: false,
+    stepUp: true,
+    params: adminIdParamsSchema,
+    query: noQuery,
+    body: updateAdminVenueRequestSchema,
+    response: { status: 200, description: 'Updated venue', schema: adminVenueSchema },
+    errors: ['forbidden', 'not_found', 'venue_exists'],
+    rateLimit: 'G',
+  }),
+  importVenues: defineEndpoint({
+    id: 'importVenues',
+    summary: 'Import venues from CSV (admin + step-up; audited)',
+    description:
+      'Stores the CSV and enqueues `venue.import`; poll `GET admin/venues/import/{importId}`. ' +
+      'Moderators answer 403.',
+    tag: 'admin',
+    phase: 5,
+    method: 'POST',
+    path: '/api/v1/admin/venues/import',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'venue.import' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: noQuery,
+    body: venueImportRequestSchema,
+    response: { status: 202, description: 'Import queued', schema: venueImportSchema },
+    errors: ['forbidden'],
+    rateLimit: 'G',
+  }),
+  getVenueImport: defineEndpoint({
+    id: 'getVenueImport',
+    summary: 'State of a venue import (staff + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/venues/import/[importId]',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: venueImportParamsSchema,
+    query: noQuery,
+    body: null,
+    response: { status: 200, description: 'Import state', schema: venueImportSchema },
+    errors: ['forbidden', 'not_found'],
+    rateLimit: null,
+  }),
+  listAdminReviews: defineEndpoint({
+    id: 'listAdminReviews',
+    summary: 'Venue reviews for moderation (staff + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/reviews',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: listAdminReviewsQuerySchema,
+    body: null,
+    response: {
+      status: 200,
+      description: 'Page of reviews',
+      schema: paginatedResponseSchema(adminReviewSchema),
+    },
+    errors: ['forbidden', 'invalid_cursor'],
+    rateLimit: null,
+  }),
+  deleteAdminReview: defineEndpoint({
+    id: 'deleteAdminReview',
+    summary: 'Remove a venue review (staff + step-up; audited)',
+    tag: 'admin',
+    phase: 5,
+    method: 'DELETE',
+    path: '/api/v1/admin/reviews/[id]',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'review.delete' },
+    emailVerified: false,
+    stepUp: true,
+    params: adminIdParamsSchema,
+    query: noQuery,
+    body: null,
+    response: { status: 204, description: 'Review removed', schema: null },
+    errors: ['forbidden', 'not_found'],
+    rateLimit: 'G',
+  }),
+  listAdminOpenCalls: defineEndpoint({
+    id: 'listAdminOpenCalls',
+    summary: 'Open calls for moderation (staff + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/open-calls',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: listAdminOpenCallsQuerySchema,
+    body: null,
+    response: {
+      status: 200,
+      description: 'Page of open calls',
+      schema: paginatedResponseSchema(adminOpenCallSchema),
+    },
+    errors: ['forbidden', 'invalid_cursor'],
+    rateLimit: null,
+  }),
+  removeAdminOpenCall: defineEndpoint({
+    id: 'removeAdminOpenCall',
+    summary: 'Close and hide an open call (staff + step-up; audited)',
+    description:
+      'Sets status `removed` from any status; pending applications are rejected in the same ' +
+      'transaction (ADR-0037). Removing an already removed call answers 204 again.',
+    tag: 'admin',
+    phase: 5,
+    method: 'DELETE',
+    path: '/api/v1/admin/open-calls/[id]',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'opencall.remove' },
+    emailVerified: false,
+    stepUp: true,
+    params: adminIdParamsSchema,
+    query: noQuery,
+    body: null,
+    response: { status: 204, description: 'Open call removed', schema: null },
+    errors: ['forbidden', 'not_found'],
+    rateLimit: 'G',
+  }),
+  listAdminUsers: defineEndpoint({
+    id: 'listAdminUsers',
+    summary: 'Accounts with masked email (staff + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/users',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: listAdminUsersQuerySchema,
+    body: null,
+    response: {
+      status: 200,
+      description: 'Page of users',
+      schema: paginatedResponseSchema(adminUserSchema),
+    },
+    errors: ['forbidden', 'invalid_cursor'],
+    rateLimit: null,
+  }),
+  setUserRole: defineEndpoint({
+    id: 'setUserRole',
+    summary: "Change a user's platform role (admin + step-up + fresh TOTP; audited)",
+    tag: 'admin',
+    phase: 5,
+    method: 'PATCH',
+    path: '/api/v1/admin/users/[id]/role',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.role.manage' },
+    emailVerified: false,
+    stepUp: true,
+    params: adminIdParamsSchema,
+    query: noQuery,
+    body: setUserRoleRequestSchema,
+    response: { status: 200, description: 'Updated user', schema: adminUserSchema },
+    errors: ['forbidden', 'not_found', 'totp_invalid', 'last_admin'],
+    rateLimit: 'G',
+  }),
+  setUserDeactivated: defineEndpoint({
+    id: 'setUserDeactivated',
+    summary: 'Deactivate or reactivate a user (admin + step-up + fresh TOTP; audited)',
+    tag: 'admin',
+    phase: 5,
+    method: 'PATCH',
+    path: '/api/v1/admin/users/[id]/deactivate',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.user.deactivate' },
+    emailVerified: false,
+    stepUp: true,
+    params: adminIdParamsSchema,
+    query: noQuery,
+    body: setUserDeactivatedRequestSchema,
+    response: { status: 200, description: 'Updated user', schema: adminUserSchema },
+    errors: ['forbidden', 'not_found', 'totp_invalid', 'last_admin', 'deletion_pending'],
+    rateLimit: 'G',
+  }),
+  listAuditLogs: defineEndpoint({
+    id: 'listAuditLogs',
+    summary: 'Audit log, newest first (admin + step-up)',
+    tag: 'admin',
+    phase: 5,
+    method: 'GET',
+    path: '/api/v1/admin/audit-logs',
+    client: 'required',
+    auth: 'required',
+    policy: { action: 'admin.audit.read' },
+    emailVerified: false,
+    stepUp: true,
+    params: noParams,
+    query: listAuditLogsQuerySchema,
+    body: null,
+    response: {
+      status: 200,
+      description: 'Page of audit rows',
+      schema: paginatedResponseSchema(auditLogEntrySchema),
+    },
+    errors: ['forbidden', 'invalid_cursor'],
+    rateLimit: null,
+  }),
 } as const satisfies Record<string, EndpointDefinition>;
 
 export type EndpointId = keyof typeof ENDPOINTS;
@@ -1280,7 +1728,7 @@ export function toOpenApiPath(path: string): string {
 /**
  * Every error code an operation can answer with: the endpoint's own `errors` plus the codes its
  * definition implies (client header and input validation, body limits, authentication, CSRF on
- * web mutations, email verification, rate limiting, and server failures). Sorted by status.
+ * web mutations, email verification, admin step-up, rate limiting, and server failures).
  */
 export function endpointErrorCodes(endpoint: EndpointDefinition): ErrorCode[] {
   const codes = new Set<ErrorCode>(['validation_failed']);
@@ -1297,6 +1745,9 @@ export function endpointErrorCodes(endpoint: EndpointDefinition): ErrorCode[] {
   }
   if (endpoint.emailVerified) {
     codes.add('email_unverified');
+  }
+  if (endpoint.stepUp === true) {
+    codes.add('step_up_required');
   }
   for (const code of endpoint.errors) {
     codes.add(code);

@@ -7,22 +7,39 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Projects
 
-| Folder                    | Product                                                                                                               | Stack                                                                          | Status                                     |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------ |
-| [`kadro`](kadro/)         | Match organizer for amateur pitch football: build the squad, fill missing players, split the pitch fee                | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | In development (foundation + Phase 1 done) |
-| [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Design document only, no code              |
-| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code              |
-| [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code              |
-| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code              |
+| Folder                    | Product                                                                                                               | Stack                                                                          | Status                                                        | Progress |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- | -------- |
+| [`kadro`](kadro/)         | Match organizer for amateur pitch football: build the squad, fill missing players, split the pitch fee                | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | In development (Phases 0 to 2 done, Phase 3 to 5 in progress) | 0%       |
+| [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Design document only, no code                                 | 0%       |
+| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code                                 | 0%       |
+| [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                                 | 0%       |
+| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code                                 | 0%       |
 
 ## Status
 
-Only Kadro has code. Its repository foundation and Phase 1 (data model, authentication and the
-security core) are complete; the domain API, the mobile app, SEO pages, subscriptions and the admin
-area are planned. See [`kadro/README.md`](kadro/README.md) for the detailed breakdown.
+Only Kadro has code. Its repository foundation, Phase 1 (data model, authentication and the
+security core) and Phase 2 (domain API and worker jobs) are complete. Phases 3 to 5 (mobile app,
+SEO pages, subscriptions and the admin area) are in progress: the mobile foundation, sign-in,
+teams, the marketing shell, the RevenueCat webhook and the Phase 5 data model are merged. See
+[`kadro/README.md`](kadro/README.md) for the detailed breakdown.
 
 Askida, Cetele, Inecek Var and Patika currently consist of a single specification document each.
 No application code exists for them yet.
+
+### Progress
+
+Last updated: 2026-10-03. The figures are estimates, refreshed whenever a batch of work merges.
+
+| Project     | Progress | Basis                                                                                                                                      |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `kadro`     | ~58%     | Phases 0 to 2 done; Phases 3 to 5: 12 of 34 work packages merged; Phase 6 not started. Seven phases weighted equally: (3 + 3 x 12/34) / 7. |
+| `askida`    | 0%       | Specification only; no code yet.                                                                                                           |
+| `cetele`    | 0%       | Specification only; no code yet.                                                                                                           |
+| `inecekvar` | 0%       | Specification only; no code yet.                                                                                                           |
+| `patika`    | 0%       | Specification only; no code yet.                                                                                                           |
+
+Progress means merged into `main`; work that is only on a branch or in an open pull request is not
+counted. The figure reaches 100% only after Phase 6 (hardening and release readiness).
 
 ## Repository layout
 

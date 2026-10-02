@@ -1,0 +1,3 @@
+ALTER TABLE "users" ADD COLUMN "totp_pending_secret_enc" text;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "totp_pending_created_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_totp_pending_consistent" CHECK ((("users"."totp_pending_secret_enc" is null) = ("users"."totp_pending_created_at" is null)) and ("users"."totp_pending_secret_enc" is null or ("users"."totp_secret_enc" is null and not "users"."is_tombstone" and char_length("users"."totp_pending_secret_enc") between 1 and 1024)));

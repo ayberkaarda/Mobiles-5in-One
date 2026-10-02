@@ -5,21 +5,36 @@
  *
  *   node scripts/security/headers-check.ts [base-url]
  *
- * `base-url` defaults to http://localhost:3000. The script requests an HTML page twice, a
- * missing page, an API success response and an API error response, prints one line per check
- * and exits with 1 when any required header or directive is missing or weaker than specified:
+ * `base-url` defaults to http://localhost:3000. The expected headers come from the surface table
+ * that the request proxy uses (`SURFACES` in `apps/web/lib/server/security-headers.ts`, ADR-0021,
+ * ADR-0055), so the proxy and this check cannot drift apart. The script requests the home page
+ * twice, a missing page, an API success response, an API error response and the probe path of
+ * every other surface, prints one line per check and exits with 1 when any required header or
+ * directive is missing or weaker than specified:
  *
- * - pages: nonce CSP with `script-src 'self' 'nonce-…' 'strict-dynamic'` (no `'unsafe-inline'`,
- *   no `'unsafe-eval'`), `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, and a
- *   fresh nonce per response;
  * - every response: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
- *   (a longer max-age passes), `X-Content-Type-Options: nosniff`,
- *   `Referrer-Policy: strict-origin-when-cross-origin`,
- *   `Permissions-Policy` with `camera=()`, `microphone=()`, `geolocation=(self)`;
- * - API responses: `Cache-Control: no-store` and a CSP that denies everything.
+ *   (a longer max-age passes), `X-Content-Type-Options: nosniff`, `Permissions-Policy` with
+ *   `camera=()`, `microphone=()`, `geolocation=(self)`, and the surface's `Referrer-Policy`;
+ * - `X-Robots-Tag: noindex` exactly on the surfaces marked `noindex`, absent on the others;
+ * - the surface's `Cache-Control` directives where the table sets one; and on every nonce surface
+ *   (token pages included) a response that no cache may reuse: `private` or `no-store`, and none
+ *   of `public`, `s-maxage`, `max-age` above 0, `stale-while-revalidate`, `stale-if-error`,
+ *   `immutable`, because a reused page would replay one nonce to every visitor;
+ * - nonce surfaces: `script-src 'self' 'nonce-…' 'strict-dynamic'` (no `'unsafe-inline'`, no
+ *   `'unsafe-eval'`), `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, and a
+ *   fresh nonce per response;
+ * - the API surface: a CSP that denies everything.
  */
 
 import { fileURLToPath } from 'node:url';
+
+import type * as SecurityHeaders from '../../apps/web/lib/server/security-headers';
+
+// Node.js loads this file with type stripping, which needs the `.ts` extension; the web app's
+// TypeScript settings reject that extension in a static import, so the module is loaded by URL.
+const { surfaceFor, SURFACES } = (await import(
+  new URL('../../apps/web/lib/server/security-headers.ts', import.meta.url).href
+)) as typeof SecurityHeaders;
 
 export const DEFAULT_BASE_URL = 'http://localhost:3000';
 
@@ -37,19 +52,29 @@ export interface HeaderCheck {
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-interface Target {
+export interface Target {
   readonly label: string;
   readonly path: string;
-  readonly kind: 'page' | 'api';
 }
 
-const TARGETS: readonly Target[] = [
-  { label: 'page /', path: '/', kind: 'page' },
-  { label: 'missing page', path: '/headers-check-missing-page', kind: 'page' },
-  { label: 'api success', path: '/api/v1/health', kind: 'api' },
+const NAMED_TARGETS: readonly Target[] = [
+  { label: 'page /', path: '/' },
+  { label: 'missing page', path: '/headers-check-missing-page' },
+  { label: 'api success', path: '/api/v1/health' },
   // No x-kadro-client header: the route wrapper answers with a 400 problem response.
-  { label: 'api error', path: '/api/v1/me', kind: 'api' },
+  { label: 'api error', path: '/api/v1/me' },
 ];
+
+/** The named targets plus the probe path of every surface they do not already request. */
+export function targets(): Target[] {
+  const all = [...NAMED_TARGETS];
+  for (const surface of SURFACES) {
+    if (!all.some((target) => target.path === surface.probe)) {
+      all.push({ label: `${surface.name} ${surface.probe}`, path: surface.probe });
+    }
+  }
+  return all;
+}
 
 /** `default-src 'self'; script-src …` → directive name → source tokens. */
 export function parseCsp(value: string): Map<string, string[]> {
@@ -92,7 +117,7 @@ function exactDirective(
   return check(target, `CSP ${name} ${expected}`, observed === expected, observed);
 }
 
-function pageCspChecks(target: string, csp: string | null): HeaderCheck[] {
+function nonceCspChecks(target: string, csp: string | null): HeaderCheck[] {
   if (csp === null) {
     return [check(target, 'Content-Security-Policy', false, 'missing')];
   }
@@ -117,28 +142,92 @@ function pageCspChecks(target: string, csp: string | null): HeaderCheck[] {
   ];
 }
 
-function apiChecks(target: string, headers: Headers): HeaderCheck[] {
-  const cacheControl = headers.get('cache-control');
-  const csp = headers.get('content-security-policy');
+function denyAllCspCheck(target: string, csp: string | null): HeaderCheck {
   const directives = parseCsp(csp ?? '');
-  return [
-    check(
-      target,
-      'Cache-Control no-store',
-      (cacheControl ?? '')
-        .split(',')
-        .map((part) => part.trim().toLowerCase())
-        .includes('no-store'),
-      cacheControl ?? 'missing',
-    ),
-    check(
-      target,
-      "CSP default-src 'none' and frame-ancestors 'none'",
-      directives.get('default-src')?.join(' ') === "'none'" &&
-        directives.get('frame-ancestors')?.join(' ') === "'none'",
-      csp ?? 'missing',
-    ),
-  ];
+  return check(
+    target,
+    "CSP default-src 'none' and frame-ancestors 'none'",
+    directives.get('default-src')?.join(' ') === "'none'" &&
+      directives.get('frame-ancestors')?.join(' ') === "'none'",
+    csp ?? 'missing',
+  );
+}
+
+/** `Cache-Control` value → directive name → argument (`''` without one). */
+function cacheDirectives(value: string | null): Map<string, string> {
+  const directives = new Map<string, string>();
+  for (const part of (value ?? '').split(',')) {
+    const [name = '', argument = ''] = part.trim().toLowerCase().split('=');
+    if (name !== '') {
+      directives.set(name, argument.replace(/"/g, ''));
+    }
+  }
+  return directives;
+}
+
+/** Directives that let a shared or browser cache reuse the response (and so its nonce). */
+function reusableDirectives(directives: Map<string, string>): string[] {
+  const found: string[] = [];
+  for (const name of [
+    'public',
+    's-maxage',
+    'stale-while-revalidate',
+    'stale-if-error',
+    'immutable',
+  ]) {
+    if (directives.has(name)) {
+      found.push(name);
+    }
+  }
+  const maxAge = directives.get('max-age');
+  if (maxAge !== undefined && maxAge !== '0') {
+    found.push(`max-age=${maxAge}`);
+  }
+  return found;
+}
+
+function cacheControlChecks(
+  target: string,
+  surface: SecurityHeaders.Surface,
+  value: string | null,
+): HeaderCheck[] {
+  const observed = cacheDirectives(value);
+  const results: HeaderCheck[] = [];
+  if (surface.cacheControl !== null) {
+    const required = [...cacheDirectives(surface.cacheControl).keys()];
+    results.push(
+      check(
+        target,
+        `Cache-Control ${surface.cacheControl}`,
+        required.every((directive) => observed.has(directive)),
+        value ?? 'missing',
+      ),
+    );
+  }
+  if (surface.csp === 'nonce') {
+    // Every nonce surface, the token pages included: a reusable response replays one nonce.
+    const reusable = reusableDirectives(observed);
+    results.push(
+      check(
+        target,
+        'Cache-Control not shared-cacheable (per-request nonce)',
+        (observed.has('private') || observed.has('no-store')) && reusable.length === 0,
+        reusable.length === 0 ? (value ?? 'missing') : `${value ?? ''} [${reusable.join(', ')}]`,
+      ),
+    );
+  }
+  return results;
+}
+
+function robotsCheck(
+  target: string,
+  surface: SecurityHeaders.Surface,
+  value: string | null,
+): HeaderCheck {
+  const noindex = (value ?? '').toLowerCase().includes('noindex');
+  return surface.noindex
+    ? check(target, 'X-Robots-Tag noindex', noindex, value ?? 'missing')
+    : check(target, 'X-Robots-Tag absent (indexable)', !noindex, value ?? 'absent');
 }
 
 function hstsCheck(target: string, value: string | null): HeaderCheck {
@@ -175,25 +264,32 @@ function permissionsPolicyCheck(target: string, value: string | null): HeaderChe
   );
 }
 
-function commonChecks(target: string, headers: Headers): HeaderCheck[] {
+function surfaceChecks(target: Target, headers: Headers): HeaderCheck[] {
+  const surface = surfaceFor(target.path);
+  const label = target.label;
   const nosniff = headers.get('x-content-type-options');
   const referrer = headers.get('referrer-policy');
-  return [
-    hstsCheck(target, headers.get('strict-transport-security')),
+  const csp = headers.get('content-security-policy');
+  const results = [
+    hstsCheck(label, headers.get('strict-transport-security')),
     check(
-      target,
+      label,
       'X-Content-Type-Options nosniff',
       nosniff?.toLowerCase() === 'nosniff',
       nosniff ?? 'missing',
     ),
     check(
-      target,
-      'Referrer-Policy strict-origin-when-cross-origin',
-      referrer?.toLowerCase() === 'strict-origin-when-cross-origin',
+      label,
+      `Referrer-Policy ${surface.referrerPolicy}`,
+      referrer?.toLowerCase() === surface.referrerPolicy,
       referrer ?? 'missing',
     ),
-    permissionsPolicyCheck(target, headers.get('permissions-policy')),
+    permissionsPolicyCheck(label, headers.get('permissions-policy')),
+    robotsCheck(label, surface, headers.get('x-robots-tag')),
+    ...(surface.csp === 'nonce' ? nonceCspChecks(label, csp) : [denyAllCspCheck(label, csp)]),
+    ...cacheControlChecks(label, surface, headers.get('cache-control')),
   ];
+  return results;
 }
 
 /** Runs every check against `baseUrl`; a request that fails becomes a failed check. */
@@ -204,7 +300,8 @@ export async function checkSecurityHeaders(
   const base = new URL(baseUrl);
   const results: HeaderCheck[] = [];
   const nonces: string[] = [];
-  for (const target of [TARGETS[0], ...TARGETS] as Target[]) {
+  const all = targets();
+  for (const target of [all[0], ...all] as Target[]) {
     let response: Response;
     try {
       response = await fetchImpl(new URL(target.path, base).toString(), { redirect: 'manual' });
@@ -220,15 +317,9 @@ export async function checkSecurityHeaders(
       );
       continue;
     }
-    results.push(...commonChecks(target.label, response.headers));
-    if (target.kind === 'page') {
-      const csp = response.headers.get('content-security-policy');
-      results.push(...pageCspChecks(target.label, csp));
-      if (target.path === '/') {
-        nonces.push(cspNonce(csp) ?? '');
-      }
-    } else {
-      results.push(...apiChecks(target.label, response.headers));
+    results.push(...surfaceChecks(target, response.headers));
+    if (target.path === '/') {
+      nonces.push(cspNonce(response.headers.get('content-security-policy')) ?? '');
     }
   }
   const [first, second] = nonces;

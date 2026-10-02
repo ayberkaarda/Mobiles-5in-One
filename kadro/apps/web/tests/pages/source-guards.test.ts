@@ -11,14 +11,22 @@ import { describe, expect, it } from 'vitest';
  */
 
 const APP_DIR = fileURLToPath(new URL('../../', import.meta.url));
-const ROOTS = ['components/auth', 'lib/client', 'app/(app)'];
+const ROOTS = ['components/auth', 'components/seo', 'lib/client', 'app/(app)'];
+
+/**
+ * The one script element the sources may render: the JSON-LD data block (ADR-0055). A data block
+ * is never executed, its text is React children (no `dangerouslySetInnerHTML`) and the helper
+ * escapes `<`, `>`, `&`, U+2028 and U+2029 (`tests/seo/json-ld.test.ts`).
+ */
+const JSON_LD_FILE = 'components/seo/json-ld.tsx';
+const JSON_LD_SCRIPT = '<script type="application/ld+json"';
 
 /** Code only: block and line comments are removed so prose about a rule does not trip it. */
 function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-function sources(): { readonly path: string; readonly text: string }[] {
+function sources(roots: readonly string[]): { readonly path: string; readonly text: string }[] {
   const files: { path: string; text: string }[] = [];
   const walk = (relative: string) => {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed roots inside this package
@@ -33,13 +41,20 @@ function sources(): { readonly path: string; readonly text: string }[] {
       }
     }
   };
-  for (const root of ROOTS) {
+  for (const root of roots) {
     walk(root);
   }
   return files;
 }
 
-const FILES = sources();
+const FILES = sources(ROOTS);
+
+/**
+ * Every page, layout, route handler and component of the web app, including the root files and
+ * future `(marketing)` / `(seo)` groups. Only the script and HTML injection rules apply here; the
+ * token and navigation rules above stay scoped to the email-link pages.
+ */
+const ALL_FILES = sources(['app', 'components']);
 
 function file(path: string): string {
   const found = FILES.find((entry) => entry.path === path);
@@ -69,10 +84,21 @@ describe('page source guards', () => {
 
   it('reads no configuration, injects no HTML and renders no script', () => {
     for (const { path, text } of FILES) {
-      expect(text, path).not.toMatch(
+      const checked = path === JSON_LD_FILE ? text.replace(JSON_LD_SCRIPT, '') : text;
+      expect(checked, path).not.toMatch(
         /process\.env|dangerouslySetInnerHTML|<script\b|next\/script|eval\(/,
       );
     }
+  });
+
+  it('renders only the JSON-LD data block, once, from its helper', () => {
+    const helper = file(JSON_LD_FILE);
+    expect(helper.split(JSON_LD_SCRIPT)).toHaveLength(2);
+    expect(helper).not.toMatch(/__html|innerHTML|outerHTML|insertAdjacentHTML|createElement\(/);
+    const others = FILES.filter(
+      ({ path, text }) => path !== JSON_LD_FILE && text.includes('ld+json'),
+    );
+    expect(others.map(({ path }) => path)).toEqual([]);
   });
 
   it('navigates only to constants (no location writes, router only with the fixed target)', () => {
@@ -118,5 +144,36 @@ describe('page source guards', () => {
     for (const { path, text } of FILES) {
       expect(text, path).not.toMatch(/\b(TODO|FIXME|XXX)\b/);
     }
+  });
+});
+
+describe('script and HTML injection guards across app/** and components/**', () => {
+  it('finds the root, group and component sources', () => {
+    const paths = ALL_FILES.map(({ path }) => path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        'app/layout.tsx',
+        'app/(marketing)/layout.tsx',
+        'app/(marketing)/page.tsx',
+        'app/not-found.tsx',
+        'app/(app)/layout.tsx',
+        JSON_LD_FILE,
+      ]),
+    );
+    expect(paths.length).toBeGreaterThan(FILES.length);
+  });
+
+  it('injects no HTML and renders no script outside the JSON-LD helper', () => {
+    for (const { path, text } of ALL_FILES) {
+      const checked = path === JSON_LD_FILE ? text.replace(JSON_LD_SCRIPT, '') : text;
+      expect(checked, path).not.toMatch(
+        /dangerouslySetInnerHTML|__html|innerHTML|outerHTML|insertAdjacentHTML|document\.write|<script\b|next\/script|\beval\(|new Function\(/,
+      );
+    }
+  });
+
+  it('keeps JSON-LD in the one helper', () => {
+    const users = ALL_FILES.filter(({ text }) => text.includes('ld+json')).map(({ path }) => path);
+    expect(users).toEqual([JSON_LD_FILE]);
   });
 });

@@ -9,6 +9,8 @@ allowBuilds:
   # Git hooks are installed explicitly by the repository owner (`pnpm exec lefthook install`),
   # never implicitly during dependency installation.
   lefthook: false
+  # msw postinstall only copies the browser service worker script; the mobile tests use msw/node.
+  msw: false
 
 # Align auto-installed peers with the versions bundled by Expo SDK 57 / React Native 0.86.
 overrides:

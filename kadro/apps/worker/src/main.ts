@@ -2,6 +2,7 @@ import { EnvValidationError, loadWorkerEnv } from '@kadro/config';
 
 import { describeError } from './job-runner.js';
 import { createLogger } from './logger.js';
+import { installProcessHandlers } from './process-handlers.js';
 import { startWorker } from './runtime.js';
 
 async function main(): Promise<void> {
@@ -12,7 +13,11 @@ async function main(): Promise<void> {
     appEnv: env.APP_ENV,
   });
 
+  let stopWorker: () => Promise<void> = () => Promise.resolve();
+  installProcessHandlers({ logger, shutdown: () => stopWorker() });
+
   const worker = await startWorker({ env, logger, fetch: globalThis.fetch });
+  stopWorker = () => worker.stop();
 
   const shutdown = (signal: NodeJS.Signals): void => {
     logger.info({ signal }, 'worker stopping');
