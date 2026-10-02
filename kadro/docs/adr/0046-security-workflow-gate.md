@@ -44,4 +44,7 @@ noted that `Kadro Security` should not be a required check in its current form.
 - Pull requests that touch Kadro now also run the full-history gitleaks scan as a merge gate,
   as before for path-matching pull requests.
 - The weekly schedule is not affected by the diff logic and always scans everything.
-- Both gates always report, so a ruleset that requires them cannot get stuck on a missing check.
+- Both gates remove the missing-check problem that a path filter causes, so a ruleset that
+  requires them no longer waits on a check that never starts. A run that is cancelled (a newer
+  push cancels the older run of the same ref) or never starts is not covered; re-run the current
+  run if its gate stays cancelled.
