@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -32,7 +33,13 @@ import {
   maxMissingCount,
   publishBlocker,
 } from '../../../src/calls/permissions';
-import { districtsQuery, matchCallQuery } from '../../../src/calls/queries';
+import { callHref } from '../../../src/calls/links';
+import {
+  callKeys,
+  districtsQuery,
+  findListedCallForMatch,
+  matchCallQuery,
+} from '../../../src/calls/queries';
 import { formatDateTime } from '../../../src/i18n/format';
 import { ChoiceGroup, MatchScreen, matchHref, SectionTitle } from '../../../src/matches/components';
 import { type MatchMemberView } from '../../../src/matches/contracts';
@@ -46,9 +53,21 @@ import { Button, SkeletonList, Text } from '../../../src/ui';
 
 const ANY = 'any';
 
-/** The call while it is still taking applications; `null` otherwise. */
-function liveCall(call: OpenCall | null | undefined, now: number): OpenCall | null {
-  return call !== null && call !== undefined && call.status === 'open' && callActive(call, now)
+/**
+ * The kept call while it still takes applications: stored as `open`, before its end, and the
+ * match itself still `open` (a lock, cancel or played status closes the call on the server,
+ * footnote 21). `null` otherwise.
+ */
+function liveCall(
+  call: OpenCall | null | undefined,
+  match: Pick<MatchMemberView, 'status' | 'startsAt'>,
+  now: number,
+): OpenCall | null {
+  return call !== null &&
+    call !== undefined &&
+    call.status === 'open' &&
+    match.status === 'open' &&
+    callActive({ expiresAt: call.expiresAt, startsAt: match.startsAt }, now)
     ? call
     : null;
 }
@@ -205,14 +224,16 @@ function PublishForm({
 /**
  * The open call of one match for its captain and co-captains (authorization matrix §3.5
  * footnotes 19, 21, 30): publish a call, see and decide its applications, close it. The app keeps
- * the call from the publish / close answer, because the match response does not carry it; a call
- * published from another device is found through the server's `open_call_exists` answer and can
- * be closed by match id.
+ * the call (in memory) from the publish / close answer, because the match response does not carry
+ * it; a call published from another device is recognized through the server's `open_call_exists`
+ * answer or a cached list entry, the publish form is then hidden, and the call can be opened from
+ * the list or closed by match id.
  */
 export default function MatchCallScreen() {
   const { t, i18n } = useTranslation('opencalls');
   const theme = useTheme();
   const client = useQueryClient();
+  const router = useRouter();
   const { matchId, teamId, query, match, role, roleLoading } = useMatchScreen();
   const member = match?.projection === 'member' ? match : null;
   const team = useQuery({ ...teamDetailQuery(teamsApi, teamId), enabled: member !== null });
@@ -267,9 +288,16 @@ export default function MatchCallScreen() {
   }
 
   const call = stored.data;
-  const live = liveCall(call, now);
+  const live = liveCall(call, member, now);
+  // A live call this device did not publish (another staff member or device): known from the
+  // server's `open_call_exists`, or recognized in the cached public lists. The publish form stays
+  // hidden; the call can be opened from the list (decisions) or closed by match id.
+  const listed = live === null ? findListedCallForMatch(client, member) : undefined;
+  const listedIsKept =
+    listed !== undefined && call !== null && call !== undefined && call.id === listed.id;
+  const existing = live === null && (conflict || (listed !== undefined && !listedIsKept));
   const blocker = publishBlocker(role, team.data.isProLocked, member, now);
-  const callPlace = (value: OpenCall): string | null =>
+  const callPlace = (value: { readonly districtId: string }): string | null =>
     districtLabel(districts.data?.items, value.districtId);
 
   const closeCall = (): void => {
@@ -280,7 +308,7 @@ export default function MatchCallScreen() {
     <View style={{ marginTop: theme.spacing['3'] }}>
       <ConfirmAction
         label={t('manage.close')}
-        question={t('manage.closeQuestion')}
+        question={live === null ? t('manage.closeUnknownQuestion') : t('manage.closeQuestion')}
         confirmLabel={t('manage.closeConfirm')}
         cancelLabel={t('common.cancel')}
         onConfirm={closeCall}
@@ -315,15 +343,35 @@ export default function MatchCallScreen() {
         </>
       ) : (
         <>
-          {conflict ? (
-            <Section>
-              <Notice testID="call-exists">{t('manage.exists')}</Notice>
-              {closeControl}
-            </Section>
+          {existing ? (
+            <>
+              <SectionTitle>{t('manage.existingTitle')}</SectionTitle>
+              <Section>
+                <Notice testID="call-exists">{t('manage.exists')}</Notice>
+                {listed === undefined || listedIsKept ? null : (
+                  <View style={{ marginTop: theme.spacing['3'] }} testID="call-exists-listed">
+                    <CallFacts call={listed} place={listed.venue?.name ?? callPlace(listed)} />
+                    <Button
+                      label={t('manage.openListed')}
+                      variant="secondary"
+                      onPress={() => {
+                        client.setQueryData(callKeys.call(listed.id), listed);
+                        router.push(callHref(listed.id));
+                      }}
+                      testID="call-exists-open"
+                      style={{ marginTop: theme.spacing['3'] }}
+                    />
+                  </View>
+                )}
+                {closeControl}
+              </Section>
+            </>
           ) : null}
           <SectionTitle>{t('publish.title')}</SectionTitle>
           <Section>
-            {blocker === null ? (
+            {existing ? (
+              <Notice testID="publish-hidden">{t('publish.hiddenWhileLive')}</Notice>
+            ) : blocker === null ? (
               <PublishForm
                 match={member}
                 teamId={match.team.id}
@@ -343,7 +391,15 @@ export default function MatchCallScreen() {
                   style={{ marginBottom: theme.spacing['2'] }}
                   testID="last-call-status"
                 >
-                  {t(`manage.callStatus.${call.status === 'open' ? 'expired' : call.status}`)}
+                  {t(
+                    `manage.callStatus.${
+                      call.status !== 'open'
+                        ? call.status
+                        : member.status === 'open'
+                          ? 'expired'
+                          : 'closed'
+                    }`,
+                  )}
                 </Text>
                 <CallFacts call={call} place={callPlace(call)} />
                 <View style={{ marginTop: theme.spacing['4'] }}>

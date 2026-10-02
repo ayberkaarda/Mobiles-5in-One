@@ -108,7 +108,8 @@
       "notOpen": "A call can only be posted for an open match.",
       "tooLate": "The match starts too soon; a call must stay listed for at least 15 minutes.",
       "full": "The match has no free place."
-    }
+    },
+    "hiddenWhileLive": "A new call can be posted only after the live call is closed."
   },
   "manage": {
     "title": "Eksik Var call",
@@ -123,7 +124,7 @@
       "expired": "Ended",
       "removed": "Removed"
     },
-    "exists": "This match already has a live call (perhaps posted from another device). Close it before posting a new one.",
+    "exists": "This match has a live call, but this device did not post it, so its details and applications cannot be shown here. If the call appears in the Eksik Var list, open it there to manage the applications. To post a new call, close this one first.",
     "close": "Close call",
     "closeQuestion": "The call will close and pending applications will be rejected. This cannot be undone.",
     "closeConfirm": "Close call",
@@ -139,7 +140,10 @@
     "rejectQuestion": "{{name}} will be rejected and cannot apply to this call again.",
     "rejectConfirm": "Reject",
     "more": "More applications",
-    "inactive": "The call has ended, so pending applications can no longer be decided."
+    "inactive": "The call has ended, so pending applications can no longer be decided.",
+    "existingTitle": "A call is live",
+    "openListed": "Open the call and its applications",
+    "closeUnknownQuestion": "The match's live call will close. Pending applications you cannot see here will be rejected too, and those players cannot apply to this call again. This cannot be undone."
   },
   "validation": {
     "messageTooLong": "The note can be at most {{max}} characters.",

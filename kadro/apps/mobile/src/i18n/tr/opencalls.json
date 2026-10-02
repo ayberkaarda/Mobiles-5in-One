@@ -108,7 +108,8 @@
       "notOpen": "İlan yalnızca açık bir maç için verilebilir.",
       "tooLate": "Maça çok az kaldı; ilan en az 15 dakika yayında kalmalı.",
       "full": "Maçta boş yer yok."
-    }
+    },
+    "hiddenWhileLive": "Yayındaki ilan kapanmadan yeni ilan verilemez."
   },
   "manage": {
     "title": "Eksik Var ilanı",
@@ -123,7 +124,7 @@
       "expired": "Süresi doldu",
       "removed": "Kaldırıldı"
     },
-    "exists": "Bu maçın yayında bir ilanı zaten var (başka bir cihazdan verilmiş olabilir). Yenisini vermek için önce onu kapat.",
+    "exists": "Bu maçın yayında bir ilanı var, ama bu cihaz onu yayınlamadığı için ilanın ayrıntılarını ve başvurularını burada gösteremiyoruz. İlan Eksik Var listesinde görünüyorsa oradan açıp başvuruları yönetebilirsin. Yeni ilan için önce bu ilanı kapatman gerekir.",
     "close": "İlanı kapat",
     "closeQuestion": "İlan kapanacak ve bekleyen başvurular reddedilecek. Bu geri alınamaz.",
     "closeConfirm": "İlanı kapat",
@@ -139,7 +140,10 @@
     "rejectQuestion": "{{name}} reddedilecek ve bu ilana tekrar başvuramayacak.",
     "rejectConfirm": "Reddet",
     "more": "Daha fazla başvuru",
-    "inactive": "İlan kapandığı için bekleyen başvurular artık karara bağlanamaz."
+    "inactive": "İlan kapandığı için bekleyen başvurular artık karara bağlanamaz.",
+    "existingTitle": "Yayında bir ilan var",
+    "openListed": "İlanı ve başvuruları aç",
+    "closeUnknownQuestion": "Bu maçın yayındaki ilanı kapanacak. Burada göremediğin bekleyen başvurular da reddedilecek ve bu oyuncular aynı ilana tekrar başvuramayacak. Bu geri alınamaz."
   },
   "validation": {
     "messageTooLong": "Not en fazla {{max}} karakter olabilir.",
