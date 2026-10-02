@@ -9,6 +9,9 @@ import {
   HSTS_VALUE,
   PERMISSIONS_POLICY_VALUE,
   REFERRER_POLICY_VALUE,
+  SURFACES,
+  type SurfaceName,
+  surfaceFor,
 } from '../lib/server/security-headers';
 import { noParams, noQuery } from '../lib/server/validate';
 import { testEnv } from './support/env';
@@ -113,6 +116,113 @@ describe('error pages', () => {
       expectStaticHeaders(response.headers);
     }
   });
+});
+
+describe('surface table (ADR-0021, ADR-0055)', () => {
+  /** Written out on purpose: a change to the table has to change this expectation too. */
+  const expected: Record<
+    SurfaceName,
+    {
+      readonly csp: 'nonce' | 'deny-all';
+      readonly robots: string | null;
+      readonly referrer: string;
+      readonly cache: string | null;
+    }
+  > = {
+    api: {
+      csp: 'deny-all',
+      robots: null,
+      referrer: 'strict-origin-when-cross-origin',
+      cache: 'no-store',
+    },
+    'token-page': {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'no-referrer',
+      cache: 'no-store',
+    },
+    'email-link-page': {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'strict-origin-when-cross-origin',
+      cache: null,
+    },
+    marketing: {
+      csp: 'nonce',
+      robots: null,
+      referrer: 'strict-origin-when-cross-origin',
+      cache: null,
+    },
+    seo: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+    app: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+  };
+
+  it('lists every surface once, with the catch-all app surface last', () => {
+    expect(SURFACES.map((surface) => surface.name)).toEqual([
+      'api',
+      'token-page',
+      'email-link-page',
+      'marketing',
+      'seo',
+      'app',
+    ]);
+    expect(SURFACES.at(-1)?.paths).toEqual([]);
+  });
+
+  it('classifies paths by exact match or by whole segments under a `/**` base', () => {
+    const cases: [string, SurfaceName][] = [
+      ['/api/v1/health', 'api'],
+      ['/api/v1/auth/reset', 'api'],
+      ['/e-posta-dogrula', 'token-page'],
+      ['/sifre-sifirla', 'token-page'],
+      ['/sifre-sifirla/x', 'app'],
+      ['/sifremi-unuttum', 'email-link-page'],
+      ['/giris', 'email-link-page'],
+      ['/hesap-silme', 'email-link-page'],
+      ['/', 'marketing'],
+      ['/ozellikler', 'marketing'],
+      ['/blog', 'marketing'],
+      ['/blog/ilk-yazi', 'marketing'],
+      ['/blogx', 'app'],
+      ['/kvkk-aydinlatma', 'marketing'],
+      ['/sahalar/istanbul', 'seo'],
+      ['/saha/kadikoy-arena', 'seo'],
+      ['/sahalarx', 'app'],
+      ['/eksik-var/istanbul/kadikoy', 'seo'],
+      ['/admin/kullanicilar', 'app'],
+      ['/mac/AbCdEf123', 'app'],
+      ['/bu-sayfa-yok', 'app'],
+    ];
+    for (const [pathname, name] of cases) {
+      expect(surfaceFor(pathname).name, pathname).toBe(name);
+    }
+  });
+
+  it('classifies every probe path into its own surface', () => {
+    for (const surface of SURFACES) {
+      expect(surfaceFor(surface.probe).name, surface.probe).toBe(surface.name);
+    }
+  });
+
+  for (const surface of SURFACES) {
+    it(`${surface.name}: proxy sends the CSP variant, robots, referrer and cache headers`, () => {
+      const want = expected[surface.name];
+      const headers = proxied(surface.probe, production).headers;
+      const csp = headers.get('content-security-policy');
+      if (want.csp === 'nonce') {
+        expectPageCsp(headers);
+      } else {
+        expect(csp).toBe("default-src 'none'; frame-ancestors 'none'");
+      }
+      expect(headers.get('x-robots-tag')).toBe(want.robots);
+      expect(headers.get('referrer-policy')).toBe(want.referrer);
+      expect(headers.get('cache-control')).toBe(want.cache);
+      expect(headers.get('strict-transport-security')).toBe(HSTS_VALUE);
+      expect(headers.get('x-content-type-options')).toBe('nosniff');
+      expect(headers.get('permissions-policy')).toBe(PERMISSIONS_POLICY_VALUE);
+      expect(headers.get('x-frame-options')).toBe('DENY');
+    });
+  }
 });
 
 describe('API responses', () => {
