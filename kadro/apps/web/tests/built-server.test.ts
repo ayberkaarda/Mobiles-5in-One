@@ -123,8 +123,8 @@ describe.skipIf(!BUILT)('production build', () => {
   });
 
   it('prerenders no page: a static page could not carry the per-request nonce', () => {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
     const manifest = JSON.parse(
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
       readFileSync(
         fileURLToPath(new URL('../.next/prerender-manifest.json', import.meta.url)),
         'utf8',
