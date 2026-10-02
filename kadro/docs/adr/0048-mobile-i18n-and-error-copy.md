@@ -32,8 +32,13 @@ do not exist yet.
   never displayed. Error screens show the `requestId` as a selectable reference so support can
   find the request in the logs.
 - `errors.json` holds exactly one non-empty message per entry of `ERROR_CODES` in
-  `@kadro/contracts`, nothing else. A test enforces this for each language as soon as the file
-  exists; until then it reports the file as awaited.
+  `@kadro/contracts`, nothing else. A test enforces this for each language whenever the file
+  exists. A missing file is never counted as passing: by default the test is reported as skipped,
+  and with `KADRO_REQUIRE_ERROR_CATALOG=1` it fails. Once the catalogs are merged, requiring them
+  becomes the default (the switch is inverted and CI sets nothing); until then a delivery check
+  runs the mobile tests with the switch set. The turbo `test` task forwards only listed variables,
+  so the switch takes effect with `pnpm --filter @kadro/mobile test` until it is added to the
+  task's `passThroughEnv`.
 - Copy follows the brand voice (§2): short, friendly "sen" form in Turkish.
 
 ## Consequences

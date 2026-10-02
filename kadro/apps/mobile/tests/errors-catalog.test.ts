@@ -45,24 +45,29 @@ describe('errors catalog check', () => {
 });
 
 /**
+ * `KADRO_REQUIRE_ERROR_CATALOG=1` makes a missing catalog a failure (delivery gate, ADR-0048).
+ * Without it a missing catalog is reported as skipped, never as passed.
+ */
+// eslint-disable-next-line no-restricted-properties -- test switch read by the test runner only
+const catalogRequired = process.env.KADRO_REQUIRE_ERROR_CATALOG === '1';
+
+/**
  * Product spec §6 item 13: every problem `code` the API can return has localized copy in
- * `src/i18n/<language>/errors.json`, and nothing else is in those files. The catalogs are
- * delivered by a separate work package; until a file exists, its test states that it is awaited
- * and asserts the absence, and the full check runs as soon as the file is present.
+ * `src/i18n/<language>/errors.json`, and nothing else is in those files.
  */
 describe.each(LANGUAGES)('errors.json (%s)', (language) => {
   const file = translationFile(language, 'errors');
-
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path under the fixed src/i18n directory
-  if (!existsSync(file)) {
-    it(`bekleniyor: src/i18n/${language}/errors.json is not delivered yet; coverage of ERROR_CODES is checked once it exists`, () => {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path under the fixed src/i18n directory
-      expect(existsSync(file)).toBe(false);
-    });
+  const present = existsSync(file);
+  const title = 'has exactly one non-empty message for every ERROR_CODES entry';
+
+  if (!present && !catalogRequired) {
+    it.skip(`${title} (src/i18n/${language}/errors.json not delivered yet)`, () => undefined);
     return;
   }
 
-  it('has exactly one non-empty message for every ERROR_CODES entry', () => {
+  it(title, () => {
+    expect(present, `src/i18n/${language}/errors.json is missing`).toBe(true);
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path under the fixed src/i18n directory
     const catalog = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
     expect(catalogProblems(catalog)).toEqual([]);
