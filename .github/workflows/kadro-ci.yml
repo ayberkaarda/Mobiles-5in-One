@@ -41,6 +41,10 @@ jobs:
 
       # Pull requests: the checked-out merge commit against its first parent (the base branch).
       # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Kadro
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of kadro/ as a deletion inside it. Exit 0 means no
+      # Kadro change, 1 a change, anything else is an error and runs every Kadro job.
       - name: Diff against base
         id: diff
         env:
@@ -62,14 +66,23 @@ jobs:
             echo "No usable base commit; running every Kadro job."
             kadro=true
           else
-            files="$(git diff --name-only "$base" "$head")"
-            printf '%s\n' "$files"
-            if printf '%s\n' "$files" \
-              | grep -qE '^(kadro/|\.github/workflows/kadro-[^/]+\.yml$|\.gitleaks\.toml$)'; then
-              kadro=true
+            set -- kadro/ ':(glob).github/workflows/kadro-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
             else
-              kadro=false
+              status=$?
             fi
+            case "$status" in
+              0) kadro=false ;;
+              1) kadro=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Kadro job."
+                kadro=true
+                ;;
+            esac
           fi
           echo "kadro=$kadro" >> "$GITHUB_OUTPUT"
           echo "Kadro jobs run: $kadro"
@@ -150,10 +163,27 @@ jobs:
           cache: pnpm
           cache-dependency-path: kadro/pnpm-lock.yaml
 
+      # A short headless start, not only --version, so a sandbox or start-up problem shows up
+      # here with Chrome's own stderr instead of as a browser-suite timeout. Runs with Chrome's
+      # default sandbox, like the browser suite.
       - name: Check Docker and browser
         run: |
           docker version --format 'Docker server {{.Server.Version}}'
           "$KADRO_TEST_BROWSER" --version
+          probe="$RUNNER_TEMP/chrome-probe"
+          mkdir -p "$probe"
+          if timeout 60 "$KADRO_TEST_BROWSER" --headless=new --user-data-dir="$probe/profile" \
+            --dump-dom 'data:text/html,<p>kadro-ci-probe</p>' > "$probe/out.html" 2> "$probe/err.txt"; then
+            status=0
+          else
+            status=$?
+          fi
+          echo "Chrome headless start: exit $status, stderr follows"
+          cat "$probe/err.txt"
+          if [ "$status" -ne 0 ] || ! grep -q 'kadro-ci-probe' "$probe/out.html"; then
+            echo "Chrome did not start headless on this runner."
+            exit 1
+          fi
 
       - name: Pull PostgreSQL + PostGIS test image
         run: docker pull postgis/postgis:16-3.5-alpine
@@ -167,8 +197,9 @@ jobs:
       - name: Test
         run: pnpm test
 
-  # The only check to mark as required on main. "changes" must succeed; the Kadro jobs must
-  # succeed or be skipped (no Kadro change). Any other result (failure, cancelled, empty) fails.
+  # The only check to mark as required on main. "changes" must succeed and report kadro=true
+  # or kadro=false. true: verify and test must both succeed. false: both must be skipped.
+  # Any other output or result (failure, cancelled, empty) fails the gate.
   # When a job is added to this workflow, add it to "needs" and to the list below.
   gate:
     name: Kadro CI gate
@@ -183,21 +214,27 @@ jobs:
       - name: Evaluate job results
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
+          KADRO_CHANGED: ${{ needs.changes.outputs.kadro }}
           VERIFY_RESULT: ${{ needs.verify.result }}
           TEST_RESULT: ${{ needs.test.result }}
         run: |
-          status=0
-          echo "changes: ${CHANGES_RESULT:-<none>}"
-          [ "$CHANGES_RESULT" = "success" ] || status=1
-          for pair in "verify=$VERIFY_RESULT" "test=$TEST_RESULT"; do
-            echo "${pair%%=*}: ${pair#*=}"
-            case "${pair#*=}" in
-              success | skipped) ;;
-              *) status=1 ;;
-            esac
-          done
-          if [ "$status" -ne 0 ]; then
-            echo "Kadro CI failed: a job failed, was cancelled or did not report."
+          echo "changes: ${CHANGES_RESULT:-<none>} (kadro=${KADRO_CHANGED:-<none>})"
+          echo "verify: ${VERIFY_RESULT:-<none>}"
+          echo "test: ${TEST_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Kadro CI failed: change detection did not succeed."
             exit 1
           fi
-          echo "All Kadro CI jobs passed or had nothing to do."
+          case "$KADRO_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Kadro CI failed: change detection reported no valid kadro output."
+              exit 1
+              ;;
+          esac
+          if [ "$VERIFY_RESULT" != "$expected" ] || [ "$TEST_RESULT" != "$expected" ]; then
+            echo "Kadro CI failed: kadro=$KADRO_CHANGED requires verify and test to be $expected."
+            exit 1
+          fi
+          echo "Kadro CI passed (kadro=$KADRO_CHANGED, verify and test $expected)."
