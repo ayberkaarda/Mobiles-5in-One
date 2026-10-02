@@ -176,6 +176,16 @@ describe('app.config.ts', () => {
     expect(failure).not.toContain('api.invalid.example');
   });
 
+  it('fails fast and names the key when the web origin is missing in a production build', () => {
+    stubPublicEnv({
+      EXPO_PUBLIC_APP_ENV: 'production',
+      EXPO_PUBLIC_API_URL: 'https://api.kadro.example',
+    });
+    const failure = captureFailure(() => resolvedConfig());
+    expect(failure).toContain('EXPO_PUBLIC_WEB_ORIGIN');
+    expect(failure).not.toContain('api.kadro.example');
+  });
+
   it('fails fast and names only the key when a public variable is missing', () => {
     vi.stubEnv('EXPO_PUBLIC_APP_ENV', 'preview');
     vi.stubEnv('EXPO_PUBLIC_API_URL', '');
@@ -187,6 +197,7 @@ describe('app.config.ts', () => {
     stubPublicEnv({
       EXPO_PUBLIC_APP_ENV: 'production',
       EXPO_PUBLIC_API_URL: 'https://api.kadro.example',
+      EXPO_PUBLIC_WEB_ORIGIN: 'https://kadro.example',
     });
     expect(resolvedConfig().scheme).toBe('kadro');
   });

@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "Kadro",
+    "tagline": "Kadron eksik kalmasın."
+  },
+  "tabs": {
+    "matches": "Maçlar",
+    "teams": "Takımlar",
+    "openCalls": "Eksik Var",
+    "venues": "Sahalar",
+    "profile": "Profil"
+  },
+  "state": {
+    "loading": "Yükleniyor",
+    "retry": "Tekrar dene",
+    "errorTitle": "Bir şeyler ters gitti",
+    "reference": "Hata kodu",
+    "showingCached": "Bağlantı yok. Son kaydedilen bilgileri görüyorsun."
+  },
+  "error": {
+    "unknown": "Beklenmeyen bir hata oluştu. Biraz sonra tekrar dene.",
+    "network": "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.",
+    "timeout": "Sunucu zamanında yanıt vermedi. Tekrar dene."
+  },
+  "matches": {
+    "noTeamTitle": "Henüz bir takımın yok",
+    "noTeamMessage": "Maçlar takımın içinde kurulur. Takımını kur ya da davet bağlantısıyla bir takıma katıl.",
+    "emptyTitle": "Yaklaşan maç yok",
+    "emptyMessage": "Kaptanın maç kurduğunda burada görürsün.",
+    "itemSubtitle": "{{team}} · {{format}}",
+    "slots": "{{confirmed}}/{{slots}}"
+  },
+  "teams": {
+    "emptyTitle": "Henüz bir takımın yok",
+    "emptyMessage": "Kadroyu kur ya da arkadaşının gönderdiği davet bağlantısıyla takıma katıl.",
+    "itemSubtitle": "{{role}} · {{number}} oyuncu",
+    "role": {
+      "captain": "Kaptan",
+      "co_captain": "Yardımcı kaptan",
+      "player": "Oyuncu"
+    }
+  },
+  "openCalls": {
+    "emptyTitle": "Şu an eksik oyuncu ilanı yok",
+    "emptyMessage": "Bir takım oyuncu aradığında ilan burada çıkar.",
+    "missing": "{{number}} eksik",
+    "itemSubtitle": "{{date}} · {{format}}"
+  },
+  "venues": {
+    "emptyTitle": "Henüz saha yok",
+    "emptyMessage": "Saha rehberine eklenen sahalar burada listelenir.",
+    "verified": "Doğrulanmış",
+    "unverified": "Doğrulanmamış",
+    "indoor": "Kapalı",
+    "outdoor": "Açık",
+    "noRating": "Puan yok"
+  },
+  "profile": {
+    "email": "E-posta",
+    "emailUnverified": "E-posta adresin henüz doğrulanmadı.",
+    "signOut": "Çıkış yap",
+    "signOutHint": "Bu cihazdaki oturumu kapatır ve kayıtlı bilgileri siler."
+  }
+}

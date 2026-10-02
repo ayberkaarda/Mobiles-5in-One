@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "Kadro",
+    "tagline": "Never play a player short."
+  },
+  "tabs": {
+    "matches": "Matches",
+    "teams": "Teams",
+    "openCalls": "Players Needed",
+    "venues": "Pitches",
+    "profile": "Profile"
+  },
+  "state": {
+    "loading": "Loading",
+    "retry": "Try again",
+    "errorTitle": "Something went wrong",
+    "reference": "Error reference",
+    "showingCached": "You are offline. Showing the last saved information."
+  },
+  "error": {
+    "unknown": "Something unexpected happened. Try again in a moment.",
+    "network": "Could not connect. Check your internet connection and try again.",
+    "timeout": "The server did not answer in time. Try again."
+  },
+  "matches": {
+    "noTeamTitle": "You have no team yet",
+    "noTeamMessage": "Matches are set up inside a team. Create your team or join one with an invite link.",
+    "emptyTitle": "No upcoming matches",
+    "emptyMessage": "When your captain sets up a match, you will see it here.",
+    "itemSubtitle": "{{team}} · {{format}}",
+    "slots": "{{confirmed}}/{{slots}}"
+  },
+  "teams": {
+    "emptyTitle": "You have no team yet",
+    "emptyMessage": "Build your squad or join a team with the invite link a friend sent you.",
+    "itemSubtitle": "{{role}} · squad of {{number}}",
+    "role": {
+      "captain": "Captain",
+      "co_captain": "Co-captain",
+      "player": "Player"
+    }
+  },
+  "openCalls": {
+    "emptyTitle": "No open calls right now",
+    "emptyMessage": "When a team is looking for players, the call shows up here.",
+    "missing": "{{number}} needed",
+    "itemSubtitle": "{{date}} · {{format}}"
+  },
+  "venues": {
+    "emptyTitle": "No pitches yet",
+    "emptyMessage": "Pitches added to the directory are listed here.",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "indoor": "Indoor",
+    "outdoor": "Outdoor",
+    "noRating": "No rating"
+  },
+  "profile": {
+    "email": "Email",
+    "emailUnverified": "Your email address is not verified yet.",
+    "signOut": "Sign out",
+    "signOutHint": "Ends the session on this device and deletes the data saved on it."
+  }
+}
