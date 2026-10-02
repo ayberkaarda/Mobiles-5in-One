@@ -7,22 +7,39 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Projeler
 
-| Klasör                    | Ürün                                                                                                                                                      | Teknoloji                                                                      | Durum                                              |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------- |
-| [`kadro`](kadro/)         | Halı saha maç organizasyonu: kadro kur, eksik oyuncuyu bul, saha ücretini böl                                                                             | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Geliştirme aşamasında (foundation + Phase 1 tamam) |
-| [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Yalnızca tasarım dokümanı, kod yok                 |
-| [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Yalnızca tasarım dokümanı, kod yok                 |
-| [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                 |
-| [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Yalnızca tasarım dokümanı, kod yok                 |
+| Klasör                    | Ürün                                                                                                                                                      | Teknoloji                                                                      | Durum                                                      | İlerleme |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------- | -------- |
+| [`kadro`](kadro/)         | Halı saha maç organizasyonu: kadro kur, eksik oyuncuyu bul, saha ücretini böl                                                                             | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Geliştirme aşamasında (Phase 0-2 tamam, Phase 3-5 sürüyor) | %0       |
+| [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Yalnızca tasarım dokümanı, kod yok                         | %0       |
+| [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Yalnızca tasarım dokümanı, kod yok                         | %0       |
+| [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                         | %0       |
+| [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Yalnızca tasarım dokümanı, kod yok                         | %0       |
 
 ## Durum
 
-Şu an yalnızca Kadro'nun kodu var. Depo iskeleti ve Phase 1 (veri modeli, kimlik doğrulama ve
-güvenlik çekirdeği) tamamlandı; domain API, mobil uygulama, SEO sayfaları, abonelik ve yönetim
-paneli planlanıyor. Ayrıntı için [`kadro/README.tr.md`](kadro/README.tr.md) dosyasına bakın.
+Şu an yalnızca Kadro'nun kodu var. Depo iskeleti, Phase 1 (veri modeli, kimlik doğrulama ve
+güvenlik çekirdeği) ve Phase 2 (domain API ve worker işleri) tamamlandı. Phase 3 ile 5 (mobil
+uygulama, SEO sayfaları, abonelik ve yönetim paneli) sürüyor: mobil iskelet, giriş, takımlar,
+pazarlama sitesi kabuğu, RevenueCat webhook'u ve Phase 5 veri modeli birleştirildi. Ayrıntı için
+[`kadro/README.tr.md`](kadro/README.tr.md) dosyasına bakın.
 
 Askida, Cetele, Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
 uygulama kodu yok.
+
+### İlerleme
+
+Son güncelleme: 2026-10-03. Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
+
+| Proje       | İlerleme | Dayanak                                                                                                                               |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `kadro`     | ~%58     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinden 12'si birleşti; Phase 6 başlamadı. Yedi faz eşit ağırlıklı: (3 + 3 x 12/34) / 7. |
+| `askida`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                      |
+| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                      |
+| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                      |
+| `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                      |
+
+İlerleme `main`'e birleştirilmiş işi ifade eder; yalnızca dalda duran ya da açık bir pull request'teki
+iş sayılmaz. Rakam ancak Phase 6 (sağlamlaştırma ve yayına hazırlık) bittikten sonra %100 olur.
 
 ## Depo yapısı
 
