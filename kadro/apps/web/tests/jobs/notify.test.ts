@@ -1,6 +1,7 @@
 import { newId } from '@kadro/db';
 
 import { LIMITS, pushSendJobSchema } from '@kadro/contracts';
+import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
@@ -161,6 +162,99 @@ describe('push producers', () => {
       added.every((job) => job.startAfter.getTime() === now.getTime() + COALESCE_DELAY_MS),
     ).toBe(true);
     expect(repeat).toHaveLength(0);
+  });
+
+  describe('dropped repeats are recorded for the worker (ADR-0044)', () => {
+    async function pendingResends(singletonKey: string) {
+      const admin = new pg.Client({ connectionString: jobs.database.url });
+      await admin.connect();
+      try {
+        const result = await admin.query<{
+          type: string;
+          user_id: string;
+          ref_id: string;
+          requested_at: Date;
+          version: number;
+        }>(
+          'select type, user_id, ref_id, requested_at, version from push_resends where singleton_key = $1',
+          [singletonKey],
+        );
+        return result.rows;
+      } finally {
+        await admin.end();
+      }
+    }
+
+    type Tx = Parameters<Parameters<JobsHarness['app']['db']['transaction']>[0]>[0];
+    const cases = [
+      {
+        type: 'rsvp.changed' as const,
+        prefix: 'rsvp',
+        /** `rsvp.changed` refers to the match, the coalescing object itself. */
+        expectedRef: (objectId: string) => objectId,
+        produce: (tx: Tx, objectId: string, _refId: string, userId: string, now: Date) =>
+          notifyRsvpChanged(sender(), tx, { matchId: objectId, recipientIds: [userId], now }),
+      },
+      {
+        type: 'application.received' as const,
+        prefix: 'application',
+        /** `application.received` refers to the application of the first recorded change. */
+        expectedRef: (_objectId: string, refId: string) => refId,
+        produce: (tx: Tx, objectId: string, refId: string, userId: string, now: Date) =>
+          notifyApplicationReceived(sender(), tx, {
+            openCallId: objectId,
+            applicationId: refId,
+            recipientIds: [userId],
+            now,
+          }),
+      },
+    ];
+
+    for (const scenario of cases) {
+      it(`${scenario.type}: the window's job records nothing, each dropped repeat counts`, async () => {
+        const objectId = newId();
+        const userId = newId();
+        const singletonKey = `${scenario.prefix}:${objectId}:${userId}`;
+        const opened = new Date(Date.now() + 60_000);
+        const [firstRef, secondRef, thirdRef] = [newId(), newId(), newId()];
+
+        const first = await produced('push.send', (tx) =>
+          scenario.produce(tx, objectId, firstRef, userId, opened),
+        );
+        expect(first).toHaveLength(1);
+        expect(await pendingResends(singletonKey)).toEqual([]);
+
+        // The worker has fetched the job: the enqueue is still dropped, and the change recorded.
+        await jobs.database.client.pool.query(
+          "update pgboss.job set state = 'active', started_on = now() where id = $1",
+          [first[0]?.id ?? ''],
+        );
+        const secondAt = new Date(opened.getTime() + 60_000);
+        const second = await produced('push.send', (tx) =>
+          scenario.produce(tx, objectId, secondRef, userId, secondAt),
+        );
+        const third = await produced('push.send', (tx) =>
+          scenario.produce(
+            tx,
+            objectId,
+            thirdRef,
+            userId,
+            new Date(opened.getTime() + COALESCE_DELAY_MS),
+          ),
+        );
+        expect(second).toHaveLength(0);
+        expect(third).toHaveLength(0);
+        expect(await pendingResends(singletonKey)).toEqual([
+          {
+            type: scenario.type,
+            user_id: userId,
+            ref_id: scenario.expectedRef(objectId, secondRef),
+            requested_at: secondAt,
+            version: 2,
+          },
+        ]);
+      });
+    }
   });
 
   it('notifyApplicationDecided: the key the expiry job uses, so a close and an expiry notify once', async () => {

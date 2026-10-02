@@ -4,6 +4,7 @@ import {
   deletionRequests,
   emailTokens,
   jobReceipts,
+  pushResends,
   newId,
   openCallApplications,
   openCalls,
@@ -247,6 +248,18 @@ describe('maintenance.sweep (ADR-0028)', () => {
         { queue: 'email.send', idempotencyKey: `fresh:${newId()}`, createdAt: ago(DAY_MS) },
       ])
       .returning({ id: jobReceipts.id });
+    const [oldResend, freshResend] = await database.admin.db
+      .insert(pushResends)
+      .values(
+        [ago(25 * HOUR_MS), ago(HOUR_MS)].map((requestedAt) => ({
+          singletonKey: `rsvp:${newId()}:${user.id}`,
+          type: 'rsvp.changed' as const,
+          userId: user.id,
+          refId: newId(),
+          requestedAt,
+        })),
+      )
+      .returning({ id: pushResends.id });
     const unseenDevice = await fixtures.pushToken(user.id, ago(61 * DAY_MS));
     const activeDevice = await fixtures.pushToken(user.id, ago(DAY_MS));
 
@@ -300,6 +313,11 @@ describe('maintenance.sweep (ADR-0028)', () => {
     expect(await ids('bucket')).not.toContain(oldBucket?.id);
     expect(await ids('receipt')).toContain(freshReceipt?.id);
     expect(await ids('receipt')).not.toContain(oldReceipt?.id);
+    const resends = (await database.admin.db.select({ id: pushResends.id }).from(pushResends)).map(
+      (r) => r.id,
+    );
+    expect(resends).toContain(freshResend?.id);
+    expect(resends).not.toContain(oldResend?.id);
     expect(await ids('push')).toContain(activeDevice.id);
     expect(await ids('push')).not.toContain(unseenDevice.id);
 

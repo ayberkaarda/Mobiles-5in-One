@@ -401,6 +401,9 @@ describe('roles and grants (ADR-0028)', () => {
       if (table === 'job_receipts') {
         expect(app, table).toEqual([]);
         expect(worker, table).toEqual(['DELETE', 'INSERT', 'SELECT']);
+      } else if (table === 'push_resends') {
+        expect(app, table).toEqual(['INSERT', 'SELECT', 'UPDATE']);
+        expect(worker, table).toEqual(['DELETE', 'SELECT']);
       } else if (table === 'audit_logs') {
         expect(app, table).toEqual(['INSERT', 'SELECT']);
         expect(worker, table).toEqual(['INSERT', 'SELECT']);
