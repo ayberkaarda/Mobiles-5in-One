@@ -9,6 +9,7 @@ import {
   ENDPOINT_LIST,
   ENDPOINTS,
   type EndpointDefinition,
+  type EndpointId,
   endpointActions,
   endpointErrorCodes,
   ERROR_CODES,
@@ -70,23 +71,25 @@ function matrixRows(source: string): MatrixRow[] {
   return rows;
 }
 
-/** Matrix areas that belong to Phase 5 (webhook, admin) and are not in the registry yet. */
-function isLaterPhase(path: string): boolean {
-  return path.startsWith('admin/') || path.startsWith('webhooks/');
+/** Matrix rows such as `GET admin/**` cover every registry path below their prefix. */
+function rowMatches(row: MatrixRow, method: string, path: string): boolean {
+  if (row.method !== method) {
+    return false;
+  }
+  if (row.path.endsWith('/**')) {
+    return path.startsWith(row.path.slice(0, -2));
+  }
+  return row.path === path;
 }
 
-const PHASE5_ACTIONS: readonly Action[] = [
-  'webhook.revenuecat',
-  'admin.stepUp',
-  'admin.totpEnroll',
-  'admin.read',
-  'admin.role.manage',
-  'admin.user.deactivate',
-  'admin.audit.read',
-  'venue.verify',
-  'venue.import',
-  'review.delete',
-  'opencall.remove',
+/**
+ * Phase 3–5 endpoints whose matrix rows are written by the docs work packages of those phases
+ * (the matrix is not owned by the contracts package). Each id leaves this list when its row lands.
+ */
+const PENDING_MATRIX_ROWS: readonly EndpointId[] = [
+  'getMyStats',
+  'listDistricts',
+  'adminTotpConfirm',
 ];
 
 describe('registry structure', () => {
@@ -100,9 +103,22 @@ describe('registry structure', () => {
     }
   });
 
-  it('covers the 49 endpoints of Phase 1 and Phase 2', () => {
-    expect(ENDPOINT_LIST).toHaveLength(49);
-    expect(ENDPOINT_LIST.filter((endpoint) => endpoint.phase === 1)).toHaveLength(12);
+  it('covers the 67 endpoints of Phases 1 to 5', () => {
+    expect(ENDPOINT_LIST).toHaveLength(67);
+    const perPhase = (phase: number) =>
+      ENDPOINT_LIST.filter((endpoint) => endpoint.phase === phase).length;
+    expect([1, 2, 3, 4, 5].map(perPhase)).toEqual([12, 37, 2, 0, 16]);
+  });
+
+  it('puts every admin route under /api/v1/admin and every webhook under /api/v1/webhooks', () => {
+    for (const endpoint of ENDPOINT_LIST) {
+      expect(endpoint.path.startsWith('/api/v1/admin/'), endpoint.id).toBe(
+        endpoint.tag === 'admin',
+      );
+      expect(endpoint.path.startsWith('/api/v1/webhooks/'), endpoint.id).toBe(
+        endpoint.tag === 'webhooks',
+      );
+    }
   });
 
   it('uses only strict object schemas for params, query and bodies', () => {
@@ -174,9 +190,12 @@ describe('registry structure', () => {
 });
 
 describe('authentication, client and rate-limit rules', () => {
-  it('exempts only health from x-kadro-client', () => {
+  it('exempts only health and the webhook from x-kadro-client (ADR-0020)', () => {
     const exempt = ENDPOINT_LIST.filter((endpoint) => endpoint.client === 'exempt');
-    expect(exempt.map((endpoint) => endpoint.path)).toEqual(['/api/v1/health']);
+    expect(exempt.map((endpoint) => endpoint.path)).toEqual([
+      '/api/v1/health',
+      '/api/v1/webhooks/revenuecat',
+    ]);
   });
 
   it('keeps unauthenticated access to auth entry points, health and public reads', () => {
@@ -194,6 +213,8 @@ describe('authentication, client and rate-limit rules', () => {
         '/api/v1/auth/reset',
         '/api/v1/auth/apple',
         '/api/v1/auth/google',
+        '/api/v1/districts',
+        '/api/v1/webhooks/revenuecat',
       ].sort(),
     );
     const optional = ENDPOINT_LIST.filter((endpoint) => endpoint.auth === 'optional');
@@ -205,10 +226,13 @@ describe('authentication, client and rate-limit rules', () => {
     ]);
   });
 
-  it('names a matrix §8 group for every mutation and none for reads but the invite preview', () => {
+  it('names a matrix §8 group for every mutation but the webhook, none for reads but the invite preview', () => {
     for (const endpoint of ENDPOINT_LIST) {
       if (endpoint.id === 'previewInvite') {
         expect(endpoint.rateLimit).toBe('I');
+      } else if (endpoint.id === 'receiveRevenueCatWebhook') {
+        // Provider deliveries arrive in bursts and must not be dropped (ADR-0063).
+        expect(endpoint.rateLimit).toBeNull();
       } else if (endpoint.method === 'GET') {
         expect(endpoint.rateLimit, endpoint.id).toBeNull();
       } else {
@@ -241,6 +265,9 @@ describe('authentication, client and rate-limit rules', () => {
     expect(group('createReview')).toBe('W');
     expect(group('presignUpload')).toBe('U');
     expect(group('registerPushToken')).toBe('P');
+    for (const id of ['adminStepUp', 'adminTotpEnroll', 'adminTotpConfirm'] as const) {
+      expect(group(id)).toBe('T');
+    }
     expect(RATE_LIMIT_GROUPS.A).toMatchObject({ max: 5, windowSeconds: 900 });
     expect(RATE_LIMIT_GROUPS.U).toMatchObject({ max: 10, windowSeconds: 86_400 });
     expect(RATE_LIMIT_GROUPS.C).toMatchObject({ max: 10, windowSeconds: 86_400 });
@@ -294,7 +321,8 @@ describe('authentication, client and rate-limit rules', () => {
   });
 
   it('answers unreadable team-scoped resources with 404 before 403', () => {
-    for (const endpoint of ENDPOINT_LIST) {
+    // Admin routes answer non-staff with 403 before any resource is loaded (matrix §3.8).
+    for (const endpoint of ENDPOINT_LIST.filter((candidate) => candidate.tag !== 'admin')) {
       if (endpoint.errors.includes('forbidden')) {
         expect(endpoint.errors, endpoint.id).toContain('not_found');
       }
@@ -305,9 +333,41 @@ describe('authentication, client and rate-limit rules', () => {
   });
 });
 
+describe('admin step-up', () => {
+  const admin = ENDPOINT_LIST.filter((endpoint) => endpoint.tag === 'admin');
+  const establishing = ['adminStepUp', 'adminTotpEnroll', 'adminTotpConfirm'];
+
+  it('requires step-up on every admin route except the ones that establish it', () => {
+    expect(admin).toHaveLength(15);
+    for (const endpoint of admin) {
+      expect(endpoint.stepUp === true, endpoint.id).toBe(!establishing.includes(endpoint.id));
+      expect(endpoint.auth, endpoint.id).toBe('required');
+      expect(endpoint.errors, endpoint.id).toContain('forbidden');
+    }
+    for (const endpoint of ENDPOINT_LIST.filter((candidate) => candidate.tag !== 'admin')) {
+      expect(endpoint.stepUp, endpoint.id).toBeUndefined();
+    }
+    expect(endpointErrorCodes(ENDPOINTS.listAuditLogs)).toContain('step_up_required');
+    expect(endpointErrorCodes(ENDPOINTS.adminStepUp)).not.toContain('step_up_required');
+    expect(ERROR_STATUS.step_up_required).toBe(401);
+  });
+
+  it('asks for a fresh TOTP code on role and deactivation changes', () => {
+    for (const id of ['setUserRole', 'setUserDeactivated'] as const) {
+      expect(Object.keys(ENDPOINTS[id].body.shape), id).toContain('totpCode');
+      expect(ENDPOINTS[id].errors, id).toContain('totp_invalid');
+      expect(ENDPOINTS[id].errors, id).toContain('last_admin');
+    }
+    expect(ERROR_STATUS.totp_invalid).toBe(401);
+    expect(ERROR_STATUS.totp_already_enrolled).toBe(409);
+  });
+});
+
 describe('authorization matrix', () => {
   const rows = matrixRows(matrixSource);
-  const current = rows.filter((row) => !isLaterPhase(row.path));
+  const registered = ENDPOINT_LIST.filter(
+    (endpoint) => !(PENDING_MATRIX_ROWS as readonly string[]).includes(endpoint.id),
+  );
 
   it('parses the endpoint tables of matrix §3', () => {
     expect(rows.length).toBeGreaterThan(40);
@@ -320,10 +380,11 @@ describe('authorization matrix', () => {
   });
 
   it('maps every registry endpoint to its matrix row and action', () => {
-    for (const endpoint of ENDPOINT_LIST) {
-      const matching = current.filter(
-        (row) => row.method === endpoint.method && row.path === normalizePath(endpoint.path),
-      );
+    for (const endpoint of registered) {
+      const path = normalizePath(endpoint.path);
+      const exact = rows.filter((row) => row.method === endpoint.method && row.path === path);
+      const matching =
+        exact.length > 0 ? exact : rows.filter((row) => rowMatches(row, endpoint.method, path));
       expect(matching.length, `${endpoint.method} ${endpoint.path}`).toBeGreaterThan(0);
       const actions = endpointActions(endpoint);
       if (actions.length === 0) {
@@ -334,23 +395,31 @@ describe('authorization matrix', () => {
     }
   });
 
-  it('has a registry endpoint for every Phase 1 and Phase 2 matrix row', () => {
-    for (const row of current) {
-      const endpoint = ENDPOINT_LIST.find(
-        (candidate) =>
-          candidate.method === row.method && normalizePath(candidate.path) === row.path,
+  it('has a registry endpoint for every matrix row', () => {
+    for (const row of rows) {
+      const endpoint = ENDPOINT_LIST.find((candidate) =>
+        rowMatches(row, candidate.method, normalizePath(candidate.path)),
       );
       expect(endpoint, `${row.method} ${row.path}`).toBeDefined();
     }
   });
 
-  it('uses every policy action except the Phase 5 admin and webhook ones', () => {
+  it('keeps the pending matrix rows few and real', () => {
+    for (const id of PENDING_MATRIX_ROWS) {
+      const endpoint = ENDPOINTS[id];
+      expect(endpoint.phase, id).toBeGreaterThanOrEqual(3);
+      const path = normalizePath(endpoint.path);
+      expect(
+        rows.some((row) => row.method === endpoint.method && row.path === path),
+        `${id} now has a matrix row: remove it from PENDING_MATRIX_ROWS`,
+      ).toBe(false);
+    }
+  });
+
+  it('uses every policy action', () => {
     const used = new Set(ENDPOINT_LIST.flatMap((endpoint) => endpointActions(endpoint)));
     for (const action of ACTIONS) {
-      expect(used.has(action) || PHASE5_ACTIONS.includes(action), action).toBe(true);
-      if (PHASE5_ACTIONS.includes(action)) {
-        expect(used.has(action), action).toBe(false);
-      }
+      expect(used.has(action), action).toBe(true);
     }
   });
 

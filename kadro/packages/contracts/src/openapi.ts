@@ -8,8 +8,17 @@ import {
   tokenPairSchema,
   webAuthResponseSchema,
 } from './auth.js';
+import {
+  adminOpenCallSchema,
+  adminReviewSchema,
+  adminUserSchema,
+  adminVenueSchema,
+  auditLogEntrySchema,
+  venueImportSchema,
+} from './admin.js';
+import { entitlementsSchema, revenueCatEventSchema } from './billing.js';
 import { acceptedResponseSchema } from './common.js';
-import { geoPointSchema } from './districts.js';
+import { districtPublicSchema, geoPointSchema } from './districts.js';
 import {
   ENDPOINT_LIST,
   type EndpointDefinition,
@@ -79,13 +88,21 @@ const JSON_SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema';
 const TAG_DESCRIPTIONS = {
   health: 'Uptime probe',
   auth: 'Registration, sign-in, token rotation and password reset',
-  me: 'The signed-in user: profile, push tokens, account deletion',
+  me: 'The signed-in user: profile, statistics, push tokens, account deletion',
+  districts: 'Provinces and districts (il / ilçe): public reference data',
   teams: 'Teams, roster roles and invites',
   matches: 'Matches, RSVP, lineup, payment marking and MVP votes',
   'open-calls': 'Eksik Var: open calls and applications',
   venues: 'Saha Rehberi: venue directory and reviews',
   uploads: 'Presigned avatar and badge uploads',
+  webhooks: 'Inbound provider webhooks (RevenueCat); no user principal',
+  admin: 'Staff area: TOTP step-up, moderation, venue import, roles and audit log',
 } as const satisfies Record<EndpointTag, string>;
+
+/** Shared request components (loose provider payloads are named so they can be found). */
+const SHARED_REQUEST_SCHEMAS: readonly (readonly [string, z.ZodType])[] = [
+  ['RevenueCatEvent', revenueCatEventSchema],
+];
 
 /** Shared response components, registered under fixed names so every operation reuses them. */
 const SHARED_RESPONSE_SCHEMAS: readonly (readonly [string, z.ZodType])[] = [
@@ -123,6 +140,14 @@ const SHARED_RESPONSE_SCHEMAS: readonly (readonly [string, z.ZodType])[] = [
   ['VenueReview', venueReviewSchema],
   ['VenueDetail', venueDetailSchema],
   ['UploadStatus', uploadStatusResponseSchema],
+  ['Entitlements', entitlementsSchema],
+  ['DistrictPublic', districtPublicSchema],
+  ['AdminVenue', adminVenueSchema],
+  ['AdminReview', adminReviewSchema],
+  ['AdminOpenCall', adminOpenCallSchema],
+  ['AdminUser', adminUserSchema],
+  ['AuditLogEntry', auditLogEntrySchema],
+  ['VenueImport', venueImportSchema],
 ];
 
 type Registry = z.core.$ZodRegistry<{ id: string }>;
@@ -267,6 +292,9 @@ function problemResponses(endpoint: EndpointDefinition): JsonObject {
 }
 
 function security(endpoint: EndpointDefinition): JsonValue[] {
+  if (endpoint.tag === 'webhooks') {
+    return [{ webhookSecret: [] }];
+  }
   if (endpoint.auth === 'none') {
     return [];
   }
@@ -330,6 +358,7 @@ function operation(
   result['x-kadro-client'] = endpoint.client;
   result['x-kadro-policy-action'] = policyExtension(endpoint);
   result['x-kadro-email-verified'] = endpoint.emailVerified;
+  result['x-kadro-step-up'] = endpoint.stepUp === true;
   result['x-kadro-rate-limit'] =
     endpoint.rateLimit === null
       ? null
@@ -350,6 +379,9 @@ export function buildOpenApiDocument(
 ): JsonObject {
   const requests: Registry = z.registry<{ id: string }>();
   const responses: Registry = z.registry<{ id: string }>();
+  for (const [id, schema] of SHARED_REQUEST_SCHEMAS) {
+    requests.add(schema, { id });
+  }
   for (const [id, schema] of SHARED_RESPONSE_SCHEMAS) {
     responses.add(schema, { id });
   }
@@ -382,7 +414,8 @@ export function buildOpenApiDocument(
       description: [
         'REST API of Kadro, consumed by the mobile app and the web app.',
         '',
-        `Every request except \`GET /api/v1/health\` carries the \`${AUTH_CLIENT_HEADER}\` header ` +
+        'Every request except `GET /api/v1/health` and `POST /api/v1/webhooks/revenuecat` ' +
+          `carries the \`${AUTH_CLIENT_HEADER}\` header ` +
           '(`mobile` or `web`); a missing or unknown value, or `mobile` together with an `Origin` ' +
           'header, is rejected with 400. Mobile clients authenticate with an ES256 access JWT ' +
           `(bearer); web clients with the \`${SESSION_COOKIE_NAME}\` cookie and, on every ` +
@@ -394,9 +427,14 @@ export function buildOpenApiDocument(
           'to answers 404, a readable resource without the permission answers 403, and a state ' +
           'conflict answers 409. Lists use cursor pagination: pass `nextCursor` back as `cursor`.',
         '',
+        'Admin routes (`/api/v1/admin/**`) need a moderator or admin session and, except step-up ' +
+          'and TOTP enrollment, a TOTP step-up from the last 15 minutes (401 ' +
+          '`step_up_required`). The RevenueCat webhook has no user principal and is ' +
+          'authenticated by its shared secret in the `Authorization` header.',
+        '',
         'Extensions: `x-kadro-policy-action` (authorization matrix action), `x-kadro-rate-limit` ' +
-          '(matrix §8 group), `x-kadro-email-verified`, `x-kadro-auth`, `x-kadro-client`, ' +
-          '`x-kadro-phase`.',
+          '(matrix §8 group), `x-kadro-email-verified`, `x-kadro-step-up`, `x-kadro-auth`, ' +
+          '`x-kadro-client`, `x-kadro-phase`.',
       ].join('\n'),
     },
     servers: [{ url: 'https://kadro.app', description: 'Production' }],
@@ -443,6 +481,14 @@ export function buildOpenApiDocument(
           in: 'header',
           name: CSRF_HEADER,
           description: 'CSRF token (double submit), required on every web mutation.',
+        },
+        webhookSecret: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'Authorization',
+          description:
+            'Shared secret configured in the RevenueCat dashboard (`REVENUECAT_WEBHOOK_SECRET`), ' +
+            'compared in constant time; webhook routes only.',
         },
       },
     },

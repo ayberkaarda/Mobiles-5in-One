@@ -178,3 +178,52 @@ export const JOB_PAYLOAD_SCHEMAS = {
 } as const satisfies Record<JobQueue, z.ZodType>;
 
 export type JobPayload<TQueue extends JobQueue> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[TQueue]>;
+
+// ---------------------------------------------------------------------------
+// Billing queues (Phase 5, ADR-0063)
+// ---------------------------------------------------------------------------
+
+/**
+ * Queues of the RevenueCat integration. They are defined here first so producer and consumer
+ * share one contract; they join `JOB_QUEUES` in the same change that adds their worker queue
+ * definitions (the worker types its definitions as a record over `JobQueue`).
+ */
+export const BILLING_JOB_QUEUES = ['webhook.revenuecat.process', 'subscription.reconcile'] as const;
+export const billingJobQueueSchema = z.enum(BILLING_JOB_QUEUES);
+export type BillingJobQueue = z.infer<typeof billingJobQueueSchema>;
+
+/**
+ * `webhook.revenuecat.process`: applies one stored delivery. The webhook route stores the
+ * normalized event columns in `webhook_events` and enqueues only the row id, so no RevenueCat
+ * payload travels through the queue. Idempotency key: `revenuecat:<event.id>`.
+ */
+export const revenueCatProcessJobSchema = z.strictObject({
+  webhookEventId: idSchema,
+  idempotencyKey: idempotencyKeySchema,
+});
+export type RevenueCatProcessJob = z.infer<typeof revenueCatProcessJobSchema>;
+
+/**
+ * `subscription.reconcile`: compares `subscriptions` with the RevenueCat REST API. The nightly
+ * schedule sends `userId: null` (every user with a subscription row, in batches); a user id
+ * reconciles one account, for example after a delivery that could not be applied. Idempotency
+ * key: `reconcile:<YYYY-MM-DD>` for the nightly run, `reconcile:<userId>:<epochMinute>` otherwise.
+ */
+export const subscriptionReconcileJobSchema = z.strictObject({
+  userId: idSchema.nullable(),
+  idempotencyKey: idempotencyKeySchema,
+});
+export type SubscriptionReconcileJob = z.infer<typeof subscriptionReconcileJobSchema>;
+
+/** Payload schema per billing queue; producer and consumer both parse with it. */
+export const BILLING_JOB_PAYLOAD_SCHEMAS = {
+  'webhook.revenuecat.process': revenueCatProcessJobSchema,
+  'subscription.reconcile': subscriptionReconcileJobSchema,
+} as const satisfies Record<BillingJobQueue, z.ZodType>;
+
+export type BillingJobPayload<TQueue extends BillingJobQueue> = z.infer<
+  (typeof BILLING_JOB_PAYLOAD_SCHEMAS)[TQueue]
+>;
+
+/** Nightly reconciliation schedule (cron, UTC): 03:17 every day. */
+export const SUBSCRIPTION_RECONCILE_CRON = '17 3 * * *';

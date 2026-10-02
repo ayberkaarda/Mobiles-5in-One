@@ -72,6 +72,7 @@ describe('document structure', () => {
       expect(operation['x-kadro-auth']).toBe(endpoint.auth);
       expect(operation['x-kadro-client']).toBe(endpoint.client);
       expect(operation['x-kadro-email-verified']).toBe(endpoint.emailVerified);
+      expect(operation['x-kadro-step-up']).toBe(endpoint.stepUp === true);
       const policy = operation['x-kadro-policy-action'];
       const actions = endpointActions(endpoint);
       if (typeof policy === 'string') {
@@ -122,8 +123,17 @@ describe('document structure', () => {
       in: 'header',
       name: CSRF_HEADER,
     });
+    expect(object(schemes.webhookSecret)).toMatchObject({
+      type: 'apiKey',
+      in: 'header',
+      name: 'Authorization',
+    });
     for (const endpoint of ENDPOINT_LIST) {
       const security = operationOf(endpoint.method, endpoint.path).security as JsonValue[];
+      if (endpoint.tag === 'webhooks') {
+        expect(security, endpoint.id).toEqual([{ webhookSecret: [] }]);
+        continue;
+      }
       if (endpoint.auth === 'none') {
         expect(security, endpoint.id).toEqual([]);
         continue;
@@ -187,7 +197,9 @@ describe('document structure', () => {
       /^(password_?hash|passwordHash|token_?hash|tokenHash|code_?hash|codeHash|totp_?secret|totpSecretEnc|apple_?sub|appleSub|google_?sub|googleSub|ownerId|createdBy|avatarKey|badgeKey)$/;
     walk(object(object(document.components).schemas), (node, path) => {
       if (node.type === 'object' && node.properties !== undefined) {
-        expect(node.additionalProperties, path).toBe(false);
+        // The RevenueCat event is the one deliberately open object: the provider adds fields
+        // without notice, and only the listed ones are read (ADR-0063).
+        expect(node.additionalProperties, path).toEqual(path === '#/RevenueCatEvent' ? {} : false);
         for (const key of Object.keys(object(node.properties))) {
           expect(forbidden.test(key), `${path}.${key}`).toBe(false);
         }
