@@ -9,9 +9,11 @@ import { OpenCallEntry } from '../../../../../src/calls/components';
 import { formatDateTime } from '../../../../../src/i18n/format';
 import {
   ChoiceGroup,
+  MATCHES_HOME,
   Fact,
   MatchScreen,
   matchHref,
+  RoleError,
   SectionTitle,
   teamMatchesHref,
 } from '../../../../../src/matches/components';
@@ -89,7 +91,9 @@ export default function MatchDetailScreen() {
   // After a draft is deleted its cached copy is dropped; it must not be fetched again (404)
   // while the screen is on its way out.
   const [deleted, setDeleted] = useState(false);
-  const { matchId, teamId, query, match, myUserId, role } = useMatchScreen({ enabled: !deleted });
+  const { matchId, teamId, query, match, myUserId, role, roleError, retryRole } = useMatchScreen({
+    enabled: !deleted,
+  });
   const rsvp = useSetRsvp(matchesApi, matchId, teamId);
   const update = useUpdateMatch(matchesApi, matchId, teamId);
   const remove = useDeleteMatch(matchesApi, matchId, teamId);
@@ -101,7 +105,8 @@ export default function MatchDetailScreen() {
 
   if (match === undefined) {
     return (
-      <MatchScreen back={teamMatchesHref(teamId)} testID="match-screen">
+      // Unknown projection yet: the tab is a safe fallback (a guest's team list answers 404).
+      <MatchScreen back={MATCHES_HOME} testID="match-screen">
         <ResourceState
           status={query.status === 'error' ? 'error' : 'pending'}
           error={query.error}
@@ -167,7 +172,8 @@ export default function MatchDetailScreen() {
     <MatchScreen
       title={formatDateTime(match.startsAt, i18n.language)}
       subtitle={match.team.name}
-      back={teamMatchesHref(teamId)}
+      // A guest cannot open the team's match list (404), so "back" leads to the tab.
+      back={match.projection === 'guest' ? MATCHES_HOME : teamMatchesHref(teamId)}
       testID="match-screen"
     >
       <CachedNotice visible={query.isError} />
@@ -351,7 +357,9 @@ export default function MatchDetailScreen() {
         ) : null}
       </Section>
 
-      {isStaff(role) ? (
+      {roleError !== null ? (
+        <RoleError error={roleError} onRetry={retryRole} />
+      ) : isStaff(role) ? (
         <>
           <SectionTitle>{t('manage.title')}</SectionTitle>
           <Section>

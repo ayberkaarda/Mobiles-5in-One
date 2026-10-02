@@ -39,7 +39,11 @@ shape the client:
 ### Roles in the UI
 
 - The viewer's role comes from `GET teams/:id` (`myRole`), read only for the member projection; a
-  guest has no role and no staff control. Staff controls appear only once the role has loaded.
+  guest has no role and no staff control. Staff controls appear only once the role has loaded; when
+  the team cannot be loaded (offline without a saved copy, server error), the screens show an error
+  with retry in their place instead of hiding them or saying the action is not allowed.
+- "Back" from a guest's match leads to the Maçlar tab, because the team's match list answers 404
+  for a guest.
 - Controls follow matrix §3.4: staff of a team that is not read-only create matches; staff edit
   `draft`, `open` and `locked` matches; fee, slots and format are disabled from the first lock on
   and never sent unless changed (ADR-0004); status buttons offer exactly the footnote 12
@@ -58,8 +62,11 @@ shape the client:
   list under `matches/team/<teamId>/all`, below the key the teams area removes after leaving a team.
   The saved match is shown with the "showing saved data" notice when a refresh fails.
 - Only the RSVP is optimistic. The predicted status (`waitlist` when a member's `in` exceeds the
-  slots, never for a guest) is shown at once; the server's answer replaces it; a refusal puts the
-  previous match object back exactly, unless a refetch has replaced the optimistic one meanwhile.
+  slots) is shown at once. A guest's `in` is the exception and waits for the server: the guest
+  projection has no slots or counts, and a full match answers a guest with 409 `match_full`, never
+  with the waitlist (footnote 14). For the optimistic case, the server's answer replaces the
+  prediction; a refusal puts the previous match object back exactly, unless a refetch has replaced
+  the optimistic one meanwhile.
 - Everything else is pessimistic: create, edit, status, cancel, lineup, payment marks and the vote
   wait for the server; the answer is written into the cached match, then the match and the team
   lists are refetched in the background (never awaited, ADR-0050).
@@ -73,14 +80,18 @@ shape the client:
   device. The fee is typed in lira (`1.500`, `1500,50`) and sent as kuruş; the checks mirror
   `LIMITS` and `createMatchRequestSchema`, compared by tests. A directory venue is found through
   `GET venues?q=`; otherwise free text.
-- Shares are shown to the kuruş from the confirmed participants in RSVP order (ADR-0036), the same
-  rule as the server; the actor's own share is the server's `myShareMinor`.
+- Shares: the contract gives the base share (`sharePerPlayerMinor`, `floor(fee / n)`) and the
+  viewer's exact share (`myShareMinor`), but no share per participant and no documented order of
+  `participants`. So every other row shows the base share, the viewer's row the exact share, and
+  when the fee does not split evenly the screen says that some shares are 1 kuruş higher and labels
+  the collected sum as a lower bound. Nothing depends on the order of `participants`; a per-row
+  share would need a contract change.
 - Lineup by tapping: each confirmed player gets A, B or bench; a full side (`ceil(slots / 2)`) is
   disabled; "auto-balance" applies a copy of the contracts' `suggestLineup` (a test runs both on the
   same inputs, since the contracts package is not bundled); nothing is sent before "save", which
   replaces the whole lineup. Players see the sides read-only.
-- The waitlist position is not shown: participants come in RSVP order, while the queue is ordered
-  by the server-only `waitlisted_at`.
+- The waitlist position is not shown: the queue is ordered by the server-only `waitlisted_at`,
+  which the contract does not expose.
 
 ### Copy, accessibility
 
@@ -93,9 +104,9 @@ shape the client:
 - The match flows of stories 3–5 and 9 work on the phone; a control appears only where the server
   would allow it, and the server's refusal is shown with the catalog copy and the request id.
 - An RSVP feels instant on a slow connection; a refused one returns to the exact previous state.
-- Known limits: no drag and drop for the lineup, no lineup history (Pro, Phase 5), no open-call
-  publishing from the match (open-call work package), no team-screen link to the match list (the
-  team screen belongs to the teams area; the tab and deep routes reach it).
+- Known limits: no drag and drop for the lineup, no lineup history (Pro, Phase 5), no team-screen
+  link to the match list (the team screen belongs to the teams area; the tab and deep routes reach
+  it). Open-call publishing from the match detail is added by ADR-0052.
 
 ## Rejected alternatives
 

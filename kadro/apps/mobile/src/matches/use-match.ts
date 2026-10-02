@@ -44,5 +44,8 @@ export function useMatchScreen({ enabled = true }: { readonly enabled?: boolean 
     myUserId: me.data?.id ?? null,
     role,
     roleLoading: isMember && team.data === undefined && team.status === 'pending',
+    /** The member's role could not be loaded: staff controls show an error with retry. */
+    roleError: isMember && team.data === undefined && team.status === 'error' ? team.error : null,
+    retryRole: () => void team.refetch(),
   };
 }

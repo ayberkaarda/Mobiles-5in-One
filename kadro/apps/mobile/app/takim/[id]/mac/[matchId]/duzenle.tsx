@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
-import { MatchScreen, matchHref } from '../../../../../src/matches/components';
+import { MatchScreen, matchHref, RoleError } from '../../../../../src/matches/components';
 import { type MatchMemberView } from '../../../../../src/matches/contracts';
 import { changedFields } from '../../../../../src/matches/edit';
 import { dateInput, liraInput, timeInput } from '../../../../../src/matches/form';
@@ -37,7 +37,8 @@ function initialValues(match: MatchMemberView): MatchFormInitial {
 export default function EditMatchScreen() {
   const { t } = useTranslation('matches');
   const router = useRouter();
-  const { matchId, teamId, query, match, role, roleLoading } = useMatchScreen();
+  const { matchId, teamId, query, match, role, roleLoading, roleError, retryRole } =
+    useMatchScreen();
   const update = useUpdateMatch(matchesApi, matchId, teamId);
   const busy = useMatchBusy(matchId);
   const action = useAsyncAction();
@@ -61,6 +62,14 @@ export default function EditMatchScreen() {
     return (
       <MatchScreen title={t('edit.title')} back={back} testID="edit-match-screen">
         <SkeletonList rows={3} accessibilityLabel={t('edit.title')} />
+      </MatchScreen>
+    );
+  }
+  if (roleError !== null) {
+    // A captain offline without a saved team must not be told they may not edit.
+    return (
+      <MatchScreen title={t('edit.title')} back={back} testID="edit-match-screen">
+        <RoleError error={roleError} onRetry={retryRole} />
       </MatchScreen>
     );
   }

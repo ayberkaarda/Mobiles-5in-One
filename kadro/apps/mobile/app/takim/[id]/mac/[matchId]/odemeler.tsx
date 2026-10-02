@@ -3,9 +3,9 @@ import { View } from 'react-native';
 
 import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
-import { Fact, MatchScreen, matchHref } from '../../../../../src/matches/components';
+import { Fact, MatchScreen, matchHref, RoleError } from '../../../../../src/matches/components';
 import { matchesApi } from '../../../../../src/matches/instance';
-import { confirmedShares, formatMinor } from '../../../../../src/matches/money';
+import { formatMinor, paymentSummary } from '../../../../../src/matches/money';
 import { useMarkPayment, useMatchBusy } from '../../../../../src/matches/mutations';
 import { canMarkPayment, isStaff, paymentsWritable } from '../../../../../src/matches/permissions';
 import { useMatchScreen } from '../../../../../src/matches/use-match';
@@ -22,7 +22,7 @@ import { Button, Card, Text } from '../../../../../src/ui';
 export default function PaymentsScreen() {
   const { t, i18n } = useTranslation('matches');
   const theme = useTheme();
-  const { matchId, teamId, query, match, myUserId, role } = useMatchScreen();
+  const { matchId, teamId, query, match, myUserId, role, roleError, retryRole } = useMatchScreen();
   const mark = useMarkPayment(matchesApi, matchId, teamId);
   const busy = useMatchBusy(matchId);
   const action = useAsyncAction();
@@ -53,15 +53,14 @@ export default function PaymentsScreen() {
   }
 
   const confirmed = match.participants.filter((row) => row.status === 'in');
-  const shares = confirmedShares(
+  const summary = paymentSummary(
     match.feeTotalMinor,
-    confirmed.map((row) => row.user.id),
+    confirmed.map((row) => ({ userId: row.user.id, paid: row.paid })),
+    match.sharePerPlayerMinor,
+    myUserId,
+    match.myShareMinor,
   );
   const paidCount = confirmed.filter((row) => row.paid).length;
-  const collected = confirmed.reduce(
-    (sum, row) => sum + (row.paid ? (shares.get(row.user.id) ?? 0) : 0),
-    0,
-  );
   const writable = paymentsWritable(match.status);
   const pendingUser = mark.isPending ? (mark.variables?.userId ?? null) : null;
 
@@ -79,6 +78,7 @@ export default function PaymentsScreen() {
       testID="payments-screen"
     >
       <CachedNotice visible={query.isError} />
+      {roleError === null ? null : <RoleError error={roleError} onRetry={retryRole} />}
       <Section>
         <Card>
           <View style={{ gap: theme.spacing['2'] }}>
@@ -89,13 +89,18 @@ export default function PaymentsScreen() {
               testID="payments-count"
             />
             <Fact
-              label={t('payments.collected')}
-              value={formatMinor(collected, i18n.language)}
+              label={summary.uneven ? t('payments.collectedAtLeast') : t('payments.collected')}
+              value={formatMinor(summary.collectedMinor, i18n.language)}
               testID="payments-collected"
             />
           </View>
         </Card>
       </Section>
+      {summary.uneven ? (
+        <Section>
+          <Notice testID="payments-uneven">{t('payments.uneven')}</Notice>
+        </Section>
+      ) : null}
       <Section>
         <Notice>{t('payments.noMoney')}</Notice>
       </Section>
@@ -117,7 +122,7 @@ export default function PaymentsScreen() {
           const name = isSelf
             ? t('participants.you', { name: row.user.displayName })
             : row.user.displayName;
-          const share = shares.get(row.user.id);
+          const share = summary.shareOf(row.user.id);
           const markable = canMarkPayment(role, match.status, { status: row.status, isSelf });
           return (
             <Section key={row.user.id}>
@@ -126,7 +131,7 @@ export default function PaymentsScreen() {
                   accessible
                   accessibilityLabel={[
                     name,
-                    share === undefined ? null : formatMinor(share, i18n.language),
+                    share === null ? null : formatMinor(share, i18n.language),
                     row.paid ? t('payments.paid') : t('payments.unpaid'),
                   ]
                     .filter((part): part is string => part !== null)
@@ -136,9 +141,7 @@ export default function PaymentsScreen() {
                   <Text variant="label" style={{ flexShrink: 1 }}>
                     {name}
                   </Text>
-                  <Text tabular>
-                    {share === undefined ? '' : formatMinor(share, i18n.language)}
-                  </Text>
+                  <Text tabular>{share === null ? '' : formatMinor(share, i18n.language)}</Text>
                 </View>
                 <Text
                   tone={row.paid ? 'default' : 'muted'}

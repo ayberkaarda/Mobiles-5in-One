@@ -3,8 +3,10 @@ import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { ApiError } from '../api/errors';
+import { errorMessage } from '../i18n/error-copy';
 import { useTheme } from '../theme';
-import { Screen, Text } from '../ui';
+import { ErrorState, Screen, Text } from '../ui';
 
 /** Where "back" leads when a match screen was opened directly (deep link, cold start). */
 export const MATCHES_HOME = '/maclar';
@@ -198,5 +200,31 @@ export function Fact({
         {value}
       </Text>
     </View>
+  );
+}
+
+/**
+ * The viewer's team role could not be loaded (offline without a saved team, server error). Staff
+ * controls depend on it, so instead of hiding them as if the viewer had no right, the screen says
+ * so and offers a retry.
+ */
+export function RoleError({
+  error,
+  onRetry,
+}: {
+  readonly error: unknown;
+  readonly onRetry: () => void;
+}) {
+  const { t, i18n } = useTranslation('matches');
+  const { t: tc } = useTranslation('common');
+  return (
+    <ErrorState
+      title={t('role.errorTitle')}
+      message={errorMessage(i18n, error)}
+      requestId={error instanceof ApiError ? (error.requestId ?? undefined) : undefined}
+      referenceLabel={tc('state.reference')}
+      retry={{ label: tc('state.retry'), onPress: onRetry }}
+      testID="role-error"
+    />
   );
 }

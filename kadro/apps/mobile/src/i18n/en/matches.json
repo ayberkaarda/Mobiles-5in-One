@@ -190,6 +190,11 @@
     "markUnpaid": "Mark as not paid",
     "markPaidFor": "Mark {{name}} as paid",
     "markUnpaidFor": "Mark {{name}} as not paid",
-    "selfByCaptain": "The captain marks your own payment."
+    "selfByCaptain": "The captain marks your own payment.",
+    "collectedAtLeast": "Collected (at least)",
+    "uneven": "The fee does not split evenly: some shares are 1 kuruş higher. Rows show the base share; your own row shows your exact share."
+  },
+  "role": {
+    "errorTitle": "Your team role could not be loaded"
   }
 }
