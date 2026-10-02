@@ -58,6 +58,18 @@ async function joinedJobs(teamId: string) {
   );
 }
 
+/** `team_members.id` of the current membership of `userId` in `teamId`. */
+async function membershipId(teamId: string, userId: string): Promise<string> {
+  const [row] = await t.db
+    .select({ id: teamMembers.id })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
+  if (row === undefined) {
+    throw new Error('membership not found');
+  }
+  return row.id;
+}
+
 async function inviteRow(id: string) {
   const [row] = await t.db.select().from(teamInvites).where(eq(teamInvites.id, id));
   return row;
@@ -394,18 +406,39 @@ describe('POST /api/v1/invites/:code/accept (invite.accept)', () => {
     const team = await teamFixture(t);
     const invite = await insertInvite(t, team.id);
     const joiner = await account(t);
-    const joinedAt = t.harness.runtime.now();
     await expectJson(await api.acceptInvite(joiner.headers, invite.code), 200);
+    const membership = await membershipId(team.id, joiner.id);
     const jobs = await joinedJobs(team.id);
     expect(jobs.map((job) => job.data)).toEqual([
       {
         type: 'team.member_joined',
         userId: team.captain.id,
         refId: team.id,
-        idempotencyKey: `push:joined:${team.id}:${joiner.id}:${Math.floor(joinedAt.getTime() / 1_000)}`,
+        idempotencyKey: `push:joined:${membership}`,
       },
     ]);
     expect(jobs[0]?.singletonKey).toBe(jobs[0]?.data.idempotencyKey);
+  });
+
+  it('accept, leave and accept again within one second are two member_joined events', async () => {
+    const team = await teamFixture(t);
+    const invite = await insertInvite(t, team.id);
+    const joiner = await account(t);
+    // The test clock does not move between the three requests: all of them share one second.
+    const at = t.harness.runtime.now().getTime();
+    await expectJson(await api.acceptInvite(joiner.headers, invite.code), 200);
+    const first = await membershipId(team.id, joiner.id);
+    expect((await api.removeMember(joiner.headers, team.id, joiner.id)).status).toBe(204);
+    await expectJson(await api.acceptInvite(joiner.headers, invite.code), 200);
+    const second = await membershipId(team.id, joiner.id);
+    expect(t.harness.runtime.now().getTime()).toBe(at);
+    expect(second).not.toBe(first);
+    const jobs = await joinedJobs(team.id);
+    expect(jobs.map((job) => job.data.idempotencyKey)).toEqual([
+      `push:joined:${first}`,
+      `push:joined:${second}`,
+    ]);
+    expect(jobs.every((job) => job.data.userId === team.captain.id)).toBe(true);
   });
 
   it('enqueues no job for a rejected accept', async () => {

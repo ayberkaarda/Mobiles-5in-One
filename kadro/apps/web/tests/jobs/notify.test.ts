@@ -186,7 +186,7 @@ describe('push producers', () => {
   it('notifyRsvpPromoted, notifyLineupSlotFree, notifyMemberJoined: per-event keys within 128 chars', async () => {
     const matchId = newId();
     const teamId = newId();
-    const [player, captain, leaver, member] = [newId(), newId(), newId(), newId()];
+    const [player, captain, leaver, membership] = [newId(), newId(), newId(), newId()];
     const at = new Date('2026-10-03T09:30:00Z');
     const added = await produced('push.send', async (tx) => {
       await notifyRsvpPromoted(sender(), tx, { matchId, userId: player, promotedAt: at });
@@ -199,8 +199,7 @@ describe('push producers', () => {
       await notifyMemberJoined(sender(), tx, {
         teamId,
         captainId: captain,
-        memberId: member,
-        joinedAt: at,
+        membershipId: membership,
       });
     });
     expect(

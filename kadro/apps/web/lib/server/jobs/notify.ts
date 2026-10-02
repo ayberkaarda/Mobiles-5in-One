@@ -198,16 +198,19 @@ export function notifyApplicationDecided(
   );
 }
 
-/** `team.member_joined` to the captain when an invite is accepted. */
+/**
+ * `team.member_joined` to the captain when an invite is accepted. The key is the `team_members` row
+ * of this membership: a leave deletes the row and a rejoin inserts a new one, so a rejoin in the
+ * same second is still a new event.
+ */
 export function notifyMemberJoined(
   jobs: JobSender,
   tx: Transaction,
   input: {
     readonly teamId: string;
     readonly captainId: string;
-    /** The new member; part of the key, never of the payload. */
-    readonly memberId: string;
-    readonly joinedAt: Date;
+    /** `team_members.id` of the new membership; part of the key, never of the payload. */
+    readonly membershipId: string;
   },
 ): Promise<void> {
   // One recipient (the captain), so the key names the event only.
@@ -217,7 +220,7 @@ export function notifyMemberJoined(
     'team.member_joined',
     input.teamId,
     [input.captainId],
-    () => `push:joined:${input.teamId}:${input.memberId}:${epochSeconds(input.joinedAt)}`,
+    () => `push:joined:${input.membershipId}`,
   );
 }
 
