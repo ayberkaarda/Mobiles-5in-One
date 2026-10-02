@@ -74,6 +74,9 @@ function RootStack() {
           <Stack.Screen name="takim/[id]/mac/[matchId]/duzenle" />
           <Stack.Screen name="takim/[id]/mac/[matchId]/dizilis" />
           <Stack.Screen name="takim/[id]/mac/[matchId]/odemeler" />
+          {/* Open calls: a call opened from the Eksik Var list, and the call of a match (staff). */}
+          <Stack.Screen name="ilan/[id]" />
+          <Stack.Screen name="ilan/mac/[matchId]" />
         </Stack.Protected>
         {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>

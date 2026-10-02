@@ -1,0 +1,150 @@
+{
+  "common": {
+    "cancel": "Cancel"
+  },
+  "entry": {
+    "label": "Eksik Var call",
+    "hint": "Post a call for missing players for this match or manage its applications."
+  },
+  "list": {
+    "missing": "{{number}} missing",
+    "openHint": "Opens the call's details.",
+    "emptyTitle": "No calls for players right now",
+    "emptyMessage": "When a team is short of players, its call shows up here.",
+    "emptyFilteredTitle": "No calls match these filters",
+    "emptyFilteredMessage": "Widen the filters or check again later."
+  },
+  "filters": {
+    "show": "Filter",
+    "showCount": "Filter ({{number}})",
+    "hint": "Shows or hides the district, level and position filters.",
+    "reset": "Clear filters",
+    "anyPosition": "All positions"
+  },
+  "district": {
+    "label": "District",
+    "all": "All districts",
+    "default": "Default: the venue's or the team's district",
+    "unknown": "Selected district",
+    "clear": "Clear",
+    "search": "Search district",
+    "searchHelp": "Type the first letters of a district or province.",
+    "results": "Matching districts",
+    "loading": "Loading districts",
+    "loadFailed": "The district list could not be loaded.",
+    "retry": "Reload districts"
+  },
+  "level": {
+    "any": "All levels",
+    "casual": "Casual",
+    "regular": "Regular",
+    "competitive": "Competitive"
+  },
+  "position": {
+    "any": "Any",
+    "GK": "Goalkeeper",
+    "DEF": "Defender",
+    "MID": "Midfielder",
+    "FWD": "Forward"
+  },
+  "facts": {
+    "startsAt": "Match",
+    "place": "Where",
+    "format": "Format",
+    "missing": "Missing players",
+    "position": "Position",
+    "level": "Level",
+    "expiresAt": "Call ends"
+  },
+  "detail": {
+    "missingTitle": "Call not found",
+    "missingMessage": "This call may be full, closed or past its end. See the list for current calls.",
+    "toList": "Back to calls",
+    "ended": "This call has ended. It takes no new applications.",
+    "ownTeam": "This is your team's call. Manage the applications below."
+  },
+  "apply": {
+    "title": "Application",
+    "messageLabel": "Note to the captain (optional)",
+    "messageHelp": "Up to {{max}} characters. Links are not shown as links.",
+    "submit": "Apply",
+    "closed": "The call has ended, so you cannot apply.",
+    "unverified": "Verify your email address before applying.",
+    "participant": "You are in this match's team or already in the match; no application needed.",
+    "yourMessage": "Your note: {{message}}",
+    "withdraw": "Withdraw my application",
+    "withdrawQuestion": "Your application will be withdrawn. You cannot apply to this call again.",
+    "withdrawConfirm": "Withdraw",
+    "state": {
+      "pending": "Your application is with the captain. We will let you know.",
+      "accepted": "You're in! You are in the match squad.",
+      "rejected": "Your application was not accepted.",
+      "withdrawn": "You withdrew your application."
+    }
+  },
+  "application": {
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    }
+  },
+  "publish": {
+    "title": "New call",
+    "missing": "How many players are missing? (at most {{max}})",
+    "missingGroup": "Missing players",
+    "expiry": "How long should the call stay open?",
+    "expiryChoice": {
+      "kickoff": "Until kick-off",
+      "hour1": "Until 1 hour before",
+      "hours3": "Until 3 hours before",
+      "hours24": "Until 24 hours before"
+    },
+    "submit": "Publish call",
+    "blocked": {
+      "notStaff": "Only the captain and co-captains can post a call.",
+      "proLocked": "The team is read-only, so no new call can be posted.",
+      "notOpen": "A call can only be posted for an open match.",
+      "tooLate": "The match starts too soon; a call must stay listed for at least 15 minutes.",
+      "full": "The match has no free place."
+    }
+  },
+  "manage": {
+    "title": "Eksik Var call",
+    "loading": "Loading",
+    "notStaff": "Only the team's captain and co-captains manage the call and its applications.",
+    "matchMissingTitle": "Match not found",
+    "matchMissingMessage": "This match was deleted or you no longer have access to it.",
+    "liveTitle": "Live call",
+    "lastTitle": "Last call",
+    "callStatus": {
+      "closed": "Closed",
+      "expired": "Ended",
+      "removed": "Removed"
+    },
+    "exists": "This match already has a live call (perhaps posted from another device). Close it before posting a new one.",
+    "close": "Close call",
+    "closeQuestion": "The call will close and pending applications will be rejected. This cannot be undone.",
+    "closeConfirm": "Close call",
+    "applicationsTitle": "Applications",
+    "applicationsCount": "{{total}} applications, {{pending}} pending",
+    "applicationsEmpty": "No applications yet.",
+    "applicationsCached": "No connection. Showing the last saved applications.",
+    "applicationsMissingTitle": "Applications unavailable",
+    "applicationsMissingMessage": "This call was not found or you may not see its applications.",
+    "accept": "Accept",
+    "acceptName": "Accept {{name}}",
+    "reject": "Reject",
+    "rejectQuestion": "{{name}} will be rejected and cannot apply to this call again.",
+    "rejectConfirm": "Reject",
+    "more": "More applications",
+    "inactive": "The call has ended, so pending applications can no longer be decided."
+  },
+  "validation": {
+    "messageTooLong": "The note can be at most {{max}} characters.",
+    "messageInvalid": "The note contains characters that cannot be used.",
+    "missingInvalid": "Missing players must be between 1 and {{max}}.",
+    "expiryInvalid": "This end time can no longer be chosen; pick another option."
+  }
+}
