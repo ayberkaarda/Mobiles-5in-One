@@ -50,9 +50,10 @@ async function authorizedTarget(
   action: Extract<Action, 'member.updateRole' | 'member.remove'>,
   teamId: string,
   userId: string,
+  now: Date,
   requestFacts: ResourceContext = {},
 ): Promise<{ relation: MemberTargetRelation; target: MemberTarget }> {
-  const relation = await loadMemberTargetRelation(tx, actorIdOf(ctx), teamId, userId);
+  const relation = await loadMemberTargetRelation(tx, actorIdOf(ctx), teamId, userId, now);
   if (relation === null) {
     throw new ApiError('not_found');
   }
@@ -88,6 +89,7 @@ export async function updateMemberRole(
       'member.updateRole',
       teamId,
       userId,
+      runtime.now(),
       { newTeamRole: body.role },
     );
     if (body.role === 'captain') {
@@ -180,7 +182,14 @@ export async function removeMember(
   const actorId = actorIdOf(ctx);
   await runtime.db.transaction(async (tx) => {
     await lockTeam(tx, teamId);
-    const { relation, target } = await authorizedTarget(tx, ctx, 'member.remove', teamId, userId);
+    const { relation, target } = await authorizedTarget(
+      tx,
+      ctx,
+      'member.remove',
+      teamId,
+      userId,
+      runtime.now(),
+    );
     const upcoming = await tx
       .select({
         matchId: matches.id,

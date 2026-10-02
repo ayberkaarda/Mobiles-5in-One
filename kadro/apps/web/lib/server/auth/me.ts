@@ -2,6 +2,7 @@ import { type MeResponse, type UpdateMeRequest } from '@kadro/contracts';
 import { districts, type NewUser, users } from '@kadro/db';
 import { eq } from 'drizzle-orm';
 
+import { loadEntitlements } from '../billing/entitlements';
 import { ApiError } from '../errors';
 import { type ServerRuntime } from '../runtime';
 import { mediaUrlBuilder } from '../uploads/urls';
@@ -20,7 +21,8 @@ export async function readMe(runtime: ServerRuntime, userId: string): Promise<Me
   if (user === undefined) {
     throw new ApiError('unauthenticated');
   }
-  return toMeResponse(user, mediaUrlBuilder(runtime.env));
+  const entitlements = await loadEntitlements(runtime.db, user.id, runtime.now());
+  return toMeResponse(user, mediaUrlBuilder(runtime.env), entitlements);
 }
 
 type SelfWritable = Partial<Pick<NewUser, 'displayName' | 'position' | 'level' | 'districtId'>>;
@@ -66,5 +68,6 @@ export async function updateMe(
   if (updated === undefined) {
     throw new ApiError('unauthenticated');
   }
-  return toMeResponse(updated, mediaUrlBuilder(runtime.env));
+  const entitlements = await loadEntitlements(runtime.db, updated.id, runtime.now());
+  return toMeResponse(updated, mediaUrlBuilder(runtime.env), entitlements);
 }
