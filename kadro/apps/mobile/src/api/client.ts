@@ -13,6 +13,28 @@ const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 
 const API_PATH = /^\/api\/v1\/[A-Za-z0-9\-._~/]*$/;
 
+/**
+ * 401 codes about a proof sent with the request (re-authentication, TOTP step-up), not about the
+ * access token: a refresh cannot change the answer, and a replay would verify the same password
+ * again against its rate limit.
+ */
+const PROOF_REFUSALS: ReadonlySet<string> = new Set(['reauth_required', 'step_up_required']);
+
+async function refusesProof(response: Response): Promise<boolean> {
+  try {
+    const body: unknown = await response.clone().json();
+    return (
+      typeof body === 'object' &&
+      body !== null &&
+      'code' in body &&
+      typeof body.code === 'string' &&
+      PROOF_REFUSALS.has(body.code)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
@@ -271,7 +293,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   ): Promise<Response> {
     const token = await tokenFor(auth, signal);
     const response = await send(url, method, body, token, signal);
-    if (response.status !== 401 || token === null) {
+    if (response.status !== 401 || token === null || (await refusesProof(response))) {
       return response;
     }
     // A 401 for a token that has been replaced meanwhile (another request already refreshed):
