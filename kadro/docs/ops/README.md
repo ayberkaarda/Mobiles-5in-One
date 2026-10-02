@@ -41,12 +41,12 @@ Both images build from the repository root as context.
 `.github/workflows/kadro-ci.yml` runs on every pull request and every push to `main`
 ([ADR-0042](../adr/0042-ci-test-job-and-required-check.md)):
 
-| Job ID    | Check name               | Runs                                                                   |
-| --------- | ------------------------ | ---------------------------------------------------------------------- |
-| `changes` | `Detect Kadro changes`   | always; decides whether Kadro files changed                            |
-| `verify`  | `Lint, typecheck, build` | on Kadro changes                                                       |
-| `test`    | `Test`                   | on Kadro changes; `CI=true`, build, then all suites (Docker + Chrome)  |
-| `gate`    | `Kadro CI gate`          | always; fails if any job failed or was cancelled, skipped counts as ok |
+| Job ID    | Check name               | Runs                                                                  |
+| --------- | ------------------------ | --------------------------------------------------------------------- |
+| `changes` | `Detect Kadro changes`   | always; decides whether Kadro files changed                           |
+| `verify`  | `Lint, typecheck, build` | on Kadro changes                                                      |
+| `test`    | `Test`                   | on Kadro changes; `CI=true`, build, then all suites (Docker + Chrome) |
+| `gate`    | `Kadro CI gate`          | always; Kadro change: verify and test passed, else: both skipped      |
 
 Mark only `Kadro CI gate` as the required status check of the `main` ruleset. With `CI=true` a
 suite that cannot find the production build or a browser fails instead of skipping; locally it

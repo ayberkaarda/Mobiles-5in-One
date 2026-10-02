@@ -30,8 +30,10 @@ status" and blocks the merge.
     environment, so the job uses the runner's Docker engine and no service container; the image
     is pulled in its own step so a registry failure is reported as such.
   - Browser: the browser suite drives Chrome over the DevTools protocol, without Playwright. The
-    job points `KADRO_TEST_BROWSER` at the Chrome preinstalled on the runner and prints its
-    version before the tests.
+    job points `KADRO_TEST_BROWSER` at the Chrome preinstalled on the runner and, before the
+    tests, starts it once headless with its default sandbox (`--dump-dom` of a small page) and
+    prints its stderr. No `--no-sandbox` is passed; whether the runner needs it is to be checked
+    on the first real run, from that step's output.
 - **A skip in CI is a failure.** The four suites gate on `prerequisite()`
   (`apps/web/tests/support/prerequisite.ts`): locally a missing build or browser skips the suite
   and says so on stderr; with `CI=true` it throws and the test file fails. A scan of the test
@@ -44,9 +46,14 @@ status" and blocks the merge.
 - **No path filter, one gate.** The workflow runs on every pull request and every push to `main`.
   A `changes` job diffs the pull request (merge commit against its first parent) or the pushed
   range against `kadro/`, `.github/workflows/kadro-*.yml` and `.gitleaks.toml`; `verify` and
-  `test` run only when that matches. A final `gate` job (check name **`Kadro CI gate`**) runs
-  with `if: always()`, needs every other job, passes when `changes` succeeded and every other job
-  succeeded or was skipped, and fails on any other result.
+  `test` run only when that matches. The decision is the exit code of
+  `git diff --quiet --no-renames <base> <head> -- <pathspecs>` (0 no change, 1 change, anything
+  else runs every job), so a file moved out of `kadro/` counts as a deletion inside it and
+  quoted or non-ASCII file names are never parsed. A missing or unknown base commit runs every
+  job. A final `gate` job (check name **`Kadro CI gate`**) runs with `if: always()` and needs
+  every other job. It passes only when `changes` succeeded and either reported `kadro=true` with
+  `verify` and `test` both `success`, or `kadro=false` with both `skipped`; any other output or
+  result (failure, cancelled, empty) fails it.
 - **Required check.** The `main` ruleset should require only `Kadro CI gate`, not the individual
   job names, so adding or renaming jobs does not change the ruleset. Setting up the ruleset is an
   owner action outside this repository's files.
