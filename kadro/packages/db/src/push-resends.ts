@@ -35,11 +35,12 @@ function recipientLockKey(userId: string) {
 
 /**
  * Account hard delete (ADR-0032, ADR-0044): the first statement of the deletion transaction. Waits
- * for producers that are recording a change for this user, and makes later ones skip until the
- * deletion has committed or rolled back. Taken before any other lock, so it never waits while
+ * until every producer transaction that recorded a change for this user has ended (a producer keeps
+ * its shared lock until its commit or rollback), and makes later ones skip until the deletion has
+ * committed or rolled back. Taken before any other lock, so it never waits while
  * holding one.
  */
-export async function lockPushRecipientForDeletion(tx: Executor, userId: string): Promise<void> {
+export async function lockPushRecipientForDeletion(tx: Transaction, userId: string): Promise<void> {
   await tx.execute(
     sql`select pg_advisory_xact_lock(hashtextextended(${recipientLockKey(userId)}, 0))`,
   );
@@ -51,10 +52,11 @@ export async function lockPushRecipientForDeletion(tx: Executor, userId: string)
  * on a deletion that holds them too; failing to get it means a deletion is running. Under the
  * shared lock the user row is still there exactly when no deletion has committed, and a deletion
  * that starts later waits for this transaction and then deletes the row recorded here. Returns
- * whether the change was recorded.
+ * whether the change was recorded. Takes a transaction only: on the pool each statement would
+ * commit on its own and release the lock before the check and the insert.
  */
 export async function recordPushResendForRecipient(
-  tx: Executor,
+  tx: Transaction,
   request: PushResendRequest,
 ): Promise<boolean> {
   const locked = await tx.execute<{ locked: boolean }>(

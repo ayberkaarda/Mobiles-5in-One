@@ -241,6 +241,16 @@ describe('lockPushResend', () => {
 });
 
 describe('recordPushResendForRecipient', () => {
+  it('takes only a transaction, never the pool (type check)', () => {
+    // A pool-level Database would run each statement in its own autocommit transaction and
+    // release the transaction-scoped locks at once.
+    // @ts-expect-error a Database is not a Transaction
+    const record = () => recordPushResendForRecipient(db, request());
+    // @ts-expect-error a Database is not a Transaction
+    const lock = () => lockPushRecipientForDeletion(db, newId());
+    expect([typeof record, typeof lock]).toEqual(['function', 'function']);
+  });
+
   async function newUser(): Promise<string> {
     const [row] = await db
       .insert(users)
