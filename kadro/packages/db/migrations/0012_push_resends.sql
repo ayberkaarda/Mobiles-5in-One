@@ -15,7 +15,9 @@ CREATE TABLE "push_resends" (
 --> statement-breakpoint
 CREATE UNIQUE INDEX "push_resends_singleton_key_key" ON "push_resends" USING btree ("singleton_key");--> statement-breakpoint
 CREATE INDEX "push_resends_updated_at_idx" ON "push_resends" USING btree ("updated_at");--> statement-breakpoint
--- ADR-0044: the web role records dropped changes (insert, or bump the version of the pending row);
--- the worker reads and clears them. Neither role gets more than that.
-GRANT SELECT, INSERT, UPDATE ON push_resends TO kadro_app;--> statement-breakpoint
+-- ADR-0044: the web role records dropped changes (insert, or bump the version of the pending row,
+-- so UPDATE covers only version and updated_at); the worker reads and clears them. Neither role
+-- gets more than that.
+GRANT SELECT, INSERT ON push_resends TO kadro_app;--> statement-breakpoint
+GRANT UPDATE (version, updated_at) ON push_resends TO kadro_app;--> statement-breakpoint
 GRANT SELECT, DELETE ON push_resends TO kadro_worker;

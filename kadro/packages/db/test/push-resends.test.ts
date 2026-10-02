@@ -116,6 +116,32 @@ describe('recordPushResend', () => {
     });
   });
 
+  it('lets kadro_app update only the version and updated_at columns', async () => {
+    const row = request();
+    await recordPushResend(db, row);
+    for (const change of [
+      { userId: newId() },
+      { refId: newId() },
+      { singletonKey: `rsvp:${newId()}:${newId()}` },
+      { type: 'application.received' as const },
+      { requestedAt: new Date() },
+    ]) {
+      await expectPgError(
+        asRole('kadro_app', (tx) =>
+          tx.update(pushResends).set(change).where(eq(pushResends.singletonKey, row.singletonKey)),
+        ),
+        PG_INSUFFICIENT_PRIVILEGE,
+      );
+    }
+    await asRole('kadro_app', (tx) =>
+      tx
+        .update(pushResends)
+        .set({ version: 5, updatedAt: new Date() })
+        .where(eq(pushResends.singletonKey, row.singletonKey)),
+    );
+    expect((await rowOf(row.singletonKey))?.version).toBe(5);
+  });
+
   it('gives kadro_app no delete and kadro_worker only read and delete', async () => {
     const row = request();
     await recordPushResend(db, row);

@@ -86,9 +86,9 @@ Option (a).
 `application.received`), `user_id` uuid, `ref_id` uuid, `requested_at` timestamptz (first dropped
 change since the row was cleared), `version` integer ≥ 1, `created_at`, `updated_at`; index on
 `updated_at`. No foreign keys: the columns mirror a job payload, which has none either; rows are
-short-lived and swept. Grants: `kadro_app` SELECT, INSERT, UPDATE (insert or bump); `kadro_worker`
-SELECT, DELETE. The migration only creates; reverting it is dropping the table, which no
-migration does automatically.
+short-lived and swept. Grants: `kadro_app` SELECT, INSERT, and UPDATE on `version` and
+`updated_at` only (insert or bump); `kadro_worker` SELECT, DELETE. The migration only creates;
+reverting it is dropping the table, which no migration does automatically.
 
 ### Producer (web, `lib/server/jobs/notify.ts`)
 
