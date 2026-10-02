@@ -24,15 +24,30 @@ export function createTestQueryClient(): QueryClient {
   });
 }
 
+/** The app providers around `children`; also used to re-render a tree with the same providers. */
+export function TestProviders({
+  children,
+  i18n,
+  queryClient,
+  scheme,
+}: ProviderOptions & { readonly children: ReactElement }) {
+  return (
+    <ThemeProvider scheme={scheme}>
+      <I18nextProvider i18n={i18n ?? createTestI18n()}>
+        <QueryClientProvider client={queryClient ?? createTestQueryClient()}>
+          {children}
+        </QueryClientProvider>
+      </I18nextProvider>
+    </ThemeProvider>
+  );
+}
+
 /** Renders inside the app providers: theme, translations (Turkish by default) and queries. */
 export function renderWithProviders(ui: ReactElement, options: ProviderOptions = {}) {
-  const i18n = options.i18n ?? createTestI18n();
-  const queryClient = options.queryClient ?? createTestQueryClient();
-  return render(
-    <ThemeProvider scheme={options.scheme}>
-      <I18nextProvider i18n={i18n}>
-        <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-      </I18nextProvider>
-    </ThemeProvider>,
-  );
+  const resolved = {
+    i18n: options.i18n ?? createTestI18n(),
+    queryClient: options.queryClient ?? createTestQueryClient(),
+    scheme: options.scheme,
+  };
+  return render(<TestProviders {...resolved}>{ui}</TestProviders>);
 }

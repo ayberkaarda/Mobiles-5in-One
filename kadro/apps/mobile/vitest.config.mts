@@ -17,6 +17,12 @@ export default defineConfig({
       { find: /^react-native-safe-area-context$/, replacement: support('safe-area-context.tsx') },
       { find: /^expo-secure-store$/, replacement: support('expo-secure-store.ts') },
       { find: /^expo-localization$/, replacement: support('expo-localization.ts') },
+      { find: /^expo-router$/, replacement: support('expo-router.tsx') },
+      { find: /^expo-linking$/, replacement: support('expo-linking.ts') },
+      {
+        find: /^expo-apple-authentication$/,
+        replacement: support('expo-apple-authentication.ts'),
+      },
       { find: /^@shopify\/flash-list$/, replacement: support('flash-list.tsx') },
       {
         find: /^@react-native-async-storage\/async-storage$/,

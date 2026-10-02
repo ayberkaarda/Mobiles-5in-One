@@ -31,6 +31,7 @@ export const Image = host('Image');
 export const ActivityIndicator = host('ActivityIndicator');
 export const RefreshControl = host('RefreshControl');
 export const Modal = host('Modal');
+export const KeyboardAvoidingView = host('View');
 
 export function ScrollView({ children, contentContainerStyle, ...props }: Props) {
   return createElement(
