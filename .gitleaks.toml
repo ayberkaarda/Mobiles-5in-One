@@ -11,5 +11,11 @@ paths = ['''kadro/packages/config/src/env\.test\.ts''']
 targetRules = ['generic-api-key']
 
 [[allowlists]]
+description = "Fixed dummy email-link tokens in the mobile auth tests"
+condition = "AND"
+paths = ['''kadro/apps/mobile/tests/auth-(units|api|screens)\.test\.tsx?''']
+targetRules = ['generic-api-key']
+
+[[allowlists]]
 description = "Generated build output (Next.js preview and server-action keys) and installed dependencies"
 paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''']
