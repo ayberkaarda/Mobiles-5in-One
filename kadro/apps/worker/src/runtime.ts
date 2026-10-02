@@ -25,6 +25,7 @@ import {
   resolveQueueDefinitions,
 } from './queues.js';
 import { createMatchReminderHandler } from './reminders/handler.js';
+import { safeLog } from './safe-log.js';
 import { type ObjectStorage, createS3Storage } from './storage/storage.js';
 import { createUploadProcessHandler } from './uploads/process.js';
 
@@ -104,10 +105,10 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
     schedule: options.schedule ?? true,
   });
   boss.on('error', (error) => {
-    logger.error(describeError(error), 'pg-boss error');
+    safeLog(() => logger.error(describeError(error), 'pg-boss error'));
   });
   boss.on('warning', (warning) => {
-    logger.warn({ warning: warning.message }, 'pg-boss warning');
+    safeLog(() => logger.warn({ warning: warning.message }, 'pg-boss warning'));
   });
 
   const definitions = resolveQueueDefinitions(options.queueOverrides);
