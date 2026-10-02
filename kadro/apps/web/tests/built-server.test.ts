@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { type IncomingHttpHeaders, request } from 'node:http';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -42,6 +43,32 @@ function freePort(): Promise<number> {
 
 let child: ChildProcess | undefined;
 let base = '';
+
+interface RawResponse {
+  readonly status: number;
+  readonly headers: IncomingHttpHeaders;
+  readonly body: string;
+}
+
+/** GET with the path sent exactly as written: no client-side normalization or re-encoding. */
+function rawGet(path: string): Promise<RawResponse> {
+  const { hostname, port } = new URL(base);
+  return new Promise((resolve, reject) => {
+    const req = request({ host: hostname, port, path, method: 'GET' }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => chunks.push(chunk));
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode ?? 0,
+          headers: res.headers,
+          body: Buffer.concat(chunks).toString('utf8'),
+        });
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
 async function waitUntilReady(): Promise<void> {
   const deadline = Date.now() + 60_000;
@@ -150,6 +177,35 @@ describe.skipIf(!BUILT)('production build', () => {
         expect(tag, surface.probe).toContain(`nonce="${nonce}"`);
       }
     }
+  });
+
+  it('classifies raw encoded, case and slash variants of a path like the router (ADR-0055)', async () => {
+    const token = ['/sifre%2dsifirla', '/%73ifre-sifirla', '/SIFRE-SIFIRLA', '/x/../sifre-sifirla'];
+    for (const pathname of token) {
+      const response = await rawGet(pathname);
+      expect(response.headers['referrer-policy'], pathname).toBe('no-referrer');
+      // A 404 render replaces the value with Next.js' own `private, no-cache, no-store, …`.
+      expect(response.headers['cache-control'], pathname).toMatch(/(^|, )no-store(,|$)/);
+      expect(response.headers['x-robots-tag'], pathname).toBe('noindex, nofollow');
+    }
+    for (const pathname of ['/sifre-sifirla/', '//sifre-sifirla', '//api/v1/health']) {
+      const response = await rawGet(pathname);
+      // Next.js answers these with a redirect to the canonical path before any page renders.
+      expect(response.status, pathname).toBe(308);
+      expect(response.body, pathname).not.toMatch(/<html/i);
+    }
+    for (const pathname of ['/api%2fv1/health', '/sifre-sifirla%00', '/%E0%A4%A', '/giris%5c']) {
+      const response = await rawGet(pathname);
+      expect(response.status, pathname).toBe(400);
+      expect(response.headers['content-security-policy'], pathname).toBe(
+        "default-src 'none'; frame-ancestors 'none'",
+      );
+      expect(response.body, pathname).toBe('Bad Request');
+    }
+    const api = await rawGet('/%61pi/v1/health');
+    expect(api.headers['content-security-policy']).toBe(
+      "default-src 'none'; frame-ancestors 'none'",
+    );
   });
 
   it('uses a different nonce on the next request', async () => {

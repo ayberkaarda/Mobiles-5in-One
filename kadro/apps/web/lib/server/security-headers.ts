@@ -151,11 +151,71 @@ function matches(pattern: string, pathname: string): boolean {
   return pathname === pattern;
 }
 
-/** The surface of a request path (exact or whole-segment match; never a substring). */
+/** A `%` not followed by two hex digits: the path cannot be decoded unambiguously. */
+const INVALID_ESCAPE = /%(?![0-9a-f]{2})/i;
+/** Encoded `/`, `\`, NUL and other control characters: they could rejoin or split segments. */
+const AMBIGUOUS_ESCAPE = /%(?:2f|5c|[01][0-9a-f]|7f)/i;
+/** Raw backslashes and control characters (some clients and servers treat `\` as `/`). */
+function hasAmbiguousCharacter(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f || code === 0x5c) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The path the surface table is matched against (ADR-0055), or `null` when the path is ambiguous
+ * and the proxy rejects it with 400.
+ *
+ * The router may match a page by its decoded path, so classification decodes too, exactly once
+ * (`%252d` stays the text `%2d`). Matching is case-insensitive and ignores empty segments (`//`,
+ * trailing `/`) and dot segments, so every spelling that could reach a page gets that page's
+ * headers; spellings the router does not serve then only receive stricter headers on a 404.
+ * Encoded separators, control characters and invalid escapes have no single meaning and are
+ * refused instead of guessed.
+ */
+export function canonicalPath(pathname: string): string | null {
+  if (
+    INVALID_ESCAPE.test(pathname) ||
+    AMBIGUOUS_ESCAPE.test(pathname) ||
+    hasAmbiguousCharacter(pathname)
+  ) {
+    return null;
+  }
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    // Invalid UTF-8 sequence such as `%E0%A4`.
+    return null;
+  }
+  if (hasAmbiguousCharacter(decoded)) {
+    return null;
+  }
+  const segments: string[] = [];
+  for (const segment of decoded.split('/')) {
+    if (segment === '..') {
+      segments.pop();
+    } else if (segment !== '' && segment !== '.') {
+      segments.push(segment.toLowerCase());
+    }
+  }
+  return `/${segments.join('/')}`;
+}
+
+/**
+ * The surface of a request path: exact or whole-segment match on {@link canonicalPath}, never a
+ * substring. An ambiguous path falls to the catch-all row here; the proxy rejects it first.
+ */
 export function surfaceFor(pathname: string): Surface {
-  const found = SURFACES.find((surface) =>
-    surface.paths.some((pattern) => matches(pattern, pathname)),
-  );
+  const canonical = canonicalPath(pathname);
+  const found =
+    canonical === null
+      ? undefined
+      : SURFACES.find((surface) => surface.paths.some((pattern) => matches(pattern, canonical)));
   // The table ends with the catch-all row, so `found` is only undefined for an empty table.
   return found ?? (SURFACES.at(-1) as Surface);
 }

@@ -9,6 +9,7 @@ import {
   HSTS_VALUE,
   PERMISSIONS_POLICY_VALUE,
   REFERRER_POLICY_VALUE,
+  canonicalPath,
   SURFACES,
   type SurfaceName,
   surfaceFor,
@@ -195,6 +196,77 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
     ];
     for (const [pathname, name] of cases) {
       expect(surfaceFor(pathname).name, pathname).toBe(name);
+    }
+  });
+
+  it('classifies the canonical path: decoded once, case-folded, dot segments and empty segments removed', () => {
+    const cases: [string, SurfaceName][] = [
+      ['/sifre%2dsifirla', 'token-page'],
+      ['/%73ifre-sifirla', 'token-page'],
+      ['/e%2Dposta-dogrula', 'token-page'],
+      ['/SIFRE-SIFIRLA', 'token-page'],
+      ['/Sifre-Sifirla', 'token-page'],
+      ['/sifre-sifirla/', 'token-page'],
+      ['//sifre-sifirla', 'token-page'],
+      ['/x/../sifre-sifirla', 'token-page'],
+      ['/./sifre-sifirla', 'token-page'],
+      ['/g%69ris', 'email-link-page'],
+      ['/%61pi/v1/health', 'api'],
+      ['/API/v1/health', 'api'],
+      ['//api//v1/health/', 'api'],
+      ['/api/v1/../v1/health', 'api'],
+      ['/SAHALAR/istanbul', 'seo'],
+      // One decoding pass only: `%252d` is the text `%2d`, not a hyphen.
+      ['/sifre%252dsifirla', 'app'],
+      ['/../..', 'marketing'],
+    ];
+    for (const [pathname, name] of cases) {
+      expect(surfaceFor(pathname).name, pathname).toBe(name);
+    }
+  });
+
+  it('treats encoded separators, control characters and invalid encodings as ambiguous', () => {
+    for (const pathname of [
+      '/api%2fv1/health',
+      '/api%2Fv1/health',
+      '/sifre-sifirla%2f',
+      '/sifre-sifirla%5c',
+      '/sifre-sifirla\\x',
+      '/sifre-sifirla%00',
+      '/sifre-sifirla%0a',
+      '/sifre-sifirla%7f',
+      '/%E0%A4%A',
+      '/sifre%2',
+      '/sifre%zz',
+    ]) {
+      expect(canonicalPath(pathname), pathname).toBeNull();
+    }
+    expect(canonicalPath('/Sahalar//Istanbul/')).toBe('/sahalar/istanbul');
+    expect(canonicalPath('/')).toBe('/');
+  });
+
+  it('proxy rejects an ambiguous path with 400 and the deny-all headers', async () => {
+    for (const pathname of ['/api%2fv1/health', '/sifre-sifirla%00', '/%E0%A4%A', '/giris%5c']) {
+      const response = proxied(pathname, production);
+      expect(response.status, pathname).toBe(400);
+      expect(response.headers.get('content-security-policy')).toBe(
+        "default-src 'none'; frame-ancestors 'none'",
+      );
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
+      expect(response.headers.get('x-middleware-next')).toBeNull();
+      expect(response.headers.get('x-request-id')).toMatch(/^[0-9a-f-]{36}$/);
+      expectStaticHeaders(response.headers);
+      expect(await response.text()).toBe('Bad Request');
+    }
+  });
+
+  it('proxy sends the token-page headers for encoded and case variants of a token path', () => {
+    for (const pathname of ['/sifre%2dsifirla', '/SIFRE-SIFIRLA', '/e%2dposta-dogrula']) {
+      const headers = proxied(pathname, production).headers;
+      expect(headers.get('referrer-policy'), pathname).toBe('no-referrer');
+      expect(headers.get('cache-control'), pathname).toBe('no-store');
+      expect(headers.get('x-robots-tag'), pathname).toBe('noindex, nofollow');
     }
   });
 
