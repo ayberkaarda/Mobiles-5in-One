@@ -91,6 +91,39 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+function abortError(): Error {
+  const error = new Error('The request was cancelled');
+  error.name = 'AbortError';
+  return error;
+}
+
+/**
+ * Settles with `promise`, or rejects with an AbortError as soon as the caller cancels. The
+ * awaited work itself (a shared refresh) keeps running for its other waiters.
+ */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (signal === undefined) {
+    return promise;
+  }
+  if (signal.aborted) {
+    return Promise.reject(abortError());
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function createApiClient(options: ApiClientOptions): ApiClient {
   // Looked up per call, so a fetch installed after the client is created (polyfill, network
   // inspector, test interceptor) is used.
@@ -100,6 +133,23 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const retryDelays = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
   const sleep = options.sleep ?? defaultSleep;
   const apiOrigin = originOf(options.baseUrl);
+  /**
+   * Failures of a token refresh. They end the call without the request-level retry: a refresh
+   * whose answer was lost may already have rotated the token on the server, and presenting the
+   * same token again would be reuse and revoke the session family (ADR-0019).
+   */
+  const refreshFailures = new WeakSet<object>();
+
+  async function refreshFor(signal: AbortSignal | undefined): Promise<string | null> {
+    try {
+      return await untilAborted(options.session.refreshAccessToken(), signal);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        refreshFailures.add(error);
+      }
+      throw error;
+    }
+  }
 
   async function send(
     url: string,
@@ -187,7 +237,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     throw problemFromResponse(response.status, problem);
   }
 
-  async function tokenFor(mode: AuthMode): Promise<string | null> {
+  async function tokenFor(mode: AuthMode, signal: AbortSignal | undefined): Promise<string | null> {
     if (mode === 'none') {
       return null;
     }
@@ -201,7 +251,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       }
       return null;
     }
-    const refreshed = await options.session.refreshAccessToken();
+    const refreshed = await refreshFor(signal);
     if (refreshed === null && mode === 'required') {
       throw new ApiError({ kind: 'problem', status: 401, code: 'unauthenticated' });
     }
@@ -216,14 +266,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     auth: AuthMode,
     signal: AbortSignal | undefined,
   ): Promise<Response> {
-    const token = await tokenFor(auth);
+    const token = await tokenFor(auth, signal);
     const response = await send(url, method, body, token, signal);
     if (response.status !== 401 || token === null) {
       return response;
     }
     // The access token was rejected (expired early, revoked): refresh once through the shared
     // gate and replay. Concurrent 401s all wait for the same refresh.
-    const refreshed = await options.session.refreshAccessToken();
+    const refreshed = await refreshFor(signal);
     if (refreshed === null) {
       return response;
     }
@@ -249,17 +299,19 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
             requestOptions.signal,
           );
           if (RETRYABLE_STATUSES.has(response.status) && retry < maxRetries) {
-            await sleep(retryDelays.at(retry) ?? 0);
+            await untilAborted(sleep(retryDelays.at(retry) ?? 0), requestOptions.signal);
             continue;
           }
           return await readBody<T>(response);
         } catch (error) {
           const transient =
-            error instanceof ApiError && (error.kind === 'network' || error.kind === 'timeout');
+            error instanceof ApiError &&
+            (error.kind === 'network' || error.kind === 'timeout') &&
+            !refreshFailures.has(error);
           if (!transient || retry >= maxRetries) {
             throw error;
           }
-          await sleep(retryDelays.at(retry) ?? 0);
+          await untilAborted(sleep(retryDelays.at(retry) ?? 0), requestOptions.signal);
         }
       }
     },
