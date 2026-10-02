@@ -201,3 +201,40 @@ export const AccessibilityInfo = {
 };
 
 export const I18nManager = { isRTL: false, allowRTL: () => undefined, forceRTL: () => undefined };
+
+export interface ShareContent {
+  readonly message?: string;
+  readonly url?: string;
+  readonly title?: string;
+}
+
+let sharedContent: ShareContent[] = [];
+let shareFailure: Error | null = null;
+
+/** Records what would open in the system share sheet. */
+export const Share = {
+  sharedAction: 'sharedAction' as const,
+  dismissedAction: 'dismissedAction' as const,
+  async share(content: ShareContent): Promise<{ action: 'sharedAction' }> {
+    if (shareFailure !== null) {
+      throw shareFailure;
+    }
+    sharedContent.push(content);
+    return { action: 'sharedAction' };
+  },
+};
+
+/** Test hook: what was handed to the share sheet since the last reset. */
+export function __sharedContent(): readonly ShareContent[] {
+  return sharedContent;
+}
+
+/** Test hook: makes the next share calls fail like a share sheet that cannot open. */
+export function __setShareFailure(next: Error | null): void {
+  shareFailure = next;
+}
+
+export function __resetShare(): void {
+  sharedContent = [];
+  shareFailure = null;
+}

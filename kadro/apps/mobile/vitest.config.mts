@@ -24,6 +24,7 @@ export default defineConfig({
         replacement: support('expo-apple-authentication.ts'),
       },
       { find: /^@shopify\/flash-list$/, replacement: support('flash-list.tsx') },
+      { find: /^react-native-qrcode-svg$/, replacement: support('qrcode-svg.tsx') },
       {
         find: /^@react-native-async-storage\/async-storage$/,
         replacement: support('async-storage.ts'),

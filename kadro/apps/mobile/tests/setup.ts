@@ -46,6 +46,7 @@ afterEach(async () => {
   resetRouterDouble();
   resetAppleDouble();
   __setLinkingURL(null);
+  reactNativeDouble.__resetShare();
   const violations = takeAsyncStorageViolations();
   resetAsyncStorage();
   // Threat model T-MOB-01: a credential written to AsyncStorage fails the test that wrote it.
