@@ -153,7 +153,8 @@ describe('script and HTML injection guards across app/** and components/**', () 
     expect(paths).toEqual(
       expect.arrayContaining([
         'app/layout.tsx',
-        'app/page.tsx',
+        'app/(marketing)/layout.tsx',
+        'app/(marketing)/page.tsx',
         'app/not-found.tsx',
         'app/(app)/layout.tsx',
         JSON_LD_FILE,

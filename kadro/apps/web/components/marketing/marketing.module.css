@@ -1,0 +1,618 @@
+/*
+ * Marketing shell and pages (ADR-0056). Colors come only from the `--m-*` custom properties set
+ * by `theme.ts` on `.shell`; fonts from the `next/font` variables in `fonts.ts`. Every text pair
+ * meets 4.5:1 (tests/marketing/theme.test.ts). Interactive targets are at least 44 px high, focus
+ * is always visible, motion is reduced on request, and the layout works from 320 px wide and at
+ * 200 % zoom without horizontal scrolling.
+ */
+
+.shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--m-background);
+  color: var(--m-text);
+  font-family: var(--m-font-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.shell *,
+.shell *::before,
+.shell *::after {
+  box-sizing: border-box;
+}
+
+/* Skip link: off screen until focused, then the first visible element of the page. */
+.skipLink {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background-color: var(--m-text);
+  color: var(--m-background);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skipLink:focus-visible,
+.skipLink:focus {
+  transform: none;
+}
+
+/* Header */
+
+.header {
+  border-bottom: 1px solid rgb(14 26 20 / 12%);
+  background-color: var(--m-surface);
+}
+
+.headerInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 20px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--m-primary);
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.nav {
+  flex: 1 1 auto;
+}
+
+.navList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--m-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.navLink[aria-current='page'] {
+  color: var(--m-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.headerCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background-color: var(--m-primary);
+  color: var(--m-onPrimary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.headerCta:hover {
+  background-color: var(--m-text);
+}
+
+.main {
+  flex: 1 0 auto;
+}
+
+.main:focus {
+  outline: none;
+}
+
+/* Hero */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--m-primary);
+  color: var(--m-onPrimary);
+}
+
+/* Centre circle and halfway line of a pitch, drawn with borders (decorative, no content). */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -120px;
+  width: 360px;
+  height: 360px;
+  border: 2px solid rgb(255 255 255 / 22%);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 59px;
+  width: 2px;
+  background-color: rgb(255 255 255 / 22%);
+  pointer-events: none;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 20px 80px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  max-width: 14ch;
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 44px;
+  line-height: 52px;
+  font-weight: 700;
+}
+
+.heroLead {
+  max-width: 60ch;
+  margin: 20px 0 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.buttonPrimary,
+.buttonSecondary,
+.buttonSolid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 22px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.buttonPrimary {
+  border: 0;
+  background-color: var(--m-accent);
+  color: var(--m-onAccent);
+}
+
+.buttonPrimary:hover {
+  background-color: var(--m-surface);
+  color: var(--m-text);
+}
+
+.buttonSecondary {
+  border: 2px solid var(--m-onPrimary);
+  background-color: transparent;
+  color: var(--m-onPrimary);
+}
+
+.buttonSecondary:hover {
+  background-color: var(--m-onPrimary);
+  color: var(--m-text);
+}
+
+.buttonSolid {
+  border: 0;
+  background-color: var(--m-primary);
+  color: var(--m-onPrimary);
+}
+
+.buttonSolid:hover {
+  background-color: var(--m-text);
+}
+
+/* Sections */
+
+.section {
+  padding: 64px 0;
+}
+
+.sectionAlt {
+  background-color: var(--m-surface);
+}
+
+.sectionInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+}
+
+.sectionLead {
+  max-width: 64ch;
+  margin: 12px 0 0;
+  color: var(--m-textMuted);
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 20px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.step {
+  padding: 24px;
+  border-radius: 20px;
+  background-color: var(--m-surface);
+  counter-increment: step;
+}
+
+.step::before {
+  content: counter(step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background-color: var(--m-primary);
+  color: var(--m-onPrimary);
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 24px;
+  border: 1px solid rgb(14 26 20 / 12%);
+  border-radius: 20px;
+  background-color: var(--m-surface);
+}
+
+.sectionAlt .card,
+.sectionAlt .step {
+  background-color: var(--m-background);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.cardText {
+  margin: 8px 0 0;
+  color: var(--m-textMuted);
+}
+
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--m-link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Download section */
+
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.storeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storeBadge {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 160px;
+  min-height: 56px;
+  padding: 8px 18px;
+  border: 2px solid var(--m-text);
+  border-radius: 12px;
+  background-color: var(--m-surface);
+  color: var(--m-text);
+  text-decoration: none;
+}
+
+.storeLink:hover {
+  background-color: var(--m-text);
+  color: var(--m-surface);
+}
+
+.storeName {
+  font-weight: 600;
+}
+
+.storeStatus {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Inner pages */
+
+.pageHeader {
+  padding: 56px 0 8px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 700;
+}
+
+.pageLead {
+  max-width: 64ch;
+  margin: 16px 0 0;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.featureList {
+  margin: 16px 0 0;
+  padding-left: 20px;
+}
+
+.featureList li + li {
+  margin-top: 8px;
+}
+
+.notice {
+  max-width: 64ch;
+  margin: 24px 0 0;
+  color: var(--m-textMuted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* 404 and error */
+
+.statusBlock {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 80px 20px;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.digest {
+  margin: 16px 0 0;
+  color: var(--m-textMuted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Footer */
+
+.footer {
+  border-top: 1px solid rgb(14 26 20 / 12%);
+  background-color: var(--m-surface);
+}
+
+.footerInner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 24px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 40px 20px 32px;
+}
+
+.footerWordmark {
+  margin: 0;
+  color: var(--m-primary);
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.footerText {
+  margin: 4px 0 0;
+  color: var(--m-textMuted);
+}
+
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+}
+
+.footerTitle {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.footerList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--m-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footerLink[aria-current='page'] {
+  font-weight: 600;
+}
+
+.footerLegal {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--m-textMuted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Focus: always visible, dark ring on light areas, light ring on the primary hero. */
+
+.skipLink:focus-visible,
+.brand:focus-visible,
+.navLink:focus-visible,
+.headerCta:focus-visible,
+.storeLink:focus-visible,
+.inlineLink:focus-visible,
+.footerLink:focus-visible,
+.buttonSolid:focus-visible,
+.statusActions a:focus-visible {
+  outline: 3px solid var(--m-text);
+  outline-offset: 2px;
+}
+
+.hero .buttonPrimary:focus-visible,
+.hero .buttonSecondary:focus-visible {
+  outline: 3px solid var(--m-onPrimary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .heroInner {
+    padding: 48px 16px 56px;
+  }
+
+  .heroTitle {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .pageTitle {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .sectionTitle {
+    font-size: 26px;
+    line-height: 34px;
+  }
+
+  .section {
+    padding: 48px 0;
+  }
+
+  .sectionInner,
+  .headerInner,
+  .footerInner,
+  .statusBlock {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero::before,
+  .hero::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buttonPrimary,
+  .buttonSecondary,
+  .buttonSolid {
+    transition: none;
+  }
+}
