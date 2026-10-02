@@ -42,11 +42,17 @@ them.
      same way.
    - `history.pushState` / `replaceState` are wrapped before the router installs its own patch, so
      every history write, the router's included, that would put a fragment into a token page entry
-     is written with the bare path instead and its token captured. The router is then told the
-     bare path, so it does not write the fragment back from its own state.
+     is written with the bare path instead and its token captured. A write the router takes from
+     outside (`history.pushState` by other code) briefly records the fragment in the router state;
+     the router is then told the bare path, so it does not write the fragment back. That update is
+     skipped when a later history write has happened meanwhile, so it never undoes a navigation. A
+     URL of another origin is passed through unchanged, so the browser rejects it as before and
+     nothing is captured from it.
    - A new token replaces the held one under a new version; the page keys its flow state by that
-     version, so a new link starts a fresh single-use flow (verification posts once per token), and
-     the request of the replaced token is aborted. A held token is never replaced by itself.
+     version, so a new link starts a fresh flow and the request of the replaced token is aborted. A
+     held token is never replaced by itself. Verification posts once per mounted flow; a real
+     unmount and remount of the page (navigating away and back on the client) starts a new flow,
+     so the single use of a token is guaranteed by the server, not by the page.
 3. A malformed or missing token shows the "link invalid or expired" state without calling the API.
 4. Verification posts automatically once; reset posts only when the user submits the new password.
    A 401 `token_invalid` shows the same "invalid or expired" state with a link to
@@ -56,7 +62,8 @@ them.
    one.
 6. An unused token is released when the user leaves the page: on `pagehide` (navigation, close and
    entry into the back/forward cache, which `no-store` alone does not prevent) and one task after
-   the page component unmounts (the delay keeps it across an immediate remount). Releasing aborts
+   the page component unmounts (the delay keeps it across an immediate remount; the delayed release
+   applies only to the token held at unmount, never to a newer one). Releasing aborts
    the pending request that carries the token. A page restored from the back/forward cache
    (`pageshow` with `persisted`) has no token and shows the "link invalid or expired" state
    without calling the API; the user opens the link again. A settled page (success or rejected
@@ -88,22 +95,29 @@ The repository has no Playwright and no axe dependency; adding one is an owner d
 and CI cost) and is not part of this ADR. The accessibility bar above is verified today as follows,
 and no automated axe rule set runs on any page:
 
-| Page               | Initial state                                    | Error state                                                                                             | Success state         |
-| ------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | --------------------- |
-| `/e-posta-dogrula` | server render (unit), built server, browser      | browser (invalid link after `pagehide` / back/forward cache), unit (failure map, messages)              | unit (state machine)  |
-| `/sifre-sifirla`   | server render (unit), built server, browser      | browser (short password: `aria-invalid`, `aria-describedby`, focus; malformed link; back/forward cache) | unit (state machine)  |
-| `/sifremi-unuttum` | server render (unit), built server               | unit (failure map, messages)                                                                            | unit (state machine)  |
-| `/giris`           | server render (unit), built server               | unit (failure map, messages)                                                                            | unit (fixed redirect) |
-| `/hesap-silme`     | server render of both forms (unit), built server | unit (failure map, messages)                                                                            | unit (state machine)  |
+| Page               | Initial state                                    | Error state                                                                                                            | Success state         |
+| ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `/e-posta-dogrula` | server render (unit), built server, browser      | browser (invalid link after a synthetic `pagehide`), unit (failure map, messages)                                      | unit (state machine)  |
+| `/sifre-sifirla`   | server render (unit), built server, browser      | browser (short password: `aria-invalid`, `aria-describedby`, focus; malformed link; synthetic `pagehide` / `pageshow`) | unit (state machine)  |
+| `/sifremi-unuttum` | server render (unit), built server               | unit (failure map, messages)                                                                                           | unit (state machine)  |
+| `/giris`           | server render (unit), built server               | unit (failure map, messages)                                                                                           | unit (fixed redirect) |
+| `/hesap-silme`     | server render of both forms (unit), built server | unit (failure map, messages)                                                                                           | unit (state machine)  |
 
 - "server render (unit)": one `h1` and `main`, labelled inputs, `autocomplete`, the polite live
   region, the show/hide button, no inline script (`tests/pages/render.test.tsx`).
 - "built server": `next start` of the production build, all five pages, headers and one `h1`
   (`tests/pages/built-pages.test.ts`).
 - "browser": headless Chrome or Edge over the DevTools protocol against the production build
-  (`tests/pages/browser.test.ts`): token removal from URL, history, requests and storage; the
-  same-document, router and back/forward-cache token lifecycle; the reset form error, focus and
-  show/hide toggle. It fails instead of skipping under `CI=true` (ADR-0042).
+  (`tests/pages/browser.test.ts`): token removal from URL, history, requests and storage; a second
+  link in the same document (reset: exactly one request, with the new token; verification: also
+  while the first request is still pending, which is cancelled); a fragment written through the
+  router's history patch; the reset form error, focus and show/hide toggle. It fails instead of
+  skipping under `CI=true` (ADR-0042).
+- Leaving the page is covered with synthetic lifecycle events (`pagehide`, `pageshow` with
+  `persisted`) dispatched on the live page. A real freeze in and restore from the back/forward cache
+  is not exercised (the token pages are `no-store`, and headless Chrome does not cache them
+  reliably). Unmount release, its timing and versioning, and cross-origin pass-through are covered
+  by unit tests on a fake browser (`tests/pages/token-lifecycle.test.ts`), not in a real React tree.
 - Contrast against the brand tokens, target sizes, focus outline and reduced motion are checked on
   the stylesheet and tokens (`tests/pages/redirects-and-a11y.test.ts`), not on rendered pages.
 
