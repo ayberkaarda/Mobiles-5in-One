@@ -7,6 +7,11 @@ export interface EnqueueOptions {
   /** Commit the job together with the caller's transaction (transactional outbox, ADR-0028). */
   readonly tx?: Transaction;
   readonly startAfter?: Date;
+  /**
+   * Coalescing key of a coalesced push (ADR-0031); the job's `idempotencyKey` then names its
+   * window. Defaults to the `idempotencyKey`.
+   */
+  readonly singletonKey?: string;
 }
 
 /** Runs pg-boss statements inside a Drizzle transaction. */
@@ -16,7 +21,7 @@ export function bossExecutor(tx: Transaction): Db {
 
 /**
  * Validates the payload with the contract schema and sends it with `singletonKey =
- * idempotencyKey`. Returns the job id, or `null` when an identical job is already queued or active
+ * idempotencyKey` unless a coalescing key is given. Returns the job id, or `null` when an identical job is already queued or active
  * (the `exclusive` queue policy drops the duplicate).
  */
 export async function enqueue<TQueue extends JobQueue>(
@@ -29,7 +34,7 @@ export async function enqueue<TQueue extends JobQueue>(
   const schema = JOB_PAYLOAD_SCHEMAS[queue];
   const data = schema.parse(payload) as JobPayload<TQueue>;
   return boss.send(queue, data, {
-    singletonKey: data.idempotencyKey,
+    singletonKey: options.singletonKey ?? data.idempotencyKey,
     ...(options.startAfter ? { startAfter: options.startAfter } : {}),
     ...(options.tx ? { db: bossExecutor(options.tx) } : {}),
   });

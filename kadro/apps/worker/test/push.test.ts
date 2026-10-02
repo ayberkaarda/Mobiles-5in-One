@@ -1,10 +1,18 @@
 import { NOTIFICATION_TYPES, type PushSendJob, pushSendJobSchema } from '@kadro/contracts';
-import { newId, pushTokens, rateLimitBuckets } from '@kadro/db';
+import {
+  jobReceipts,
+  lockPushResend,
+  newId,
+  pushResends,
+  pushTokens,
+  rateLimitBuckets,
+  recordPushResendForRecipient,
+} from '@kadro/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { HOUR_MS, MINUTE_MS } from '../src/clock.js';
-import { enqueue } from '../src/enqueue.js';
+import { bossExecutor, enqueue } from '../src/enqueue.js';
 import { createLogger } from '../src/logger.js';
 import { PUSH_CAP_KEY, hourWindowStart } from '../src/push/cap.js';
 import { PUSH_REF_KEY, renderPush } from '../src/push/templates.js';
@@ -19,6 +27,7 @@ import {
   type TestDatabase,
   type TestWorker,
   createTestDatabase,
+  type FakeResponse,
   expoOkTickets,
   jobsIn,
   startFakeProvider,
@@ -379,6 +388,369 @@ describe('coalesced push.send windows (ADR-0031)', () => {
     clock.advance(MINUTE_MS);
     expect(await sendCoalesced(current, clock.now())).toBeNull();
   });
+});
+
+describe('a change while a coalesced push is being delivered (ADR-0044)', () => {
+  interface Coalesced {
+    readonly type: 'rsvp.changed' | 'application.received';
+    readonly singletonKey: string;
+    readonly refId: string;
+    /** Count rendered into the summary now. */
+    readonly before: number;
+    /** Commits one more confirmed player or pending application; returns its ref id. */
+    change(): Promise<string>;
+    /** Text the summary contains for `count`. */
+    summary(count: number): string;
+  }
+
+  async function coalescedScene(type: Coalesced['type']): Promise<Coalesced & Scene> {
+    const target = await scene();
+    await fixtures.pushToken(target.captainId);
+    if (type === 'rsvp.changed') {
+      return {
+        ...target,
+        type,
+        singletonKey: `rsvp:${target.matchId}:${target.captainId}`,
+        refId: target.matchId,
+        before: 2,
+        change: async () => {
+          const player = await fixtures.user();
+          await fixtures.member(target.teamId, player.id);
+          await fixtures.rsvp(target.matchId, player.id, 'in');
+          return target.matchId;
+        },
+        summary: (count) => `için ${count} oyuncu geliyor`,
+      };
+    }
+    const callId = await fixtures.openCall(target.matchId, new Date(Date.now() + HOUR_MS));
+    const applicant = await fixtures.user();
+    const applicationId = await fixtures.application(callId, applicant.id, 'pending');
+    return {
+      ...target,
+      type,
+      singletonKey: `application:${callId}:${target.captainId}`,
+      refId: applicationId,
+      before: 1,
+      change: async () => {
+        const next = await fixtures.user();
+        return fixtures.application(callId, next.id, 'pending');
+      },
+      summary: (count) => `için ${count} bekleyen başvuru var`,
+    };
+  }
+
+  /** The web producer of a coalesced notification (`notify.ts`), for one recipient. */
+  async function produce(
+    target: Coalesced & Scene,
+    refId: string,
+    windowOpenedAt: Date,
+    startAfter?: Date,
+  ): Promise<string | null> {
+    const data = pushSendJobSchema.parse({
+      type: target.type,
+      userId: target.captainId,
+      refId,
+      idempotencyKey: `${target.singletonKey}:${windowOpenedAt.getTime()}`,
+    });
+    return database.admin.db.transaction(async (tx) => {
+      await lockPushResend(tx, target.singletonKey);
+      const jobId = await worker.runtime.boss.send('push.send', data, {
+        singletonKey: target.singletonKey,
+        ...(startAfter === undefined ? {} : { startAfter }),
+        db: bossExecutor(tx),
+      });
+      if (jobId === null) {
+        await recordPushResendForRecipient(tx, {
+          singletonKey: target.singletonKey,
+          type: target.type,
+          userId: target.captainId,
+          refId,
+          requestedAt: windowOpenedAt,
+        });
+      }
+      return jobId;
+    });
+  }
+
+  function bodies(): string[] {
+    return sendRequests().map((request) => JSON.stringify(request.body));
+  }
+
+  async function jobsFor(target: Coalesced): Promise<Awaited<ReturnType<typeof jobsIn>>> {
+    return (await jobsIn(database, 'push.send')).filter(
+      (job) => job.singletonKey === target.singletonKey,
+    );
+  }
+
+  /** Lets a job whose `startAfter` lies ahead run now (the database clock is the real one). */
+  async function release(jobId: string): Promise<void> {
+    await database.admin.pool.query('update pgboss.job set start_after = now() where id = $1', [
+      jobId,
+    ]);
+  }
+
+  async function pendingRows(target: Coalesced): Promise<{ version: number; refId: string }[]> {
+    return database.admin.db
+      .select({ version: pushResends.version, refId: pushResends.refId })
+      .from(pushResends)
+      .where(eq(pushResends.singletonKey, target.singletonKey));
+  }
+
+  /**
+   * Holds the first Expo request until the test releases it: the handler has read the state it
+   * renders and has not completed the job yet. `first` answers the held request; later requests
+   * get ok tickets after `later` has run.
+   */
+  function holdFirstSend(
+    options: {
+      readonly first?: (request: RecordedRequest) => FakeResponse;
+      readonly later?: () => Promise<void>;
+    } = {},
+  ): { reached: Promise<void>; release: () => void } {
+    let reachedResolve: () => void = () => undefined;
+    let releaseResolve: () => void = () => undefined;
+    const reached = new Promise<void>((resolve) => {
+      reachedResolve = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      releaseResolve = resolve;
+    });
+    let calls = 0;
+    provider.responders.set(EXPO_SEND_PATH, async (request) => {
+      calls += 1;
+      if (calls === 1) {
+        reachedResolve();
+        await gate;
+        return (options.first ?? expoOkTickets)(request);
+      }
+      await options.later?.();
+      return expoOkTickets(request);
+    });
+    return { reached, release: releaseResolve };
+  }
+
+  /** Starts a job and stops it inside Expo's send call, after its state read. */
+  async function deliveringJob(
+    target: Coalesced & Scene,
+    held: { reached: Promise<void> },
+    windowOpenedAt: Date,
+  ): Promise<string> {
+    const jobId = await produce(target, target.refId, windowOpenedAt);
+    expect(jobId).not.toBeNull();
+    await held.reached;
+    const job = await waitForJobState(database, 'push.send', jobId ?? '', ['active']);
+    expect(job.state).toBe('active');
+    return job.id;
+  }
+
+  for (const type of ['rsvp.changed', 'application.received'] as const) {
+    describe(type, () => {
+      it('a change after the state read reaches the next delivery, sent once', async () => {
+        const target = await coalescedScene(type);
+        const held = holdFirstSend();
+        const opened = clock.now();
+        const first = await deliveringJob(target, held, opened);
+
+        // Barrier: the handler has rendered its summary; the change commits before completion.
+        const changedRef = await target.change();
+        expect(await produce(target, changedRef, clock.now())).toBeNull();
+        expect(await pendingRows(target)).toEqual([{ version: 1, refId: changedRef }]);
+        held.release();
+        expect(await outcomeOf(first)).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before));
+
+        // The follow-up is enqueued in the transaction that completed the first job.
+        const queued = (await jobsFor(target)).filter((job) => job.state === 'created');
+        expect(queued).toHaveLength(1);
+        const [successor] = queued;
+        if (successor === undefined) throw new Error('no follow-up job');
+        // Same moment as the first window (the test clock stands still): the next millisecond.
+        const next = opened.getTime() + 1;
+        expect(successor.data).toEqual({
+          type,
+          userId: target.captainId,
+          refId: changedRef,
+          idempotencyKey: `${target.singletonKey}:${next}`,
+        });
+        expect(successor.startAfter.getTime()).toBe(next + COALESCE_WINDOW_MS);
+        expect(await pendingRows(target)).toEqual([]);
+
+        await release(successor.id);
+        expect(await outcomeOf(successor.id)).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(2);
+        expect(bodies()[1]).toContain(target.summary(target.before + 1));
+        expect((await jobsFor(target)).map((job) => job.state)).toEqual(['completed', 'completed']);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('repeats inside a queued window still coalesce into one delivery', async () => {
+        const target = await coalescedScene(type);
+        const first = await produce(
+          target,
+          target.refId,
+          clock.now(),
+          new Date(Date.now() + COALESCE_WINDOW_MS),
+        );
+        expect(first).not.toBeNull();
+        clock.advance(MINUTE_MS);
+        expect(await produce(target, await target.change(), clock.now())).toBeNull();
+        clock.advance(MINUTE_MS);
+        expect(await produce(target, await target.change(), clock.now())).toBeNull();
+        expect((await pendingRows(target)).map((row) => row.version)).toEqual([2]);
+
+        await release(first ?? '');
+        expect(await outcomeOf(first ?? '')).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before + 2));
+        expect((await jobsFor(target)).map((job) => job.state)).toEqual(['completed']);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('exactly 10 minutes after the window opened: a queued job absorbs the change', async () => {
+        const target = await coalescedScene(type);
+        const opened = clock.now();
+        const first = await produce(
+          target,
+          target.refId,
+          opened,
+          new Date(Date.now() + COALESCE_WINDOW_MS),
+        );
+        clock.set(new Date(opened.getTime() + COALESCE_WINDOW_MS));
+        expect(await produce(target, await target.change(), clock.now())).toBeNull();
+        await release(first ?? '');
+        expect(await outcomeOf(first ?? '')).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before + 1));
+        expect(await jobsFor(target)).toHaveLength(1);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('exactly 10 minutes after the window opened: an active job hands the change on', async () => {
+        const target = await coalescedScene(type);
+        const held = holdFirstSend();
+        const opened = clock.now();
+        const first = await deliveringJob(target, held, opened);
+        const boundary = new Date(opened.getTime() + COALESCE_WINDOW_MS);
+        clock.set(boundary);
+        const changedRef = await target.change();
+        expect(await produce(target, changedRef, boundary)).toBeNull();
+        held.release();
+        expect(await outcomeOf(first)).toEqual({ outcome: 'sent' });
+
+        const [successor] = (await jobsFor(target)).filter((job) => job.state === 'created');
+        expect(successor?.data.idempotencyKey).toBe(`${target.singletonKey}:${boundary.getTime()}`);
+        expect(successor?.startAfter.getTime()).toBe(boundary.getTime() + COALESCE_WINDOW_MS);
+        await release(successor?.id ?? '');
+        expect(await outcomeOf(successor?.id ?? '')).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(2);
+        expect(bodies()[1]).toContain(target.summary(target.before + 1));
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('two concurrent producers open one window and record one change', async () => {
+        const target = await coalescedScene(type);
+        const startAfter = new Date(Date.now() + COALESCE_WINDOW_MS);
+        const changedRef = await target.change();
+        const results = await Promise.all([
+          produce(target, target.refId, clock.now(), startAfter),
+          produce(target, changedRef, clock.now(), startAfter),
+        ]);
+        expect(results.filter((id) => id !== null)).toHaveLength(1);
+        expect((await pendingRows(target)).map((row) => row.version)).toEqual([1]);
+
+        const jobId = results.find((id) => id !== null) ?? '';
+        await release(jobId);
+        expect(await outcomeOf(jobId)).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before + 1));
+        expect(await jobsFor(target)).toHaveLength(1);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('a failed delivery keeps the record and its retry sends the change once', async () => {
+        const target = await coalescedScene(type);
+        const pendingDuringRetry: { version: number; refId: string }[][] = [];
+        const held = holdFirstSend({
+          first: () => ({ status: 503 }),
+          later: async () => {
+            pendingDuringRetry.push(await pendingRows(target));
+          },
+        });
+        const first = await deliveringJob(target, held, clock.now());
+        const changedRef = await target.change();
+        expect(await produce(target, changedRef, clock.now())).toBeNull();
+        held.release();
+
+        const job = await waitForJobState(database, 'push.send', first, ['completed']);
+        expect(job.retryCount).toBe(1);
+        expect(job.output).toEqual({ outcome: 'sent' });
+        // The retry read the state again, so the change it delivers needs no follow-up.
+        expect(pendingDuringRetry).toEqual([[{ version: 1, refId: changedRef }]]);
+        expect(bodies()).toHaveLength(2);
+        expect(bodies()[1]).toContain(target.summary(target.before + 1));
+        expect(await jobsFor(target)).toHaveLength(1);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('a failure after the receipt commits still hands the change on in the retry', async () => {
+        const target = await coalescedScene(type);
+        const held = holdFirstSend();
+        const first = await deliveringJob(target, held, clock.now());
+        const changedRef = await target.change();
+        expect(await produce(target, changedRef, clock.now())).toBeNull();
+
+        // Hold the key's lock so the settle transaction waits after the receipt has committed,
+        // then cancel its statement: the failure lands between receipt and completion.
+        const blocker = await database.admin.pool.connect();
+        try {
+          await blocker.query('begin');
+          const { rows } = await blocker.query<{ pid: number }>('select pg_backend_pid() as pid');
+          await blocker.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+            `push-resend:${target.singletonKey}`,
+          ]);
+          held.release();
+          const waiter = await waitFor(
+            async () => {
+              const result = await database.admin.pool.query<{ pid: number }>(
+                `select pid from pg_stat_activity
+                  where wait_event_type = 'Lock' and wait_event = 'advisory'
+                    and $1 = any(pg_blocking_pids(pid))`,
+                [rows[0]?.pid],
+              );
+              return result.rows[0];
+            },
+            { label: 'the settle transaction waiting on the key lock' },
+          );
+          const receipts = await database.admin.db
+            .select({ key: jobReceipts.idempotencyKey })
+            .from(jobReceipts)
+            .where(eq(jobReceipts.queue, 'push.send'));
+          const deliveryKey = (await jobsFor(target)).find((job) => job.id === first)?.data
+            .idempotencyKey;
+          expect(receipts.map((receipt) => receipt.key)).toContain(deliveryKey);
+          await database.admin.pool.query('select pg_cancel_backend($1)', [waiter.pid]);
+        } finally {
+          await blocker.query('rollback');
+          blocker.release();
+        }
+
+        const job = await waitForJobState(database, 'push.send', first, ['completed']);
+        expect(job.retryCount).toBe(1);
+        expect(job.output).toEqual({ outcome: 'duplicate' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before));
+
+        const [successor] = (await jobsFor(target)).filter((row) => row.state === 'created');
+        expect(successor?.data.refId).toBe(changedRef);
+        await release(successor?.id ?? '');
+        expect(await outcomeOf(successor?.id ?? '')).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(2);
+        expect(bodies()[1]).toContain(target.summary(target.before + 1));
+        expect(await pendingRows(target)).toEqual([]);
+      });
+    });
+  }
 });
 
 describe('push templates (ADR-0031)', () => {

@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { handleProxyRequest, type ProxyEnv } from '../../lib/server/proxy-handler';
 import {
   EMAIL_LINK_PAGE_PATHS,
-  pagePathHeaders,
   REFERRER_POLICY_VALUE,
+  surfaceFor,
   TOKEN_PAGE_PATHS,
 } from '../../lib/server/security-headers';
 import { PAGE_PATHS } from '../../lib/client/redirects';
@@ -71,9 +71,11 @@ describe('email-link page headers', () => {
   });
 
   it('matches exact paths only', () => {
-    expect(pagePathHeaders('/')).toEqual([]);
-    expect(pagePathHeaders('/sifre-sifirla/x')).toEqual([]);
-    expect(pagePathHeaders('/api/v1/auth/reset')).toEqual([]);
+    expect(surfaceFor('/').noindex).toBe(false);
+    expect(surfaceFor('/sifre-sifirla/x').name).toBe('app');
+    expect(surfaceFor('/api/v1/auth/reset').name).toBe('api');
+    expect(proxied('/sifre-sifirla/x').get('x-robots-tag')).toBeNull();
+    expect(proxied('/sifre-sifirla/x').get('referrer-policy')).toBe(REFERRER_POLICY_VALUE);
     expect(proxied('/').get('x-robots-tag')).toBeNull();
   });
 

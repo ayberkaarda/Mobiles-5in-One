@@ -4,6 +4,9 @@ import {
   deletionRequests,
   emailTokens,
   jobReceipts,
+  lockPushResend,
+  pushResends,
+  recordPushResend,
   newId,
   openCallApplications,
   openCalls,
@@ -11,7 +14,7 @@ import {
   rateLimitBuckets,
   refreshTokens,
 } from '@kadro/db';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { scheduledPayload } from '../src/boss.js';
@@ -247,6 +250,20 @@ describe('maintenance.sweep (ADR-0028)', () => {
         { queue: 'email.send', idempotencyKey: `fresh:${newId()}`, createdAt: ago(DAY_MS) },
       ])
       .returning({ id: jobReceipts.id });
+    const [oldResend, freshResend] = await database.admin.db
+      .insert(pushResends)
+      .values(
+        [ago(25 * HOUR_MS), ago(HOUR_MS)].map((at) => ({
+          singletonKey: `rsvp:${newId()}:${user.id}`,
+          type: 'rsvp.changed' as const,
+          userId: user.id,
+          refId: newId(),
+          requestedAt: at,
+          createdAt: at,
+          updatedAt: at,
+        })),
+      )
+      .returning({ id: pushResends.id });
     const unseenDevice = await fixtures.pushToken(user.id, ago(61 * DAY_MS));
     const activeDevice = await fixtures.pushToken(user.id, ago(DAY_MS));
 
@@ -300,6 +317,11 @@ describe('maintenance.sweep (ADR-0028)', () => {
     expect(await ids('bucket')).not.toContain(oldBucket?.id);
     expect(await ids('receipt')).toContain(freshReceipt?.id);
     expect(await ids('receipt')).not.toContain(oldReceipt?.id);
+    const resends = (await database.admin.db.select({ id: pushResends.id }).from(pushResends)).map(
+      (r) => r.id,
+    );
+    expect(resends).toContain(freshResend?.id);
+    expect(resends).not.toContain(oldResend?.id);
     expect(await ids('push')).toContain(activeDevice.id);
     expect(await ids('push')).not.toContain(unseenDevice.id);
 
@@ -320,5 +342,83 @@ describe('maintenance.sweep (ADR-0028)', () => {
     expect(completed?.completedAt).not.toBeNull();
     await runScheduled('maintenance.sweep');
     expect(await jobsIn(database, 'account.hard_delete')).toHaveLength(1);
+  });
+
+  it('keeps a leftover push re-send that a new change refreshed, also while it commits', async () => {
+    clock.set(new Date());
+    const old = new Date(Date.now() - 25 * HOUR_MS);
+    const user = await fixtures.user();
+    const leftover = (singletonKey: string) => ({
+      singletonKey,
+      type: 'rsvp.changed' as const,
+      userId: user.id,
+      refId: newId(),
+      requestedAt: old,
+    });
+    const committedKey = `rsvp:${newId()}:${user.id}`;
+    const committingKey = `rsvp:${newId()}:${user.id}`;
+    // Rows a dead-lettered delivery left a day ago.
+    await database.admin.db.insert(pushResends).values(
+      [committedKey, committingKey].map((key) => ({
+        ...leftover(key),
+        createdAt: old,
+        updatedAt: old,
+      })),
+    );
+
+    // A new window's change was recorded on the first row (the producer's path).
+    await database.admin.db.transaction(async (tx) => {
+      await lockPushResend(tx, committedKey);
+      await recordPushResend(tx, { ...leftover(committedKey), requestedAt: new Date() });
+    });
+
+    // The second row's change is still committing when the sweep reaches it.
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let recorded: () => void = () => undefined;
+    const isRecorded = new Promise<void>((resolve) => {
+      recorded = resolve;
+    });
+    let producerPid = 0;
+    const producing = database.admin.db.transaction(async (tx) => {
+      const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      producerPid = Number(result.rows[0]?.pid);
+      await lockPushResend(tx, committingKey);
+      await recordPushResend(tx, { ...leftover(committingKey), requestedAt: new Date() });
+      recorded();
+      await gate;
+    });
+    await isRecorded;
+    const sweeping = runScheduled('maintenance.sweep');
+    try {
+      await waitFor(
+        async () => {
+          const { rows } = await database.admin.pool.query<{ pid: number }>(
+            `select pid from pg_stat_activity
+              where wait_event_type = 'Lock' and $1 = any(pg_blocking_pids(pid))`,
+            [producerPid],
+          );
+          return rows[0];
+        },
+        { label: 'the sweep waiting on the committing change' },
+      );
+    } finally {
+      release();
+    }
+    await producing;
+    expect((await sweeping).output).toEqual({ outcome: 'swept' });
+
+    const rows = await database.admin.db
+      .select({ key: pushResends.singletonKey, version: pushResends.version })
+      .from(pushResends)
+      .where(inArray(pushResends.singletonKey, [committedKey, committingKey]));
+    expect(rows.sort((a, b) => a.key.localeCompare(b.key))).toEqual(
+      [
+        { key: committedKey, version: 2 },
+        { key: committingKey, version: 2 },
+      ].sort((a, b) => a.key.localeCompare(b.key)),
+    );
   });
 });

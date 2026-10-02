@@ -1,9 +1,16 @@
-import { JOB_QUEUES, type JobQueue, deadLetterQueue } from '@kadro/contracts';
+import {
+  JOB_QUEUES,
+  type JobQueue,
+  SUBSCRIPTION_RECONCILE_CRON,
+  deadLetterQueue,
+} from '@kadro/contracts';
 
 /**
  * Queue options of ADR-0028. Every queue uses the `exclusive` policy: at most one job per
  * `singletonKey` (the job's `idempotencyKey`) may be queued, retrying or active, so a duplicate
- * enqueue is dropped by pg-boss. Exhausted jobs move to `<queue>.dead`.
+ * enqueue is dropped by pg-boss. Coalesced pushes use a per-object `singletonKey` that differs from
+ * the `idempotencyKey` (ADR-0031) and carry a dropped change forward (ADR-0044). Exhausted jobs move
+ * to `<queue>.dead`.
  */
 
 /** pg-boss keeps its tables in a dedicated schema, created by migration 0010. */
@@ -37,6 +44,13 @@ export interface QueueDefinition {
   readonly localConcurrency: number;
   /** Cron expression for scheduled queues. */
   readonly cron?: string;
+  /** Time zone of `cron`; defaults to {@link SCHEDULE_TIME_ZONE}. */
+  readonly cronTimeZone?: string;
+  /**
+   * Payload fields of the scheduled job besides its `idempotencyKey`, for queues whose contract
+   * has more than the key (the nightly reconciliation sends `userId: null`).
+   */
+  readonly scheduleData?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 export const QUEUE_DEFINITIONS: Readonly<Record<JobQueue, QueueDefinition>> = {
@@ -122,6 +136,30 @@ export const QUEUE_DEFINITIONS: Readonly<Record<JobQueue, QueueDefinition>> = {
     retryBackoff: false,
     expireInSeconds: 600,
     localConcurrency: 1,
+  },
+  // ADR-0063: deliveries are applied quickly and retried with backoff; the event row stays
+  // unprocessed until a run succeeds, and the nightly reconciliation corrects what is left.
+  'webhook.revenuecat.process': {
+    name: 'webhook.revenuecat.process',
+    stage: 'active',
+    retryLimit: 5,
+    retryDelaySeconds: 30,
+    retryBackoff: true,
+    expireInSeconds: 60,
+    localConcurrency: 2,
+  },
+  // Nightly at 03:17 UTC with `userId: null`; per-user runs share the queue.
+  'subscription.reconcile': {
+    name: 'subscription.reconcile',
+    stage: 'active',
+    retryLimit: 3,
+    retryDelaySeconds: 300,
+    retryBackoff: true,
+    expireInSeconds: 1_800,
+    localConcurrency: 1,
+    cron: SUBSCRIPTION_RECONCILE_CRON,
+    cronTimeZone: 'UTC',
+    scheduleData: { userId: null },
   },
 };
 

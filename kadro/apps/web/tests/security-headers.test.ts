@@ -9,6 +9,10 @@ import {
   HSTS_VALUE,
   PERMISSIONS_POLICY_VALUE,
   REFERRER_POLICY_VALUE,
+  canonicalPath,
+  SURFACES,
+  type SurfaceName,
+  surfaceFor,
 } from '../lib/server/security-headers';
 import { noParams, noQuery } from '../lib/server/validate';
 import { testEnv } from './support/env';
@@ -113,6 +117,184 @@ describe('error pages', () => {
       expectStaticHeaders(response.headers);
     }
   });
+});
+
+describe('surface table (ADR-0021, ADR-0055)', () => {
+  /** Written out on purpose: a change to the table has to change this expectation too. */
+  const expected: Record<
+    SurfaceName,
+    {
+      readonly csp: 'nonce' | 'deny-all';
+      readonly robots: string | null;
+      readonly referrer: string;
+      readonly cache: string | null;
+    }
+  > = {
+    api: {
+      csp: 'deny-all',
+      robots: null,
+      referrer: 'strict-origin-when-cross-origin',
+      cache: 'no-store',
+    },
+    'token-page': {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'no-referrer',
+      cache: 'no-store',
+    },
+    'email-link-page': {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'strict-origin-when-cross-origin',
+      cache: null,
+    },
+    marketing: {
+      csp: 'nonce',
+      robots: null,
+      referrer: 'strict-origin-when-cross-origin',
+      cache: null,
+    },
+    seo: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+    app: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+  };
+
+  it('lists every surface once, with the catch-all app surface last', () => {
+    expect(SURFACES.map((surface) => surface.name)).toEqual([
+      'api',
+      'token-page',
+      'email-link-page',
+      'marketing',
+      'seo',
+      'app',
+    ]);
+    expect(SURFACES.at(-1)?.paths).toEqual([]);
+  });
+
+  it('classifies paths by exact match or by whole segments under a `/**` base', () => {
+    const cases: [string, SurfaceName][] = [
+      ['/api/v1/health', 'api'],
+      ['/api/v1/auth/reset', 'api'],
+      ['/e-posta-dogrula', 'token-page'],
+      ['/sifre-sifirla', 'token-page'],
+      ['/sifre-sifirla/x', 'app'],
+      ['/sifremi-unuttum', 'email-link-page'],
+      ['/giris', 'email-link-page'],
+      ['/hesap-silme', 'email-link-page'],
+      ['/', 'marketing'],
+      ['/ozellikler', 'marketing'],
+      ['/blog', 'marketing'],
+      ['/blog/ilk-yazi', 'marketing'],
+      ['/blogx', 'app'],
+      ['/kvkk-aydinlatma', 'marketing'],
+      ['/sahalar/istanbul', 'seo'],
+      ['/saha/kadikoy-arena', 'seo'],
+      ['/sahalarx', 'app'],
+      ['/eksik-var/istanbul/kadikoy', 'seo'],
+      ['/admin/kullanicilar', 'app'],
+      ['/mac/AbCdEf123', 'app'],
+      ['/bu-sayfa-yok', 'app'],
+    ];
+    for (const [pathname, name] of cases) {
+      expect(surfaceFor(pathname).name, pathname).toBe(name);
+    }
+  });
+
+  it('classifies the canonical path: decoded once, case-folded, dot segments and empty segments removed', () => {
+    const cases: [string, SurfaceName][] = [
+      ['/sifre%2dsifirla', 'token-page'],
+      ['/%73ifre-sifirla', 'token-page'],
+      ['/e%2Dposta-dogrula', 'token-page'],
+      ['/SIFRE-SIFIRLA', 'token-page'],
+      ['/Sifre-Sifirla', 'token-page'],
+      ['/sifre-sifirla/', 'token-page'],
+      ['//sifre-sifirla', 'token-page'],
+      ['/x/../sifre-sifirla', 'token-page'],
+      ['/./sifre-sifirla', 'token-page'],
+      ['/g%69ris', 'email-link-page'],
+      ['/%61pi/v1/health', 'api'],
+      ['/API/v1/health', 'api'],
+      ['//api//v1/health/', 'api'],
+      ['/api/v1/../v1/health', 'api'],
+      ['/SAHALAR/istanbul', 'seo'],
+      // One decoding pass only: `%252d` is the text `%2d`, not a hyphen.
+      ['/sifre%252dsifirla', 'app'],
+      ['/../..', 'marketing'],
+    ];
+    for (const [pathname, name] of cases) {
+      expect(surfaceFor(pathname).name, pathname).toBe(name);
+    }
+  });
+
+  it('treats encoded separators, control characters and invalid encodings as ambiguous', () => {
+    for (const pathname of [
+      '/api%2fv1/health',
+      '/api%2Fv1/health',
+      '/sifre-sifirla%2f',
+      '/sifre-sifirla%5c',
+      '/sifre-sifirla\\x',
+      '/sifre-sifirla%00',
+      '/sifre-sifirla%0a',
+      '/sifre-sifirla%7f',
+      '/%E0%A4%A',
+      '/sifre%2',
+      '/sifre%zz',
+    ]) {
+      expect(canonicalPath(pathname), pathname).toBeNull();
+    }
+    expect(canonicalPath('/Sahalar//Istanbul/')).toBe('/sahalar/istanbul');
+    expect(canonicalPath('/')).toBe('/');
+  });
+
+  it('proxy rejects an ambiguous path with 400 and the deny-all headers', async () => {
+    for (const pathname of ['/api%2fv1/health', '/sifre-sifirla%00', '/%E0%A4%A', '/giris%5c']) {
+      const response = proxied(pathname, production);
+      expect(response.status, pathname).toBe(400);
+      expect(response.headers.get('content-security-policy')).toBe(
+        "default-src 'none'; frame-ancestors 'none'",
+      );
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
+      expect(response.headers.get('x-middleware-next')).toBeNull();
+      expect(response.headers.get('x-request-id')).toMatch(/^[0-9a-f-]{36}$/);
+      expectStaticHeaders(response.headers);
+      expect(await response.text()).toBe('Bad Request');
+    }
+  });
+
+  it('proxy sends the token-page headers for encoded and case variants of a token path', () => {
+    for (const pathname of ['/sifre%2dsifirla', '/SIFRE-SIFIRLA', '/e%2dposta-dogrula']) {
+      const headers = proxied(pathname, production).headers;
+      expect(headers.get('referrer-policy'), pathname).toBe('no-referrer');
+      expect(headers.get('cache-control'), pathname).toBe('no-store');
+      expect(headers.get('x-robots-tag'), pathname).toBe('noindex, nofollow');
+    }
+  });
+
+  it('classifies every probe path into its own surface', () => {
+    for (const surface of SURFACES) {
+      expect(surfaceFor(surface.probe).name, surface.probe).toBe(surface.name);
+    }
+  });
+
+  for (const surface of SURFACES) {
+    it(`${surface.name}: proxy sends the CSP variant, robots, referrer and cache headers`, () => {
+      const want = expected[surface.name];
+      const headers = proxied(surface.probe, production).headers;
+      const csp = headers.get('content-security-policy');
+      if (want.csp === 'nonce') {
+        expectPageCsp(headers);
+      } else {
+        expect(csp).toBe("default-src 'none'; frame-ancestors 'none'");
+      }
+      expect(headers.get('x-robots-tag')).toBe(want.robots);
+      expect(headers.get('referrer-policy')).toBe(want.referrer);
+      expect(headers.get('cache-control')).toBe(want.cache);
+      expect(headers.get('strict-transport-security')).toBe(HSTS_VALUE);
+      expect(headers.get('x-content-type-options')).toBe('nosniff');
+      expect(headers.get('permissions-policy')).toBe(PERMISSIONS_POLICY_VALUE);
+      expect(headers.get('x-frame-options')).toBe('DENY');
+    });
+  }
 });
 
 describe('API responses', () => {

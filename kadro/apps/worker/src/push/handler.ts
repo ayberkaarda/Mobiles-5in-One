@@ -10,6 +10,7 @@ import { type JobContext, TransientJobError } from '../job-runner.js';
 import { type Metrics } from '../metrics.js';
 import { reservePushCapacity } from './cap.js';
 import { resolveRecipient } from './recipients.js';
+import { coalescedJob, readResendVersion, settleCoalesced } from './resend.js';
 import { PUSH_REF_KEY, renderPush } from './templates.js';
 import {
   EXPO_RECEIPTS_BATCH,
@@ -58,8 +59,39 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
-/** `push.send` (ADR-0031): one notification to every device of one user. */
+/**
+ * `push.send` (ADR-0031): one notification to every device of one user. A coalesced push also
+ * settles its pending re-send (ADR-0044): the row's version is read before the state, and the job
+ * completes together with that check once the delivery has an outcome. A thrown error leaves the
+ * row for the retry, which reads the state again. A `duplicate` outcome means an earlier attempt
+ * delivered and wrote its receipt but did not settle: this attempt read no state, so it cannot
+ * tell which recorded changes that delivery covered and hands every pending one on.
+ */
 export function createPushSendHandler(dependencies: PushHandlerDependencies) {
+  const { db, boss, clock } = dependencies;
+  const deliver = createPushDelivery(dependencies);
+
+  return async (job: PushSendJob, context: JobContext): Promise<string> => {
+    const coalesced = coalescedJob(job, context);
+    if (coalesced === null) {
+      return deliver(job, context);
+    }
+    const seenVersion = await readResendVersion(db, coalesced.singletonKey);
+    const outcome = await deliver(job, context);
+    await settleCoalesced(
+      { db, boss, now: clock.now() },
+      job,
+      coalesced,
+      context,
+      outcome,
+      outcome === 'duplicate' ? 0 : seenVersion,
+    );
+    return outcome;
+  };
+}
+
+/** The delivery itself; returns the outcome once the receipt is written. */
+function createPushDelivery(dependencies: PushHandlerDependencies) {
   const { db, boss, transport, clock, metrics } = dependencies;
 
   return async (job: PushSendJob, context: JobContext): Promise<string> => {

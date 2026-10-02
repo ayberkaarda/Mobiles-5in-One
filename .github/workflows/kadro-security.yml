@@ -4,22 +4,21 @@ name: Kadro Security
 # dependency audit and the repository secret grep. Actions are pinned to full commit SHAs;
 # the gitleaks binary is downloaded from its GitHub release and checked against its SHA-256.
 # The workflow lives at the Git repository root; Kadro is the kadro/ subdirectory.
+#
+# It runs on every pull request and every push to main, without a path filter, so the single
+# "Kadro Security gate" check always reports and can be a required status check on main.
+# The "changes" job decides whether the Kadro jobs have work to do; when nothing under kadro/
+# (or a kadro-* workflow, or .gitleaks.toml) changed they are skipped and the gate passes. The
+# weekly schedule and manual runs always run every job.
+# See kadro/docs/adr/0046-security-workflow-gate.md.
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
   pull_request:
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
   schedule:
     # Weekly, so new advisories and new gitleaks rules surface without a code change.
-    - cron: '17 4 * * 1'
+    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -38,8 +37,73 @@ env:
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
 
 jobs:
+  changes:
+    name: Detect Kadro changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      kadro: ${{ steps.diff.outputs.kadro }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # Scheduled and manual runs have no range and run everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Kadro
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of kadro/ as a deletion inside it. Exit 0 means no
+      # Kadro change, 1 a change, anything else is an error and runs every Kadro job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ]             && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]             && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No diff range for $EVENT_NAME; running every Kadro job."
+            kadro=true
+          else
+            set -- kadro/ ':(glob).github/workflows/kadro-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@"               || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) kadro=false ;;
+              1) kadro=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Kadro job."
+                kadro=true
+                ;;
+            esac
+          fi
+          echo "kadro=$kadro" >> "$GITHUB_OUTPUT"
+          echo "Kadro jobs run: $kadro"
+
   gitleaks:
     name: Gitleaks (full history)
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,6 +130,8 @@ jobs:
 
   audit:
     name: Dependency audit (high and critical)
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -91,6 +157,8 @@ jobs:
 
   secret-grep:
     name: Secret grep
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -107,3 +175,47 @@ jobs:
       # Node.js 22.18+ runs the TypeScript file directly; the script has no dependencies.
       - name: Scan working tree
         run: node scripts/security/secret-grep.ts
+
+  # The only security check to mark as required on main. "changes" must succeed and report
+  # kadro=true or kadro=false. true: gitleaks, audit and secret-grep must all succeed. false: all
+  # three must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # When a job is added to this workflow, add it to "needs" and to the list below.
+  gate:
+    name: Kadro Security gate
+    needs: [changes, gitleaks, audit, secret-grep]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          KADRO_CHANGED: ${{ needs.changes.outputs.kadro }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          AUDIT_RESULT: ${{ needs.audit.result }}
+          SECRET_GREP_RESULT: ${{ needs.secret-grep.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (kadro=${KADRO_CHANGED:-<none>})"
+          echo "gitleaks: ${GITLEAKS_RESULT:-<none>}"
+          echo "audit: ${AUDIT_RESULT:-<none>}"
+          echo "secret-grep: ${SECRET_GREP_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Kadro Security failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$KADRO_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Kadro Security failed: change detection reported no valid kadro output."
+              exit 1
+              ;;
+          esac
+          if [ "$GITLEAKS_RESULT" != "$expected" ] || [ "$AUDIT_RESULT" != "$expected" ]             || [ "$SECRET_GREP_RESULT" != "$expected" ]; then
+            echo "Kadro Security failed: kadro=$KADRO_CHANGED requires gitleaks, audit and secret-grep to be $expected."
+            exit 1
+          fi
+          echo "Kadro Security passed (kadro=$KADRO_CHANGED, all three jobs $expected)."

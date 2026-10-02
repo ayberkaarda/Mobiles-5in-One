@@ -6,12 +6,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { corsResponseHeaders, isPreflight, preflightHeaders } from './cors';
 import { newRequestId, REQUEST_ID_HEADER } from './request-context';
 import {
-  API_CACHE_HEADERS,
   API_CONTENT_SECURITY_POLICY,
+  canonicalPath,
   type HeaderEntry,
+  NO_STORE_VALUE,
+  NOINDEX_VALUE,
+  NONCE_HEADER,
   pageContentSecurityPolicy,
-  pagePathHeaders,
   STATIC_SECURITY_HEADERS,
+  surfaceFor,
+  surfaceHeaders,
 } from './security-headers';
 
 /**
@@ -19,18 +23,27 @@ import {
  *
  * - Assigns every request a fresh `x-request-id`, replacing any client-supplied value, and
  *   forwards it to route handlers (security checklist item 14).
- * - Pages and error pages: per-request nonce CSP with `'strict-dynamic'` (item 9). Next.js reads
- *   the nonce from the forwarded `Content-Security-Policy` request header and applies it to its
- *   own scripts.
- * - `/api/*`: answers CORS preflights and adds CORS headers for allowed origins (item 8), plus a
- *   deny-all CSP and `Cache-Control: no-store`.
- * - Every response: HSTS, `nosniff`, Referrer-Policy, Permissions-Policy, `X-Frame-Options`.
+ * - Classifies the canonical path (decoded once, case-folded, see `canonicalPath`) into a surface
+ *   of the shared table (`SURFACES` in `security-headers.ts`, ADR-0021, ADR-0055) and sends that
+ *   surface's headers; an ambiguous path (encoded `/` or `\`, control character, invalid escape)
+ *   is answered with 400 and the deny-all CSP.
+ * - HTML surfaces (pages and error pages): per-request nonce CSP with `'strict-dynamic'`
+ *   (item 9). Next.js reads the nonce from the forwarded `Content-Security-Policy` request header
+ *   and applies it to its own scripts; server components read it from `x-nonce`.
+ * - API surface (`/api/**`): answers CORS preflights and adds CORS headers for allowed origins
+ *   (item 8), plus a deny-all CSP and `Cache-Control: no-store`.
+ * - Every response: HSTS, `nosniff`, Referrer-Policy, Permissions-Policy, `X-Frame-Options`,
+ *   then the surface's Referrer-Policy, `X-Robots-Tag` and `Cache-Control`.
  */
 
 export type ProxyEnv = Pick<WebEnv, 'NODE_ENV' | 'APP_ENV' | 'WEB_ORIGIN' | 'CORS_ALLOWED_ORIGINS'>;
 
-const API_PREFIX = '/api/';
-export const NONCE_HEADER = 'x-nonce';
+export { NONCE_HEADER };
+
+const AMBIGUOUS_PATH_HEADERS: readonly HeaderEntry[] = [
+  { key: 'Cache-Control', value: NO_STORE_VALUE },
+  { key: 'X-Robots-Tag', value: NOINDEX_VALUE },
+];
 
 function applyHeaders(target: Headers, entries: readonly HeaderEntry[]): void {
   for (const { key, value } of entries) {
@@ -43,10 +56,25 @@ export function handleProxyRequest(request: NextRequest, env: ProxyEnv): NextRes
   const forwarded = new Headers(request.headers);
   forwarded.set(REQUEST_ID_HEADER, requestId);
 
+  if (canonicalPath(request.nextUrl.pathname) === null) {
+    // ADR-0055: a path with an encoded separator, a control character or an invalid escape has
+    // no single surface, so it never reaches a page or route handler.
+    const rejected = new NextResponse('Bad Request', {
+      status: 400,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+    rejected.headers.set('Content-Security-Policy', API_CONTENT_SECURITY_POLICY);
+    rejected.headers.set(REQUEST_ID_HEADER, requestId);
+    applyHeaders(rejected.headers, STATIC_SECURITY_HEADERS);
+    applyHeaders(rejected.headers, AMBIGUOUS_PATH_HEADERS);
+    return rejected;
+  }
+
+  const surface = surfaceFor(request.nextUrl.pathname);
   let response: NextResponse;
   let contentSecurityPolicy: string;
 
-  if (request.nextUrl.pathname.startsWith(API_PREFIX)) {
+  if (surface.csp === 'deny-all') {
     contentSecurityPolicy = API_CONTENT_SECURITY_POLICY;
     if (isPreflight(request)) {
       response = new NextResponse(null, { status: 204, headers: preflightHeaders(request, env) });
@@ -56,7 +84,6 @@ export function handleProxyRequest(request: NextRequest, env: ProxyEnv): NextRes
         response.headers.set(key, value);
       });
     }
-    applyHeaders(response.headers, API_CACHE_HEADERS);
   } else {
     const nonce = randomBytes(16).toString('base64');
     contentSecurityPolicy = pageContentSecurityPolicy({
@@ -72,7 +99,6 @@ export function handleProxyRequest(request: NextRequest, env: ProxyEnv): NextRes
   response.headers.set('Content-Security-Policy', contentSecurityPolicy);
   response.headers.set(REQUEST_ID_HEADER, requestId);
   applyHeaders(response.headers, STATIC_SECURITY_HEADERS);
-  // Email-link pages (ADR-0040): noindex; token pages also no-referrer and no-store.
-  applyHeaders(response.headers, pagePathHeaders(request.nextUrl.pathname));
+  applyHeaders(response.headers, surfaceHeaders(surface));
   return response;
 }
