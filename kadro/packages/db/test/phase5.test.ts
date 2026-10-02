@@ -238,6 +238,35 @@ describe('subscription upsert ordered by event time', () => {
     });
   });
 
+  it('keeps the first of two different events with an equal time, in any order of retries', async () => {
+    const userId = await createUser();
+    const at = new Date('2031-03-10T00:00:00.000Z');
+    expect((await write(userId, { eventAt: at, eventId: 'evt-a', status: 'active' })).applied).toBe(
+      true,
+    );
+    expect(await write(userId, { eventAt: at, eventId: 'evt-b', status: 'expired' })).toEqual({
+      applied: false,
+    });
+    expect((await write(userId, { eventAt: at, eventId: 'evt-a', status: 'active' })).applied).toBe(
+      true,
+    );
+    expect(await rowOf(userId)).toMatchObject({ status: 'active', lastEventId: 'evt-a' });
+  });
+
+  it('applies a reconciliation only when it read the provider after the last event', async () => {
+    const userId = await createUser();
+    const at = new Date('2031-03-10T00:00:00.000Z');
+    await write(userId, { eventAt: at, eventId: 'evt-a', status: 'active' });
+    expect(await write(userId, { eventAt: at, eventId: null, status: 'expired' })).toEqual({
+      applied: false,
+    });
+    const later = new Date(at.getTime() + 1);
+    expect(
+      (await write(userId, { eventAt: later, eventId: null, status: 'expired' })).applied,
+    ).toBe(true);
+    expect(await rowOf(userId)).toMatchObject({ status: 'expired', lastEventId: null });
+  });
+
   it('re-applies an event with the same time idempotently', async () => {
     const userId = await createUser();
     const input = { eventAt: new Date('2031-03-10T00:00:00.000Z'), eventId: 'evt-same' };
@@ -321,6 +350,30 @@ describe('pending TOTP secret', () => {
       ciphertext: 'cipher-2',
       createdAt: t1,
     });
+  });
+
+  it('confirms up to and including the end of the window and not after it', async () => {
+    const t0 = new Date('2031-03-01T10:00:00.000Z');
+    for (const [offsetMs, expected] of [
+      [600_000, 'confirmed'],
+      [600_001, 'expired'],
+    ] as const) {
+      const userId = await createUser({ role: 'admin' });
+      await setPendingTotpSecret(db, userId, 'cipher-edge', t0);
+      expect(
+        await confirmPendingTotpSecret(
+          db,
+          { userId, expectedCiphertext: 'cipher-edge', step: 1, windowSeconds: WINDOW },
+          new Date(t0.getTime() + offsetMs),
+        ),
+      ).toBe(expected);
+    }
+  });
+
+  it('does not start an enrollment for a deactivated account', async () => {
+    const userId = await createUser({ role: 'moderator', deactivatedAt: new Date() });
+    expect(await setPendingTotpSecret(db, userId, 'cipher')).toBe('user_not_found');
+    expect((await getTotpEnrollment(db, userId))?.pending).toBeNull();
   });
 
   it('confirms inside the window and moves the secret to the active column', async () => {
@@ -582,6 +635,18 @@ describe('venue imports', () => {
     await expectPgError(
       asRole('kadro_app', (tx) =>
         tx.update(venueImports).set({ status: 'failed' }).where(eq(venueImports.id, row.id)),
+      ),
+      PG_INSUFFICIENT_PRIVILEGE,
+    );
+    for (const column of ['csv', 'dry_run', 'created_by'] as const) {
+      const { rows } = await db.execute<{ allowed: boolean }>(
+        sql`select has_column_privilege('kadro_worker', 'venue_imports', ${column}, 'UPDATE') as allowed`,
+      );
+      expect(rows[0]?.allowed, column).toBe(false);
+    }
+    await expectPgError(
+      asRole('kadro_worker', (tx) =>
+        tx.update(venueImports).set({ csv: 'other' }).where(eq(venueImports.id, row.id)),
       ),
       PG_INSUFFICIENT_PRIVILEGE,
     );

@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 
 import { type Database, type Transaction } from './client.js';
 import { users } from './schema/index.js';
@@ -58,7 +58,14 @@ export async function setPendingTotpSecret(
   const rows = await db
     .update(users)
     .set({ totpPendingSecretEnc: ciphertext, totpPendingCreatedAt: now, updatedAt: now })
-    .where(and(eq(users.id, userId), isNull(users.totpSecretEnc), eq(users.isTombstone, false)))
+    .where(
+      and(
+        eq(users.id, userId),
+        isNull(users.totpSecretEnc),
+        eq(users.isTombstone, false),
+        isNull(users.deactivatedAt),
+      ),
+    )
     .returning({ id: users.id });
   if (rows.length > 0) {
     return 'stored';
@@ -73,7 +80,7 @@ export interface ConfirmPendingTotp {
   readonly expectedCiphertext: string;
   /** Time step of the accepted code, stored so the same code cannot be replayed. */
   readonly step: number;
-  /** Confirm window in seconds (`LIMITS.totpEnrollmentWindowSeconds`). */
+  /** Confirm window in seconds; confirming exactly at its end is still allowed (`LIMITS.totpEnrollmentWindowSeconds`). */
   readonly windowSeconds: number;
 }
 
@@ -105,7 +112,7 @@ export async function confirmPendingTotpSecret(
         isNull(users.totpSecretEnc),
         eq(users.totpPendingSecretEnc, request.expectedCiphertext),
         isNotNull(users.totpPendingCreatedAt),
-        gt(users.totpPendingCreatedAt, oldest),
+        gte(users.totpPendingCreatedAt, oldest),
       ),
     )
     .returning({ id: users.id });
