@@ -16,6 +16,7 @@ import {
   type AuthHarness,
   createUser,
   GOOGLE_CLIENT_ID,
+  holdNextQuery,
   keyServer,
   mobile,
   parseSetCookies,
@@ -358,6 +359,27 @@ describe('account linking (footnote 3, T-AUTH-07)', () => {
     );
   });
 
+  it('refuses another Apple subject for an email already linked to an Apple subject', async () => {
+    const linked = `apple.${randomBytes(4).toString('hex')}`;
+    const existing = await createUser(auth, { appleSub: linked });
+    const other = await appleToken({
+      subject: `apple.${randomBytes(4).toString('hex')}`,
+      email: existing.email,
+    });
+    await expectProblem(await signInApple(other.token, other.nonce), 409, 'account_link_required');
+    expect((await userRow(auth, existing.id))?.appleSub).toBe(linked);
+  });
+
+  it('compares subjects per provider: an Apple subject does not admit the same Google subject', async () => {
+    // The account's email is unverified, so a Google link must be refused even though the token's
+    // subject string equals the account's Apple subject.
+    const subject = `shared.${randomBytes(4).toString('hex')}`;
+    const existing = await createUser(auth, { appleSub: subject, emailVerifiedAt: null });
+    const idToken = await googleToken({ email: existing.email, email_verified: true }, subject);
+    await expectProblem(await post(google, mobile(), { idToken }), 409, 'account_link_required');
+    expect((await userRow(auth, existing.id))?.googleSub).toBeNull();
+  });
+
   it('creates an unverified account for an unverified email nobody owns', async () => {
     const email = uniqueEmail();
     const idToken = await googleToken({ email, email_verified: false });
@@ -416,29 +438,132 @@ describe('JWKS cache staleness bound', () => {
   });
 });
 
+/**
+ * Concurrent sign-ins of one provider identity, with the interleaving forced: the gated request
+ * (`late`) runs its transaction up to the held statement, the other request (`early`) then runs
+ * to its commit, and only then is the held statement sent. No timing or repetition is involved.
+ */
+async function interleave(
+  hold: (text: string, values: readonly unknown[]) => boolean,
+  late: () => Promise<Response>,
+  early: () => Promise<Response>,
+): Promise<{ early: Response; late: Response }> {
+  const gate = holdNextQuery(auth.database.client.pool, hold);
+  try {
+    const pending = late();
+    const reached = await Promise.race([gate.held.then(() => true), pending.then(() => false)]);
+    expect(reached, 'the gated request finished without issuing the held statement').toBe(true);
+    const earlyResponse = await early();
+    gate.release();
+    return { early: earlyResponse, late: await pending };
+  } finally {
+    gate.dispose();
+  }
+}
+
+/** The email lookup of the provider sign-in transaction (after its subject lookup found nothing). */
+function emailLookup(email: string) {
+  return (text: string, values: readonly unknown[]) =>
+    /lower\("users"\."email"\)/.test(text) && /for update/i.test(text) && values.includes(email);
+}
+
+/** The account insert of the provider sign-in transaction. */
+function accountInsert(email: string) {
+  return (text: string, values: readonly unknown[]) =>
+    /^insert into "users"/i.test(text) && values.includes(email);
+}
+
+async function signedInId(response: Response): Promise<string> {
+  const text = await response.text();
+  expect(response.status, text).toBe(200);
+  return mobileAuthResponseSchema.parse(JSON.parse(text)).user.id;
+}
+
 describe('concurrent first sign-in', () => {
-  it('signs both requests into the one account the first of them created', async () => {
-    for (let round = 0; round < 3; round += 1) {
-      const subject = `apple.${randomBytes(4).toString('hex')}`;
-      const email = uniqueEmail();
-      const a = await appleToken({ subject, email });
-      const b = await appleToken({ subject, email });
-      const responses = await Promise.all([
-        signInApple(a.token, a.nonce),
-        signInApple(b.token, b.nonce),
-      ]);
-      const texts = await Promise.all(responses.map((response) => response.text()));
-      expect(
-        responses.map((response) => response.status),
-        texts.join(' | '),
-      ).toEqual([200, 200]);
-      const ids = texts.map((text) => mobileAuthResponseSchema.parse(JSON.parse(text)).user.id);
-      expect(ids[0]).toBe(ids[1]);
-      const rows = await auth.database.client.db
-        .select()
-        .from(users)
-        .where(eq(users.appleSub, subject));
-      expect(rows).toHaveLength(1);
-    }
+  it('signs the second request in when the first commits between its subject and email lookups', async () => {
+    const subject = `apple.${randomBytes(4).toString('hex')}`;
+    const email = uniqueEmail();
+    const a = await appleToken({ subject, email });
+    const b = await appleToken({ subject, email });
+    const { early, late } = await interleave(
+      emailLookup(email),
+      () => signInApple(b.token, b.nonce),
+      () => signInApple(a.token, a.nonce),
+    );
+    const earlyId = await signedInId(early);
+    expect(await signedInId(late)).toBe(earlyId);
+    const rows = await auth.database.client.db.select().from(users).where(eq(users.email, email));
+    expect(rows.map((row) => [row.id, row.appleSub])).toEqual([[earlyId, subject]]);
+  });
+
+  it('signs the second request in when its insert loses to the committed account (unique retry)', async () => {
+    const subject = `apple.${randomBytes(4).toString('hex')}`;
+    const email = uniqueEmail();
+    const a = await appleToken({ subject, email });
+    const b = await appleToken({ subject, email });
+    const { early, late } = await interleave(
+      accountInsert(email),
+      () => signInApple(b.token, b.nonce),
+      () => signInApple(a.token, a.nonce),
+    );
+    const earlyId = await signedInId(early);
+    expect(await signedInId(late)).toBe(earlyId);
+    const rows = await auth.database.client.db.select().from(users).where(eq(users.email, email));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('signs the same subject in even when the provider email is unverified', async () => {
+    // Same subject means the same provider account: the first branch would sign it in without any
+    // email check, so the race must not add one.
+    const subject = `apple.${randomBytes(4).toString('hex')}`;
+    const email = uniqueEmail();
+    const a = await appleToken({ subject, email, emailVerified: 'false' });
+    const b = await appleToken({ subject, email, emailVerified: 'false' });
+    const { early, late } = await interleave(
+      emailLookup(email),
+      () => signInApple(b.token, b.nonce),
+      () => signInApple(a.token, a.nonce),
+    );
+    const earlyId = await signedInId(early);
+    expect(await signedInId(late)).toBe(earlyId);
+    expect((await userRow(auth, earlyId))?.emailVerifiedAt).toBeNull();
+  });
+
+  it('signs a concurrent link of the same subject into the linked account, auditing one link', async () => {
+    const existing = await createUser(auth);
+    const subject = `google.${randomBytes(4).toString('hex')}`;
+    const claims = { email: existing.email, email_verified: true };
+    const a = await googleToken(claims, subject);
+    const b = await googleToken(claims, subject);
+    const { early, late } = await interleave(
+      emailLookup(existing.email),
+      () => post(google, mobile(), { idToken: b }),
+      () => post(google, mobile(), { idToken: a }),
+    );
+    expect(await signedInId(early)).toBe(existing.id);
+    expect(await signedInId(late)).toBe(existing.id);
+    expect((await userRow(auth, existing.id))?.googleSub).toBe(subject);
+    const audit = await auth.database.client.db
+      .select()
+      .from(auditLogs)
+      .where(and(eq(auditLogs.actorId, existing.id), eq(auditLogs.action, 'auth.providerLinked')));
+    expect(audit).toHaveLength(1);
+  });
+
+  it('still refuses another subject of the provider that wins the race to the email', async () => {
+    const email = uniqueEmail();
+    const winner = `apple.${randomBytes(4).toString('hex')}`;
+    const other = `apple.${randomBytes(4).toString('hex')}`;
+    const a = await appleToken({ subject: winner, email });
+    const b = await appleToken({ subject: other, email });
+    const { early, late } = await interleave(
+      emailLookup(email),
+      () => signInApple(b.token, b.nonce),
+      () => signInApple(a.token, a.nonce),
+    );
+    const earlyId = await signedInId(early);
+    await expectProblem(late, 409, 'account_link_required');
+    const rows = await auth.database.client.db.select().from(users).where(eq(users.email, email));
+    expect(rows.map((row) => [row.id, row.appleSub])).toEqual([[earlyId, winner]]);
   });
 });

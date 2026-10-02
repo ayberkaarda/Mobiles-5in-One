@@ -13,19 +13,21 @@ import {
   startBareServer,
   startBuiltServer,
 } from './support/server';
+import { prerequisite } from '../support/prerequisite';
 
 /**
  * Security checklist item 9: `scripts/security/headers-check.ts` against the production build
  * (`next start` on the output of `pnpm build`, generated test configuration). Without a build
- * the build-backed block is skipped and says so on stderr; the parser tests and the negative
- * run against a bare server (no security headers → exit 1) always run.
+ * the build-backed block is skipped locally and says so on stderr, and the whole file fails
+ * under CI=true; the parser tests and the negative run against a bare server (no security
+ * headers → exit 1) always run otherwise.
  */
 
-if (!BUILD_PRESENT) {
-  process.stderr.write(
-    'headers-check.test: SKIPPED the production-build checks, apps/web/.next/BUILD_ID is missing. Run `pnpm build` first.\n',
-  );
-}
+const BUILD_CHECKS = prerequisite(
+  BUILD_PRESENT,
+  'headers-check.test (production-build checks)',
+  'apps/web/.next/BUILD_ID is missing, run `pnpm build` first',
+);
 
 describe('CSP parsing', () => {
   it('splits directives and finds the script nonce', () => {
@@ -78,7 +80,7 @@ describe('headers-check against a server without security headers', () => {
   });
 });
 
-describe.skipIf(!BUILD_PRESENT)('headers-check against the production build', () => {
+describe.skipIf(!BUILD_CHECKS)('headers-check against the production build', () => {
   let server: RunningServer;
 
   beforeAll(async () => {

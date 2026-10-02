@@ -1,17 +1,15 @@
 name: Kadro CI
 
+# Runs on every pull request and every push to main, without a path filter, so the single
+# "Kadro CI gate" check always reports and can be the one required status check on main.
+# The "changes" job decides whether the Kadro jobs have work to do; when nothing under kadro/
+# (or a kadro-* workflow, or .gitleaks.toml) changed they are skipped and the gate passes.
+# See kadro/docs/adr/0042-ci-test-job-and-required-check.md.
+
 on:
   push:
     branches: [main]
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
   pull_request:
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
 
 permissions:
   contents: read
@@ -25,8 +23,74 @@ defaults:
     working-directory: kadro
 
 jobs:
+  changes:
+    name: Detect Kadro changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      kadro: ${{ steps.diff.outputs.kadro }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Kadro
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of kadro/ as a deletion inside it. Exit 0 means no
+      # Kadro change, 1 a change, anything else is an error and runs every Kadro job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base commit; running every Kadro job."
+            kadro=true
+          else
+            set -- kadro/ ':(glob).github/workflows/kadro-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) kadro=false ;;
+              1) kadro=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Kadro job."
+                kadro=true
+                ;;
+            esac
+          fi
+          echo "kadro=$kadro" >> "$GITHUB_OUTPUT"
+          echo "Kadro jobs run: $kadro"
+
   verify:
     name: Lint, typecheck, build
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -59,3 +123,120 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # The DB-backed suites (apps/web, apps/worker, packages/db) start their own disposable
+  # PostgreSQL 16 + PostGIS container through the Docker CLI (their vitest globalSetup) on a
+  # random loopback port with test-only credentials, and apply the migrations themselves. They
+  # read no database URL from the environment, so the job needs the runner's Docker engine, not
+  # a service container. The image is pulled up front so a registry problem fails here and not
+  # as a test timeout.
+  # CI=true turns every build- or browser-gated suite that would skip locally into a failure
+  # (apps/web/tests/support/prerequisite.ts).
+  test:
+    name: Test
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Google Chrome preinstalled on the ubuntu-latest image; the browser suite drives it over
+      # the DevTools protocol (apps/web/tests/pages/browser.test.ts), no Playwright involved.
+      KADRO_TEST_BROWSER: /usr/bin/google-chrome
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in kadro/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          package_json_file: kadro/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: kadro/pnpm-lock.yaml
+
+      # A short headless start, not only --version, so a sandbox or start-up problem shows up
+      # here with Chrome's own stderr instead of as a browser-suite timeout. Runs with Chrome's
+      # default sandbox, like the browser suite.
+      - name: Check Docker and browser
+        run: |
+          docker version --format 'Docker server {{.Server.Version}}'
+          "$KADRO_TEST_BROWSER" --version
+          probe="$RUNNER_TEMP/chrome-probe"
+          mkdir -p "$probe"
+          if timeout 60 "$KADRO_TEST_BROWSER" --headless=new --user-data-dir="$probe/profile" \
+            --dump-dom 'data:text/html,<p>kadro-ci-probe</p>' > "$probe/out.html" 2> "$probe/err.txt"; then
+            status=0
+          else
+            status=$?
+          fi
+          echo "Chrome headless start: exit $status, stderr follows"
+          cat "$probe/err.txt"
+          if [ "$status" -ne 0 ] || ! grep -q 'kadro-ci-probe' "$probe/out.html"; then
+            echo "Chrome did not start headless on this runner."
+            exit 1
+          fi
+
+      - name: Pull PostgreSQL + PostGIS test image
+        run: docker pull postgis/postgis:16-3.5-alpine
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Keeps running the other packages' tests after one fails, so a single run reports every
+      # failure; any failed task still makes turbo, and this step, exit non-zero.
+      - name: Test
+        run: pnpm test --continue=dependencies-successful
+
+  # The only check to mark as required on main. "changes" must succeed and report kadro=true
+  # or kadro=false. true: verify and test must both succeed. false: both must be skipped.
+  # Any other output or result (failure, cancelled, empty) fails the gate.
+  # When a job is added to this workflow, add it to "needs" and to the list below.
+  gate:
+    name: Kadro CI gate
+    needs: [changes, verify, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          KADRO_CHANGED: ${{ needs.changes.outputs.kadro }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (kadro=${KADRO_CHANGED:-<none>})"
+          echo "verify: ${VERIFY_RESULT:-<none>}"
+          echo "test: ${TEST_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Kadro CI failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$KADRO_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Kadro CI failed: change detection reported no valid kadro output."
+              exit 1
+              ;;
+          esac
+          if [ "$VERIFY_RESULT" != "$expected" ] || [ "$TEST_RESULT" != "$expected" ]; then
+            echo "Kadro CI failed: kadro=$KADRO_CHANGED requires verify and test to be $expected."
+            exit 1
+          fi
+          echo "Kadro CI passed (kadro=$KADRO_CHANGED, verify and test $expected)."

@@ -24,9 +24,9 @@
       "outputs": []
     },
     "@kadro/web#test": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/security/**"],
-      "outputs": []
+      "dependsOn": ["^build", "build"],
+      "passThroughEnv": ["CI", "KADRO_TEST_BROWSER", "DOCKER_HOST", "DOCKER_CONTEXT"],
+      "cache": false
     },
     "typecheck": {
       "dependsOn": ["^build"],
@@ -39,7 +39,8 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "passThroughEnv": ["CI", "DOCKER_HOST", "DOCKER_CONTEXT"],
+      "cache": false
     },
     "dev": {
       "dependsOn": ["^build"],
