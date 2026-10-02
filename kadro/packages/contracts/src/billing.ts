@@ -129,7 +129,13 @@ export function isRevenueCatEventType(value: string): value is RevenueCatEventTy
   return (REVENUECAT_EVENT_TYPES as readonly string[]).includes(value);
 }
 
+/** Fields the server keys on: never empty. */
 const rcText = (max: number) => z.string().min(1).max(max);
+/**
+ * Descriptive provider fields: bounded only. RevenueCat may send an empty string, and failing the
+ * delivery on it would answer 400 and make RevenueCat retry the same event forever.
+ */
+const rcOptionalText = (max: number) => z.string().max(max);
 const epochMs = z.int().min(0).max(LIMITS.revenueCatEpochMsMax);
 
 /**
@@ -143,17 +149,17 @@ export const revenueCatEventSchema = z.looseObject({
   type: rcText(64),
   event_timestamp_ms: epochMs,
   app_user_id: rcText(LIMITS.revenueCatAppUserId.max).optional(),
-  original_app_user_id: rcText(LIMITS.revenueCatAppUserId.max).nullable().optional(),
+  original_app_user_id: rcOptionalText(LIMITS.revenueCatAppUserId.max).nullable().optional(),
   aliases: z.array(rcText(LIMITS.revenueCatAppUserId.max)).max(50).nullable().optional(),
-  product_id: rcText(200).nullable().optional(),
+  product_id: rcOptionalText(200).nullable().optional(),
   entitlement_ids: z.array(rcText(100)).max(50).nullable().optional(),
-  period_type: rcText(32).nullable().optional(),
+  period_type: rcOptionalText(32).nullable().optional(),
   purchased_at_ms: epochMs.nullable().optional(),
   expiration_at_ms: epochMs.nullable().optional(),
-  store: rcText(32).nullable().optional(),
+  store: rcOptionalText(32).nullable().optional(),
   environment: z.enum(['SANDBOX', 'PRODUCTION']).optional(),
-  transaction_id: rcText(200).nullable().optional(),
-  original_transaction_id: rcText(200).nullable().optional(),
+  transaction_id: rcOptionalText(200).nullable().optional(),
+  original_transaction_id: rcOptionalText(200).nullable().optional(),
   transferred_from: z.array(rcText(LIMITS.revenueCatAppUserId.max)).max(50).nullable().optional(),
   transferred_to: z.array(rcText(LIMITS.revenueCatAppUserId.max)).max(50).nullable().optional(),
 });

@@ -165,6 +165,32 @@ describe('RevenueCat webhook', () => {
     expect(accepts(revenueCatWebhookBodySchema, body({ type: 'SOMETHING_NEW' }))).toBe(true);
   });
 
+  it('accepts empty descriptive provider strings so a delivery is never retried forever', () => {
+    const body = (patch: Record<string, unknown>) => ({
+      api_version: '1.0',
+      event: { ...event(), ...patch },
+    });
+    expect(accepts(revenueCatWebhookBodySchema, body({ transaction_id: '' }))).toBe(true);
+    expect(
+      accepts(
+        revenueCatWebhookBodySchema,
+        body({
+          original_transaction_id: '',
+          product_id: '',
+          period_type: '',
+          store: '',
+          original_app_user_id: '',
+        }),
+      ),
+    ).toBe(true);
+    expect(accepts(revenueCatWebhookBodySchema, body({ transaction_id: 'x'.repeat(201) }))).toBe(
+      false,
+    );
+    // Fields the server keys on stay non-empty.
+    expect(accepts(revenueCatWebhookBodySchema, body({ app_user_id: '' }))).toBe(false);
+    expect(accepts(revenueCatWebhookBodySchema, body({ type: '' }))).toBe(false);
+  });
+
   it('answers with one of three outcomes', () => {
     for (const status of ['accepted', 'duplicate', 'ignored']) {
       expect(accepts(revenueCatWebhookResponseSchema, { status })).toBe(true);
@@ -240,6 +266,18 @@ describe('deep links', () => {
     const token = base64url(43);
     expect(deepLinkPath({ kind: 'verifyEmail', token })).toBe(`/e-posta-dogrula#token=${token}`);
     expect(parseDeepLink(`/e-posta-dogrula?token=${token}`)).toBeNull();
+    expect(parseDeepLink(`/e-posta-dogrula#lang=tr&token=${token}`)).toEqual({
+      kind: 'verifyEmail',
+      token,
+    });
+  });
+
+  it('rejects a repeated or empty token key, like the web email-link pages', () => {
+    const token = base64url(43);
+    expect(parseDeepLink(`/sifre-sifirla#token=${token}&token=${token}`)).toBeNull();
+    expect(parseDeepLink(`/sifre-sifirla#token=${token}&token=${base64url(43)}`)).toBeNull();
+    expect(parseDeepLink(`/sifre-sifirla#token&token=${token}`)).toBeNull();
+    expect(parseDeepLink('/sifre-sifirla#token=')).toBeNull();
   });
 
   it('rejects foreign origins, the old match name and malformed values', () => {

@@ -117,14 +117,21 @@ function splitLink(
   return { path: path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path, fragment };
 }
 
+/**
+ * Exactly one `token` key with a well-formed value, as the web email-link pages require; a
+ * repeated or empty key is rejected. Other keys are ignored and the value is never decoded.
+ */
 function fragmentToken(fragment: string): string | null {
+  const values: string[] = [];
   for (const part of fragment.split('&')) {
-    if (part.startsWith('token=')) {
-      const token = part.slice('token='.length);
-      return valid(opaqueTokenSchema, token) ? token : null;
+    const separator = part.indexOf('=');
+    const key = separator < 0 ? part : part.slice(0, separator);
+    if (key === 'token') {
+      values.push(separator < 0 ? '' : part.slice(separator + 1));
     }
   }
-  return null;
+  const [only] = values;
+  return values.length === 1 && only !== undefined && valid(opaqueTokenSchema, only) ? only : null;
 }
 
 /**
