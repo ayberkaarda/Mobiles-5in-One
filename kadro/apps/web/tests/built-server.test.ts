@@ -109,7 +109,9 @@ describe('render mode per surface (ADR-0021, ADR-0055)', () => {
     for (const file of [
       '../app/(app)/layout.tsx',
       '../app/(marketing)/layout.tsx',
+      '../app/(seo)/layout.tsx',
       '../app/not-found.tsx',
+      '../app/sitemap.ts',
     ]) {
       expect(code(file), file).toContain('await connection();');
     }
