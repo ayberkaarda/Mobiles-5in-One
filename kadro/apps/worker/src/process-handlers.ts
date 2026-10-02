@@ -28,7 +28,7 @@ export interface ProcessHandlerOptions {
  * Last line of defence (ADR-0028): an exception or rejection nobody handled leaves the process in
  * an unknown state. The failure is logged at `fatal` (error type and code only, so messages that
  * carry personal data stay out of the log), a graceful stop gets a few seconds, and the process
- * then exits non-zero so the orchestrator restarts it. The handler never throws and runs once.
+ * then exits non-zero so the supervisor restarts it. The handler never throws and runs once.
  */
 export function installProcessHandlers(options: ProcessHandlerOptions): void {
   const target = options.target ?? process;
