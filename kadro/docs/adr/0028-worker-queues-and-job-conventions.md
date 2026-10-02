@@ -53,6 +53,9 @@ ADRs of those phases. Every queue has a dead-letter queue named `<queue>.dead`.
   `singletonKey`, so a duplicate enqueue while the first job is still queued or active is dropped
   by pg-boss. Exception: coalesced notifications (ADR-0031) use a per-object `singletonKey` and an
   `idempotencyKey` that also names the coalescing window, because a receipt outlives the window.
+  Update (ADR-0044): a dropped coalesced enqueue also writes a `push_resends` row in the same
+  transaction, and the `push.send` handler completes a coalesced job itself, inside the transaction
+  that checks that row, so a change made during an active delivery is carried to the next one.
 
 ### Idempotent handlers
 
