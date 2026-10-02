@@ -8,9 +8,11 @@ import { type JobSender } from './enqueue';
  * helper enqueues one `push.send` job per recipient inside the caller's transaction. Payloads
  * carry ids only (`{ type, userId, refId }`); the worker composes the text at send time and
  * re-checks that the recipient still has access, so callers pass the full recipient list of
- * ADR-0031 without further filtering. Keys are unique per event, except the two coalesced types
- * (`rsvp.changed`, `application.received`), whose key is per object and recipient with a
- * 10-minute delay, so repeats inside that window are dropped by the `exclusive` queue policy.
+ * ADR-0031 without further filtering. Keys are unique per event. The two coalesced types
+ * (`rsvp.changed`, `application.received`) carry two keys: the pg-boss `singletonKey` is per object
+ * and recipient, with a 10-minute delay, so repeats while that job is queued or active are dropped
+ * by the `exclusive` queue policy; the `idempotencyKey` (the worker's delivery receipt) adds the
+ * moment that opened the window, so the next window after delivery is sent again.
  *
  * `match.reminder_24h` and `match.reminder_2h` are produced by the worker from the
  * `match.reminder` jobs that {@link scheduleMatchReminders} plans.
@@ -24,6 +26,22 @@ function epochSeconds(date: Date): number {
   return Math.floor(date.getTime() / 1_000);
 }
 
+/**
+ * Keys of a coalesced notification (ADR-0031): `<prefix>:<objectId>:<recipientId>` coalesces, and
+ * `<prefix>:<objectId>:<recipientId>:<windowOpenedEpochMilliseconds>` is the delivery key. The
+ * window opens with the first event that finds no queued or active job and closes when that job
+ * has run, 10 minutes later; the repeats it absorbed are dropped together with their keys.
+ */
+export function coalescedKeys(
+  prefix: 'rsvp' | 'application',
+  objectId: string,
+  recipientId: string,
+  windowOpenedAt: Date,
+): { readonly singletonKey: string; readonly idempotencyKey: string } {
+  const singletonKey = `${prefix}:${objectId}:${recipientId}`;
+  return { singletonKey, idempotencyKey: `${singletonKey}:${windowOpenedAt.getTime()}` };
+}
+
 function unique(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
@@ -34,15 +52,21 @@ async function pushEach(
   type: NotificationType,
   refId: string,
   recipientIds: readonly string[],
-  key: (recipientId: string) => string,
+  key: (
+    recipientId: string,
+  ) => string | { readonly singletonKey: string; readonly idempotencyKey: string },
   startAfter?: Date,
 ): Promise<void> {
   for (const userId of unique(recipientIds)) {
+    const keys = key(userId);
     await jobs.enqueue(
       tx,
       'push.send',
       { type, userId, refId },
-      { idempotencyKey: key(userId), ...(startAfter === undefined ? {} : { startAfter }) },
+      {
+        ...(typeof keys === 'string' ? { idempotencyKey: keys } : keys),
+        ...(startAfter === undefined ? {} : { startAfter }),
+      },
     );
   }
 }
@@ -81,7 +105,7 @@ export function notifyRsvpChanged(
     'rsvp.changed',
     input.matchId,
     input.recipientIds,
-    (userId) => `rsvp:${input.matchId}:${userId}`,
+    (userId) => coalescedKeys('rsvp', input.matchId, userId, input.now),
     new Date(input.now.getTime() + COALESCE_DELAY_MS),
   );
 }
@@ -150,7 +174,7 @@ export function notifyApplicationReceived(
     'application.received',
     input.applicationId,
     input.recipientIds,
-    (userId) => `application:${input.openCallId}:${userId}`,
+    (userId) => coalescedKeys('application', input.openCallId, userId, input.now),
     new Date(input.now.getTime() + COALESCE_DELAY_MS),
   );
 }

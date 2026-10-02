@@ -15,7 +15,7 @@ import {
   reminderIdempotencyKey,
   scheduleMatchReminders,
 } from '../../lib/server/jobs/notify';
-import { type StoredJob, storedJobs } from '../support/jobs';
+import { completeJobs, type StoredJob, storedJobs } from '../support/jobs';
 import { type JobsHarness, setupJobsHarness } from './support';
 
 /**
@@ -91,7 +91,39 @@ describe('push producers', () => {
     expect(first).toHaveLength(1);
     expect(again).toHaveLength(0);
     expect(first[0]?.singletonKey).toBe(`rsvp:${matchId}:${captain}`);
+    expect(first[0]?.data.idempotencyKey).toBe(`rsvp:${matchId}:${captain}:${now.getTime()}`);
     expect(first[0]?.startAfter.getTime()).toBe(now.getTime() + COALESCE_DELAY_MS);
+  });
+
+  it('notifyRsvpChanged: the window after a delivered one has a new delivery key', async () => {
+    const matchId = newId();
+    const captain = newId();
+    const opened = new Date(Date.now() + 60_000);
+    const first = await produced('push.send', (tx) =>
+      notifyRsvpChanged(sender(), tx, { matchId, recipientIds: [captain], now: opened }),
+    );
+    expect(first).toHaveLength(1);
+    // The worker runs the job at the end of the window; its receipt key is the delivery key.
+    await completeJobs(
+      jobs.database.url,
+      first.map((job) => job.id),
+    );
+    const next = new Date(opened.getTime() + COALESCE_DELAY_MS);
+    const second = await produced('push.send', (tx) =>
+      notifyRsvpChanged(sender(), tx, { matchId, recipientIds: [captain], now: next }),
+    );
+    const inside = await produced('push.send', (tx) =>
+      notifyRsvpChanged(sender(), tx, {
+        matchId,
+        recipientIds: [captain],
+        now: new Date(next.getTime() + 60_000),
+      }),
+    );
+    expect(second).toHaveLength(1);
+    expect(inside).toHaveLength(0);
+    expect(second[0]?.singletonKey).toBe(first[0]?.singletonKey);
+    expect(second[0]?.data.idempotencyKey).toBe(`rsvp:${matchId}:${captain}:${next.getTime()}`);
+    expect(second[0]?.data.idempotencyKey).not.toBe(first[0]?.data.idempotencyKey);
   });
 
   it('notifyApplicationReceived: coalesced per call and recipient, refId is the application', async () => {
@@ -117,6 +149,12 @@ describe('push producers', () => {
     );
     expect(added.map((job) => job.singletonKey).sort()).toEqual(
       [`application:${openCallId}:${captain}`, `application:${openCallId}:${coCaptain}`].sort(),
+    );
+    expect(added.map((job) => job.data.idempotencyKey).sort()).toEqual(
+      [
+        `application:${openCallId}:${captain}:${now.getTime()}`,
+        `application:${openCallId}:${coCaptain}:${now.getTime()}`,
+      ].sort(),
     );
     expect(added.every((job) => job.data.refId === applicationId)).toBe(true);
     expect(
