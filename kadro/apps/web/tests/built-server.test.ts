@@ -1,11 +1,12 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { SURFACES } from '../lib/server/security-headers';
 import { testEnvSource } from './support/env';
 import { prerequisite } from './support/prerequisite';
 
@@ -65,6 +66,25 @@ function cspNonce(response: Response): string {
   return nonce ?? '';
 }
 
+/** Source text without comments, so prose about a call does not count as the call. */
+function code(relative: string): string {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed paths inside this package
+  const text = readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+describe('render mode per surface (ADR-0021, ADR-0055)', () => {
+  it('the root layout leaves the render mode to the surfaces', () => {
+    expect(code('../app/layout.tsx')).not.toMatch(/connection\(|headers\(|cookies\(|dynamic\s*=/);
+  });
+
+  it('every page outside a route group renders per request itself', () => {
+    for (const file of ['../app/(app)/layout.tsx', '../app/page.tsx', '../app/not-found.tsx']) {
+      expect(code(file), file).toContain('await connection();');
+    }
+  });
+});
+
 describe.skipIf(!BUILT)('production build', () => {
   beforeAll(async () => {
     const port = await freePort();
@@ -99,6 +119,36 @@ describe.skipIf(!BUILT)('production build', () => {
     expect(scripts.length).toBeGreaterThan(0);
     for (const tag of scripts) {
       expect(tag).toContain(`nonce="${nonce}"`);
+    }
+  });
+
+  it('prerenders no page: a static page could not carry the per-request nonce', () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
+    const manifest = JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL('../.next/prerender-manifest.json', import.meta.url)),
+        'utf8',
+      ),
+    ) as { routes: Record<string, unknown>; dynamicRoutes: Record<string, unknown> };
+    // The global error page is a client component that Next.js always prerenders; it replaces
+    // the root layout only after a render failure.
+    expect(Object.keys(manifest.routes)).toEqual(['/_global-error']);
+    expect(Object.keys(manifest.dynamicRoutes)).toEqual([]);
+  });
+
+  it('puts the CSP nonce on every script of every HTML surface probe', async () => {
+    for (const surface of SURFACES.filter((entry) => entry.csp === 'nonce')) {
+      const response = await fetch(`${base}${surface.probe}`);
+      const nonce = cspNonce(response);
+      const cacheControl = response.headers.get('cache-control') ?? '';
+      expect(cacheControl, surface.probe).toMatch(/private|no-store/);
+      expect(cacheControl, surface.probe).not.toMatch(/public|s-maxage/);
+      const html = await response.text();
+      const scripts = html.match(/<script\b[^>]*>/g) ?? [];
+      expect(scripts.length, surface.probe).toBeGreaterThan(0);
+      for (const tag of scripts) {
+        expect(tag, surface.probe).toContain(`nonce="${nonce}"`);
+      }
     }
   });
 
