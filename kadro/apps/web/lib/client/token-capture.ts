@@ -165,7 +165,14 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
         } catch {
           target = null;
         }
-        if (target === null || target.hash === '' || !isTokenPage(target.pathname)) {
+        // Another origin is passed through as written, so the browser rejects it as it would
+        // without this wrapper; nothing is captured from it.
+        if (
+          target === null ||
+          target.origin !== new URL(browser.location.href).origin ||
+          target.hash === '' ||
+          !isTokenPage(target.pathname)
+        ) {
           write(data, unused, url);
           return;
         }

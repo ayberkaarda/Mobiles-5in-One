@@ -70,6 +70,10 @@ export function fakeBrowser(pathname: string, hash: string, search = ''): FakeBr
   const entries = [location.href];
   const moveTo = (url: string | URL) => {
     const next = new URL(String(url), location.href);
+    if (next.origin !== new URL(location.href).origin) {
+      // Browsers refuse a history write to another origin.
+      throw new DOMException('cross-origin history write', 'SecurityError');
+    }
     location.hash = next.hash;
     location.pathname = next.pathname;
     location.search = next.search;

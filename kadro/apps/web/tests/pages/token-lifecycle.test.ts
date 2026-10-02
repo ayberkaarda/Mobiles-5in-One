@@ -100,6 +100,25 @@ describe('a new fragment in the same document', () => {
     expect(browser.native.replaceState).not.toHaveBeenCalledWith(null, '', RESET);
   });
 
+  it('forwards a cross-origin URL unchanged and captures nothing from it', () => {
+    const token = freshToken();
+    const browser = fakeBrowser('/giris', '');
+    const capture = createTokenCapture(browser);
+    const foreign = `https://other.example${VERIFY}#token=${token}`;
+    // The browser's own rejection is kept: the write throws and the entry is not rewritten.
+    expect(() => {
+      browser.history.pushState(null, '', foreign);
+    }).toThrow(/cross-origin/);
+    expect(() => {
+      browser.history.replaceState(null, '', foreign);
+    }).toThrow(/cross-origin/);
+    expect(browser.location.href).toBe('https://kadro.test/giris');
+    expect(browser.history.entries).toEqual(['https://kadro.test/giris']);
+    expect(browser.native.pushState).toHaveBeenCalledWith(null, '', foreign);
+    expect(browser.native.replaceState).toHaveBeenCalledWith(null, '', foreign);
+    expect(capture.read(VERIFY)).toEqual({ kind: 'missing' });
+  });
+
   it('leaves history writes for other pages and without a fragment untouched', () => {
     const browser = fakeBrowser('/giris', '');
     createTokenCapture(browser);
