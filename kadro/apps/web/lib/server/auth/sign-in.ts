@@ -109,7 +109,9 @@ function linkedSubject(user: User, identity: ProviderIdentity): string | null {
 
 /**
  * Resolves the account of a verified provider identity, in this order:
- * 1. an account already linked to the provider subject signs in;
+ * 1. an account already linked to the provider subject signs in (also when the email lookup of
+ *    step 2 is what finds it, because a concurrent sign-in of the same identity committed between
+ *    the two lookups);
  * 2. an account with the same email is linked only when the provider asserts the email as
  *    verified **and** the account's email is verified, and the account has no other subject of
  *    this provider; otherwise 409 `account_link_required` (pre-account takeover, T-AUTH-07);
@@ -143,7 +145,13 @@ export async function signInWithProvider(
           .where(eq(sql`lower(${users.email})`, identity.email))
           .limit(1)
           .for('update');
-        if (byEmail !== undefined) {
+        if (byEmail !== undefined && linkedSubject(byEmail, identity) === identity.subject) {
+          // A concurrent sign-in of this same identity created or linked the account and committed
+          // after the subject lookup above ran (READ COMMITTED: each statement sees the latest
+          // commits). The account is linked to exactly this subject, so this is rule 1, not a new
+          // link: sign in, with no link, no audit entry and no email check, as rule 1 would.
+          user = byEmail;
+        } else if (byEmail !== undefined) {
           if (
             !identity.emailVerified ||
             byEmail.emailVerifiedAt === null ||
@@ -201,8 +209,10 @@ export async function signInWithProvider(
   try {
     result = await resolve();
   } catch (error) {
-    // Two first sign-ins of one identity race to create the account; the loser hits the unique
-    // index on the subject (or email) and resolves again, now finding the winner's row.
+    // Two first sign-ins of one identity race to create the account. When both email lookups ran
+    // before either commit, the loser hits the unique index on the subject (or email) and
+    // resolves again, now finding the winner's row. (When the winner committed before the loser's
+    // email lookup, that lookup finds the row already linked to this subject; see above.)
     if (findPgError(error)?.code !== SQLSTATE.uniqueViolation) {
       throw error;
     }
