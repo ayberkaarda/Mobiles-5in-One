@@ -7,17 +7,22 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { testEnvSource } from './support/env';
+import { prerequisite } from './support/prerequisite';
 
 /**
  * Threat model §6.2 against the production build: Next.js must apply the per-request nonce of
  * the proxy CSP to every script it renders, and look-alike static paths must still pass the
  * proxy. Runs when `next build` output exists (`pnpm build` before `pnpm test`); otherwise the
- * suite is skipped and the unit-level proxy tests remain the guard.
+ * suite is skipped locally (the unit-level proxy tests remain the guard) and fails under CI=true.
  */
 
 const APP_DIR = fileURLToPath(new URL('..', import.meta.url));
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
-const BUILT = existsSync(fileURLToPath(new URL('../.next/BUILD_ID', import.meta.url)));
+const BUILT = prerequisite(
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path inside this package
+  existsSync(fileURLToPath(new URL('../.next/BUILD_ID', import.meta.url))),
+  'built-server.test',
+  'apps/web/.next/BUILD_ID is missing, run `pnpm build` first',
+);
 const NEXT_BIN = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url));
 
 function freePort(): Promise<number> {

@@ -49,6 +49,7 @@ Decision, Consequences.
 | [0039](0039-search-filters-and-cursor-pagination.md)    | District filters, text search and cursor pagination                    | Accepted                       |
 | [0040](0040-email-link-pages-phase2-scope.md)           | Email-link pages at the end of Phase 2 (details 0027)                  | Accepted                       |
 | [0041](0041-open-call-application-list.md)              | Listing the applications of an open call                               | Accepted                       |
+| [0042](0042-ci-test-job-and-required-check.md)          | CI test job, no silent skips and one required check                    | Accepted                       |
 
 ADRs 0003–0027 record the authorization and domain-integrity decisions behind
 `docs/security/authorization-matrix.md`. Schema consequences for `packages/db`: `matches.locked_at`
