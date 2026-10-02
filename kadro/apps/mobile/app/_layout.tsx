@@ -67,6 +67,13 @@ function RootStack() {
           <Stack.Screen name="takim/[id]/davet" />
           <Stack.Screen name="takim/[id]/uye/[userId]" />
           <Stack.Screen name="mac/[code]" />
+          {/* Match screens live under their team; a guest reaches them through the match id. */}
+          <Stack.Screen name="takim/[id]/mac/index" />
+          <Stack.Screen name="takim/[id]/mac/yeni" />
+          <Stack.Screen name="takim/[id]/mac/[matchId]/index" />
+          <Stack.Screen name="takim/[id]/mac/[matchId]/duzenle" />
+          <Stack.Screen name="takim/[id]/mac/[matchId]/dizilis" />
+          <Stack.Screen name="takim/[id]/mac/[matchId]/odemeler" />
         </Stack.Protected>
         {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>
