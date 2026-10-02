@@ -100,3 +100,29 @@ store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` 
   two different events with an equal time cannot flip it: the first stays. A reconciliation passes the time it read RevenueCat as the event time and no
   event id.
 - All columns are additive and nullable, so rows written before the migration stay valid.
+
+## Implementation notes (webhook route and billing jobs)
+
+- The route wrapper gained an opt-in `verifyRequest` step (only with `auth: 'none'`) that runs
+  before params, query and body are read, and hands handlers the raw body bytes. The webhook uses
+  it for the secret check, so an unauthenticated caller gets 401 (or 503 without a secret) before
+  any validation feedback, and the stored hash is over the exact bytes received. The header may
+  carry the secret alone or as `Bearer <secret>`; both comparisons always run.
+- Play Store products arrive as `<productId>:<basePlanId>`; the Pro product check and the
+  `subscriptions.product_id` use the part before the colon. `webhook_events.product_id` keeps the
+  value as sent. For `TRANSFER` the stored `app_user_id` is the first receiving id that is a user
+  id (`transferred_to`), and the product check is skipped.
+- Event mapping in the processing job: purchase, renewal, uncancellation, extension and
+  temporary grant → `active`; `CANCELLATION` and `SUBSCRIPTION_PAUSED` keep `active` while the
+  carried expiry is after the event time, else `cancelled` / `paused`; `BILLING_ISSUE` →
+  `grace_period` while the expiry lies ahead, else `billing_issue`; `EXPIRATION` → `expired`.
+  `PRODUCT_CHANGE` and `TRANSFER` enqueue a per-user `subscription.reconcile` instead of writing,
+  because the event alone does not name the resulting product. The source account of a transfer
+  is corrected by the nightly run.
+- The nightly run is scheduled in UTC (other schedules stay in Europe/Istanbul) with
+  `{ userId: null }`. It reads RevenueCat REST API v1 `GET /v1/subscribers/{app_user_id}` and
+  writes each Pro product with the response's request time as the event time. A transient
+  failure for one user is handed to a per-user job five minutes later; a rejected key ends the
+  run without retries. Without `REVENUECAT_API_KEY` the job completes as skipped.
+- Verification is limited to fixtures, a real PostgreSQL and an in-memory RevenueCat client. The
+  REST client is not exercised against RevenueCat.
