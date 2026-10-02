@@ -1,17 +1,15 @@
 name: Kadro CI
 
+# Runs on every pull request and every push to main, without a path filter, so the single
+# "Kadro CI gate" check always reports and can be the one required status check on main.
+# The "changes" job decides whether the Kadro jobs have work to do; when nothing under kadro/
+# (or a kadro-* workflow, or .gitleaks.toml) changed they are skipped and the gate passes.
+# See kadro/docs/adr/0042-ci-test-job-and-required-check.md.
+
 on:
   push:
     branches: [main]
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
   pull_request:
-    paths:
-      - 'kadro/**'
-      - '.github/workflows/kadro-*.yml'
-      - '.gitleaks.toml'
 
 permissions:
   contents: read
@@ -25,8 +23,61 @@ defaults:
     working-directory: kadro
 
 jobs:
+  changes:
+    name: Detect Kadro changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      kadro: ${{ steps.diff.outputs.kadro }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base commit; running every Kadro job."
+            kadro=true
+          else
+            files="$(git diff --name-only "$base" "$head")"
+            printf '%s\n' "$files"
+            if printf '%s\n' "$files" \
+              | grep -qE '^(kadro/|\.github/workflows/kadro-[^/]+\.yml$|\.gitleaks\.toml$)'; then
+              kadro=true
+            else
+              kadro=false
+            fi
+          fi
+          echo "kadro=$kadro" >> "$GITHUB_OUTPUT"
+          echo "Kadro jobs run: $kadro"
+
   verify:
     name: Lint, typecheck, build
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -59,3 +110,94 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # The DB-backed suites (apps/web, apps/worker, packages/db) start their own disposable
+  # PostgreSQL 16 + PostGIS container through the Docker CLI (their vitest globalSetup) on a
+  # random loopback port with test-only credentials, and apply the migrations themselves. They
+  # read no database URL from the environment, so the job needs the runner's Docker engine, not
+  # a service container. The image is pulled up front so a registry problem fails here and not
+  # as a test timeout.
+  # CI=true turns every build- or browser-gated suite that would skip locally into a failure
+  # (apps/web/tests/support/prerequisite.ts).
+  test:
+    name: Test
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Google Chrome preinstalled on the ubuntu-latest image; the browser suite drives it over
+      # the DevTools protocol (apps/web/tests/pages/browser.test.ts), no Playwright involved.
+      KADRO_TEST_BROWSER: /usr/bin/google-chrome
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in kadro/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          package_json_file: kadro/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: kadro/pnpm-lock.yaml
+
+      - name: Check Docker and browser
+        run: |
+          docker version --format 'Docker server {{.Server.Version}}'
+          "$KADRO_TEST_BROWSER" --version
+
+      - name: Pull PostgreSQL + PostGIS test image
+        run: docker pull postgis/postgis:16-3.5-alpine
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+  # The only check to mark as required on main. "changes" must succeed; the Kadro jobs must
+  # succeed or be skipped (no Kadro change). Any other result (failure, cancelled, empty) fails.
+  # When a job is added to this workflow, add it to "needs" and to the list below.
+  gate:
+    name: Kadro CI gate
+    needs: [changes, verify, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          status=0
+          echo "changes: ${CHANGES_RESULT:-<none>}"
+          [ "$CHANGES_RESULT" = "success" ] || status=1
+          for pair in "verify=$VERIFY_RESULT" "test=$TEST_RESULT"; do
+            echo "${pair%%=*}: ${pair#*=}"
+            case "${pair#*=}" in
+              success | skipped) ;;
+              *) status=1 ;;
+            esac
+          done
+          if [ "$status" -ne 0 ]; then
+            echo "Kadro CI failed: a job failed, was cancelled or did not report."
+            exit 1
+          fi
+          echo "All Kadro CI jobs passed or had nothing to do."
