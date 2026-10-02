@@ -7,6 +7,13 @@ import { type PgBoss } from 'pg-boss';
 import { type Logger } from 'pino';
 
 import { createHardDeleteHandler } from './accounts/hard-delete.js';
+import { createRevenueCatProcessHandler } from './billing/process.js';
+import { createSubscriptionReconcileHandler } from './billing/reconcile.js';
+import {
+  type RevenueCatClient,
+  type RevenueCatFetch,
+  createRevenueCatRestClient,
+} from './billing/revenuecat-client.js';
 import { bootstrapQueues, createBoss, withSessionRole } from './boss.js';
 import { type Clock, systemClock } from './clock.js';
 import { createEmailHandler } from './email/handler.js';
@@ -25,6 +32,7 @@ import {
   resolveQueueDefinitions,
 } from './queues.js';
 import { createMatchReminderHandler } from './reminders/handler.js';
+import { safeLog } from './safe-log.js';
 import { type ObjectStorage, createS3Storage } from './storage/storage.js';
 import { createUploadProcessHandler } from './uploads/process.js';
 
@@ -44,12 +52,13 @@ export type WorkerRuntimeEnv = Pick<
   | 'R2_SECRET_ACCESS_KEY'
   | 'R2_INCOMING_BUCKET'
   | 'R2_MEDIA_BUCKET'
->;
+> &
+  Partial<Pick<WorkerEnv, 'REVENUECAT_API_KEY' | 'REVENUECAT_API_BASE_URL'>>;
 
 export interface WorkerRuntimeOptions {
   readonly env: WorkerRuntimeEnv;
   readonly logger: Logger;
-  readonly fetch: EmailFetch & PushFetch;
+  readonly fetch: EmailFetch & PushFetch & RevenueCatFetch;
   readonly clock?: Clock;
   readonly metrics?: Metrics;
   /** Run the cron loop in this process. Default true. */
@@ -67,6 +76,11 @@ export interface WorkerRuntimeOptions {
   readonly pushTransport?: PushTransport;
   /** Replaces the S3 client built from the R2 settings (tests). */
   readonly storage?: ObjectStorage;
+  /**
+   * Replaces the RevenueCat REST client built from `REVENUECAT_API_KEY` (tests use an in-memory
+   * fake). `null` disables reconciliation as if no key were configured.
+   */
+  readonly revenueCatClient?: RevenueCatClient | null;
 }
 
 export interface WorkerRuntime {
@@ -104,10 +118,10 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
     schedule: options.schedule ?? true,
   });
   boss.on('error', (error) => {
-    logger.error(describeError(error), 'pg-boss error');
+    safeLog(() => logger.error(describeError(error), 'pg-boss error'));
   });
   boss.on('warning', (warning) => {
-    logger.warn({ warning: warning.message }, 'pg-boss warning');
+    safeLog(() => logger.warn({ warning: warning.message }, 'pg-boss warning'));
   });
 
   const definitions = resolveQueueDefinitions(options.queueOverrides);
@@ -136,6 +150,18 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
 
   const storage = options.storage ?? createS3Storage(env);
   const buckets = { incoming: env.R2_INCOMING_BUCKET, media: env.R2_MEDIA_BUCKET };
+
+  const revenueCatClient =
+    options.revenueCatClient !== undefined
+      ? options.revenueCatClient
+      : env.REVENUECAT_API_KEY === undefined || env.REVENUECAT_API_BASE_URL === undefined
+        ? null
+        : createRevenueCatRestClient({
+            apiKey: env.REVENUECAT_API_KEY,
+            baseUrl: env.REVENUECAT_API_BASE_URL,
+            fetch: options.fetch,
+            clock,
+          });
 
   const handlers: { [TQueue in JobQueue]?: JobHandler<TQueue> } = {
     'email.send': createEmailHandler({
@@ -168,6 +194,18 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       clock,
       metrics,
     }),
+    'webhook.revenuecat.process': createRevenueCatProcessHandler({
+      db,
+      boss,
+      clock,
+      reconcileAvailable: revenueCatClient !== null,
+    }),
+    'subscription.reconcile': createSubscriptionReconcileHandler({
+      db,
+      boss,
+      clock,
+      client: revenueCatClient,
+    }),
   };
 
   const runner = {
@@ -188,6 +226,7 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       queues: definitions.map((definition) => definition.name),
       emailTransport: emailTransport.name,
       pushTransport: pushTransport.name,
+      revenueCatReconciliation: revenueCatClient === null ? 'disabled' : 'enabled',
     },
     'worker ready',
   );

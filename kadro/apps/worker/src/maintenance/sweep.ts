@@ -3,11 +3,14 @@ import {
   deletionRequests,
   emailTokens,
   jobReceipts,
+  lockPushResend,
+  pushResends,
+  setLockTimeout,
   pushTokens,
   rateLimitBuckets,
   refreshTokens,
 } from '@kadro/db';
-import { type SQL, and, asc, inArray, isNull, lt, or } from 'drizzle-orm';
+import { type SQL, and, asc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { type PgColumn, type PgTable } from 'drizzle-orm/pg-core';
 import { type PgBoss } from 'pg-boss';
 
@@ -27,6 +30,12 @@ export const RETENTION = {
   refreshTokensMs: 30 * DAY_MS,
   rateLimitWindowsMs: 2 * DAY_MS,
   jobReceiptsMs: 30 * DAY_MS,
+  /**
+   * Pending push re-sends (ADR-0044), by last change. A row lives until the job holding its key
+   * completes, minutes later; one untouched this long was left by a dead-lettered job, and its push
+   * would be stale (6 h) anyway.
+   */
+  pushResendsMs: DAY_MS,
   /** Push tokens whose app has not checked in (ADR-0031). */
   pushTokensUnseenMs: 60 * DAY_MS,
   /** Deletion requests overdue by this much are re-queued (ADR-0028, ADR-0032). */
@@ -46,6 +55,7 @@ export interface SweepResult {
   readonly refreshTokens: number;
   readonly rateLimitBuckets: number;
   readonly jobReceipts: number;
+  readonly pushResends: number;
   readonly pushTokens: number;
   readonly deletionsRequeued: number;
   readonly uploadsExpired: number;
@@ -67,6 +77,62 @@ async function deleteInBatches(
     const deleted = await db.delete(table).where(inArray(id, candidates)).returning({ id });
     total += deleted.length;
     if (deleted.length < SWEEP_BATCH) {
+      break;
+    }
+  }
+  return total;
+}
+
+/**
+ * Deletes pending push re-sends not touched since `cutoff` (ADR-0044). Each row is re-checked under
+ * its key's lock, the one the web producer holds while it records a change: a leftover row that a
+ * new change refreshed, or is refreshing, belongs to a live window and stays. A key whose lock
+ * cannot be had within the lock timeout is skipped, so one stuck producer does not fail the run.
+ */
+/** SQLSTATE `lock_not_available`, raised when a lock wait exceeds `lock_timeout`. */
+function isLockNotAvailable(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    if ((current as { code?: unknown }).code === '55P03') {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+export async function sweepPushResends(
+  db: Database,
+  cutoff: Date,
+  lockTimeoutMs?: number,
+): Promise<number> {
+  let total = 0;
+  for (let round = 0; round < MAX_ROUNDS; round += 1) {
+    const candidates = await db
+      .select({ id: pushResends.id, singletonKey: pushResends.singletonKey })
+      .from(pushResends)
+      .where(lt(pushResends.updatedAt, cutoff))
+      .orderBy(asc(pushResends.updatedAt))
+      .limit(SWEEP_BATCH);
+    for (const candidate of candidates) {
+      try {
+        total += await db.transaction(async (tx) => {
+          await setLockTimeout(tx, lockTimeoutMs);
+          await lockPushResend(tx, candidate.singletonKey);
+          const deleted = await tx
+            .delete(pushResends)
+            .where(and(eq(pushResends.id, candidate.id), lt(pushResends.updatedAt, cutoff)))
+            .returning({ id: pushResends.id });
+          return deleted.length;
+        });
+      } catch (error) {
+        // A key whose lock is held belongs to a live window; the next sweep looks at it again.
+        if (!isLockNotAvailable(error)) {
+          throw error;
+        }
+      }
+    }
+    if (candidates.length < SWEEP_BATCH) {
       break;
     }
   }
@@ -114,6 +180,7 @@ export async function sweep(dependencies: SweepDependencies): Promise<SweepResul
     jobReceipts.id,
     lt(jobReceipts.createdAt, before(RETENTION.jobReceiptsMs)),
   );
+  const resendRows = await sweepPushResends(db, before(RETENTION.pushResendsMs));
   const pushTokenRows = await deleteInBatches(
     db,
     pushTokens,
@@ -171,6 +238,7 @@ export async function sweep(dependencies: SweepDependencies): Promise<SweepResul
     refreshTokens: refreshTokenRows,
     rateLimitBuckets: bucketRows,
     jobReceipts: receiptRows,
+    pushResends: resendRows,
     pushTokens: pushTokenRows,
     deletionsRequeued: requeued,
   };

@@ -13,7 +13,8 @@ const IMMUTABLE_TABLES = new Set(['job_receipts']);
 
 /**
  * Every table of product spec §5 (except `jobs`, which pg-boss manages in its own schema) plus
- * the Phase 2 tables `job_receipts` (ADR-0028) and `uploads` (ADR-0030).
+ * the Phase 2 tables `job_receipts` (ADR-0028), `uploads` (ADR-0030) and `push_resends`
+ * (ADR-0044).
  */
 const SPEC_TABLES = [
   'users',
@@ -38,6 +39,8 @@ const SPEC_TABLES = [
   'deletion_requests',
   'job_receipts',
   'uploads',
+  'push_resends',
+  'venue_imports',
 ].sort();
 
 describe('migrations', () => {
@@ -119,7 +122,7 @@ describe('migrations', () => {
   });
 
   it('records every committed migration file and is a no-op when re-run', async () => {
-    expect(MIGRATION_COUNT).toBe(12);
+    expect(MIGRATION_COUNT).toBe(16);
     const countApplied = async (): Promise<number> => {
       const { rows } = await client.query<{ count: string }>(
         'select count(*)::text as count from drizzle.__drizzle_migrations',

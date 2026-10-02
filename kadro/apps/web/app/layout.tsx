@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
@@ -13,10 +12,13 @@ export const viewport: Viewport = {
   themeColor: '#1B7F4B',
 };
 
-export default async function RootLayout({ children }: { readonly children: ReactNode }) {
-  // Pages render per request so Next.js can apply the CSP nonce set by proxy.ts to its scripts
-  // (security checklist item 9); a prerendered page cannot carry a per-request nonce.
-  await connection();
+/**
+ * The root layout sets no render mode (ADR-0021, ADR-0055). Each surface renders per request in
+ * its own layout or page (`(app)/layout.tsx`, `page.tsx`, `not-found.tsx`) so Next.js can apply the
+ * CSP nonce set by proxy.ts to its scripts (security checklist item 9); a prerendered page cannot
+ * carry a per-request nonce, and `tests/built-server.test.ts` fails if any page is prerendered.
+ */
+export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     <html lang="tr">
       <body

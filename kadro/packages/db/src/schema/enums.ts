@@ -81,6 +81,21 @@ export const subscriptionEnvironmentEnum = pgEnum(
   SUBSCRIPTION_ENVIRONMENTS,
 );
 
+/** Store that sold a subscription; RevenueCat store names map onto this closed set (ADR-0063). */
+export const SUBSCRIPTION_STORES = ['app_store', 'play_store', 'promotional', 'other'] as const;
+export type SubscriptionStore = (typeof SUBSCRIPTION_STORES)[number];
+export const subscriptionStoreEnum = pgEnum('subscription_store', SUBSCRIPTION_STORES);
+
+/** What the webhook route decided for a stored event; a replayed delivery is never stored twice. */
+export const WEBHOOK_OUTCOMES = ['accepted', 'ignored'] as const;
+export type StoredWebhookOutcome = (typeof WEBHOOK_OUTCOMES)[number];
+export const webhookOutcomeEnum = pgEnum('webhook_outcome', WEBHOOK_OUTCOMES);
+
+/** Venue CSV import lifecycle (ADR-0064). */
+export const VENUE_IMPORT_STATUSES = ['queued', 'processing', 'completed', 'failed'] as const;
+export type VenueImportStatus = (typeof VENUE_IMPORT_STATUSES)[number];
+export const venueImportStatusEnum = pgEnum('venue_import_status', VENUE_IMPORT_STATUSES);
+
 export const WEBHOOK_PROVIDERS = ['revenuecat'] as const;
 export type WebhookProvider = (typeof WEBHOOK_PROVIDERS)[number];
 export const webhookProviderEnum = pgEnum('webhook_provider', WEBHOOK_PROVIDERS);

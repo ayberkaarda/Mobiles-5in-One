@@ -22,6 +22,8 @@ export interface JobContext {
   readonly queue: JobQueue;
   readonly retryCount: number;
   readonly createdOn: Date;
+  /** pg-boss `singletonKey` of the job; for a coalesced push, its coalescing key (ADR-0031). */
+  readonly singletonKey: string | null;
   /** Child logger carrying `queue`, `jobId`, `idempotencyKey` and `requestId` when present. */
   readonly logger: Logger;
   /** Aborted when the job expires or the worker stops past its grace period. */
@@ -37,6 +39,19 @@ export type JobHandler<TQueue extends JobQueue> = (
   context: JobContext,
 ) => Promise<string>;
 
+/** SQLSTATE of the error or of its `cause` chain (query errors wrap the driver error). */
+function findSqlState(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) {
+      return code;
+    }
+    current = current.cause;
+  }
+  return undefined;
+}
+
 /** Error fields that are safe to log: class name, our own messages, PostgreSQL SQLSTATE. */
 export function describeError(error: unknown): Record<string, string | number> {
   if (!(error instanceof Error)) {
@@ -50,9 +65,9 @@ export function describeError(error: unknown): Record<string, string | number> {
   ) {
     fields.errorMessage = error.message;
   }
-  const code = (error as { code?: unknown }).code;
-  if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) {
-    fields.sqlState = code;
+  const sqlState = findSqlState(error);
+  if (sqlState !== undefined) {
+    fields.sqlState = sqlState;
   }
   if (error instanceof EmailDeliveryError && error.status !== undefined) {
     fields.status = error.status;
@@ -119,6 +134,7 @@ export async function runJob<TQueue extends JobQueue>(
       queue,
       retryCount: job.retryCount,
       createdOn: job.createdOn,
+      singletonKey: job.singletonKey ?? null,
       logger: jobLogger,
       signal: job.signal,
     });
