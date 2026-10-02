@@ -99,6 +99,9 @@ export default function SignInScreen() {
         <TextLink label={t('signIn.forgot')} onPress={() => router.push('/sifremi-unuttum')} />
       </View>
       <ProviderButtons providers={providerSignIn} action={action} />
+      <Text variant="footnote" tone="muted" style={{ marginTop: theme.spacing['4'] }}>
+        {t('signIn.deletionNote')}
+      </Text>
       <View style={{ marginTop: theme.spacing['5'] }}>
         <Text tone="muted">{t('signIn.noAccount')}</Text>
         <TextLink label={t('signIn.signUpLink')} onPress={() => router.replace('/kayit')} />

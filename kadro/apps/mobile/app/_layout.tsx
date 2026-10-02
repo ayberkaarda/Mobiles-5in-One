@@ -26,6 +26,7 @@ import {
   createQueryPersister,
   QueryProvider,
 } from '../src/query';
+import { restoreLanguage } from '../src/settings/language';
 import { FONT_MAP, navigationTheme, ThemeProvider, useTheme } from '../src/theme';
 import { ErrorState } from '../src/ui';
 
@@ -37,6 +38,8 @@ const queryPersister = createQueryPersister(AsyncStorage);
 const appVersion = Constants.expoConfig?.version ?? 'dev';
 // Registered before the session is read, so even the start-up check clears a stale cache.
 session.onSignOut(() => clearQueryCaches(queryClient, queryPersister));
+// The language chosen in the settings, if any, replaces the device language.
+void restoreLanguage(i18n, AsyncStorage);
 
 /** Last-resort screen for a render error outside every screen boundary. */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -77,6 +80,10 @@ function RootStack() {
           {/* Open calls: a call opened from the Eksik Var list, and the call of a match (staff). */}
           <Stack.Screen name="ilan/[id]" />
           <Stack.Screen name="ilan/mac/[matchId]" />
+          {/* Profile editing and the settings, including the start of an account deletion. */}
+          <Stack.Screen name="profil/duzenle" />
+          <Stack.Screen name="ayarlar/index" />
+          <Stack.Screen name="ayarlar/hesabi-sil" />
         </Stack.Protected>
         {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>
@@ -86,6 +93,8 @@ function RootStack() {
         {/* Email links open in any session state; the tokens they carry are single use. */}
         <Stack.Screen name="e-posta-dogrula" />
         <Stack.Screen name="sifre-sifirla" />
+        {/* Shown right after a deletion request, while the session ends (ADR-0054). */}
+        <Stack.Screen name="ayarlar/hesap-silindi" />
       </Stack>
     </NavigationThemeProvider>
   );

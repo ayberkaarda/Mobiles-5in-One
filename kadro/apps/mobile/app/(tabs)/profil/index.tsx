@@ -1,73 +1,131 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { ApiError } from '../../../src/api/errors';
-import { api, session } from '../../../src/api/instance';
-import { errorMessage } from '../../../src/i18n/error-copy';
+import { api } from '../../../src/api/instance';
+import { callsApi } from '../../../src/calls/instance';
+import { districtLabel } from '../../../src/calls/form';
+import { districtsQuery } from '../../../src/calls/queries';
+import { Fact } from '../../../src/matches/components';
+import {
+  Avatar,
+  profileLevelLabel,
+  profilePositionLabel,
+  StatsCard,
+} from '../../../src/profile/components';
+import { profileApi } from '../../../src/profile/instance';
+import { statsQuery } from '../../../src/profile/queries';
 import { meQuery, QueryBoundary } from '../../../src/query';
+import { CachedNotice, ResourceState } from '../../../src/teams/components';
 import { useTheme } from '../../../src/theme';
-import { Button, Card, ErrorState, Screen, SkeletonList, Text } from '../../../src/ui';
+import { Button, Card, Screen, Text } from '../../../src/ui';
 
-/** Own profile (`GET /api/v1/me`) and sign-out; profile editing and settings come with the profile screens. */
+/**
+ * Own profile (`GET /api/v1/me`): photo, name, position, level, district and the statistics
+ * (`GET /api/v1/me/stats`), with the way to edit it and to the settings.
+ */
 export default function ProfileTab() {
-  const { t, i18n } = useTranslation('common');
+  const { t } = useTranslation('common');
+  const { t: tc } = useTranslation('opencalls');
   const theme = useTheme();
-  const query = useQuery(meQuery(api));
-  const [signingOut, setSigningOut] = useState(false);
+  const router = useRouter();
+  const me = useQuery(meQuery(api));
+  const stats = useQuery(statsQuery(profileApi));
+  const hasDistrict = me.data !== undefined && me.data.districtId !== null;
+  const districts = useQuery({ ...districtsQuery(callsApi), enabled: hasDistrict });
 
-  const signOut = (): void => {
-    setSigningOut(true);
-    void session.signOut({ revokeRemote: true }).finally(() => setSigningOut(false));
-  };
-
-  let body;
-  if (query.data !== undefined) {
-    const me = query.data;
-    body = (
-      <Card style={{ marginHorizontal: theme.spacing['4'] }}>
-        <Text variant="title3">{me.displayName}</Text>
-        <Text variant="footnote" tone="muted" style={{ marginTop: theme.spacing['3'] }}>
-          {t('profile.email')}
-        </Text>
-        <Text selectable>{me.email}</Text>
-        {me.emailVerified ? null : (
-          <Text variant="footnote" tone="danger" style={{ marginTop: theme.spacing['2'] }}>
-            {t('profile.emailUnverified')}
-          </Text>
-        )}
-      </Card>
-    );
-  } else if (query.status === 'error') {
-    body = (
-      <ErrorState
-        title={t('state.errorTitle')}
-        message={errorMessage(i18n, query.error)}
-        requestId={
-          query.error instanceof ApiError ? (query.error.requestId ?? undefined) : undefined
-        }
-        referenceLabel={t('state.reference')}
-        retry={{ label: t('state.retry'), onPress: () => void query.refetch() }}
+  const settingsButton = (
+    <View style={{ padding: theme.spacing['4'] }}>
+      <Button
+        label={t('profile.settings')}
+        variant="secondary"
+        onPress={() => router.push('/ayarlar')}
+        testID="profile-settings"
       />
+    </View>
+  );
+
+  if (me.data === undefined) {
+    return (
+      <Screen title={t('tabs.profile')} scroll testID="profile-screen">
+        <QueryBoundary>
+          <ResourceState
+            status={me.status === 'error' ? 'error' : 'pending'}
+            error={me.error}
+            onRetry={() => void me.refetch()}
+            missingTitle={t('state.errorTitle')}
+            missingMessage={t('error.unknown')}
+            testID="profile"
+          />
+          {settingsButton}
+        </QueryBoundary>
+      </Screen>
     );
-  } else {
-    body = <SkeletonList accessibilityLabel={t('state.loading')} rows={2} />;
+  }
+
+  const profile = me.data;
+  const notSet = t('profile.notSet');
+  let district = notSet;
+  if (profile.districtId !== null) {
+    district =
+      districtLabel(districts.data?.items ?? [], profile.districtId) ??
+      (districts.status === 'pending' ? t('state.loading') : t('profile.districtUnavailable'));
   }
 
   return (
-    <Screen title={t('tabs.profile')} scroll>
+    <Screen title={t('tabs.profile')} scroll testID="profile-screen">
       <QueryBoundary>
-        {body}
-        <View style={{ padding: theme.spacing['4'] }}>
+        <CachedNotice visible={me.isRefetchError} />
+        <Card style={{ marginHorizontal: theme.spacing['4'] }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing['4'] }}>
+            <Avatar url={profile.avatarUrl} displayName={profile.displayName} />
+            <View style={{ flexShrink: 1 }}>
+              <Text variant="title3">{profile.displayName}</Text>
+              <Text selectable tone="muted" variant="footnote">
+                {profile.email}
+              </Text>
+              {profile.entitlements?.pro === true ? (
+                <Text variant="label" testID="profile-pro">
+                  {t('profile.pro')}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+          {profile.emailVerified ? null : (
+            <Text variant="footnote" tone="danger" style={{ marginTop: theme.spacing['3'] }}>
+              {t('profile.emailUnverified')}
+            </Text>
+          )}
+          <View style={{ marginTop: theme.spacing['4'], gap: theme.spacing['2'] }}>
+            <Fact
+              label={t('profile.position')}
+              value={profilePositionLabel(tc, notSet, profile.position)}
+              testID="profile-position"
+            />
+            <Fact
+              label={t('profile.level')}
+              value={profileLevelLabel(tc, notSet, profile.level)}
+              testID="profile-level"
+            />
+            <Fact label={t('profile.district')} value={district} testID="profile-district" />
+          </View>
           <Button
-            label={t('profile.signOut')}
-            accessibilityHint={t('profile.signOutHint')}
-            variant="secondary"
-            loading={signingOut}
-            onPress={signOut}
+            label={t('profile.edit')}
+            onPress={() => router.push('/profil/duzenle')}
+            testID="profile-edit"
+            style={{ marginTop: theme.spacing['4'] }}
+          />
+        </Card>
+        <View style={{ marginHorizontal: theme.spacing['4'], marginTop: theme.spacing['4'] }}>
+          <StatsCard
+            status={stats.status}
+            data={stats.data}
+            error={stats.error}
+            onRetry={() => void stats.refetch()}
           />
         </View>
+        {settingsButton}
       </QueryBoundary>
     </Screen>
   );
