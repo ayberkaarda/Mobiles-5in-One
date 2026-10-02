@@ -1,0 +1,107 @@
+{
+  "nav": {
+    "back": "Geri"
+  },
+  "list": {
+    "create": "Takım kur",
+    "join": "Kodla katıl",
+    "openHint": "Takımın kadrosunu ve ayarlarını açar.",
+    "locked": "Salt okunur"
+  },
+  "create": {
+    "title": "Takım kur",
+    "subtitle": "Takımın adını yaz. Kaptan sen olursun; oyuncuları sonra davet bağlantısıyla eklersin.",
+    "name": "Takım adı",
+    "nameHint": "{{min}}–{{max}} karakter.",
+    "districtFromProfile": "Takım, profilinde seçtiğin bölgeye kurulur.",
+    "noDistrict": "Takım kurmak için önce profilinde bölgeni seçmelisin.",
+    "openProfile": "Profile git",
+    "unverified": "Takım kurmak için e-posta adresini doğrulaman gerekiyor. Gelen kutundaki doğrulama bağlantısına dokun.",
+    "submit": "Takımı kur"
+  },
+  "validation": {
+    "nameTooShort": "Takım adı en az {{min}} karakter olmalı.",
+    "nameTooLong": "Takım adı en fazla {{max}} karakter olabilir.",
+    "nameInvalid": "Takım adında görünmeyen karakter olamaz."
+  },
+  "join": {
+    "title": "Takıma katıl",
+    "subtitle": "Arkadaşının gönderdiği davet bağlantısını ya da davet kodunu yapıştır.",
+    "input": "Davet bağlantısı ya da kodu",
+    "inputInvalid": "Bu bir davet bağlantısı ya da davet kodu değil. Bağlantının tamamını yapıştır.",
+    "submit": "Daveti göster",
+    "other": "Başka bir kod gir"
+  },
+  "invite": {
+    "title": "Takım daveti",
+    "members": "{{number}} oyuncu",
+    "accept": "Takıma katıl",
+    "acceptHint": "Takıma oyuncu olarak katılırsın.",
+    "invalidTitle": "Davet geçersiz",
+    "invalidMessage": "Bu davetin süresi dolmuş, kullanım hakkı bitmiş ya da kaptan daveti iptal etmiş. Kaptandan yeni bir bağlantı iste.",
+    "alreadyMember": "Zaten bu takımdasın.",
+    "openTeams": "Takımlarıma git",
+    "unverified": "Takıma katılmak için e-posta adresini doğrulaman gerekiyor."
+  },
+  "detail": {
+    "summary": "Rolün: {{role}} · {{number}} oyuncu",
+    "roster": "Kadro",
+    "you": "{{name}} (sen)",
+    "memberHint": "Rol ve üyelik seçeneklerini açar.",
+    "invite": "Oyuncu davet et",
+    "locked": "Bu takım salt okunur: Pro üyelik sona erdiği için yeni davet ve maç oluşturulamaz.",
+    "leave": "Takımdan ayrıl",
+    "leaveQuestion": "{{team}} takımından ayrılmak istediğine emin misin? Tekrar katılmak için yeni bir davet gerekir.",
+    "leaveConfirm": "Ayrıl",
+    "cancel": "Vazgeç",
+    "captainCannotLeave": "Kaptan takımdan ayrılamaz. Ayrılmadan önce kaptanlığı bir oyuncuya devret.",
+    "missingTitle": "Takım bulunamadı",
+    "missingMessage": "Bu takım silinmiş ya da artık takımın üyesi değilsin."
+  },
+  "member": {
+    "role": "Rol: {{role}}",
+    "joined": "Katılma: {{date}}",
+    "position": {
+      "GK": "Kaleci",
+      "DEF": "Defans",
+      "MID": "Orta saha",
+      "FWD": "Forvet"
+    },
+    "makeCoCaptain": "Yardımcı kaptan yap",
+    "makePlayer": "Oyuncu yap",
+    "transfer": "Kaptanlığı devret",
+    "transferQuestion": "Kaptanlığı {{name}} adlı oyuncuya devretmek istediğine emin misin? Sen yardımcı kaptan olursun.",
+    "transferConfirm": "Devret",
+    "remove": "Takımdan çıkar",
+    "removeQuestion": "{{name}} takımdan çıkarılsın mı?",
+    "removeConfirm": "Çıkar",
+    "cancel": "Vazgeç",
+    "noActions": "Bu oyuncu için yapabileceğin bir işlem yok.",
+    "missingTitle": "Oyuncu bulunamadı",
+    "missingMessage": "Bu oyuncu artık takımda değil."
+  },
+  "invites": {
+    "title": "Oyuncu davet et",
+    "intro": "Bağlantıyı paylaş ya da QR kodu okut. Bağlantıyı açan herkes takıma oyuncu olarak katılabilir.",
+    "create": "Davet bağlantısı oluştur",
+    "createAnother": "Yeni bağlantı oluştur",
+    "onceNotice": "Bu kod yalnızca şimdi gösterilir. Sayfadan çıkınca tekrar göremezsin; gerekirse yeni bağlantı oluştur.",
+    "code": "Davet kodu",
+    "link": "Bağlantı",
+    "qrLabel": "Davet bağlantısının QR kodu",
+    "validity": "{{date}} tarihine kadar geçerli · en fazla {{number}} katılım",
+    "share": "Bağlantıyı paylaş",
+    "shareMessage": "{{team}} takımına Kadro'da katıl: {{url}}",
+    "shareFailed": "Paylaşım açılamadı. Kodu ekrandan seçip kopyalayabilirsin.",
+    "active": "Etkin davetler",
+    "activeEmpty": "Etkin davet yok.",
+    "activeItem": "{{date}} tarihine kadar · {{uses}}/{{max}} katılım",
+    "revoke": "Daveti iptal et",
+    "revokeQuestion": "Bu davet iptal edilsin mi? Bağlantı hemen geçersiz olur.",
+    "revokeConfirm": "İptal et",
+    "cancel": "Vazgeç",
+    "locked": "Bu takım salt okunur olduğu için yeni davet oluşturulamaz.",
+    "unverified": "Davet oluşturmak için e-posta adresini doğrulaman gerekiyor.",
+    "staffOnly": "Davetleri yalnızca kaptan ve yardımcı kaptan yönetebilir."
+  }
+}
