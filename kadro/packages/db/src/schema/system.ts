@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   integer,
@@ -15,6 +16,9 @@ import {
   pushPlatformEnum,
   subscriptionEnvironmentEnum,
   subscriptionStatusEnum,
+  subscriptionStoreEnum,
+  venueImportStatusEnum,
+  webhookOutcomeEnum,
   webhookProviderEnum,
 } from './enums.js';
 import { users } from './users.js';
@@ -52,9 +56,19 @@ export const subscriptions = pgTable(
     status: subscriptionStatusEnum('status').notNull(),
     expiresAt: timestamptz('expires_at'),
     environment: subscriptionEnvironmentEnum('environment').notNull(),
+    /** Store of the latest applied event; `null` on rows written before ADR-0063. */
+    store: subscriptionStoreEnum('store'),
+    /** Provider time of the latest applied event; an older event never overwrites the row. */
+    lastEventAt: timestamptz('last_event_at'),
+    /** `webhook_events.event_id` of the latest applied event; `null` after a reconciliation write. */
+    lastEventId: text('last_event_id'),
     ...timestamps(),
   },
   (t) => [
+    check(
+      'subscriptions_last_event_id_length',
+      sql`${t.lastEventId} is null or char_length(${t.lastEventId}) between 1 and 128`,
+    ),
     uniqueIndex('subscriptions_user_id_product_id_environment_key').on(
       t.userId,
       t.productId,
@@ -64,7 +78,12 @@ export const subscriptions = pgTable(
   ],
 );
 
-/** Received webhook events. The unique event id makes delivery replay-safe. */
+/**
+ * Received webhook events. The unique event id makes delivery replay-safe. Besides the payload
+ * hash the route stores only the normalized fields the processing job needs (ADR-0063); the raw
+ * body and unknown event fields are never stored. The normalized columns are nullable for rows
+ * that predate them; the insert helper requires them.
+ */
 export const webhookEvents = pgTable(
   'webhook_events',
   {
@@ -74,10 +93,33 @@ export const webhookEvents = pgTable(
     receivedAt: timestamptz('received_at').notNull().defaultNow(),
     processedAt: timestamptz('processed_at'),
     payloadHash: sha256Hex('payload_hash').notNull(),
+    /** Provider event type, e.g. `RENEWAL`; open text because new types appear without notice. */
+    eventType: text('event_type'),
+    /** `app_user_id` as sent (a user id, or an anonymous id for events that are ignored). */
+    appUserId: text('app_user_id'),
+    productId: text('product_id'),
+    store: subscriptionStoreEnum('store'),
+    environment: subscriptionEnvironmentEnum('environment'),
+    /** Provider event time (`event_timestamp_ms`); orders deliveries that arrive out of order. */
+    eventAt: timestamptz('event_at'),
+    /** Subscription expiry carried by the event (`expiration_at_ms`). */
+    expiresAt: timestamptz('expires_at'),
+    outcome: webhookOutcomeEnum('outcome'),
+    /** Short machine reason for `ignored`, e.g. `unknown_user`. */
+    ignoredReason: text('ignored_reason'),
     ...timestamps(),
   },
   (t) => [
     uniqueIndex('webhook_events_provider_event_id_key').on(t.provider, t.eventId),
+    index('webhook_events_app_user_id_event_at_idx').on(t.appUserId, t.eventAt),
+    check(
+      'webhook_events_text_lengths',
+      sql`(${t.eventType} is null or char_length(${t.eventType}) between 1 and 64) and (${t.appUserId} is null or char_length(${t.appUserId}) between 1 and 256) and (${t.productId} is null or char_length(${t.productId}) <= 200) and (${t.ignoredReason} is null or char_length(${t.ignoredReason}) between 1 and 64) and char_length(${t.eventId}) between 1 and 128`,
+    ),
+    check(
+      'webhook_events_ignored_reason_matches_outcome',
+      sql`${t.outcome} is null or (${t.outcome} = 'ignored') = (${t.ignoredReason} is not null)`,
+    ),
     index('webhook_events_unprocessed_idx')
       .on(t.receivedAt)
       .where(sql`${t.processedAt} is null`),
@@ -186,5 +228,61 @@ export const pushResends = pgTable(
     ),
     check('push_resends_type', sql`${t.type} in ('rsvp.changed', 'application.received')`),
     check('push_resends_version_positive', sql`${t.version} >= 1`),
+  ],
+);
+
+/**
+ * Venue CSV imports (ADR-0064). The web role stores the request and its CSV, the worker parses it
+ * and records the counters and the first row-level issues. `created_by` is cleared when the admin
+ * account is deleted; the import itself stays as a record.
+ */
+export const venueImports = pgTable(
+  'venue_imports',
+  {
+    id: primaryId(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    status: venueImportStatusEnum('status').notNull().default('queued'),
+    dryRun: boolean('dry_run').notNull().default(false),
+    csv: text('csv').notNull(),
+    /** Data rows (header excluded); known once parsing has finished. */
+    totalRows: integer('total_rows'),
+    createdRows: integer('created_rows').notNull().default(0),
+    skippedRows: integer('skipped_rows').notNull().default(0),
+    rejectedRows: integer('rejected_rows').notNull().default(0),
+    /** At most 50 `{ line, column, issue }` entries; the remainder is only counted. */
+    issues: jsonb('issues')
+      .$type<readonly { line: number; column: string | null; issue: string }[]>()
+      .notNull()
+      .default([]),
+    /** Short machine reason when `status` is `failed`. */
+    failureReason: text('failure_reason'),
+    startedAt: timestamptz('started_at'),
+    completedAt: timestamptz('completed_at'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('venue_imports_created_at_idx').on(t.createdAt),
+    index('venue_imports_created_by_idx').on(t.createdBy),
+    index('venue_imports_open_idx')
+      .on(t.createdAt)
+      .where(sql`${t.status} in ('queued', 'processing')`),
+    check('venue_imports_csv_length', sql`char_length(${t.csv}) between 1 and 900000`),
+    check(
+      'venue_imports_counters',
+      sql`${t.createdRows} >= 0 and ${t.skippedRows} >= 0 and ${t.rejectedRows} >= 0 and (${t.totalRows} is null or ${t.totalRows} between 0 and 5000)`,
+    ),
+    check(
+      'venue_imports_issues',
+      sql`jsonb_typeof(${t.issues}) = 'array' and jsonb_array_length(${t.issues}) <= 50`,
+    ),
+    check(
+      'venue_imports_completed_state',
+      sql`(${t.status} in ('completed', 'failed')) = (${t.completedAt} is not null)`,
+    ),
+    check(
+      'venue_imports_failure_reason',
+      sql`(${t.status} = 'failed') = (${t.failureReason} is not null)`,
+    ),
+    check('venue_imports_dry_run_creates_nothing', sql`not ${t.dryRun} or ${t.createdRows} = 0`),
   ],
 );

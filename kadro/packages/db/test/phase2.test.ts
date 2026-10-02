@@ -412,6 +412,10 @@ describe('roles and grants (ADR-0028)', () => {
             order by column_name`,
         );
         expect(updatable.map((row) => row.column_name)).toEqual(['updated_at', 'version']);
+      } else if (table === 'venue_imports') {
+        // The web role stores and reads imports, the worker records progress through column grants; nobody deletes (ADR-0064).
+        expect(app, table).toEqual(['INSERT', 'SELECT']);
+        expect(worker, table).toEqual(['SELECT']);
       } else if (table === 'audit_logs') {
         expect(app, table).toEqual(['INSERT', 'SELECT']);
         expect(worker, table).toEqual(['INSERT', 'SELECT']);

@@ -40,6 +40,7 @@ const SPEC_TABLES = [
   'job_receipts',
   'uploads',
   'push_resends',
+  'venue_imports',
 ].sort();
 
 describe('migrations', () => {
@@ -121,7 +122,7 @@ describe('migrations', () => {
   });
 
   it('records every committed migration file and is a no-op when re-run', async () => {
-    expect(MIGRATION_COUNT).toBe(13);
+    expect(MIGRATION_COUNT).toBe(16);
     const countApplied = async (): Promise<number> => {
       const { rows } = await client.query<{ count: string }>(
         'select count(*)::text as count from drizzle.__drizzle_migrations',
