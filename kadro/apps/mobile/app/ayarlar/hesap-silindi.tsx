@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useStore } from 'zustand';
 
 import { useAuthStatus } from '../../src/auth-store';
 import { formatDateTime } from '../../src/i18n/format';
-import { DELETION_GRACE_DAYS } from '../../src/settings/deletion';
-import { deletionNotice } from '../../src/settings/instance';
+import { DELETION_GRACE_DAYS, NO_DELETION_NOTICE } from '../../src/settings/deletion';
+import { deletionNotice } from '../../src/settings/notice';
 import { useTheme } from '../../src/theme';
 import { Button, Card, Screen, Text } from '../../src/ui';
 
@@ -21,7 +22,25 @@ export default function DeletionNoticeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const status = useAuthStatus();
-  const graceUntil = useStore(deletionNotice, (state) => state.graceUntil);
+  const { pending, graceUntil } = useStore(deletionNotice);
+  // Opened by a link while signed in, without a request on this device: nothing to explain.
+  const stray = status === 'signedIn' && !pending;
+
+  useEffect(() => {
+    if (stray) {
+      router.replace('/profil');
+    }
+  }, [stray, router]);
+
+  if (stray) {
+    return (
+      <Screen title={t('deletion.noRequestTitle')} testID="deletion-done-stray">
+        <View style={{ paddingHorizontal: theme.spacing['4'] }}>
+          <Text tone="muted">{t('deletion.noRequest')}</Text>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen title={t('deletion.doneTitle')} scroll testID="deletion-done-screen">
@@ -41,7 +60,7 @@ export default function DeletionNoticeScreen() {
           label={status === 'signedIn' ? t('deletion.doneHome') : t('deletion.doneSignIn')}
           variant="secondary"
           onPress={() => {
-            deletionNotice.setState({ graceUntil: null });
+            deletionNotice.setState(NO_DELETION_NOTICE);
             router.replace(status === 'signedIn' ? '/profil' : '/');
           }}
           testID="deletion-done-continue"

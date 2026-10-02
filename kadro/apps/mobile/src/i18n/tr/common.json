@@ -163,6 +163,15 @@
     "doneCancel": "Fikrini değiştirirsen {{days}} gün dolmadan tekrar giriş yapman yeterli; silme iptal edilir.",
     "doneEmail": "Silme işlemi tamamlandığında e-posta adresine bir onay gönderilir.",
     "doneSignIn": "Giriş ekranına dön",
-    "doneHome": "Profile dön"
+    "doneHome": "Profile dön",
+    "errors": {
+      "reauth_required": "Şifren ya da kimlik doğrulaman kabul edilmedi. Kontrol edip tekrar dene.",
+      "step_up_required": "Doğrulama kodu eksik ya da hatalı. Uygulamandaki güncel kodu gir.",
+      "deletion_pending": "Bu hesap için silme isteği zaten alındı.",
+      "last_admin": "Son yönetici hesabı silinemez. Önce başka bir yönetici ata.",
+      "rate_limited": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene."
+    },
+    "noRequestTitle": "Silme isteği yok",
+    "noRequest": "Bu cihazda bir hesap silme isteği yapılmadı. Profiline yönlendiriliyorsun."
   }
 }

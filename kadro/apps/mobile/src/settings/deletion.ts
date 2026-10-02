@@ -1,5 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 
+import { ApiError } from '../api/errors';
+
 import { createRawNonce, type RandomBytes } from '../auth/nonce';
 import { type AppleAuthPort } from '../auth/providers';
 import { sha256Hex } from '../auth/sha256';
@@ -95,11 +97,16 @@ export async function appleProof(
 
 /** What the screen after the request shows; memory only, gone when the app is closed. */
 export interface DeletionNotice {
+  /** A deletion was requested on this device during this run. */
+  readonly pending: boolean;
+  /** End of the grace period, when the server's answer arrived (unknown after a lost answer). */
   readonly graceUntil: string | null;
 }
 
+export const NO_DELETION_NOTICE: DeletionNotice = { pending: false, graceUntil: null };
+
 export function createDeletionNoticeStore() {
-  return createStore<DeletionNotice>()(() => ({ graceUntil: null }));
+  return createStore<DeletionNotice>()(() => NO_DELETION_NOTICE);
 }
 
 export type DeletionNoticeStore = ReturnType<typeof createDeletionNoticeStore>;
@@ -113,17 +120,43 @@ export interface StartDeletionDeps {
 }
 
 /**
+ * Answers to `DELETE me` that mean the account is already closed for deletion: the 202 of an
+ * earlier attempt was lost (timeout, connection drop), so a repeat finds the request pending
+ * (409 `deletion_pending`) or the account deactivated (401 `account_deactivated`).
+ */
+export function isDeletionAlreadyPending(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    ((error.status === 409 && error.code === 'deletion_pending') ||
+      (error.status === 401 && error.code === 'account_deactivated'))
+  );
+}
+
+/**
  * `DELETE me`, then local cleanup. The server has already revoked every session, so the device
  * signs out without a logout call; the sign-out listeners drop the query caches (memory and
- * device) and the push state. A failed request rejects and changes nothing locally.
+ * device) and the push state. The sign-out runs even when opening the notice fails. An answer
+ * saying the deletion is already pending is handled the same way, without a date. Any other
+ * failure rejects and changes nothing locally. Resolves to the end of the grace period, if known.
  */
 export async function startDeletion(
   deps: StartDeletionDeps,
   body: DeleteAccountRequest,
-): Promise<string> {
-  const { graceUntil } = await deps.profile.deleteAccount(body);
-  deps.notice.setState({ graceUntil });
-  deps.showNotice();
-  await deps.session.signOut({ revokeRemote: false });
+): Promise<string | null> {
+  let graceUntil: string | null;
+  try {
+    ({ graceUntil } = await deps.profile.deleteAccount(body));
+  } catch (error) {
+    if (!isDeletionAlreadyPending(error)) {
+      throw error;
+    }
+    graceUntil = null;
+  }
+  deps.notice.setState({ pending: true, graceUntil });
+  try {
+    deps.showNotice();
+  } finally {
+    await deps.session.signOut({ revokeRemote: false });
+  }
   return graceUntil;
 }

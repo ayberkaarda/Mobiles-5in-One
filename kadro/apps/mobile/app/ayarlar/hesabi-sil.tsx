@@ -32,7 +32,8 @@ import {
   TOTP_LENGTH,
   totpIssue,
 } from '../../src/settings/deletion';
-import { appLegalLinks, deletionNotice } from '../../src/settings/instance';
+import { appLegalLinks } from '../../src/settings/instance';
+import { deletionNotice } from '../../src/settings/notice';
 import { legalLink } from '../../src/settings/legal';
 import { ConfirmAction, Notice, ResourceState, Section } from '../../src/teams/components';
 import { useTheme } from '../../src/theme';
@@ -94,7 +95,7 @@ function DeletionFlow({ me, method }: { readonly me: MeResponse; readonly method
   const action = useAsyncAction();
   const [step, setStep] = useState<'explain' | 'proof'>('explain');
   const staff = needsTotp(me);
-  const { control, handleSubmit, resetField } = useForm<ProofValues>({
+  const { control, handleSubmit } = useForm<ProofValues>({
     defaultValues: { password: '', totpCode: '' },
     resolver: issueResolver<ProofValues, DeletionValidationKey>((values) => ({
       password: method === 'password' ? passwordProofIssue(values.password) : null,
@@ -112,23 +113,15 @@ function DeletionFlow({ me, method }: { readonly me: MeResponse; readonly method
   const submit = handleSubmit((values) => {
     const totp = staff ? values.totpCode : null;
     void action.run(async () => {
-      try {
-        if (method === 'apple') {
-          const proof = await appleProof(nativeApplePort, runtimeRandomBytes, totp);
-          if (proof.kind !== 'proof') {
-            return;
-          }
-          await startDeletion(deps, proof.body);
-        } else {
-          await startDeletion(deps, passwordProof(values.password, totp));
+      if (method === 'apple') {
+        const proof = await appleProof(nativeApplePort, runtimeRandomBytes, totp);
+        if (proof.kind !== 'proof') {
+          return;
         }
-      } catch (error) {
-        // A refused proof is not kept in the form.
-        if (error instanceof ApiError && error.status === 401) {
-          resetField('password');
-          resetField('totpCode');
-        }
-        throw error;
+        await startDeletion(deps, proof.body);
+      } else {
+        // A refused proof stays in the form, so a typo can be corrected.
+        await startDeletion(deps, passwordProof(values.password, totp));
       }
     });
   });
@@ -172,7 +165,7 @@ function DeletionFlow({ me, method }: { readonly me: MeResponse; readonly method
         </Section>
       ) : (
         <Section>
-          <FormError error={action.error} />
+          <DeletionError error={action.error} />
           {method === 'password' ? (
             <Controller
               control={control}
@@ -233,5 +226,47 @@ function DeletionFlow({ me, method }: { readonly me: MeResponse; readonly method
         </Section>
       )}
     </ProfileScreen>
+  );
+}
+
+const DELETION_ERROR_CODES = new Set([
+  'reauth_required',
+  'step_up_required',
+  'deletion_pending',
+  'last_admin',
+  'rate_limited',
+]);
+
+/**
+ * Failure of the request in the deletion copy (refused password or token, missing TOTP, last
+ * admin, too many attempts), so it never reads as a server outage; anything else goes through the
+ * error catalog with its request id.
+ */
+function DeletionError({ error }: { readonly error: unknown }) {
+  const { t } = useTranslation('common');
+  const theme = useTheme();
+  if (
+    !(error instanceof ApiError) ||
+    error.code === null ||
+    !DELETION_ERROR_CODES.has(error.code)
+  ) {
+    return <FormError error={error} />;
+  }
+  return (
+    <View style={{ marginBottom: theme.spacing['4'] }}>
+      <Text
+        tone="danger"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+        testID="deletion-error-message"
+      >
+        {t(`deletion.errors.${error.code}`)}
+      </Text>
+      {error.requestId === null ? null : (
+        <Text variant="caption" tone="muted" selectable style={{ marginTop: theme.spacing['1'] }}>
+          {`${t('state.reference')}: ${error.requestId}`}
+        </Text>
+      )}
+    </View>
   );
 }

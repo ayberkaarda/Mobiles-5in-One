@@ -163,6 +163,15 @@
     "doneCancel": "If you change your mind, sign in again before the {{days}} days are over; the deletion is cancelled.",
     "doneEmail": "A confirmation is sent to your email address when the deletion is complete.",
     "doneSignIn": "Back to sign-in",
-    "doneHome": "Back to profile"
+    "doneHome": "Back to profile",
+    "errors": {
+      "reauth_required": "Your password or identity check was not accepted. Check it and try again.",
+      "step_up_required": "The verification code is missing or wrong. Enter the current code from your app.",
+      "deletion_pending": "A deletion request for this account has already been received.",
+      "last_admin": "The last admin account cannot be deleted. Appoint another admin first.",
+      "rate_limited": "Too many attempts. Wait a little and try again."
+    },
+    "noRequestTitle": "No deletion request",
+    "noRequest": "No account deletion was requested on this device. Taking you to your profile."
   }
 }
