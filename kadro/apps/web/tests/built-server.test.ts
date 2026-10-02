@@ -105,8 +105,12 @@ describe('render mode per surface (ADR-0021, ADR-0055)', () => {
     expect(code('../app/layout.tsx')).not.toMatch(/connection\(|headers\(|cookies\(|dynamic\s*=/);
   });
 
-  it('every page outside a route group renders per request itself', () => {
-    for (const file of ['../app/(app)/layout.tsx', '../app/page.tsx', '../app/not-found.tsx']) {
+  it('every surface layout and every page outside a route group renders per request itself', () => {
+    for (const file of [
+      '../app/(app)/layout.tsx',
+      '../app/(marketing)/layout.tsx',
+      '../app/not-found.tsx',
+    ]) {
       expect(code(file), file).toContain('await connection();');
     }
   });
