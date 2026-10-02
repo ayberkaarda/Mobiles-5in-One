@@ -20,6 +20,7 @@ import {
   type ReconcileDependencies,
   createSubscriptionReconcileHandler,
   reconcileAll,
+  reconcileUser,
 } from '../src/billing/reconcile.js';
 import {
   type RevenueCatClient,
@@ -117,8 +118,8 @@ async function storedEvent(
   return { id: result.id, eventId };
 }
 
-function deps() {
-  return { db: worker.runtime.db, boss: worker.runtime.boss, clock };
+function deps(reconcileAvailable = true) {
+  return { db: worker.runtime.db, boss: worker.runtime.boss, clock, reconcileAvailable };
 }
 
 async function subscriptionOf(userId: string, productId = 'kadro_pro_monthly') {
@@ -168,8 +169,9 @@ describe('event mapping (ADR-0063)', () => {
     expect(eventEffect('CANCELLATION', T0, T0)).toEqual({ kind: 'write', status: 'cancelled' });
   });
 
-  it('reconciles product changes and transfers, and applies nothing for other types', () => {
-    expect(eventEffect('PRODUCT_CHANGE', T0, future)).toEqual({ kind: 'reconcile' });
+  it('applies product changes to the product left, reconciles transfers, ignores the rest', () => {
+    expect(eventEffect('PRODUCT_CHANGE', T0, future)).toEqual({ kind: 'write', status: 'active' });
+    expect(eventEffect('PRODUCT_CHANGE', T0, past)).toEqual({ kind: 'write', status: 'expired' });
     expect(eventEffect('TRANSFER', T0, null)).toEqual({ kind: 'reconcile' });
     expect(eventEffect('TEST', T0, future)).toEqual({ kind: 'none' });
     expect(eventEffect('SOMETHING_NEW', T0, future)).toEqual({ kind: 'none' });
@@ -288,21 +290,39 @@ describe('webhook.revenuecat.process', () => {
     });
   });
 
-  it('enqueues a per-user reconciliation for a product change', async () => {
+  it('applies a product change to the product being left, without a subscriber read', async () => {
     const user = await fixtures.user();
     const event = await storedEvent(user.id, {
       eventType: 'PRODUCT_CHANGE',
       eventAt: at(0),
       expiresAt: at(60),
     });
-    expect(await processRevenueCatEvent(deps(), event.id)).toBe('reconcile_enqueued');
+    expect(await processRevenueCatEvent(deps(false), event.id)).toBe('applied');
+    expect(await subscriptionOf(user.id)).toMatchObject({ status: 'active', expiresAt: at(60) });
+    const jobs = await jobsIn(database, 'subscription.reconcile');
+    expect(jobs.some((job) => job.data.userId === user.id)).toBe(false);
+  });
+
+  it('reconciles the receiving account of a transfer, or defers it visibly without a key', async () => {
+    const user = await fixtures.user();
+    const event = await storedEvent(user.id, {
+      eventType: 'TRANSFER',
+      eventAt: at(0),
+      productId: null,
+      store: null,
+    });
+    expect(await processRevenueCatEvent(deps(false), event.id)).toBe('deferred_no_api_key');
+    expect(await processedAt(event.id)).toBeNull();
+    expect(await subscriptionOf(user.id)).toBeUndefined();
+
+    // Replayed once a key is configured.
+    expect(await processRevenueCatEvent(deps(true), event.id)).toBe('reconcile_enqueued');
+    expect(await processedAt(event.id)).not.toBeNull();
     const key = userReconcileKey(user.id, clock.now());
     const jobs = await jobsIn(database, 'subscription.reconcile');
-    expect(jobs.find((job) => job.singletonKey === key)?.data).toEqual({
-      userId: user.id,
-      idempotencyKey: key,
-    });
-    expect(await subscriptionOf(user.id)).toBeUndefined();
+    expect(jobs.filter((job) => job.singletonKey === key).map((job) => job.data)).toEqual([
+      { userId: user.id, idempotencyKey: key },
+    ]);
   });
 
   it('marks ignored rows and deleted accounts processed without writing', async () => {
@@ -401,15 +421,63 @@ describe('subscription.reconcile', () => {
         },
       ],
     });
-    const result = await reconcileAll(reconcileDeps());
-    expect(result.stale).toBeGreaterThanOrEqual(1);
+    expect(await reconcileUser(reconcileDeps(), user.id)).toEqual({
+      applied: 0,
+      stale: 1,
+      skipped: 0,
+      expired: 0,
+      notFound: false,
+    });
     expect((await subscriptionOf(user.id))?.status).toBe('expired');
   });
 
-  it('walks every subscribed user nightly and defers transient failures', async () => {
+  it('expires Pro rows the provider no longer reports, unless a newer event decided them', async () => {
+    const source = await fixtures.user();
+    const newer = await fixtures.user();
+    for (const [user, eventAt] of [
+      [source, at(-60)],
+      [newer, at(200)],
+    ] as const) {
+      const event = await storedEvent(user.id, {
+        eventType: 'INITIAL_PURCHASE',
+        eventAt,
+        expiresAt: at(60 * 24 * 30),
+      });
+      expect(await processRevenueCatEvent(deps(), event.id)).toBe('applied');
+    }
+    // Purchases transferred away: RevenueCat answers with an empty subscriptions map.
+    fake.answers.set(source.id, { readAt: at(60), subscriptions: [] });
+    expect(await reconcileUser(reconcileDeps(), source.id)).toEqual({
+      applied: 0,
+      stale: 0,
+      skipped: 0,
+      expired: 1,
+      notFound: false,
+    });
+    expect(await subscriptionOf(source.id)).toMatchObject({
+      status: 'expired',
+      expiresAt: at(60 * 24 * 30),
+      lastEventAt: at(60),
+      lastEventId: null,
+    });
+
+    // An unknown subscriber (404) counts as reporting nothing; the newer event still wins.
+    expect(await reconcileUser(reconcileDeps(), newer.id)).toEqual({
+      applied: 0,
+      stale: 1,
+      skipped: 0,
+      expired: 0,
+      notFound: true,
+    });
+    expect((await subscriptionOf(newer.id))?.status).toBe('active');
+  });
+
+  it('walks every subscribed user nightly, defers transient and skips other failures', async () => {
     const corrected = await fixtures.user();
     const failing = await fixtures.user();
-    for (const user of [corrected, failing]) {
+    const garbled = await fixtures.user();
+    const deleted = await fixtures.user();
+    for (const user of [corrected, failing, garbled, deleted]) {
       const event = await storedEvent(user.id, {
         eventType: 'INITIAL_PURCHASE',
         eventAt: at(-120),
@@ -430,12 +498,29 @@ describe('subscription.reconcile', () => {
       ],
     });
     fake.answers.set(failing.id, new RevenueCatApiError('http_status', 503));
+    fake.answers.set(garbled.id, new RevenueCatApiError('invalid_response'));
+    await database.admin.db
+      .update(users)
+      .set({ isTombstone: true, passwordHash: null, deactivatedAt: new Date() })
+      .where(eq(users.id, deleted.id));
 
-    const result = await reconcileAll(reconcileDeps());
-    expect(fake.calls).toEqual(expect.arrayContaining([corrected.id, failing.id]));
+    const result = await reconcileAll(reconcileDeps(), worker.logs.logger);
+    expect(fake.calls).toEqual(expect.arrayContaining([corrected.id, failing.id, garbled.id]));
+    expect(fake.calls).not.toContain(deleted.id);
     expect(result.deferred).toBe(1);
+    expect(result.failed).toBe(1);
     expect((await subscriptionOf(corrected.id))?.status).toBe('expired');
     expect((await subscriptionOf(failing.id))?.status).toBe('active');
+    expect((await subscriptionOf(garbled.id))?.status).toBe('active');
+    expect(
+      worker.logs
+        .entries()
+        .some(
+          (entry) =>
+            entry.msg === 'subscriber reconciliation skipped' &&
+            entry.reason === 'invalid_response',
+        ),
+    ).toBe(true);
 
     const key = userReconcileKey(failing.id, clock.now());
     const retry = (await jobsIn(database, 'subscription.reconcile')).find(

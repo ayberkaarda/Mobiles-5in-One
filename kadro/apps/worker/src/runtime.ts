@@ -193,7 +193,12 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       clock,
       metrics,
     }),
-    'webhook.revenuecat.process': createRevenueCatProcessHandler({ db, boss, clock }),
+    'webhook.revenuecat.process': createRevenueCatProcessHandler({
+      db,
+      boss,
+      clock,
+      reconcileAvailable: revenueCatClient !== null,
+    }),
     'subscription.reconcile': createSubscriptionReconcileHandler({
       db,
       boss,
