@@ -138,8 +138,9 @@ export default function TeamDetailScreen() {
                 }
                 subtitle={[roleName(member.role), position].filter(Boolean).join(' · ')}
                 accessibilityHint={manageable ? t('detail.memberHint') : undefined}
+                disabled={rosterBusy}
                 onPress={
-                  manageable && !rosterBusy
+                  manageable
                     ? () =>
                         router.push(
                           `/takim/${encodeURIComponent(team.id)}/uye/${encodeURIComponent(member.user.id)}`,

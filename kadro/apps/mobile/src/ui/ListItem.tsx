@@ -13,6 +13,8 @@ export interface ListItemProps {
   readonly leading?: ReactNode;
   /** Makes the row a button; without it the row is plain text. */
   readonly onPress?: () => void;
+  /** A pressable row that is temporarily unavailable: announced as disabled, ignores presses. */
+  readonly disabled?: boolean;
   readonly accessibilityHint?: string;
   readonly testID?: string;
 }
@@ -24,6 +26,7 @@ export function ListItem({
   meta,
   leading,
   onPress,
+  disabled = false,
   accessibilityHint,
   testID,
 }: ListItemProps) {
@@ -81,12 +84,15 @@ export function ListItem({
       accessibilityRole="button"
       accessibilityLabel={spokenLabel}
       accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       testID={testID}
       style={({ pressed }) => [
         styles.row,
         rowStyle,
-        pressed ? { backgroundColor: theme.colors.pressed } : null,
+        disabled ? { opacity: 0.5 } : null,
+        pressed && !disabled ? { backgroundColor: theme.colors.pressed } : null,
       ]}
     >
       {content}

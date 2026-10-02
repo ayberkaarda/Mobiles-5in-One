@@ -86,12 +86,11 @@ export default function MemberScreen() {
 
   const name = member.user.displayName;
   const target = { role: member.role, isSelf: me.data?.id === member.user.id };
-  // Nothing is offered until the viewer's own id is known: the captain must never see controls
-  // for their own row.
-  const known = me.data !== undefined;
-  const choices = known ? roleChoices(team.myRole, target) : [];
-  const removable = known && canRemoveMember(team.myRole, target);
+  const choices = roleChoices(team.myRole, target);
+  const removable = canRemoveMember(team.myRole, target);
   const busy = action.busy || rosterBusy;
+  // Which write is on its way, so that control shows the spinner and a busy state.
+  const pendingRole = changeRole.isPending ? (changeRole.variables?.role ?? null) : null;
 
   const setRole = (role: TeamRole): void => {
     void action.run(async () => {
@@ -134,48 +133,64 @@ export default function MemberScreen() {
           </Text>
         </Card>
       </Section>
-      <Section>
-        <FormError error={action.error} />
-        {choices.length === 0 && !removable ? (
-          <Notice testID="member-no-actions">{t('member.noActions')}</Notice>
-        ) : null}
-        {choices
-          .filter((role) => role !== 'captain')
-          .map((role) => (
-            <Button
-              key={role}
-              label={role === 'co_captain' ? t('member.makeCoCaptain') : t('member.makePlayer')}
-              variant="secondary"
+      {me.data === undefined ? (
+        // Nothing is offered until the viewer's own id is known: the captain must never see
+        // controls for their own row, nor be told there is nothing to do while it loads.
+        <ResourceState
+          status={me.status === 'error' ? 'error' : 'pending'}
+          error={me.error}
+          onRetry={() => void me.refetch()}
+          missingTitle={t('member.missingTitle')}
+          missingMessage={t('member.missingMessage')}
+          testID="member-viewer"
+        />
+      ) : (
+        <Section>
+          <FormError error={action.error} />
+          {choices.length === 0 && !removable ? (
+            <Notice testID="member-no-actions">{t('member.noActions')}</Notice>
+          ) : null}
+          {choices
+            .filter((role) => role !== 'captain')
+            .map((role) => (
+              <Button
+                key={role}
+                label={role === 'co_captain' ? t('member.makeCoCaptain') : t('member.makePlayer')}
+                variant="secondary"
+                disabled={busy}
+                loading={pendingRole === role}
+                onPress={() => setRole(role)}
+                testID={`member-make-${role}`}
+                style={{ marginBottom: theme.spacing['3'] }}
+              />
+            ))}
+          {choices.includes('captain') ? (
+            <ConfirmAction
+              label={t('member.transfer')}
+              question={t('member.transferQuestion', { name })}
+              confirmLabel={t('member.transferConfirm')}
+              cancelLabel={t('member.cancel')}
+              onConfirm={() => setRole('captain')}
+              busy={pendingRole === 'captain'}
               disabled={busy}
-              onPress={() => setRole(role)}
-              testID={`member-make-${role}`}
-              style={{ marginBottom: theme.spacing['3'] }}
+              testID="member-transfer"
             />
-          ))}
-        {choices.includes('captain') ? (
-          <ConfirmAction
-            label={t('member.transfer')}
-            question={t('member.transferQuestion', { name })}
-            confirmLabel={t('member.transferConfirm')}
-            cancelLabel={t('member.cancel')}
-            onConfirm={() => setRole('captain')}
-            disabled={busy}
-            testID="member-transfer"
-          />
-        ) : null}
-        {removable ? (
-          <ConfirmAction
-            label={t('member.remove')}
-            question={t('member.removeQuestion', { name })}
-            confirmLabel={t('member.removeConfirm')}
-            cancelLabel={t('member.cancel')}
-            onConfirm={removeMember}
-            disabled={busy}
-            variant="danger"
-            testID="member-remove"
-          />
-        ) : null}
-      </Section>
+          ) : null}
+          {removable ? (
+            <ConfirmAction
+              label={t('member.remove')}
+              question={t('member.removeQuestion', { name })}
+              confirmLabel={t('member.removeConfirm')}
+              cancelLabel={t('member.cancel')}
+              onConfirm={removeMember}
+              busy={remove.isPending}
+              disabled={busy}
+              variant="danger"
+              testID="member-remove"
+            />
+          ) : null}
+        </Section>
+      )}
     </TeamScreen>
   );
 }

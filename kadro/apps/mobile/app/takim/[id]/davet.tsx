@@ -233,6 +233,7 @@ export default function TeamInvitesScreen() {
                         await revoke.mutateAsync(invite.id);
                       })
                     }
+                    busy={revoke.isPending && revoke.variables === invite.id}
                     disabled={revokeAction.busy}
                     testID={`invite-revoke-${invite.id}`}
                   />
