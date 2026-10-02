@@ -90,7 +90,7 @@ const STORAGE_URL = 'https://incoming.storage.test.invalid/avatar/object?signatu
 const GRACE_UNTIL = '2026-10-10T10:00:00.000Z';
 
 /** Only the shipped copy: there is no error catalog file on this branch (generic fallback). */
-const GENERIC_ERROR = 'Beklenmeyen bir hata oluştu. Biraz sonra tekrar dene.';
+const GENERIC_ERROR = 'Bir sorun oluştu. Biraz sonra tekrar dene.';
 
 function render(ui: ReactElement, queryClient: QueryClient = createTestQueryClient()) {
   return renderWithProviders(ui, { i18n: createTestI18n(), queryClient });
@@ -371,7 +371,7 @@ describe('edit profile', () => {
     await fireEvent.changeText(await screen.findByLabelText('Görünen ad'), 'Ali Yeni');
     await fireEvent.press(screen.getByRole('button', { name: 'Kaydet' }));
     expect(await screen.findByText('Bu değer kabul edilmedi.')).toBeTruthy();
-    expect(screen.getByText(GENERIC_ERROR)).toBeTruthy();
+    expect(screen.getByText('Girdiğin bilgileri kontrol edip tekrar dene.')).toBeTruthy();
     expect(screen.getByText(/req-patch-1/)).toBeTruthy();
     expect(routerCalls()).toEqual([]);
   });
