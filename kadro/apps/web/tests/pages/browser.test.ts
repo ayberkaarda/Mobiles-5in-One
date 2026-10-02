@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { BUILD_PRESENT, freePort } from '../security/support/server';
 import { testEnvSource } from '../support/env';
+import { prerequisite } from '../support/prerequisite';
 import { freshToken } from './support';
 
 /**
@@ -16,26 +17,32 @@ import { freshToken } from './support';
  * opens the token pages of the production build with `#token=…` and checks, after hydration, that
  * the token is gone from the address bar, the history entry, every request URL and `Referer`,
  * browser storage and cookies, and from the server output. Runs when a build and a local Chrome or
- * Edge exist; otherwise it is skipped and says so.
+ * Edge exist; otherwise it is skipped locally and says so, and fails under CI=true.
+ * `KADRO_TEST_BROWSER` replaces the candidate list with one executable path.
  */
 
-const BROWSERS = [
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-];
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed candidate list
+// eslint-disable-next-line no-restricted-properties -- test-run setting, not application configuration
+const BROWSER_OVERRIDE = process.env.KADRO_TEST_BROWSER;
+const BROWSERS =
+  BROWSER_OVERRIDE !== undefined && BROWSER_OVERRIDE !== ''
+    ? [BROWSER_OVERRIDE]
+    : [
+        'C:/Program Files/Google/Chrome/Application/chrome.exe',
+        'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+        'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      ];
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed candidates or the test-run override
 const BROWSER = BROWSERS.find((candidate) => existsSync(candidate));
-const ENABLED = BUILD_PRESENT && BROWSER !== undefined;
-
-if (!ENABLED) {
-  process.stderr.write(
-    `browser.test: SKIPPED (${BUILD_PRESENT ? 'no local Chrome or Edge' : 'apps/web/.next/BUILD_ID is missing'}).\n`,
-  );
-}
+const ENABLED = prerequisite(
+  BUILD_PRESENT && BROWSER !== undefined,
+  'browser.test',
+  BUILD_PRESENT
+    ? `no Chrome or Edge executable at ${BROWSERS.join(', ')}`
+    : 'apps/web/.next/BUILD_ID is missing, run `pnpm build` first',
+);
 
 const APP_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const NEXT_BIN = fileURLToPath(new URL('../../node_modules/next/dist/bin/next', import.meta.url));

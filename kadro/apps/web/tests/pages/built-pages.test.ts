@@ -6,20 +6,22 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { testEnvSource } from '../support/env';
 import { BUILD_PRESENT, freePort } from '../security/support/server';
+import { prerequisite } from '../support/prerequisite';
 import { freshToken } from './support';
 
 /**
  * ADR-0040 pages against the production build (`next start`), with the server's output captured:
  * every page answers 200 with the nonce CSP, a nonce on every script, `noindex` and (token pages)
  * `no-referrer` / `no-store`; a token in the fragment never reaches the server, its logs or the
- * response. Without `next build` output the suite is skipped and says so.
+ * response. Without `next build` output the suite is skipped locally and says so; under CI=true
+ * it fails.
  */
 
-if (!BUILD_PRESENT) {
-  process.stderr.write(
-    'built-pages.test: SKIPPED, apps/web/.next/BUILD_ID is missing. Run `pnpm build` first.\n',
-  );
-}
+const ENABLED = prerequisite(
+  BUILD_PRESENT,
+  'built-pages.test',
+  'apps/web/.next/BUILD_ID is missing, run `pnpm build` first',
+);
 
 const APP_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const NEXT_BIN = fileURLToPath(new URL('../../node_modules/next/dist/bin/next', import.meta.url));
@@ -37,7 +39,7 @@ function nonceOf(response: Response): string {
   return nonce ?? '';
 }
 
-describe.skipIf(!BUILD_PRESENT)('email-link pages (production build)', () => {
+describe.skipIf(!ENABLED)('email-link pages (production build)', () => {
   beforeAll(async () => {
     const port = await freePort();
     base = `http://127.0.0.1:${port}`;
