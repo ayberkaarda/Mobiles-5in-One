@@ -103,8 +103,11 @@ export type SubscriptionWriteResult =
 
 /**
  * Creates or updates the subscription of `(user, product, environment)`. The row is overwritten
- * only when it has never recorded an event or when its last event is not newer than this one
- * (deliveries are unordered; an equal time re-applies, which is idempotent). `applied: false`
+ * only when it has never recorded an event, when its last event is strictly older than this one,
+ * or when it is a replay of the same event id (idempotent). Two different events with an equal
+ * time are decided by arrival: the first stays and the second is not applied, so a re-run cannot
+ * flip the state. A reconciliation (null event id) applies only when the time it read the
+ * provider is strictly newer than the last event. `applied: false`
  * means a newer event already decided the state. The RevenueCat app user id is the user id.
  */
 export async function upsertSubscriptionIfNotStale(
@@ -135,7 +138,7 @@ export async function upsertSubscriptionIfNotStale(
         lastEventId: write.eventId,
         updatedAt: now,
       },
-      setWhere: sql`${subscriptions.lastEventAt} is null or ${subscriptions.lastEventAt} <= excluded.last_event_at`,
+      setWhere: sql`${subscriptions.lastEventAt} is null or ${subscriptions.lastEventAt} < excluded.last_event_at or ${subscriptions.lastEventId} = excluded.last_event_id`,
     })
     .returning();
   return row === undefined ? { applied: false } : { applied: true, subscription: row };

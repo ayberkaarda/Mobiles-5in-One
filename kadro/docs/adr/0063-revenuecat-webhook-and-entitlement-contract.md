@@ -94,8 +94,9 @@ store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` 
   event. The helper `insertWebhookEventIfNew` inserts with `ON CONFLICT DO NOTHING` on
   `(provider, event_id)`; no row back means `duplicate`.
 - `subscriptions` gains `store`, `last_event_at` and `last_event_id`. `upsertSubscriptionIfNotStale`
-  overwrites a row only if it has no event time or its `last_event_at` is not newer than the
-  incoming one, in a single statement, so unordered deliveries and concurrent jobs cannot move the
-  state backwards. A reconciliation passes the time it read RevenueCat as the event time and no
+  overwrites a row only if it has no event time, its `last_event_at` is strictly older than the
+  incoming one, or the incoming event has the same id as the last applied one (a replay), in a
+  single statement. Unordered deliveries and concurrent jobs cannot move the state backwards, and
+  two different events with an equal time cannot flip it: the first stays. A reconciliation passes the time it read RevenueCat as the event time and no
   event id.
 - All columns are additive and nullable, so rows written before the migration stay valid.
