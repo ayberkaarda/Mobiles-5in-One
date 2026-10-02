@@ -19,6 +19,7 @@ interface ApiErrorInit {
   readonly code?: string | null;
   readonly requestId?: string | null;
   readonly fieldErrors?: readonly ApiFieldError[];
+  readonly retryAfterSeconds?: number | null;
   readonly cause?: unknown;
 }
 
@@ -35,6 +36,8 @@ export class ApiError extends Error {
   readonly code: string | null;
   readonly requestId: string | null;
   readonly fieldErrors: readonly ApiFieldError[];
+  /** `Retry-After` of a 429 / 503 in whole seconds, when the server sent one. */
+  readonly retryAfterSeconds: number | null;
 
   constructor(init: ApiErrorInit) {
     // The message carries no server text, so the error is safe to log.
@@ -45,6 +48,7 @@ export class ApiError extends Error {
     this.code = init.code ?? null;
     this.requestId = init.requestId ?? null;
     this.fieldErrors = init.fieldErrors ?? [];
+    this.retryAfterSeconds = init.retryAfterSeconds ?? null;
   }
 
   /** The request is rejected as such; repeating it unchanged gives the same answer. */
@@ -85,9 +89,22 @@ function readFieldErrors(value: unknown): ApiFieldError[] {
  * machine fields are kept; `title` and `detail` are dropped so server prose never reaches the UI.
  * A body that is not a problem document yields an error with `code: null`.
  */
-export function problemFromResponse(status: number, body: unknown): ApiError {
+/** `Retry-After` in delta seconds (the API never sends an HTTP date); anything else is ignored. */
+export function parseRetryAfter(header: string | null): number | null {
+  if (header === null || !/^\d{1,6}$/.test(header.trim())) {
+    return null;
+  }
+  return Number(header.trim());
+}
+
+export function problemFromResponse(
+  status: number,
+  body: unknown,
+  retryAfter: string | null = null,
+): ApiError {
+  const retryAfterSeconds = parseRetryAfter(retryAfter);
   if (!isRecord(body)) {
-    return new ApiError({ kind: 'problem', status });
+    return new ApiError({ kind: 'problem', status, retryAfterSeconds });
   }
   const code = typeof body.code === 'string' && CODE_PATTERN.test(body.code) ? body.code : null;
   const requestId =
@@ -102,6 +119,7 @@ export function problemFromResponse(status: number, body: unknown): ApiError {
     code,
     requestId,
     fieldErrors: readFieldErrors(body.errors),
+    retryAfterSeconds,
   });
 }
 

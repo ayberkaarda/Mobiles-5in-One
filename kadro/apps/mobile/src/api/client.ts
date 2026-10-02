@@ -237,7 +237,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     } catch {
       problem = null;
     }
-    throw problemFromResponse(response.status, problem);
+    throw problemFromResponse(response.status, problem, response.headers.get('retry-after'));
   }
 
   async function tokenFor(mode: AuthMode, signal: AbortSignal | undefined): Promise<string | null> {

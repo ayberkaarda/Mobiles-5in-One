@@ -150,6 +150,31 @@ describe('problem details', () => {
     expect((error as ApiError).message).not.toContain('Request validation failed');
   });
 
+  it('reads Retry-After seconds from a 429', async () => {
+    const { api } = await signedIn();
+    mswServer.use(
+      http.post(apiUrl('/api/v1/teams'), () =>
+        HttpResponse.json(
+          {
+            type: 'https://kadro.app/problems/rate_limited',
+            title: 'Too many requests',
+            status: 429,
+            code: 'rate_limited',
+            requestId: 'req-429',
+          },
+          {
+            status: 429,
+            headers: { 'content-type': 'application/problem+json', 'retry-after': '42' },
+          },
+        ),
+      ),
+    );
+    await expect(api.request('/api/v1/teams', { method: 'POST', body: {} })).rejects.toMatchObject({
+      code: 'rate_limited',
+      retryAfterSeconds: 42,
+    });
+  });
+
   it('reports a non-problem error body with a null code', async () => {
     const { api } = await signedIn();
     mswServer.use(

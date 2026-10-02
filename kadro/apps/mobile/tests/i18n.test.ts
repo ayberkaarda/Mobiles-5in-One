@@ -9,6 +9,7 @@ import {
   NAMESPACES,
   pickLanguage,
 } from '../src/i18n';
+import { CLIENT_ERROR_KEYS, CLIENT_ERROR_KEYS_RESERVED } from '../src/i18n/error-copy';
 import { formatDateTime, formatPriceRange } from '../src/i18n/format';
 import { appResources, readTranslationFiles } from './support/i18n';
 
@@ -138,6 +139,63 @@ describe('errorMessage', () => {
     expect(errorMessage(i18n, new ApiError({ kind: 'timeout' }))).toBe(
       'Sunucu zamanında yanıt vermedi. Tekrar dene.',
     );
+  });
+});
+
+describe('client-side error keys (CLIENT_ERROR_KEYS)', () => {
+  const resources = appResources();
+  const catalog = {
+    rate_limited: '{{seconds}} saniye sonra tekrar dene.',
+    unauthenticated: 'Giriş yapman gerekiyor.',
+    ...Object.fromEntries(CLIENT_ERROR_KEYS.map((key) => [key, `errors:${key}`])),
+  };
+  const i18n = createI18n({ ...resources, tr: { ...resources.tr, errors: catalog } }, 'tr');
+
+  /** One failure per key that `errorMessage` turns into that key's copy. */
+  const producers: Partial<Record<(typeof CLIENT_ERROR_KEYS)[number], unknown>> = {
+    network_error: new ApiError({ kind: 'network' }),
+    timeout: new ApiError({ kind: 'timeout' }),
+    server_error: new ApiError({ kind: 'problem', status: 503 }),
+    session_expired: new ApiError({ kind: 'problem', status: 401, code: 'unauthenticated' }),
+    unknown: new Error('render failure'),
+  };
+
+  it('uses every client-side key except the reserved ones', () => {
+    const covered = Object.keys(producers);
+    expect([...covered, ...CLIENT_ERROR_KEYS_RESERVED].sort()).toEqual(
+      [...CLIENT_ERROR_KEYS].sort(),
+    );
+    for (const [key, error] of Object.entries(producers)) {
+      expect(errorMessage(i18n, error), key).toBe(`errors:${key}`);
+    }
+  });
+
+  it('keeps the server copy for a 401 the server sent, and session_expired for a local one', () => {
+    const fromServer = new ApiError({
+      kind: 'problem',
+      status: 401,
+      code: 'unauthenticated',
+      requestId: 'req-1',
+    });
+    expect(errorMessage(i18n, fromServer)).toBe('Giriş yapman gerekiyor.');
+  });
+
+  it('fills {{seconds}} of rate_limited from Retry-After, generic copy without it', () => {
+    const limited = new ApiError({
+      kind: 'problem',
+      status: 429,
+      code: 'rate_limited',
+      requestId: 'req-2',
+      retryAfterSeconds: 30,
+    });
+    expect(errorMessage(i18n, limited)).toBe('30 saniye sonra tekrar dene.');
+    const withoutHeader = new ApiError({
+      kind: 'problem',
+      status: 429,
+      code: 'rate_limited',
+      requestId: 'req-3',
+    });
+    expect(errorMessage(i18n, withoutHeader)).toBe('errors:unknown');
   });
 });
 
