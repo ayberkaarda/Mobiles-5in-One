@@ -14,7 +14,7 @@ import {
 } from '../../lib/client/flow';
 import { PAGE_COPY } from '../../lib/client/messages';
 import { PAGE_PATHS } from '../../lib/client/redirects';
-import { pageTokenCapture } from '../../lib/client/token-capture';
+import { type CaptureSnapshot, pageTokenCapture } from '../../lib/client/token-capture';
 import styles from './auth.module.css';
 import { StatusMessage } from './fields';
 import { sendFromPage, useCapturedToken, useFocusOn } from './hooks';
@@ -25,37 +25,48 @@ const LINK_INVALID: FlowState = {
   retryAfterSeconds: null,
 };
 
-async function redeem(token: string): Promise<FlowEvent> {
-  const outcome = await sendFromPage(buildApiRequest('verifyEmail', { token }));
+async function redeem(captured: CaptureSnapshot, token: string): Promise<FlowEvent> {
+  const outcome = await sendFromPage(buildApiRequest('verifyEmail', { token }), captured.signal);
   const failure = failureFor('verifyEmail', outcome);
   if (failure === null || failure === 'link_invalid') {
     // ADR-0040 step 5: the token is spent or useless; drop it from memory.
-    pageTokenCapture.forget();
+    pageTokenCapture.forget(captured.version);
   }
   return { type: 'settled', outcome, endpoint: 'verifyEmail' };
 }
 
 /**
  * `/e-posta-dogrula#token=…` (ADR-0040): posts the captured token once, automatically. A missing
- * or malformed token shows the invalid-link state without calling the API.
+ * or malformed token shows the invalid-link state without calling the API. A new link opened in
+ * the same document is redeemed once in turn; a return from the back/forward cache asks for the
+ * link again.
  */
 export function VerifyEmail() {
   const captured = useCapturedToken(PAGE_PATHS.verifyEmail);
+  return <VerifyEmailStatus key={captured?.version ?? 'server'} captured={captured} />;
+}
+
+function VerifyEmailStatus({ captured }: { readonly captured: CaptureSnapshot | null }) {
   const [state, dispatch] = useReducer(flowReducer, PENDING);
   const started = useRef(false);
   const statusRef = useRef<HTMLParagraphElement>(null);
 
   const view: FlowState =
-    state.status !== 'success' && captured !== null && captured.kind !== 'valid'
+    state.status !== 'success' && captured !== null && captured.token.kind !== 'valid'
       ? LINK_INVALID
       : state;
 
   useEffect(() => {
-    if (captured?.kind !== 'valid' || started.current) {
+    if (captured?.token.kind !== 'valid' || started.current) {
       return;
     }
     started.current = true;
-    void redeem(captured.token).then(dispatch);
+    const { signal } = captured;
+    void redeem(captured, captured.token.token).then((event) => {
+      if (!signal.aborted) {
+        dispatch(event);
+      }
+    });
   }, [captured]);
 
   useFocusOn(
@@ -64,9 +75,14 @@ export function VerifyEmail() {
   );
 
   const retry = () => {
-    if (captured?.kind === 'valid' && canSubmit(state)) {
+    if (captured?.token.kind === 'valid' && canSubmit(state)) {
+      const { signal } = captured;
       dispatch({ type: 'submit' });
-      void redeem(captured.token).then(dispatch);
+      void redeem(captured, captured.token.token).then((event) => {
+        if (!signal.aborted) {
+          dispatch(event);
+        }
+      });
     }
   };
 

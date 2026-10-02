@@ -3,8 +3,7 @@
 import { type RefObject, useEffect, useSyncExternalStore } from 'react';
 
 import { type ApiOutcome, type ApiRequest, sendApiRequest } from '../../lib/client/api';
-import { type FragmentToken } from '../../lib/client/fragment-token';
-import { pageTokenCapture } from '../../lib/client/token-capture';
+import { type CaptureSnapshot, pageTokenCapture } from '../../lib/client/token-capture';
 
 const subscribeNever = () => () => undefined;
 
@@ -22,20 +21,25 @@ export function useHydrated(): boolean {
 }
 
 /**
- * The token captured from the fragment of `pathname` when the page script loaded, or `null`
- * during the server render and hydration (the server never sees the fragment).
+ * The token held for `pathname`, or `null` during the server render and hydration (the server
+ * never sees the fragment). A new link opened in the same document, or leaving the page, yields a
+ * snapshot with a new `version`. While mounted the page keeps the token; after it unmounts the
+ * token is released and its pending request aborted.
  */
-export function useCapturedToken(pathname: string): FragmentToken | null {
+export function useCapturedToken(pathname: string): CaptureSnapshot | null {
   return useSyncExternalStore(
-    subscribeNever,
-    () => pageTokenCapture.read(pathname),
+    pageTokenCapture.subscribe,
+    () => pageTokenCapture.snapshot(pathname),
     () => null,
   );
 }
 
-/** Same-origin `fetch` of the browser. */
-export function sendFromPage(request: ApiRequest): Promise<ApiOutcome> {
-  return sendApiRequest((url, init) => fetch(url, init), request);
+/** Same-origin `fetch` of the browser; `signal` cancels the request. */
+export function sendFromPage(request: ApiRequest, signal?: AbortSignal): Promise<ApiOutcome> {
+  return sendApiRequest(
+    (url, init) => fetch(url, signal === undefined ? init : { ...init, signal }),
+    request,
+  );
 }
 
 /** Moves focus to `ref` whenever `key` changes to a non-null value (new status content). */

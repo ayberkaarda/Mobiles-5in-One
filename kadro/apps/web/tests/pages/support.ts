@@ -34,15 +34,32 @@ export function storageSpy(): StorageSpy {
   return { writes, storage };
 }
 
+type HistoryWrite = (data: unknown, unused: string, url?: string | URL | null) => void;
+type Listener = (event: { readonly type: string; readonly persisted?: boolean }) => void;
+
 export interface FakeBrowser {
   readonly location: { hash: string; pathname: string; search: string; href: string };
   readonly history: {
-    replaceState: Mock<(data: unknown, unused: string, url?: string | URL | null) => void>;
+    replaceState: HistoryWrite;
+    pushState: HistoryWrite;
     entries: string[];
   };
+  /** The original history methods; code under test may wrap the `history` properties. */
+  readonly native: {
+    readonly replaceState: Mock<HistoryWrite>;
+    readonly pushState: Mock<HistoryWrite>;
+  };
+  addEventListener(type: string, listener: Listener): void;
+  /** Dispatches `type` to the registered listeners. */
+  fire(type: string, init?: { readonly persisted?: boolean }): void;
+  /**
+   * A same-document fragment navigation started by the browser (a link opened in the same tab,
+   * the address bar): a new history entry, then `popstate` and `hashchange`, as browsers do.
+   */
+  navigateFragment(hash: string): void;
 }
 
-/** `window.location` / `window.history` stand-ins; `replaceState` rewrites the fake location. */
+/** `window.location` / `window.history` stand-ins; history writes rewrite the fake location. */
 export function fakeBrowser(pathname: string, hash: string, search = ''): FakeBrowser {
   const location = {
     hash,
@@ -51,16 +68,49 @@ export function fakeBrowser(pathname: string, hash: string, search = ''): FakeBr
     href: `https://kadro.test${pathname}${search}${hash}`,
   };
   const entries = [location.href];
-  const replaceState = vi.fn((_data: unknown, _unused: string, url?: string | URL | null): void => {
-    if (url === undefined || url === null) {
-      return;
-    }
+  const moveTo = (url: string | URL) => {
     const next = new URL(String(url), location.href);
+    if (next.origin !== new URL(location.href).origin) {
+      // Browsers refuse a history write to another origin.
+      throw new DOMException('cross-origin history write', 'SecurityError');
+    }
     location.hash = next.hash;
     location.pathname = next.pathname;
     location.search = next.search;
     location.href = next.href;
-    entries[entries.length - 1] = next.href;
+  };
+  const replaceState = vi.fn<HistoryWrite>((_data, _unused, url) => {
+    if (url === undefined || url === null) {
+      return;
+    }
+    moveTo(url);
+    entries[entries.length - 1] = location.href;
   });
-  return { location, history: { replaceState, entries } };
+  const pushState = vi.fn<HistoryWrite>((_data, _unused, url) => {
+    if (url !== undefined && url !== null) {
+      moveTo(url);
+    }
+    entries.push(location.href);
+  });
+  const listeners = new Map<string, Listener[]>();
+  const fire = (type: string, init: { readonly persisted?: boolean } = {}) => {
+    for (const listener of listeners.get(type) ?? []) {
+      listener({ type, ...init });
+    }
+  };
+  return {
+    location,
+    history: { replaceState, pushState, entries },
+    native: { replaceState, pushState },
+    addEventListener(type, listener) {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+    },
+    fire,
+    navigateFragment(next) {
+      moveTo(`${location.pathname}${location.search}${next}`);
+      entries.push(location.href);
+      fire('popstate');
+      fire('hashchange');
+    },
+  };
 }

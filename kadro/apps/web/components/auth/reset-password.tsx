@@ -15,7 +15,7 @@ import {
 } from '../../lib/client/flow';
 import { PAGE_COPY, PASSWORD_RULE } from '../../lib/client/messages';
 import { PAGE_PATHS } from '../../lib/client/redirects';
-import { pageTokenCapture } from '../../lib/client/token-capture';
+import { type CaptureSnapshot, pageTokenCapture } from '../../lib/client/token-capture';
 import styles from './auth.module.css';
 import { PasswordField, StatusMessage, SubmitButton } from './fields';
 import { sendFromPage, useCapturedToken, useFocusOn } from './hooks';
@@ -27,39 +27,54 @@ const LINK_INVALID: FlowState = {
 };
 const STATUS_ID = 'reset-status';
 
-async function reset(token: string, password: string): Promise<FlowEvent> {
-  const outcome = await sendFromPage(buildApiRequest('reset', { token, password }));
+async function reset(
+  captured: CaptureSnapshot,
+  token: string,
+  password: string,
+): Promise<FlowEvent> {
+  const outcome = await sendFromPage(
+    buildApiRequest('reset', { token, password }),
+    captured.signal,
+  );
   const failure = failureFor('reset', outcome);
   if (failure === null || failure === 'link_invalid') {
     // ADR-0040 step 5: the token is spent or useless; drop it from memory.
-    pageTokenCapture.forget();
+    pageTokenCapture.forget(captured.version);
   }
   return { type: 'settled', outcome, endpoint: 'reset' };
 }
 
 /**
  * `/sifre-sifirla#token=…` (ADR-0040): the new password is posted only when the user submits.
- * Success signs out every session (ADR-0025) and offers the sign-in page.
+ * Success signs out every session (ADR-0025) and offers the sign-in page. A new link opened in the
+ * same document, or a return from the back/forward cache, starts the form again from its token.
  */
 export function ResetPassword() {
   const captured = useCapturedToken(PAGE_PATHS.reset);
+  if (captured === null) {
+    // Server render and hydration: the fragment has not been read yet.
+    return <p className={styles.hint}>Bağlantı kontrol ediliyor…</p>;
+  }
+  return <ResetPasswordForm key={captured.version} captured={captured} />;
+}
+
+function ResetPasswordForm({ captured }: { readonly captured: CaptureSnapshot }) {
   const [state, dispatch] = useReducer(flowReducer, IDLE);
   const [password, setPassword] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
+  const token = captured.token;
 
   const view: FlowState =
-    state.status !== 'success' && captured !== null && captured.kind !== 'valid'
-      ? LINK_INVALID
-      : state;
+    state.status !== 'success' && token.kind !== 'valid' ? LINK_INVALID : state;
   const settled =
     view.status === 'success' || (view.status === 'failure' && view.failure === 'link_invalid');
   useFocusOn(statusRef, settled ? view.status : null);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (captured?.kind !== 'valid' || !canSubmit(state)) {
+    if (token.kind !== 'valid' || !canSubmit(state)) {
       return;
     }
     const problem = newPasswordProblem(password);
@@ -70,16 +85,15 @@ export function ResetPassword() {
     }
     setFieldError(null);
     dispatch({ type: 'submit' });
-    void reset(captured.token, password).then((settledEvent) => {
+    void reset(captured, token.token, password).then((settledEvent) => {
+      if (captured.signal.aborted) {
+        // The token was released or replaced; this form is gone.
+        return;
+      }
       setPassword('');
       dispatch(settledEvent);
     });
   };
-
-  if (captured === null) {
-    // Server render and hydration: the fragment has not been read yet.
-    return <p className={styles.hint}>Bağlantı kontrol ediliyor…</p>;
-  }
 
   return (
     <>

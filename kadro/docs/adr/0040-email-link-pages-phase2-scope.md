@@ -34,14 +34,40 @@ them.
 2. The first statement of the page's client entry script reads `location.hash`, keeps the token in
    a module-scoped variable (never `localStorage`, `sessionStorage`, cookies or URL state), and
    calls `history.replaceState(null, '', location.pathname)` so the token leaves the address bar,
-   history entry and any later bookmark or share. No other script runs before it; the pages load no
-   analytics or third-party resources.
+   history entry and any later bookmark or share. No other application script runs before it (only
+   the framework bootstrap that loads it); the pages load no analytics or third-party resources.
+   The capture lives for the whole document, not only its first evaluation:
+   - A fragment that arrives later in the same document (a second link opened in the same tab is a
+     same-document navigation: `popstate` / `hashchange`, no reload) is captured and stripped the
+     same way.
+   - `history.pushState` / `replaceState` are wrapped before the router installs its own patch, so
+     every history write, the router's included, that would put a fragment into a token page entry
+     is written with the bare path instead and its token captured. A write the router takes from
+     outside (`history.pushState` by other code) briefly records the fragment in the router state;
+     the router is then told the bare path, so it does not write the fragment back. That update is
+     skipped when a later history write has happened meanwhile, so it never undoes a navigation. A
+     URL of another origin is passed through unchanged, so the browser rejects it as before and
+     nothing is captured from it.
+   - A new token replaces the held one under a new version; the page keys its flow state by that
+     version, so a new link starts a fresh flow and the request of the replaced token is aborted. A
+     held token is never replaced by itself. Verification posts once per mounted flow; a real
+     unmount and remount of the page (navigating away and back on the client) starts a new flow,
+     so the single use of a token is guaranteed by the server, not by the page.
 3. A malformed or missing token shows the "link invalid or expired" state without calling the API.
 4. Verification posts automatically once; reset posts only when the user submits the new password.
    A 401 `token_invalid` shows the same "invalid or expired" state with a link to
    `/sifremi-unuttum`; the page never says whether the token existed.
 5. After success the token variable is cleared; reset shows "all sessions were signed out"
-   (ADR-0025) and a link to `/giris`.
+   (ADR-0025) and a link to `/giris`. Only the token the request carried is cleared, never a newer
+   one.
+6. An unused token is released when the user leaves the page: on `pagehide` (navigation, close and
+   entry into the back/forward cache, which `no-store` alone does not prevent) and one task after
+   the page component unmounts (the delay keeps it across an immediate remount; the delayed release
+   applies only to the token held at unmount, never to a newer one). Releasing aborts
+   the pending request that carries the token. A page restored from the back/forward cache
+   (`pageshow` with `persisted`) has no token and shows the "link invalid or expired" state
+   without calling the API; the user opens the link again. A settled page (success or rejected
+   token) holds nothing and keeps its state.
 
 ### Headers and CSP
 
@@ -60,12 +86,45 @@ them.
   linked with `aria-describedby`, status changes (verifying, success, failure) announced, no
   time-limited content, contrast ≥ 4.5:1 with the brand palette, usable at 320 px width and 200 %
   zoom, password field with a show/hide toggle that is a real button.
-- Playwright with axe checks each page in its initial, error and success state (Phase 2 gate,
-  ADR-0027).
+- Target (Phase 2 gate, ADR-0027): an automated axe run on each page in its initial, error and
+  success state.
+
+### Verification coverage (amended 2026-10-02)
+
+The repository has no Playwright and no axe dependency; adding one is an owner decision (lockfile
+and CI cost) and is not part of this ADR. The accessibility bar above is verified today as follows,
+and no automated axe rule set runs on any page:
+
+| Page               | Initial state                                    | Error state                                                                                                            | Success state         |
+| ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `/e-posta-dogrula` | server render (unit), built server, browser      | browser (invalid link after a synthetic `pagehide`), unit (failure map, messages)                                      | unit (state machine)  |
+| `/sifre-sifirla`   | server render (unit), built server, browser      | browser (short password: `aria-invalid`, `aria-describedby`, focus; malformed link; synthetic `pagehide` / `pageshow`) | unit (state machine)  |
+| `/sifremi-unuttum` | server render (unit), built server               | unit (failure map, messages)                                                                                           | unit (state machine)  |
+| `/giris`           | server render (unit), built server               | unit (failure map, messages)                                                                                           | unit (fixed redirect) |
+| `/hesap-silme`     | server render of both forms (unit), built server | unit (failure map, messages)                                                                                           | unit (state machine)  |
+
+- "server render (unit)": one `h1` and `main`, labelled inputs, `autocomplete`, the polite live
+  region, the show/hide button, no inline script (`tests/pages/render.test.tsx`).
+- "built server": `next start` of the production build, all five pages, headers and one `h1`
+  (`tests/pages/built-pages.test.ts`).
+- "browser": headless Chrome or Edge over the DevTools protocol against the production build
+  (`tests/pages/browser.test.ts`): token removal from URL, history, requests and storage; a second
+  link in the same document (reset: exactly one request, with the new token; verification: also
+  while the first request is still pending, which is cancelled); a fragment written through the
+  router's history patch; the reset form error, focus and show/hide toggle. It fails instead of
+  skipping under `CI=true` (ADR-0042).
+- Leaving the page is covered with synthetic lifecycle events (`pagehide`, `pageshow` with
+  `persisted`) dispatched on the live page. A real freeze in and restore from the back/forward cache
+  is not exercised (the token pages are `no-store`, and headless Chrome does not cache them
+  reliably). Unmount release, its timing and versioning, and cross-origin pass-through are covered
+  by unit tests on a fake browser (`tests/pages/token-lifecycle.test.ts`), not in a real React tree.
+- Contrast against the brand tokens, target sizes, focus outline and reduced motion are checked on
+  the stylesheet and tokens (`tests/pages/redirects-and-a11y.test.ts`), not on rendered pages.
 
 ## Consequences
 
-- RR-8 closes at the Phase 2 gate together with the Playwright flows of ADR-0027.
+- RR-8 closes at the Phase 2 gate together with the Playwright flows of ADR-0027. Until an axe
+  run exists, the accessibility part of that gate rests on the coverage above.
 - The universal / app links for the same paths remain a Phase 3 deliverable.
 - Handoff `decisions-to-web-001` lists the pages and tests.
 

@@ -100,7 +100,10 @@ describe('page source guards', () => {
     for (const page of ['components/auth/verify-email.tsx', 'components/auth/reset-password.tsx']) {
       const text = file(page);
       expect(text, page).toContain("from '../../lib/client/token-capture'");
-      expect(text, page).toContain('pageTokenCapture.forget()');
+      // Only the token the request carried is dropped, never a newer one from a second link.
+      expect(text, page).toContain('pageTokenCapture.forget(captured.version)');
+      // Requests carrying the token are cancelled when it is released (pagehide, unmount).
+      expect(text, page).toContain('captured.signal');
       expect(text, page).not.toMatch(/URLSearchParams|searchParams|useState\([^)]*token/i);
     }
   });
