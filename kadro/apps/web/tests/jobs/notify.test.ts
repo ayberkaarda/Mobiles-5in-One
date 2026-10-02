@@ -1,4 +1,4 @@
-import { newId } from '@kadro/db';
+import { newId, users } from '@kadro/db';
 
 import { LIMITS, pushSendJobSchema } from '@kadro/contracts';
 import pg from 'pg';
@@ -210,10 +210,20 @@ describe('push producers', () => {
       },
     ];
 
+    /** A real recipient: a change is recorded only for a user that still exists. */
+    async function recipient(): Promise<string> {
+      const [row] = await jobs.database.client.db
+        .insert(users)
+        .values({ email: `alici-${newId()}@example.test`, displayName: 'Alıcı' })
+        .returning({ id: users.id });
+      if (row === undefined) throw new Error('user insert returned no row');
+      return row.id;
+    }
+
     for (const scenario of cases) {
       it(`${scenario.type}: the window's job records nothing, each dropped repeat counts`, async () => {
         const objectId = newId();
-        const userId = newId();
+        const userId = await recipient();
         const singletonKey = `${scenario.prefix}:${objectId}:${userId}`;
         const opened = new Date(Date.now() + 60_000);
         const [firstRef, secondRef, thirdRef] = [newId(), newId(), newId()];
@@ -253,6 +263,24 @@ describe('push producers', () => {
             version: 2,
           },
         ]);
+      });
+
+      it(`${scenario.type}: a dropped repeat for a deleted recipient records nothing`, async () => {
+        const objectId = newId();
+        const userId = newId();
+        const singletonKey = `${scenario.prefix}:${objectId}:${userId}`;
+        const opened = new Date(Date.now() + 60_000);
+        expect(
+          await produced('push.send', (tx) =>
+            scenario.produce(tx, objectId, newId(), userId, opened),
+          ),
+        ).toHaveLength(1);
+        expect(
+          await produced('push.send', (tx) =>
+            scenario.produce(tx, objectId, newId(), userId, new Date(opened.getTime() + 60_000)),
+          ),
+        ).toHaveLength(0);
+        expect(await pendingResends(singletonKey)).toEqual([]);
       });
     }
   });

@@ -5,6 +5,7 @@ import {
   type Transaction,
   auditLogs,
   deletionRequests,
+  lockPushRecipientForDeletion,
   matchRsvps,
   matches,
   mvpVotes,
@@ -359,6 +360,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
     const { userId } = precheck;
 
     const result = await db.transaction(async (tx) => {
+      // First, before any other lock: producers recording a push re-send for this user finish
+      // first, later ones skip (ADR-0044).
+      await lockPushRecipientForDeletion(tx, userId);
       const now = clock.now();
       const check = await eligibility(tx, job.deletionRequestId, now, true);
       if (!check.due) {

@@ -1,14 +1,17 @@
 import { randomBytes } from 'node:crypto';
 
 import {
+  type Transaction,
   auditLogs,
   deletionRequests,
   emailTokens,
+  lockPushResend,
   matchRsvps,
   mvpVotes,
   newId,
   openCallApplications,
   recordPushResend,
+  recordPushResendForRecipient,
   refreshTokens,
   teamMembers,
   teams,
@@ -17,13 +20,13 @@ import {
   venueReviews,
   venues,
 } from '@kadro/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { TOMBSTONE_DISPLAY_NAME } from '../src/accounts/hard-delete.js';
 import { DAY_MS, HOUR_MS } from '../src/clock.js';
 import { sha256Hex } from '../src/email/tokens.js';
-import { enqueue } from '../src/enqueue.js';
+import { bossExecutor, enqueue } from '../src/enqueue.js';
 import { hardDeleteIdempotencyKey } from '../src/maintenance/sweep.js';
 import {
   type FakeProvider,
@@ -604,5 +607,168 @@ describe('account.hard_delete (ADR-0032, ADR-0033)', () => {
     expect(job.retryCount).toBe(0);
     expect(await db().select().from(users).where(eq(users.id, user.id))).toEqual([]);
     expect(worker.metrics.count('email_delivery_failed', { kind: 'deletion_completed' })).toBe(1);
+  });
+});
+
+describe('account.hard_delete and a concurrent coalesced push producer (ADR-0044)', () => {
+  interface RaceScene {
+    readonly victimId: string;
+    readonly requestId: string;
+    readonly teamId: string;
+    readonly matchId: string;
+  }
+
+  /** The victim is a co-captain without an RSVP; a coalesced job to them holds the key. */
+  async function raceScene(): Promise<RaceScene> {
+    const captain = await fixtures.user();
+    const victim = await fixtures.user({ deactivatedAt: new Date(Date.now() - 8 * DAY_MS) });
+    const requestId = await deletionRequest(victim.id, new Date(Date.now() - HOUR_MS));
+    const teamId = await fixtures.team(captain.id, 'Yarış Kadro');
+    await fixtures.member(teamId, victim.id, 'co_captain');
+    const matchId = await fixtures.match(teamId, { startsAt: new Date(Date.now() + 2 * DAY_MS) });
+    const key = `rsvp:${matchId}:${victim.id}`;
+    const queued = await worker.runtime.boss.send(
+      'push.send',
+      { type: 'rsvp.changed', userId: victim.id, refId: matchId, idempotencyKey: `${key}:1` },
+      { singletonKey: key, startAfter: new Date(Date.now() + HOUR_MS) },
+    );
+    expect(queued).not.toBeNull();
+    return { victimId: victim.id, requestId, teamId, matchId };
+  }
+
+  /** Staff of the team, read without a lock as the web producer does (`teamStaffIds`). */
+  async function staffOf(tx: Transaction, teamId: string): Promise<string[]> {
+    const rows = await tx
+      .select({ userId: teamMembers.userId })
+      .from(teamMembers)
+      .where(
+        and(eq(teamMembers.teamId, teamId), inArray(teamMembers.role, ['captain', 'co_captain'])),
+      );
+    return rows.map((row) => row.userId).sort();
+  }
+
+  /** The rest of the web producer (`notify.ts` `pushCoalesced`) for the staff it read. */
+  async function produceFor(
+    tx: Transaction,
+    target: RaceScene,
+    recipients: readonly string[],
+  ): Promise<void> {
+    const now = new Date();
+    for (const userId of recipients) {
+      const singletonKey = `rsvp:${target.matchId}:${userId}`;
+      await lockPushResend(tx, singletonKey);
+      const jobId = await worker.runtime.boss.send(
+        'push.send',
+        {
+          type: 'rsvp.changed',
+          userId,
+          refId: target.matchId,
+          idempotencyKey: `${singletonKey}:${now.getTime()}`,
+        },
+        {
+          singletonKey,
+          startAfter: new Date(now.getTime() + 10 * 60_000),
+          db: bossExecutor(tx),
+        },
+      );
+      if (jobId === null) {
+        await recordPushResendForRecipient(tx, {
+          singletonKey,
+          type: 'rsvp.changed',
+          userId,
+          refId: target.matchId,
+          requestedAt: now,
+        });
+      }
+    }
+  }
+
+  async function tracesOf(userId: string) {
+    return (await dumpAllTables()).filter(
+      (entry) => entry.row.includes(userId) && entry.table !== 'audit_logs',
+    );
+  }
+
+  it('a producer that read the victim as staff before the deletion records nothing after it', async () => {
+    const target = await raceScene();
+    let staffRead: () => void = () => undefined;
+    const hasRead = new Promise<void>((resolve) => {
+      staffRead = resolve;
+    });
+    let resume: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const producing = db().transaction(async (tx) => {
+      const staff = await staffOf(tx, target.teamId);
+      expect(staff).toContain(target.victimId);
+      staffRead();
+      await gate;
+      await produceFor(tx, target, staff);
+    });
+
+    // Barrier: the recipient list is read; the deletion commits before the producer goes on.
+    await hasRead;
+    try {
+      expect((await runDeletion(target.requestId)).output).toEqual({ outcome: 'deleted' });
+    } finally {
+      resume();
+    }
+    await producing;
+    expect(await tracesOf(target.victimId)).toEqual([]);
+  });
+
+  it('a deletion waits for a producer that is recording a change for the victim', async () => {
+    const target = await raceScene();
+    let recorded: () => void = () => undefined;
+    const hasRecorded = new Promise<void>((resolve) => {
+      recorded = resolve;
+    });
+    let resume: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    let producerPid = 0;
+    const producing = db().transaction(async (tx) => {
+      const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      producerPid = Number(result.rows[0]?.pid);
+      await produceFor(tx, target, await staffOf(tx, target.teamId));
+      recorded();
+      await gate;
+    });
+    await hasRecorded;
+
+    const jobId = await enqueue(worker.runtime.boss, 'account.hard_delete', {
+      deletionRequestId: target.requestId,
+      idempotencyKey: `${hardDeleteIdempotencyKey(target.requestId)}:${newId()}`,
+    });
+    try {
+      // Either the deletion waits on the producer, or (without the recipient lock) it finishes.
+      await waitFor(
+        async () => {
+          const waiting = await database.admin.pool.query(
+            `select pid from pg_stat_activity
+              where wait_event_type = 'Lock' and $1 = any(pg_blocking_pids(pid))`,
+            [producerPid],
+          );
+          if (waiting.rows.length > 0) return true;
+          const jobs = await jobsIn(database, 'account.hard_delete');
+          return jobs.some((job) => job.id === jobId && job.state === 'completed');
+        },
+        { label: 'the deletion waiting on the producer or finishing' },
+      );
+    } finally {
+      resume();
+    }
+    await producing;
+    const job = await waitForJobState(
+      database,
+      'account.hard_delete',
+      jobId ?? '',
+      ['completed'],
+      30_000,
+    );
+    expect(job.output).toEqual({ outcome: 'deleted' });
+    expect(await tracesOf(target.victimId)).toEqual([]);
   });
 });

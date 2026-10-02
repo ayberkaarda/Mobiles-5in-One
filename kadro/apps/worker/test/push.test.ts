@@ -6,7 +6,7 @@ import {
   pushResends,
   pushTokens,
   rateLimitBuckets,
-  recordPushResend,
+  recordPushResendForRecipient,
 } from '@kadro/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -460,7 +460,7 @@ describe('a change while a coalesced push is being delivered (ADR-0044)', () => 
         db: bossExecutor(tx),
       });
       if (jobId === null) {
-        await recordPushResend(tx, {
+        await recordPushResendForRecipient(tx, {
           singletonKey: target.singletonKey,
           type: target.type,
           userId: target.captainId,

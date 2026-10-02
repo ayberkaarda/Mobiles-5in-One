@@ -3,7 +3,7 @@ import {
   type CoalescedPushType,
   type Transaction,
   lockPushResend,
-  recordPushResend,
+  recordPushResendForRecipient,
 } from '@kadro/db';
 
 import { type JobSender } from './enqueue';
@@ -91,7 +91,7 @@ async function pushCoalesced(
       { ...keys, startAfter: new Date(now.getTime() + COALESCE_DELAY_MS) },
     );
     if (jobId === null) {
-      await recordPushResend(tx, {
+      await recordPushResendForRecipient(tx, {
         singletonKey: keys.singletonKey,
         type,
         userId,

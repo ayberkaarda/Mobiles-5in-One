@@ -3,8 +3,13 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { Database, Transaction } from '../src/client.js';
-import { lockPushResend, recordPushResend } from '../src/push-resends.js';
-import { newId, pushResends } from '../src/schema/index.js';
+import {
+  lockPushRecipientForDeletion,
+  lockPushResend,
+  recordPushResend,
+  recordPushResendForRecipient,
+} from '../src/push-resends.js';
+import { newId, pushResends, users } from '../src/schema/index.js';
 import {
   PG_CHECK_VIOLATION,
   PG_INSUFFICIENT_PRIVILEGE,
@@ -232,5 +237,56 @@ describe('lockPushResend', () => {
     releaseFirst();
     await Promise.all([first, second]);
     expect(order).toEqual(['first', 'second']);
+  });
+});
+
+describe('recordPushResendForRecipient', () => {
+  async function newUser(): Promise<string> {
+    const [row] = await db
+      .insert(users)
+      .values({ email: `alici-${newId()}@example.test`, displayName: 'Alıcı' })
+      .returning({ id: users.id });
+    if (row === undefined) throw new Error('user insert returned no row');
+    return row.id;
+  }
+
+  it('records for an existing recipient and skips a missing one (as kadro_app)', async () => {
+    const present = { ...request(), userId: await newUser() };
+    expect(await asRole('kadro_app', (tx) => recordPushResendForRecipient(tx, present))).toBe(true);
+    expect((await rowOf(present.singletonKey))?.version).toBe(1);
+
+    const missing = request();
+    expect(await asRole('kadro_app', (tx) => recordPushResendForRecipient(tx, missing))).toBe(
+      false,
+    );
+    expect(await rowOf(missing.singletonKey)).toBeUndefined();
+  });
+
+  it('skips while a deletion holds the recipient lock, without waiting for it', async () => {
+    const pending = { ...request(), userId: await newUser() };
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked: () => void = () => undefined;
+    const isLocked = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const deleting = db.transaction(async (tx) => {
+      await lockPushRecipientForDeletion(tx, pending.userId);
+      locked();
+      await gate;
+    });
+    await isLocked;
+    try {
+      expect(await asRole('kadro_app', (tx) => recordPushResendForRecipient(tx, pending))).toBe(
+        false,
+      );
+    } finally {
+      release();
+    }
+    await deleting;
+    expect(await rowOf(pending.singletonKey)).toBeUndefined();
+    expect(await asRole('kadro_app', (tx) => recordPushResendForRecipient(tx, pending))).toBe(true);
   });
 });

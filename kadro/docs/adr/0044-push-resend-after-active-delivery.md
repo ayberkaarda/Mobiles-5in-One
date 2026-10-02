@@ -96,8 +96,35 @@ Per recipient, in sorted order (a fixed lock order), inside the caller's transac
 
 1. `lockPushResend(tx, singletonKey)`.
 2. Enqueue as before (`singletonKey`, window key, `startAfter` = now + 10 min).
-3. When the enqueue returns `null` (dropped): `recordPushResend` inserts the row or, if one
-   exists, increments `version` and keeps the first `requested_at` and `ref_id`.
+3. When the enqueue returns `null` (dropped): `recordPushResendForRecipient` inserts the row or,
+   if one exists, increments `version` and keeps the first `requested_at` and `ref_id`, unless the
+   recipient is gone or being deleted (below).
+
+### Recipients deleted concurrently
+
+Producers read their recipients without a lock (`teamStaffIds`), and an account hard delete
+removes a co-captain's membership without the team lock. A producer that read the victim before
+the deletion committed could record a row with the deleted id after it (no foreign key, ADR-0032
+proof broken). Options weighed:
+
+- **Hard delete locks every team the user belongs to, in a fixed order.** Only helps if every
+  producer takes the team lock before reading staff; the RSVP and application producers lock the
+  match or the call instead, so all of them (outside the job layer) would change, and the hard
+  delete would hold more locks for longer.
+- **A foreign key to `users` with cascade, or a blocking `FOR KEY SHARE` re-check of the user row.**
+  The hard delete holds the user row `FOR UPDATE` from its start and later locks matches; a
+  producer that holds a match lock would then wait on the user row: a lock cycle that PostgreSQL
+  breaks by aborting one side.
+- **Chosen: a per-recipient advisory lock, exclusive for the deletion, tried shared by producers.**
+  The hard delete takes `pg_advisory_xact_lock(hashtextextended('push-recipient:<userId>', 0))` as
+  the first statement of its transaction, before any other lock, so it only ever waits holding
+  nothing. The producer, before recording, calls `pg_try_advisory_xact_lock_shared` on the same key
+  (producers never block each other or the deletion) and then checks that the user row exists. A
+  producer that got the shared lock records only while the user exists, and a deletion that starts
+  later waits for it and deletes the row; a producer that comes after the deletion committed finds
+  no user; one that fails to get the lock is racing a running deletion and records nothing (if
+  that deletion rolls back, the change for that user is lost: accepted). Cost per dropped repeat:
+  one advisory lock attempt and one primary-key read.
 
 ### Worker (`apps/worker/src/push/resend.ts`, `handler.ts`)
 
@@ -145,12 +172,17 @@ nothing (its completion is fenced to the attempt and only touches `active` jobs)
   would need a state version the domain does not keep.
 - Every dropped repeat costs one upsert and an advisory lock in the domain transaction.
 - Account hard delete (ADR-0032 step 6) deletes the user's rows, since `user_id` has no foreign
-  key to cascade; the deletion proof's table dump covers the table.
+  key to cascade, after taking the recipient lock first (see "Recipients deleted concurrently");
+  the deletion proof's table dump covers the table, including a producer racing the deletion.
 - `JobContext` gains `singletonKey`; the worker's `enqueue` accepts a coalescing key.
 - The maintenance sweep reports `pushResends` and deletes rows whose `updated_at` is more than a
   day old, each under its key's lock and re-checked there. Not `requested_at`: a new change on a
   row a dead-lettered job left keeps the old `requested_at`, and sweeping by it would delete the
-  live window's record; the lock keeps a change that is still committing.
+  live window's record; the lock keeps a change that is still committing. Each candidate is a
+  short transaction of its own (at most `SWEEP_BATCH` = 5,000 per round, up to 200 rounds), so
+  the sweep never holds many key locks at once; the cost is one transaction per leftover row.
+  Leftover rows only come from dead-lettered deliveries, so the count is expected to stay small;
+  if it does not, batching several keys per transaction (locked in key order) is the next step.
 - Tests: `apps/worker/test/push.test.ts` holds the Expo request after the state read (a barrier,
   not a delay) and commits the change there, for both types; it failed before this change (no
   follow-up job) and covers the queued window, the exact 10-minute boundary, two concurrent
