@@ -1,4 +1,8 @@
-export default function HomePage() {
+import { connection } from 'next/server';
+
+/** Marketing surface (ADR-0021, ADR-0055): rendered per request for the CSP nonce. */
+export default async function HomePage() {
+  await connection();
   return (
     <main
       style={{
