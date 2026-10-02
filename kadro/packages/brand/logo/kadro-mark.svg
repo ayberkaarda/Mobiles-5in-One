@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="t">
+  <title id="t">Kadro mark</title>
+  <circle cx="64" cy="64" r="48" fill="none" stroke="#1B7F4B" stroke-width="16"/>
+  <circle cx="64" cy="64" r="14" fill="#FF6B1A"/>
+</svg>

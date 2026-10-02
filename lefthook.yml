@@ -1,0 +1,16 @@
+# Git hook definitions for the whole repository. Hooks are activated only when the
+# repository owner runs `pnpm --dir kadro exec lefthook install`.
+pre-commit:
+  parallel: true
+  commands:
+    gitleaks:
+      run: gitleaks git --pre-commit --staged --redact --no-banner
+    prettier:
+      root: kadro/
+      glob: '*.{js,mjs,cjs,ts,tsx,json,md,yml,yaml,css}'
+      run: pnpm exec prettier --check {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm --dir kadro exec commitlint --config commitlint.config.mjs --edit {1}

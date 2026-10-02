@@ -1,0 +1,15 @@
+# Extends the default gitleaks rules. The first allowlist entry covers a unit test
+# that builds throwaway keys at run time and passes them under the real variable names;
+# the second skips generated build output and installed dependencies.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Throwaway keys generated inside the environment schema tests"
+condition = "AND"
+paths = ['''kadro/packages/config/src/env\.test\.ts''']
+targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "Generated build output (Next.js preview and server-action keys) and installed dependencies"
+paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''']

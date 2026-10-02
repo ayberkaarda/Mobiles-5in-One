@@ -1,0 +1,281 @@
+# Worker operations
+
+`apps/worker` is a long-running Node.js process built on pg-boss. It is the only process that runs
+jobs; the web app only enqueues them (ADR-0028). This page covers what an operator needs to run,
+observe and recover it.
+
+Implementation status (Phase 2): queue bootstrap, the job runner (validation, idempotency, retries,
+dead letters, logging, metrics), graceful shutdown, the health signal and the handlers of
+`email.send`, `push.send`, `push.receipts`, `match.reminder`, `upload.process`,
+`account.hard_delete`, `opencall.expire` and `maintenance.sweep` are implemented. `venue.import`
+exists as a queue with its dead-letter queue; its handler ships with the admin area (Phase 5), and
+jobs sent to it wait in the queue until then.
+
+## Queues
+
+| Queue                 | Kind              | Concurrency | Retries                    | Dead letter                |
+| --------------------- | ----------------- | ----------- | -------------------------- | -------------------------- |
+| `email.send`          | on demand         | 4           | 5, exponential from 30 s   | `email.send.dead`          |
+| `push.send`           | on demand         | 4           | 3, exponential from 60 s   | `push.send.dead`           |
+| `push.receipts`       | delayed (+15 min) | 1           | 3, fixed 300 s             | `push.receipts.dead`       |
+| `match.reminder`      | delayed           | 1           | 2, 60 s                    | `match.reminder.dead`      |
+| `upload.process`      | on demand         | 2           | 2, 30 s                    | `upload.process.dead`      |
+| `account.hard_delete` | delayed (7 days)  | 1           | 10, exponential from 300 s | `account.hard_delete.dead` |
+| `opencall.expire`     | cron `5 * * * *`  | 1           | none (next run covers)     | `opencall.expire.dead`     |
+| `maintenance.sweep`   | cron `35 * * * *` | 1           | none (next run covers)     | `maintenance.sweep.dead`   |
+| `venue.import`        | admin (Phase 5)   | 1           | 2, 60 s (queue only)       | `venue.import.dead`        |
+
+The definitions live in `apps/worker/src/queues.ts`. Cron expressions run in `Europe/Istanbul`.
+Every source queue uses the pg-boss `exclusive` policy with `singletonKey = idempotencyKey`: while
+a job with a key is queued, retrying or active, a second send with the same key returns `null`
+and creates nothing. Dead-letter queues use the `standard` policy and keep jobs 14 days; completed
+jobs are deleted after 7 days. Job payloads contain ids only, never personal data or tokens.
+
+`maintenance.sweep` removes expired `email_tokens`, refresh tokens revoked or expired more than 30
+days ago, `rate_limit_buckets` windows older than 2 days, `job_receipts` older than 30 days and
+push tokens unseen for 60 days, and re-queues `account.hard_delete` (key
+`delete:<deletionRequestId>`) for requests whose grace period ended more than one hour ago. For
+uploads (ADR-0030) it rejects uploads still `pending` one hour after presign (`expired`, incoming
+object deleted), closes uploads still `processing` one hour after their last change when no
+`upload.process` job for them is queued, retrying or active (their job dead-lettered or was lost:
+`rejected` with `expired`, raw object and any WebP an attempt already published deleted), marks
+`ready` uploads that no avatar or badge references any more as `deleted`, and deletes media
+objects older than one hour that are neither referenced by `users.avatar_key` / `teams.badge_key`
+nor belong to an upload in `processing` (this also covers badges of teams deleted by their
+staff).
+
+### `upload.process` (ADR-0030)
+
+Payload `{ uploadId }`, key `upload:<uploadId>`. The handler continues only while the upload is
+`processing`; a second run completes as `skipped_status` and only removes a leftover raw object.
+
+1. `HEAD` the raw object `incoming/{kind}/{ownerId}/{uploadId}` in `R2_INCOMING_BUCKET`: missing →
+   `missing`; size different from `content_length` or outside 1..2 MiB → `size_mismatch`.
+2. Read at most 2 MiB; magic bytes decide the format (JPEG `FF D8 FF`, PNG signature,
+   `RIFF....WEBP`): unknown → `not_an_image`, different from the declared type → `type_mismatch`.
+3. `sharp` with `limitInputPixels` 25 000 000 (`too_many_pixels`), `failOn: 'error'`, first frame,
+   one libvips thread, 20 s timeout (`decode_failed`); EXIF orientation applied, fit inside
+   1024 × 1024 without enlargement, WebP quality 80, no metadata written.
+4. Permission re-check: avatar → uploader active; badge → uploader is captain or co-captain of an
+   existing team. Otherwise `not_allowed`.
+5. Put `{uploads.key}.webp` to `R2_MEDIA_BUCKET` (`Cache-Control: public, max-age=31536000,
+immutable`) with the job's abort signal; an attempt whose signal fired (expired job, stopping
+   worker) stops here and retries instead of applying. Then one transaction that locks the upload
+   and the target row: `avatar_key` / `badge_key` set to that key, the previous `ready` upload of
+   the same target `deleted`, this upload `ready`; a permission lost meanwhile is recorded as
+   `not_allowed` in the same transaction. The replaced object is deleted after the commit.
+6. The raw object is deleted in every outcome.
+
+Two runs of the same upload can overlap (a retry after an expiry, an operator re-send). Both write
+the same deterministic key; the run that finds the upload no longer `processing` under the lock
+completes as `skipped_status` and deletes the object it wrote only when the upload did not become
+`ready`, so the winner's published image always stays.
+
+Rejections complete the job as `rejected_<reason>` with the upload `rejected`; they never reach
+the dead-letter queue. Storage or database failures retry (`StorageError`, 2 retries, 30 s).
+
+### `account.hard_delete` (ADR-0032, ADR-0033)
+
+Payload `{ deletionRequestId }`, key `delete:<deletionRequestId>`, `startAfter = grace_until`.
+Runs only for a request that exists, is not completed, whose `grace_until` has passed and whose
+user is still deactivated; otherwise it completes as `skipped_grace_period`, `skipped_cancelled`,
+`skipped_missing` or `skipped_completed` without touching anything.
+
+Everything runs in one transaction. Lock order: deletion request → user → captained teams (id
+order) → matches with an RSVP of the user (id order).
+
+1. Decisions under the team locks: a captained team without other members is solo. Joining a
+   team needs a key-share lock on its row, so nobody can join between this decision and the
+   commit (a late join fails once the team is gone).
+2. Object storage before any database change: every object under `avatars/{userId}/` and
+   `incoming/avatar/{userId}/`, and for each solo team `badges/{teamId}/` and
+   `incoming/badge/{teamId}/`. Idempotent; a storage failure rolls the transaction back and the job
+   retries.
+3. Database effects: solo-captained teams deleted (cascades);
+   shared teams handed to the oldest co-captain, else the oldest member, with
+   `team.captaincyTransfer` audit rows (`reason: account_deleted`) and `is_pro_locked` set when the
+   new captain already owns a team without Pro; memberships and RSVPs on matches that are
+   `draft`/`open`/`locked` when read under their row lock removed with waitlist promotion (a match
+   that became `played` keeps the RSVP for the tombstone) (`rsvp.promoted` push); remaining RSVPs and both sides
+   of MVP votes moved to a new tombstone user (`Silinmiş oyuncu`, no personal fields); reviews and
+   open-call applications deleted, `venues.created_by` cleared; the user row deleted (cascades:
+   tokens, push tokens, subscriptions, uploads); request `completed_at` set (`external_pending`
+   records `revenuecat` only when a subscription existed); audit `account.deleted` with
+   `{ teamsDeleted, teamsTransferred, objectsDeleted }` and no actor.
+4. The `deletion_completed` email is sent before the commit with a 10 s timeout; a failure is
+   counted as `email_delivery_failed{kind=deletion_completed}` and never blocks the deletion.
+
+The `kadro_worker` grants of migration 0010 cover every statement; no further migration is needed.
+
+### Job lifecycle
+
+1. The payload is parsed with the `.strict()` schema of `packages/contracts` (`jobs.ts`). An
+   invalid payload is dead-lettered at once, without retry and without running the handler; the
+   log line lists only the failing paths and issue codes, never values.
+2. The handler re-checks current state and exits early with an outcome when the job is stale or
+   no longer allowed (`skipped_*`, `not_due`, `stale_dropped`, `capped`, ...).
+3. Database effects commit together with a `job_receipts(queue, idempotency_key)` row; a second
+   run of the same key completes as `duplicate`. External effects (Resend, Expo) happen before the
+   receipt is written and are at-least-once (ADR-0029, ADR-0031).
+4. Transient failures (network, 429, 5xx) retry with the queue's backoff; after the last retry the
+   job moves to `<queue>.dead`. Permanent failures complete with an outcome.
+
+### Database roles
+
+The worker connects with the login in `DATABASE_URL` and runs every session as `kadro_worker`
+(startup option `-c role=kadro_worker`), so the pg-boss tables are owned by the group role
+(migration 0010). The login must be a member of `kadro_worker`; locally the compose superuser
+qualifies. After creating the queues the worker calls
+`select public.kadro_grant_pgboss_send_access()`, which lets `kadro_app` start a send-only client
+(`SELECT` on `pgboss.version` and `pgboss.queue`, migration 0011) and insert jobs.
+
+## Configuration
+
+`packages/config` validates the worker environment at boot (`loadWorkerEnv`) and exits with the
+list of missing or invalid keys, without printing values.
+
+| Key                                             | Purpose                                                                      |
+| ----------------------------------------------- | ---------------------------------------------------------------------------- |
+| `NODE_ENV`, `APP_ENV`, `BUILD_SHA`, `LOG_LEVEL` | Runtime identity and log level                                               |
+| `DATABASE_URL`                                  | PostgreSQL; the login must be a member of `kadro_worker`                     |
+| `WEB_ORIGIN`                                    | Origin used to build email links; non-loopback `https://` outside local      |
+| `EMAIL_TRANSPORT`                               | `log` (local only) or `resend`; default `log` (ADR-0029)                     |
+| `RESEND_API_KEY`, `EMAIL_FROM`                  | Required for `resend`; `EMAIL_FROM` defaults to `Kadro <bildirim@kadro.app>` |
+| `PUSH_TRANSPORT`                                | `log` (local only) or `expo`; default `log` (ADR-0031)                       |
+| `EXPO_ACCESS_TOKEN`                             | Required for `expo` (enhanced push security)                                 |
+| `PUSH_HOURLY_CAP`                               | Global push sends per hour, 1..100 000, default 5 000                        |
+| `R2_ENDPOINT`                                   | S3-compatible endpoint (R2); non-loopback `https://` outside local           |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`      | Worker key: read/delete incoming, read/write/delete media                    |
+| `R2_INCOMING_BUCKET`, `R2_MEDIA_BUCKET`         | Private raw uploads and published media; must differ                         |
+
+`MEDIA_PUBLIC_BASE_URL` belongs to the web app, which builds public URLs; the worker only writes
+object keys. It must be `https://` in every environment, because the API contract requires https
+image URLs. Loopback `http://` is accepted only for `R2_ENDPOINT`, a server-side connection that
+never reaches API responses. See "Public media over https locally" below.
+
+`RESEND_API_KEY`, `EXPO_ACCESS_TOKEN` and the R2 secret are on the rotation list of
+`docs/security/history-purge-runbook.md`.
+
+## Running locally
+
+Prerequisites: Docker running, Node.js from `.nvmrc`, `pnpm install` done.
+
+1. Configuration, once: `cp .env.example .env`. The worker section already selects
+   `EMAIL_TRANSPORT=log` and `PUSH_TRANSPORT=log` and the local storage values.
+2. Database: `pnpm db:up` (PostgreSQL + PostGIS container of `docker-compose.yml`).
+3. Object storage: until `docker-compose.yml` has its storage service (handoff
+   `worker-to-config-001`), start a throw-away S3-compatible server on port 9000, for example
+   SeaweedFS (accepts the local key pair, data kept in memory):
+   ```sh
+   docker run --rm -d --name kadro-local-s3 --tmpfs /data -p 127.0.0.1:9000:8333 chrislusf/seaweedfs:4.48 server -dir=/data -s3 -volume.max=50 -master.volumeSizeLimitMB=64
+   ```
+   The smoke script creates both buckets when they are missing. Stop it with
+   `docker stop kadro-local-s3`.
+4. Schema:
+   ```sh
+   pnpm --filter @kadro/db build
+   pnpm --filter @kadro/db db:migrate
+   ```
+5. Worker, in its own terminal:
+   ```sh
+   pnpm worker:dev
+   ```
+   Wait for the JSON line `"msg":"worker ready"`; it lists the queues and both transports (`log`).
+6. Demonstration, in a second terminal:
+   ```sh
+   pnpm --filter @kadro/worker smoke
+   ```
+   The script (`apps/worker/scripts/smoke.ts`) refuses to run outside `APP_ENV=local`, seeds a few
+   rows labelled `Duman`, enqueues a verification email, a forgot-password request without an
+   account, a push, a T-2 h match reminder, an avatar upload (raw PNG in the incoming bucket), an
+   account deletion whose grace period is over, an open-call expiry and a sweep, waits for the
+   worker to complete each job, checks the effects (one token hash stored, reminder fanned out to
+   the confirmed players, WebP published and raw object removed, account removed and request
+   completed, expired call with its application rejected), prints one `OK`/`FAIL` line per check
+   and removes the seeded rows and objects. Exit code 0 means every check passed.
+7. In the worker terminal the verification email appears as `email (log transport)` with the link
+   `http://localhost:3000/e-posta-dogrula#token=...`, and pushes as `push (log transport)` with
+   their fixed Turkish text. These transports are refused outside `APP_ENV=local`.
+8. Health: `pnpm --filter @kadro/worker build && pnpm --filter @kadro/worker healthcheck` prints
+   `kadro-worker healthy` while the worker runs.
+9. Stop with Ctrl+C: the worker stops fetching, waits for active jobs and exits.
+
+The full stack (`docker compose up --build`) runs the worker container next to web and Postgres.
+Start order in every environment: migrations, then the worker (creates the queues and grants the
+web role), then the web app.
+
+### Public media over https locally
+
+Image URLs in API responses are `MEDIA_PUBLIC_BASE_URL` plus the object key and must be `https://`;
+the web app refuses a plain `http://` value at boot. Leave the variable empty and every image URL
+is `null`, which is enough for most local work. To see real images:
+
+1. Create a certificate for `localhost` from a locally trusted authority. A tool such as mkcert
+   does this: it installs a local root into the system trust store and issues the certificate
+   (suggestion only; nothing in the repository runs it).
+2. Put a TLS-terminating reverse proxy in front of the storage service's media bucket, for example
+   `https://localhost:9443` forwarding to `http://localhost:9000`, using that certificate.
+3. Set `MEDIA_PUBLIC_BASE_URL=https://localhost:9443/kadro-media` in `.env`. `R2_ENDPOINT` keeps
+   `http://localhost:9000`: it is the server-side storage connection and never appears in
+   responses.
+4. Open an image URL in the browser or simulator. It must load without a certificate warning; if
+   the device does not trust the local root, install the root on it. Do not disable certificate
+   verification in the app or in Node (`NODE_TLS_REJECT_UNAUTHORIZED=0` is not an option).
+
+Tests: `pnpm --filter @kadro/worker test` starts its own disposable PostGIS container (Docker
+required), runs real pg-boss against it with two login roles (`kadro_worker`, `kadro_app`
+members) and fake Resend, Expo and S3 servers on loopback (the S3 fake records the order of
+operations and can fail chosen requests), and removes the container afterwards.
+
+## Observing
+
+- Logs are JSON lines (`service: kadro-worker`). Every job line carries `queue`, `jobId`,
+  `retryCount`, `idempotencyKey`, the producer's `requestId` when the payload has one, `outcome`
+  and `durationMs`. Emails are masked, tokens, device tokens and credentials redacted; payload
+  values of rejected jobs are never logged.
+- Metrics (structured log lines with `metric`): `job_completed{queue,outcome}`,
+  `job_failed{queue}`, `job_dead_lettered{queue,reason}`, `email_delivery_failed{kind,reason}`,
+  `email_stale_dropped{kind}`, `push_capped{type}`, `push_ticket_error{code}`,
+  `push_receipt_error{code}`.
+- Alerts in preview and production: any `job_dead_lettered`, any `push_capped`, and a queue whose
+  oldest queued job is older than 15 minutes.
+- Health: the worker writes `<tmpdir>/kadro-worker/health.json`; `ready` only after the queues and
+  handlers are set up, refreshed by a database probe every 30 s. The container `HEALTHCHECK` runs
+  `node dist/healthcheck.js`, which fails when the status is not `ready` or older than 90 s.
+
+Queue depth from SQL (read-only):
+
+```sql
+select name, state, count(*)
+from pgboss.job
+group by name, state
+order by name, state;
+```
+
+## Recovering
+
+- **Dead letters.** Inspect the payload (ids only) and `output` (error type, SQLSTATE or HTTP
+  status) of the job in `<queue>.dead`. Fix the cause, then move it back with pg-boss
+  `redrive('<queue>.dead')` or re-send the payload to the original queue with the same
+  `idempotencyKey`; handlers are idempotent, so a re-send of already applied work completes as
+  `duplicate`.
+- **Rejected uploads.** Nothing to recover: the client sees `rejected` with its reason and uploads
+  again. An upload whose job dead-lettered while it was `processing` can be re-sent with key
+  `upload:<uploadId>` once storage is reachable; without action the sweep closes it as `expired`
+  one hour later and removes its objects.
+- **Overdue deletion.** No action needed: `maintenance.sweep` re-queues deletion requests whose
+  grace period ended more than one hour ago. A dead-lettered `account.hard_delete` is a priority
+  incident (personal data kept beyond the promised period).
+- **Stopping.** `SIGTERM` stops fetching and waits up to 30 s for running jobs; a job still running
+  at the deadline is handed back for retry and runs again on the next instance (idempotent). The
+  container stop grace period is 40 s.
+- **Scaling.** One instance is the default. A second instance needs no configuration change:
+  pg-boss hands each job and each cron slot to one instance only, and queue bootstrap is
+  idempotent.
+
+## Adding the deferred handler
+
+`venue.import` is marked `queue_only` in
+`src/queues.ts`. A handler is added by writing it against its contract schema, registering it in
+the `handlers` map of `src/runtime.ts` and setting the queue's `stage` to `active`; the runner
+supplies validation, dead-lettering, receipts helpers (`src/idempotency.ts`), logging and metrics.

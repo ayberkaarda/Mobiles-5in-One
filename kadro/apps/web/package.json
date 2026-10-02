@@ -1,0 +1,49 @@
+{
+  "name": "@kadro/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kadro marketing site, SEO pages and REST API (/api/v1).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "imports": {
+    "#auth-warm-up": {
+      "edge-light": "./lib/server/auth/warm-up.edge.ts",
+      "default": "./lib/server/auth/warm-up.ts"
+    }
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env ./node_modules/next/dist/bin/next dev --port 3000",
+    "build": "next build",
+    "start": "node --env-file-if-exists=../../.env ./node_modules/next/dist/bin/next start --port 3000",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint . ../../scripts/security --max-warnings 0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1144.0",
+    "@aws-sdk/s3-request-presigner": "3.1144.0",
+    "@kadro/auth": "workspace:*",
+    "@kadro/config": "workspace:*",
+    "@kadro/contracts": "workspace:*",
+    "@kadro/db": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "jose": "6.2.12",
+    "next": "16.3.8",
+    "pg": "8.23.1",
+    "pg-boss": "12.35.1",
+    "pino": "10.3.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "eslint": "9.39.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
+}

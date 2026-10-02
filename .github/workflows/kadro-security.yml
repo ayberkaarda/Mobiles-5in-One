@@ -1,0 +1,109 @@
+name: Kadro Security
+
+# Security checklist items 1, 2 and 19 (Phase 1 part): secret scan of the full Git history,
+# dependency audit and the repository secret grep. Actions are pinned to full commit SHAs;
+# the gitleaks binary is downloaded from its GitHub release and checked against its SHA-256.
+# The workflow lives at the Git repository root; Kadro is the kadro/ subdirectory.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kadro/**'
+      - '.github/workflows/kadro-*.yml'
+      - '.gitleaks.toml'
+  pull_request:
+    paths:
+      - 'kadro/**'
+      - '.github/workflows/kadro-*.yml'
+      - '.gitleaks.toml'
+  schedule:
+    # Weekly, so new advisories and new gitleaks rules surface without a code change.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kadro-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: kadro
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  gitleaks:
+    name: Gitleaks (full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Scans every commit of every ref from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        working-directory: .
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  audit:
+    name: Dependency audit (high and critical)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in kadro/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: kadro/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: kadro/.nvmrc
+
+      # Reads kadro/pnpm-lock.yaml; no install and no lifecycle scripts run.
+      - name: pnpm audit
+        run: pnpm audit --audit-level=high
+
+  secret-grep:
+    name: Secret grep
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: kadro/.nvmrc
+
+      # Node.js 22.18+ runs the TypeScript file directly; the script has no dependencies.
+      - name: Scan working tree
+        run: node scripts/security/secret-grep.ts

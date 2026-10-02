@@ -1,0 +1,3 @@
+ALTER TABLE "deletion_requests" ADD COLUMN "external_pending" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+CREATE INDEX "deletion_requests_external_pending_idx" ON "deletion_requests" USING btree ("id") WHERE cardinality("deletion_requests"."external_pending") > 0;--> statement-breakpoint
+ALTER TABLE "deletion_requests" ADD CONSTRAINT "deletion_requests_external_pending_values" CHECK ("deletion_requests"."external_pending" <@ array['revenuecat']::text[]);

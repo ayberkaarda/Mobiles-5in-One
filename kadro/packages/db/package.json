@@ -1,0 +1,57 @@
+{
+  "name": "@kadro/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drizzle ORM schema, SQL migrations and seed data for PostgreSQL 16 + PostGIS.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./migrate": {
+      "types": "./dist/migrate.d.ts",
+      "import": "./dist/migrate.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    },
+    "./seed": {
+      "types": "./dist/seed/index.d.ts",
+      "import": "./dist/seed/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate": "node --env-file-if-exists=../../.env dist/cli/migrate.js",
+    "db:seed": "node --env-file-if-exists=../../.env dist/cli/seed.js"
+  },
+  "dependencies": {
+    "@kadro/config": "workspace:*",
+    "@kadro/contracts": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.1",
+    "uuid": "14.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "pg-boss": "12.35.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
+}

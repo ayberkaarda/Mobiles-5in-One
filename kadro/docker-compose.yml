@@ -1,0 +1,111 @@
+# Local development stack: PostgreSQL 16 + PostGIS, web (Next.js + API) and worker (pg-boss).
+#
+#   cp .env.example .env
+#   docker compose up -d postgres db-roles   # database + application login roles
+#   pnpm --filter @kadro/db db:migrate        # schema (from the host, as POSTGRES_USER)
+#   docker compose up --build                 # full stack on http://localhost:3000
+#
+# Start order in every environment: migrations, then the worker (creates the pg-boss queues and
+# grants the web role send access), then the web app.
+#
+# Database roles (migration 0010): `kadro_app` (web) and `kadro_worker` are NOLOGIN group roles.
+# The one-shot `db-roles` service creates the local login roles `kadro_app_user` and
+# `kadro_worker_user`, sets their passwords from KADRO_APP_DB_PASSWORD / KADRO_WORKER_DB_PASSWORD
+# in .env and grants group membership. It is idempotent, runs on every `up` (fresh or existing
+# volume) and also creates the group roles if migrations have not run yet. The containers connect
+# with these logins; host-side tools (`pnpm dev`, migrations, tests) keep using DATABASE_URL from
+# .env (the compose superuser). Preview and production logins are created by operators the same
+# way, with passwords from the secret store (docs/ops).
+#
+# Production hosting is described in docs/adr/0002-hosting.md and docs/ops/README.md.
+
+name: kadro
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Creates or updates the application login roles, then exits. Passwords are read inside psql
+  # with \getenv, so they never appear on a command line or in this file.
+  db-roles:
+    image: postgis/postgis:16-3.5-alpine
+    restart: 'no'
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      PGOPTIONS: -c client_min_messages=warning
+      KADRO_APP_DB_PASSWORD: ${KADRO_APP_DB_PASSWORD:?set KADRO_APP_DB_PASSWORD in .env}
+      KADRO_WORKER_DB_PASSWORD: ${KADRO_WORKER_DB_PASSWORD:?set KADRO_WORKER_DB_PASSWORD in .env}
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        psql -X -q -v ON_ERROR_STOP=1 <<'SQL'
+        \getenv app_password KADRO_APP_DB_PASSWORD
+        \getenv worker_password KADRO_WORKER_DB_PASSWORD
+        SELECT format('CREATE ROLE %I NOLOGIN', r) FROM unnest(ARRAY['kadro_app', 'kadro_worker']) AS r
+          WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) \gexec
+        SELECT format('CREATE ROLE %I LOGIN', r) FROM unnest(ARRAY['kadro_app_user', 'kadro_worker_user']) AS r
+          WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) \gexec
+        ALTER ROLE kadro_app_user WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT PASSWORD :'app_password';
+        ALTER ROLE kadro_worker_user WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT PASSWORD :'worker_password';
+        GRANT kadro_app TO kadro_app_user;
+        GRANT kadro_worker TO kadro_worker_user;
+        SQL
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://kadro_app_user:${KADRO_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://kadro_worker_user:${KADRO_WORKER_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    # The worker stops fetching on SIGTERM and gives active jobs 30 s to finish
+    # (apps/worker runtime); 40 s leaves room for closing the pool before SIGKILL.
+    # Health comes from the image's HEALTHCHECK (node dist/healthcheck.js).
+    stop_grace_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:

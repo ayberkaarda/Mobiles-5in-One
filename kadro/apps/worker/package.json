@@ -1,0 +1,39 @@
+{
+  "name": "@kadro/worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kadro background job runner built on pg-boss.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node --env-file-if-exists=../../.env --watch --import tsx src/main.ts",
+    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "healthcheck": "node dist/healthcheck.js",
+    "smoke": "node --env-file-if-exists=../../.env --import tsx scripts/smoke.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1144.0",
+    "@kadro/config": "workspace:*",
+    "@kadro/contracts": "workspace:*",
+    "@kadro/db": "workspace:*",
+    "@kadro/emails": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.1",
+    "pg-boss": "12.35.1",
+    "pino": "10.3.1",
+    "sharp": "0.35.5",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
+}

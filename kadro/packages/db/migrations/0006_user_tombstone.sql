@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "is_tombstone" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_tombstone_has_no_personal_data" CHECK (not "users"."is_tombstone" or ("users"."password_hash" is null and "users"."apple_sub" is null and "users"."google_sub" is null and "users"."avatar_key" is null and "users"."position" is null and "users"."level" is null and "users"."district_id" is null and "users"."totp_secret_enc" is null and "users"."deactivated_at" is not null));

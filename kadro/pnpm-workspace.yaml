@@ -1,0 +1,52 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Dependency lifecycle scripts are denied unless listed here with `true`.
+# Review every new entry: install scripts run arbitrary code on developer machines and CI.
+allowBuilds:
+  esbuild: true
+  # Git hooks are installed explicitly by the repository owner (`pnpm exec lefthook install`),
+  # never implicitly during dependency installation.
+  lefthook: false
+
+# Align auto-installed peers with the versions bundled by Expo SDK 57 / React Native 0.86.
+overrides:
+  '@react-native/metro-config': 0.86.3
+  react-native-worklets: 0.10.1
+
+# pnpm enforces a minimum release age for new versions. The entries below were added when the
+# workspace was scaffolded with the latest stable releases (see docs/adr/0001-stack-and-versions.md).
+
+minimumReleaseAgeExclude:
+  - '@next/env@16.3.8'
+  - '@next/eslint-plugin-next@16.3.8'
+  - '@next/swc-darwin-arm64@16.3.8'
+  - '@next/swc-darwin-x64@16.3.8'
+  - '@next/swc-linux-arm64-gnu@16.3.8'
+  - '@next/swc-linux-arm64-musl@16.3.8'
+  - '@next/swc-linux-x64-gnu@16.3.8'
+  - '@next/swc-linux-x64-musl@16.3.8'
+  - '@next/swc-win32-arm64-msvc@16.3.8'
+  - '@next/swc-win32-x64-msvc@16.3.8'
+  - '@turbo/darwin-64@2.11.6'
+  - '@turbo/darwin-arm64@2.11.6'
+  - '@turbo/linux-64@2.11.6'
+  - '@turbo/linux-arm64@2.11.6'
+  - '@turbo/windows-64@2.11.6'
+  - '@turbo/windows-arm64@2.11.6'
+  - '@vitest/mocker@5.0.3'
+  - '@vitest/spy@5.0.3'
+  - eslint-plugin-security@4.2.0
+  - globals@17.13.0
+  - next@16.3.8
+  - pg-boss@12.35.1
+  - pg-cloudflare@1.4.1
+  - pg-connection-string@2.14.1
+  - pg-protocol@1.16.1
+  - pg@8.23.1
+  - turbo@2.11.6
+  - vite@8.3.2
+  - vitest@5.0.3
+  - '@aws-sdk/client-s3@3.1144.0'
+  - '@aws-sdk/s3-request-presigner@3.1144.0'
