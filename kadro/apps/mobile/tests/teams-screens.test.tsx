@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -144,6 +144,17 @@ function serveTeam(initial: TeamDetail, { offlineAfterFirstRead = false } = {}) 
   };
 }
 
+/**
+ * Lets pending work run (query effects, fetches through the client, MSW handlers) before a test
+ * asserts that something did not happen; an assertion right after a press would pass even if a
+ * request were about to go out.
+ */
+async function settle(ms = 50): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  });
+}
+
 function lastRouterCall() {
   return routerCalls().at(-1);
 }
@@ -203,7 +214,13 @@ describe('create team', () => {
     await fireEvent.changeText(await screen.findByLabelText('Takım adı'), ' A ');
     await fireEvent.press(screen.getByRole('button', { name: 'Takımı kur' }));
     expect(screen.getByText('Takım adı en az 2 karakter olmalı.')).toBeTruthy();
+    await settle();
     expect(bodies).toEqual([]);
+    // A valid name goes out as the one and only request.
+    await fireEvent.changeText(screen.getByLabelText('Takım adı'), 'Yıldızlar FK');
+    await fireEvent.press(screen.getByRole('button', { name: 'Takımı kur' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies).toEqual([{ name: 'Yıldızlar FK', districtId: DISTRICT_ID }]);
   });
 
   it('creates the team in the profile district and opens it', async () => {
@@ -277,7 +294,13 @@ describe('join with a code', () => {
         'Bu bir davet bağlantısı ya da davet kodu değil. Bağlantının tamamını yapıştır.',
       ),
     ).toBeTruthy();
+    await settle();
     expect(calls).toEqual([]);
+    // A real code afterwards is previewed once: nothing else was sent for the bad input.
+    await fireEvent.changeText(screen.getByLabelText('Davet bağlantısı ya da kodu'), CODE);
+    await fireEvent.press(screen.getByRole('button', { name: 'Daveti göster' }));
+    expect(await screen.findByText('7 oyuncu')).toBeTruthy();
+    expect(calls).toEqual(['preview']);
   });
 
   it('previews a pasted link, joins and opens the team', async () => {
@@ -319,10 +342,18 @@ describe('join with a code', () => {
   });
 
   it('rejects a malformed link code without a request', async () => {
-    const calls = serveInvite();
+    serveMe();
+    const calls: string[] = [];
+    mswServer.use(
+      http.all(apiUrl('/api/v1/invites/*'), ({ request }) => {
+        calls.push(new URL(request.url).pathname);
+        return problem(404, 'not_found');
+      }),
+    );
     __setSearchParams({ code: 'short' });
     await render(<InviteLinkScreen />);
     expect(screen.getByRole('header', { name: 'Davet geçersiz' })).toBeTruthy();
+    await settle();
     expect(calls).toEqual([]);
   });
 
@@ -791,6 +822,209 @@ describe('invites', () => {
     __setSearchParams({ id: TEAM_ID });
     await render(<TeamInvitesScreen />);
     expect(await screen.findByTestId('invites-staff-only')).toBeTruthy();
+    await settle();
     expect(calls).toEqual([]);
+  });
+});
+
+describe('writes return at once and show their state', () => {
+  /** A connection that accepts the request and never answers (weak signal). */
+  const hang = () => new Promise<never>(() => undefined);
+
+  it('goes back after a removal although the roster refetch never answers', async () => {
+    serveMe();
+    let reads = 0;
+    mswServer.use(
+      http.get(apiUrl(`/api/v1/teams/${TEAM_ID}`), async () => {
+        reads += 1;
+        if (reads > 1) {
+          return hang();
+        }
+        return HttpResponse.json(detail('captain'));
+      }),
+      http.delete(
+        apiUrl(`/api/v1/teams/${TEAM_ID}/members/${MERT_ID}`),
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    __setSearchParams({ id: TEAM_ID, userId: MERT_ID });
+    await render(<MemberScreen />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Takımdan çıkar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Çıkar' }));
+    await waitFor(() =>
+      expect(lastRouterCall()).toEqual({ method: 'replace', href: `/takim/${TEAM_ID}` }),
+    );
+    expect(reads).toBe(2);
+  });
+
+  it('leaves the team at once although the team list refetch never answers', async () => {
+    serveMe();
+    serveTeam(detail('player'));
+    let listReads = 0;
+    mswServer.use(
+      http.get(apiUrl('/api/v1/teams'), async () => {
+        listReads += 1;
+        if (listReads > 1) {
+          return hang();
+        }
+        return HttpResponse.json({ items: [summary({ myRole: 'player' })], nextCursor: null });
+      }),
+      http.delete(
+        apiUrl(`/api/v1/teams/${TEAM_ID}/members/${ME_ID}`),
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    __setSearchParams({ id: TEAM_ID });
+    // The tab stays mounted under the team screen, so its list is refetched after leaving.
+    await render(
+      <>
+        <TeamsTab />
+        <TeamDetailScreen />
+      </>,
+    );
+    await screen.findByRole('button', { name: 'Yıldızlar FK, Oyuncu · 3 oyuncu' });
+    await fireEvent.press(await screen.findByRole('button', { name: 'Takımdan ayrıl' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ayrıl' }));
+    await waitFor(() => expect(lastRouterCall()).toEqual({ method: 'replace', href: '/takimlar' }));
+    expect(listReads).toBe(2);
+  });
+
+  it('keeps a roster that a refetch brought in while a refused change was on its way', async () => {
+    serveMe();
+    let reads = 0;
+    const gate = deferred();
+    mswServer.use(
+      http.get(apiUrl(`/api/v1/teams/${TEAM_ID}`), () => {
+        reads += 1;
+        if (reads === 1) {
+          return HttpResponse.json(detail('captain'));
+        }
+        if (reads === 2) {
+          return HttpResponse.json(
+            detail('captain', {
+              members: [
+                member(ALI, 'captain'),
+                member(ZEYNEP, 'co_captain'),
+                member({ ...MERT, displayName: 'Mert Yılmaz' }, 'player'),
+              ],
+            }),
+          );
+        }
+        return HttpResponse.error();
+      }),
+      http.patch(apiUrl(`/api/v1/teams/${TEAM_ID}/members/${MERT_ID}`), async () => {
+        await gate.promise;
+        return problem(403, 'forbidden');
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    __setSearchParams({ id: TEAM_ID, userId: MERT_ID });
+    await render(<MemberScreen />, queryClient);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Yardımcı kaptan yap' }));
+    await act(() => queryClient.refetchQueries({ queryKey: queryKeys.teamDetail(TEAM_ID) }));
+    gate.resolve();
+    expect(await screen.findByText('Bu işlem için yetkin yok.')).toBeTruthy();
+    await waitFor(() => expect(reads).toBeGreaterThanOrEqual(3));
+    const cached = queryClient.getQueryData<TeamDetail>(queryKeys.teamDetail(TEAM_ID));
+    const mert = cached?.members.find((entry) => entry.user.id === MERT_ID);
+    expect(mert?.user.displayName).toBe('Mert Yılmaz');
+    expect(mert?.role).toBe('player');
+  });
+
+  it('marks the running removal busy and the other roster rows disabled', async () => {
+    serveMe();
+    serveTeam(detail('captain'));
+    const gate = deferred();
+    mswServer.use(
+      http.delete(apiUrl(`/api/v1/teams/${TEAM_ID}/members/${MERT_ID}`), async () => {
+        await gate.promise;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    __setSearchParams({ id: TEAM_ID, userId: MERT_ID });
+    await render(
+      <>
+        <TeamDetailScreen />
+        <MemberScreen />
+      </>,
+    );
+    const zeynepRow = await screen.findByRole('button', {
+      name: 'Zeynep, Yardımcı kaptan · Orta saha',
+    });
+    expect(zeynepRow.props.accessibilityState).toEqual({ disabled: false });
+    await fireEvent.press(screen.getByRole('button', { name: 'Takımdan çıkar' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Çıkar' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Takımdan çıkar' }).props.accessibilityState,
+      ).toEqual({ disabled: true, busy: true }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Zeynep, Yardımcı kaptan · Orta saha' }).props
+        .accessibilityState,
+    ).toEqual({ disabled: true });
+    gate.resolve();
+    await waitFor(() => expect(routerCalls()).toHaveLength(1));
+  });
+
+  it('marks a running revoke busy', async () => {
+    serveMe();
+    serveTeam(detail('captain'));
+    const gate = deferred();
+    mswServer.use(
+      http.get(apiUrl(`/api/v1/teams/${TEAM_ID}/invites`), () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: INVITE_ID,
+              createdAt: '2026-10-01T10:00:00.000Z',
+              expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+              uses: 0,
+              maxUses: 20,
+            },
+          ],
+          nextCursor: null,
+        }),
+      ),
+      http.delete(apiUrl(`/api/v1/teams/${TEAM_ID}/invites/${INVITE_ID}`), async () => {
+        await gate.promise;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    __setSearchParams({ id: TEAM_ID });
+    await render(<TeamInvitesScreen />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Daveti iptal et' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'İptal et' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Daveti iptal et' }).props.accessibilityState,
+      ).toEqual({ disabled: true, busy: true }),
+    );
+    gate.resolve();
+  });
+});
+
+describe('member screen while the own profile loads', () => {
+  it('shows progress, then a retry on failure, and offers actions only once it is known', async () => {
+    serveTeam(detail('captain'));
+    const gate = deferred();
+    let fail = true;
+    mswServer.use(
+      http.get(apiUrl('/api/v1/me'), async () => {
+        await gate.promise;
+        return fail ? problem(500, 'internal_error', 'req-me-1') : HttpResponse.json(me());
+      }),
+    );
+    __setSearchParams({ id: TEAM_ID, userId: ME_ID });
+    await render(<MemberScreen />);
+    expect(await screen.findByTestId('member-viewer-loading')).toBeTruthy();
+    expect(screen.queryByTestId('member-no-actions')).toBeNull();
+    gate.resolve();
+    expect(await screen.findByText('Hata kodu: req-me-1')).toBeTruthy();
+    expect(screen.queryByTestId('member-no-actions')).toBeNull();
+    fail = false;
+    await fireEvent.press(screen.getByRole('button', { name: 'Tekrar dene' }));
+    // Own row of the captain: now known, so the screen can say there is nothing to change.
+    expect(await screen.findByTestId('member-no-actions')).toBeTruthy();
   });
 });
