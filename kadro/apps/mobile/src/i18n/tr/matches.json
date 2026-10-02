@@ -190,6 +190,11 @@
     "markUnpaid": "Ödemedi olarak işaretle",
     "markPaidFor": "{{name}} ödedi olarak işaretle",
     "markUnpaidFor": "{{name}} ödemedi olarak işaretle",
-    "selfByCaptain": "Kendi ödemeni kaptan işaretler."
+    "selfByCaptain": "Kendi ödemeni kaptan işaretler.",
+    "collectedAtLeast": "Toplanan (en az)",
+    "uneven": "Ücret oyuncu sayısına tam bölünmüyor: bazı paylar 1 kuruş fazladır. Satırlarda taban pay, senin satırında kesin payın görünür."
+  },
+  "role": {
+    "errorTitle": "Takımdaki rolün yüklenemedi"
   }
 }

@@ -8,6 +8,7 @@ import {
   ChoiceGroup,
   MatchScreen,
   matchHref,
+  RoleError,
   SectionTitle,
 } from '../../../../../src/matches/components';
 import { type LineupSide } from '../../../../../src/matches/contracts';
@@ -38,7 +39,7 @@ export default function LineupScreen() {
   const { t } = useTranslation('matches');
   const { t: tt } = useTranslation('teams');
   const theme = useTheme();
-  const { matchId, teamId, query, match, myUserId, role } = useMatchScreen();
+  const { matchId, teamId, query, match, myUserId, role, roleError, retryRole } = useMatchScreen();
   const save = useSetLineup(matchesApi, matchId, teamId);
   const busy = useMatchBusy(matchId);
   const action = useAsyncAction();
@@ -124,6 +125,7 @@ export default function LineupScreen() {
       testID="lineup-screen"
     >
       <CachedNotice visible={query.isError} />
+      {roleError === null ? null : <RoleError error={roleError} onRetry={retryRole} />}
       {confirmed.length === 0 ? (
         <Section>
           <Notice testID="lineup-empty">{t('lineup.empty')}</Notice>

@@ -50,9 +50,20 @@ export function predictedRsvp(match: MatchDetail, choice: RsvpChoice): RsvpStatu
     return current;
   }
   if (match.projection === 'guest') {
+    // A guest is never waitlisted; the hook does not apply this in advance (see `predictable`).
     return 'in';
   }
   return match.counts.in < match.slots ? 'in' : 'waitlist';
+}
+
+/**
+ * Whether the answer to a choice can be shown before the server confirms it. A guest's `in` cannot:
+ * the guest projection carries no slots or counts, and a full match answers a guest with 409
+ * `match_full`, never with the waitlist (footnote 14); predicting `in` would show a place the
+ * guest does not get. That one write is pessimistic.
+ */
+export function predictable(match: MatchDetail, choice: RsvpChoice): boolean {
+  return !(match.projection === 'guest' && choice === 'in' && myRsvpStatus(match) !== 'in');
 }
 
 /** The match with the actor's RSVP set to `status`; a player who leaves `in` loses side and paid. */
@@ -136,7 +147,7 @@ export function useSetRsvp(matches: MatchesApi, matchId: string, teamId: string)
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData<MatchDetail>(key);
       const optimistic =
-        previous === undefined
+        previous === undefined || !predictable(previous, choice)
           ? undefined
           : client.setQueryData<MatchDetail>(
               key,
@@ -145,7 +156,12 @@ export function useSetRsvp(matches: MatchesApi, matchId: string, teamId: string)
       return { previous, optimistic };
     },
     onSuccess: (own, { myUserId }, context) => {
-      if (context.optimistic !== undefined && client.getQueryData(key) === context.optimistic) {
+      if (context.optimistic === undefined) {
+        // Not shown in advance: write the server's answer into the match now.
+        client.setQueryData<MatchDetail>(key, (match) =>
+          match === undefined ? match : withOwnRsvp(match, myUserId, own.status),
+        );
+      } else if (client.getQueryData(key) === context.optimistic) {
         client.setQueryData<MatchDetail>(
           key,
           withOwnRsvp(context.optimistic, myUserId, own.status),
