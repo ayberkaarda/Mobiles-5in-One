@@ -313,14 +313,23 @@ describe('recordPushResendForRecipient', () => {
         release = resolve;
       });
       let ready: () => void = () => undefined;
-      const isReady = new Promise<void>((resolve) => {
+      let failed: (error: unknown) => void = () => undefined;
+      const isReady = new Promise<void>((resolve, reject) => {
         ready = resolve;
+        failed = reject;
       });
       const holder = db.transaction(async (tx) => {
-        await hold(tx);
+        try {
+          await hold(tx);
+        } catch (error) {
+          failed(error);
+          throw error;
+        }
         ready();
         await gate;
       });
+      // Avoid an unhandled rejection when `hold` fails; the failure surfaces through `isReady`.
+      holder.catch(() => undefined);
       await isReady;
       return { release, done: holder };
     }

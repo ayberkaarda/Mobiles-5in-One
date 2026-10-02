@@ -5,6 +5,7 @@ import {
   jobReceipts,
   lockPushResend,
   pushResends,
+  setLockTimeout,
   pushTokens,
   rateLimitBuckets,
   refreshTokens,
@@ -85,9 +86,26 @@ async function deleteInBatches(
 /**
  * Deletes pending push re-sends not touched since `cutoff` (ADR-0044). Each row is re-checked under
  * its key's lock, the one the web producer holds while it records a change: a leftover row that a
- * new change refreshed, or is refreshing, belongs to a live window and stays.
+ * new change refreshed, or is refreshing, belongs to a live window and stays. A key whose lock
+ * cannot be had within the lock timeout is skipped, so one stuck producer does not fail the run.
  */
-async function sweepPushResends(db: Database, cutoff: Date): Promise<number> {
+/** SQLSTATE `lock_not_available`, raised when a lock wait exceeds `lock_timeout`. */
+function isLockNotAvailable(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    if ((current as { code?: unknown }).code === '55P03') {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+export async function sweepPushResends(
+  db: Database,
+  cutoff: Date,
+  lockTimeoutMs?: number,
+): Promise<number> {
   let total = 0;
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     const candidates = await db
@@ -97,14 +115,22 @@ async function sweepPushResends(db: Database, cutoff: Date): Promise<number> {
       .orderBy(asc(pushResends.updatedAt))
       .limit(SWEEP_BATCH);
     for (const candidate of candidates) {
-      total += await db.transaction(async (tx) => {
-        await lockPushResend(tx, candidate.singletonKey);
-        const deleted = await tx
-          .delete(pushResends)
-          .where(and(eq(pushResends.id, candidate.id), lt(pushResends.updatedAt, cutoff)))
-          .returning({ id: pushResends.id });
-        return deleted.length;
-      });
+      try {
+        total += await db.transaction(async (tx) => {
+          await setLockTimeout(tx, lockTimeoutMs);
+          await lockPushResend(tx, candidate.singletonKey);
+          const deleted = await tx
+            .delete(pushResends)
+            .where(and(eq(pushResends.id, candidate.id), lt(pushResends.updatedAt, cutoff)))
+            .returning({ id: pushResends.id });
+          return deleted.length;
+        });
+      } catch (error) {
+        // A key whose lock is held belongs to a live window; the next sweep looks at it again.
+        if (!isLockNotAvailable(error)) {
+          throw error;
+        }
+      }
     }
     if (candidates.length < SWEEP_BATCH) {
       break;

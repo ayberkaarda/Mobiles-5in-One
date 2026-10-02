@@ -30,7 +30,7 @@ import { DAY_MS, HOUR_MS } from '../src/clock.js';
 import { sha256Hex } from '../src/email/tokens.js';
 import { bossExecutor, enqueue } from '../src/enqueue.js';
 import { type JobContext, runJob } from '../src/job-runner.js';
-import { hardDeleteIdempotencyKey } from '../src/maintenance/sweep.js';
+import { hardDeleteIdempotencyKey, sweepPushResends } from '../src/maintenance/sweep.js';
 import { settleCoalesced } from '../src/push/resend.js';
 import { QUEUE_DEFINITIONS } from '../src/queues.js';
 import {
@@ -806,14 +806,23 @@ describe('lock timeout on blocked locks (SQLSTATE 55P03)', () => {
       release = resolve;
     });
     let ready: () => void = () => undefined;
-    const isReady = new Promise<void>((resolve) => {
+    let failed: (error: unknown) => void = () => undefined;
+    const isReady = new Promise<void>((resolve, reject) => {
       ready = resolve;
+      failed = reject;
     });
     const done = db().transaction(async (tx) => {
-      await hold(tx);
+      try {
+        await hold(tx);
+      } catch (error) {
+        failed(error);
+        throw error;
+      }
       ready();
       await gate;
     });
+    // Avoid an unhandled rejection when `hold` fails; the failure surfaces through `isReady`.
+    done.catch(() => undefined);
     await isReady;
     return { release, done };
   }
@@ -940,5 +949,36 @@ describe('lock timeout on blocked locks (SQLSTATE 55P03)', () => {
       { logger, metrics: { increment: () => undefined }, pollingIntervalSeconds: 1 },
     );
     expect(result).toMatchObject({ status: 'failed', output: { sqlState: PG_LOCK_NOT_AVAILABLE } });
+  });
+
+  it('the sweep skips a push re-send whose key lock is held and removes the others', async () => {
+    const stuckKey = `rsvp:${newId()}:${newId()}`;
+    const freeKey = `rsvp:${newId()}:${newId()}`;
+    const old = new Date(Date.now() - 3 * DAY_MS);
+    for (const singletonKey of [stuckKey, freeKey]) {
+      await db().insert(pushResends).values({
+        singletonKey,
+        type: 'rsvp.changed',
+        userId: newId(),
+        refId: newId(),
+        requestedAt: old,
+        updatedAt: old,
+      });
+    }
+    const blocker = await holding((tx) => lockPushResend(tx, stuckKey));
+    try {
+      const started = Date.now();
+      const removed = await sweepPushResends(db(), new Date(Date.now() - DAY_MS), TIMEOUT_MS);
+      expect(Date.now() - started).toBeLessThan(TIMEOUT_MS + 3_000);
+      expect(removed).toBeGreaterThanOrEqual(1);
+    } finally {
+      blocker.release();
+    }
+    await blocker.done;
+    const left = await db()
+      .select({ key: pushResends.singletonKey })
+      .from(pushResends)
+      .where(inArray(pushResends.singletonKey, [stuckKey, freeKey]));
+    expect(left.map((row) => row.key)).toEqual([stuckKey]);
   });
 });
