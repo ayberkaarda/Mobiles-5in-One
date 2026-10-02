@@ -401,6 +401,21 @@ describe('roles and grants (ADR-0028)', () => {
       if (table === 'job_receipts') {
         expect(app, table).toEqual([]);
         expect(worker, table).toEqual(['DELETE', 'INSERT', 'SELECT']);
+      } else if (table === 'push_resends') {
+        // UPDATE only on (version, updated_at), a column grant (ADR-0044).
+        expect(app, table).toEqual(['INSERT', 'SELECT']);
+        expect(worker, table).toEqual(['DELETE', 'SELECT']);
+        const { rows: updatable } = await admin.query<{ column_name: string }>(
+          `select column_name from information_schema.columns
+            where table_schema = 'public' and table_name = 'push_resends'
+              and has_column_privilege('kadro_app', 'push_resends', column_name, 'UPDATE')
+            order by column_name`,
+        );
+        expect(updatable.map((row) => row.column_name)).toEqual(['updated_at', 'version']);
+      } else if (table === 'venue_imports') {
+        // The web role stores and reads imports, the worker records progress through column grants; nobody deletes (ADR-0064).
+        expect(app, table).toEqual(['INSERT', 'SELECT']);
+        expect(worker, table).toEqual(['SELECT']);
       } else if (table === 'audit_logs') {
         expect(app, table).toEqual(['INSERT', 'SELECT']);
         expect(worker, table).toEqual(['INSERT', 'SELECT']);

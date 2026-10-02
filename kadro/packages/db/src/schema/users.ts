@@ -47,6 +47,13 @@ export const users = pgTable(
     role: userRoleEnum('role').notNull().default('user'),
     /** AES-256-GCM ciphertext of the TOTP secret (staff only). */
     totpSecretEnc: text('totp_secret_enc'),
+    /**
+     * Ciphertext of a TOTP secret whose enrollment is not confirmed yet (ADR-0064), same format as
+     * `totp_secret_enc`. Present only while no active secret exists; replaced by a new enrollment.
+     */
+    totpPendingSecretEnc: text('totp_pending_secret_enc'),
+    /** When the pending secret was stored; the confirm window counts from here. */
+    totpPendingCreatedAt: timestamptz('totp_pending_created_at'),
     /** Last accepted TOTP time step, so a code cannot be replayed inside its window. */
     totpLastUsedStep: bigint('totp_last_used_step', { mode: 'number' }),
     deactivatedAt: timestamptz('deactivated_at'),
@@ -71,6 +78,10 @@ export const users = pgTable(
     check(
       'users_tombstone_has_no_personal_data',
       sql`not ${t.isTombstone} or (${t.passwordHash} is null and ${t.appleSub} is null and ${t.googleSub} is null and ${t.avatarKey} is null and ${t.position} is null and ${t.level} is null and ${t.districtId} is null and ${t.totpSecretEnc} is null and ${t.deactivatedAt} is not null)`,
+    ),
+    check(
+      'users_totp_pending_consistent',
+      sql`((${t.totpPendingSecretEnc} is null) = (${t.totpPendingCreatedAt} is null)) and (${t.totpPendingSecretEnc} is null or (${t.totpSecretEnc} is null and not ${t.isTombstone} and char_length(${t.totpPendingSecretEnc}) between 1 and 1024))`,
     ),
   ],
 );

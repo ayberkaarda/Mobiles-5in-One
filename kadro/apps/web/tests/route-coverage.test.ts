@@ -288,13 +288,14 @@ describe('team routes charge the registry rate-limit group', () => {
 
 // Upload, push-token and account deletion routes (matrix §3.2, §3.7, §8): each handler is
 // registered with the registry's path, method, schemas and rate-limit group.
-describe('upload, push-token and deletion routes match their registry entries', () => {
+describe('upload, push-token, deletion and webhook routes match their registry entries', () => {
   const ids = [
     'presignUpload',
     'completeUpload',
     'getUpload',
     'registerPushToken',
     'deleteMe',
+    'receiveRevenueCatWebhook',
   ] as const;
 
   for (const id of ids) {
