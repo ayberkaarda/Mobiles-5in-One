@@ -3,6 +3,7 @@ import {
   deletionRequests,
   emailTokens,
   jobReceipts,
+  pushResends,
   pushTokens,
   rateLimitBuckets,
   refreshTokens,
@@ -27,6 +28,11 @@ export const RETENTION = {
   refreshTokensMs: 30 * DAY_MS,
   rateLimitWindowsMs: 2 * DAY_MS,
   jobReceiptsMs: 30 * DAY_MS,
+  /**
+   * Pending push re-sends (ADR-0044). A row lives until the job holding its key completes, minutes
+   * later; one this old was left by a dead-lettered job, and its push would be stale (6 h) anyway.
+   */
+  pushResendsMs: DAY_MS,
   /** Push tokens whose app has not checked in (ADR-0031). */
   pushTokensUnseenMs: 60 * DAY_MS,
   /** Deletion requests overdue by this much are re-queued (ADR-0028, ADR-0032). */
@@ -46,6 +52,7 @@ export interface SweepResult {
   readonly refreshTokens: number;
   readonly rateLimitBuckets: number;
   readonly jobReceipts: number;
+  readonly pushResends: number;
   readonly pushTokens: number;
   readonly deletionsRequeued: number;
   readonly uploadsExpired: number;
@@ -114,6 +121,12 @@ export async function sweep(dependencies: SweepDependencies): Promise<SweepResul
     jobReceipts.id,
     lt(jobReceipts.createdAt, before(RETENTION.jobReceiptsMs)),
   );
+  const resendRows = await deleteInBatches(
+    db,
+    pushResends,
+    pushResends.id,
+    lt(pushResends.requestedAt, before(RETENTION.pushResendsMs)),
+  );
   const pushTokenRows = await deleteInBatches(
     db,
     pushTokens,
@@ -171,6 +184,7 @@ export async function sweep(dependencies: SweepDependencies): Promise<SweepResul
     refreshTokens: refreshTokenRows,
     rateLimitBuckets: bucketRows,
     jobReceipts: receiptRows,
+    pushResends: resendRows,
     pushTokens: pushTokenRows,
     deletionsRequeued: requeued,
   };

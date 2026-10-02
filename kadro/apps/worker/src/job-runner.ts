@@ -22,6 +22,8 @@ export interface JobContext {
   readonly queue: JobQueue;
   readonly retryCount: number;
   readonly createdOn: Date;
+  /** pg-boss `singletonKey` of the job; for a coalesced push, its coalescing key (ADR-0031). */
+  readonly singletonKey: string | null;
   /** Child logger carrying `queue`, `jobId`, `idempotencyKey` and `requestId` when present. */
   readonly logger: Logger;
   /** Aborted when the job expires or the worker stops past its grace period. */
@@ -119,6 +121,7 @@ export async function runJob<TQueue extends JobQueue>(
       queue,
       retryCount: job.retryCount,
       createdOn: job.createdOn,
+      singletonKey: job.singletonKey ?? null,
       logger: jobLogger,
       signal: job.signal,
     });

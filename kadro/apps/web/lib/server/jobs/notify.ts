@@ -1,5 +1,10 @@
 import { type MatchReminder, type NotificationType } from '@kadro/contracts';
-import { type Transaction } from '@kadro/db';
+import {
+  type CoalescedPushType,
+  type Transaction,
+  lockPushResend,
+  recordPushResend,
+} from '@kadro/db';
 
 import { type JobSender } from './enqueue';
 
@@ -12,7 +17,9 @@ import { type JobSender } from './enqueue';
  * (`rsvp.changed`, `application.received`) carry two keys: the pg-boss `singletonKey` is per object
  * and recipient, with a 10-minute delay, so repeats while that job is queued or active are dropped
  * by the `exclusive` queue policy; the `idempotencyKey` (the worker's delivery receipt) adds the
- * moment that opened the window, so the next window after delivery is sent again.
+ * moment that opened the window, so the next window after delivery is sent again. A dropped repeat
+ * is recorded in `push_resends` (ADR-0044): the job that absorbed it may already have read the state
+ * it renders, and the worker then carries the change into the next delivery.
  *
  * `match.reminder_24h` and `match.reminder_2h` are produced by the worker from the
  * `match.reminder` jobs that {@link scheduleMatchReminders} plans.
@@ -52,22 +59,46 @@ async function pushEach(
   type: NotificationType,
   refId: string,
   recipientIds: readonly string[],
-  key: (
-    recipientId: string,
-  ) => string | { readonly singletonKey: string; readonly idempotencyKey: string },
-  startAfter?: Date,
+  key: (recipientId: string) => string,
 ): Promise<void> {
   for (const userId of unique(recipientIds)) {
-    const keys = key(userId);
-    await jobs.enqueue(
+    await jobs.enqueue(tx, 'push.send', { type, userId, refId }, { idempotencyKey: key(userId) });
+  }
+}
+
+/**
+ * Coalesced producer (ADR-0031, ADR-0044). Per recipient, under the coalescing key's lock: the job
+ * opens a window 10 minutes long, or, when a job with that key is queued, retrying or active and
+ * the enqueue is dropped, the change is recorded for the worker to carry forward.
+ */
+async function pushCoalesced(
+  jobs: JobSender,
+  tx: Transaction,
+  type: CoalescedPushType,
+  refId: string,
+  recipientIds: readonly string[],
+  coalescing: { readonly prefix: 'rsvp' | 'application'; readonly objectId: string },
+  now: Date,
+): Promise<void> {
+  // A fixed lock order, so two producers for the same object never wait on each other in a cycle.
+  for (const userId of unique(recipientIds).sort()) {
+    const keys = coalescedKeys(coalescing.prefix, coalescing.objectId, userId, now);
+    await lockPushResend(tx, keys.singletonKey);
+    const jobId = await jobs.enqueue(
       tx,
       'push.send',
       { type, userId, refId },
-      {
-        ...(typeof keys === 'string' ? { idempotencyKey: keys } : keys),
-        ...(startAfter === undefined ? {} : { startAfter }),
-      },
+      { ...keys, startAfter: new Date(now.getTime() + COALESCE_DELAY_MS) },
     );
+    if (jobId === null) {
+      await recordPushResend(tx, {
+        singletonKey: keys.singletonKey,
+        type,
+        userId,
+        refId,
+        requestedAt: now,
+      });
+    }
   }
 }
 
@@ -99,14 +130,14 @@ export function notifyRsvpChanged(
   tx: Transaction,
   input: { readonly matchId: string; readonly recipientIds: readonly string[]; readonly now: Date },
 ): Promise<void> {
-  return pushEach(
+  return pushCoalesced(
     jobs,
     tx,
     'rsvp.changed',
     input.matchId,
     input.recipientIds,
-    (userId) => coalescedKeys('rsvp', input.matchId, userId, input.now),
-    new Date(input.now.getTime() + COALESCE_DELAY_MS),
+    { prefix: 'rsvp', objectId: input.matchId },
+    input.now,
   );
 }
 
@@ -168,14 +199,14 @@ export function notifyApplicationReceived(
     readonly now: Date;
   },
 ): Promise<void> {
-  return pushEach(
+  return pushCoalesced(
     jobs,
     tx,
     'application.received',
     input.applicationId,
     input.recipientIds,
-    (userId) => coalescedKeys('application', input.openCallId, userId, input.now),
-    new Date(input.now.getTime() + COALESCE_DELAY_MS),
+    { prefix: 'application', objectId: input.openCallId },
+    input.now,
   );
 }
 
