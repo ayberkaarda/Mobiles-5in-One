@@ -30,4 +30,5 @@ CREATE INDEX "venue_imports_open_idx" ON "venue_imports" USING btree ("created_a
 -- ADR-0064: the web role stores an import request and reads its state; the worker reads it and
 -- records progress. Neither role deletes rows.
 GRANT SELECT, INSERT ON venue_imports TO kadro_app;--> statement-breakpoint
-GRANT SELECT, UPDATE ON venue_imports TO kadro_worker;
+GRANT SELECT ON venue_imports TO kadro_worker;--> statement-breakpoint
+GRANT UPDATE (status, total_rows, created_rows, skipped_rows, rejected_rows, issues, failure_reason, started_at, completed_at, updated_at) ON venue_imports TO kadro_worker;
