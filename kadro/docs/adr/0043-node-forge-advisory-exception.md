@@ -52,15 +52,20 @@ override or version pin is added (there is no patched release to pin to).
 ## Risk
 
 Residual risk is a developer or build runner processing a crafted signature or certificate through
-Expo CLI tooling. Impact is limited to that machine and to the signing artifacts it handles; no
-production service and no end-user app runtime includes the package. Accepted by the owner for the
-time the exception stands.
+Expo CLI tooling. The direct exposure is that development or build environment. The package is not
+part of any production service or of the application code we ship, but an indirect effect through
+the signing or distribution artifacts that such a machine produces is not ruled out: this record
+does not prove that no untrusted input can reach the vulnerable verification. Accepted by the owner
+for the time the exception stands.
 
 ## Review and removal
 
 Remove the `auditConfig` entry (and keep the CI command as is) as soon as any of these holds:
 
-- a patched `node-forge` is released and `@expo/cli` resolves to it (check with `pnpm audit`);
+- a patched `node-forge` is released and `@expo/cli` resolves to it. `pnpm audit` alone is not proof
+  while the exception is active, because it ignores this advisory: compare the resolved version
+  (`pnpm why node-forge`) with the patched range and run the audit with the `auditConfig` entry
+  removed;
 - `@expo/cli` drops the `node-forge` dependency, for example in a newer Expo SDK.
 
 Re-check the exception when the Expo SDK is upgraded and at the close of every delivery phase. If
