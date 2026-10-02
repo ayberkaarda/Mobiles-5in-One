@@ -233,6 +233,38 @@ describe('POST webhooks/revenuecat: outcomes', () => {
     expect(JSON.stringify(row)).not.toContain('abone@example.test');
   });
 
+  it('accepts exactly one of two concurrent deliveries of the same event', async () => {
+    const body = delivery({ app_user_id: await newUser() });
+    const raw = JSON.stringify(body);
+    const responses = await Promise.all([post(raw), post(raw)]);
+    const outcomes = await Promise.all(
+      responses.map(async (response) => {
+        expect(response.status).toBe(200);
+        return revenueCatWebhookResponseSchema.parse(await response.json()).status;
+      }),
+    );
+    expect(outcomes.sort()).toEqual(['accepted', 'duplicate']);
+    const rows = await storedEvent(eventIdOf(body));
+    expect(rows).toHaveLength(1);
+    expect(await jobsFor(rows[0]?.id ?? '')).toHaveLength(1);
+  });
+
+  it('stores nothing when the processing job cannot be enqueued', async () => {
+    const body = delivery({ app_user_id: await newUser() });
+    installServerRuntime({
+      ...jobs.harness.runtime,
+      jobs: { enqueue: () => Promise.reject(new Error('queue unavailable')) },
+    });
+    try {
+      await expectProblem(await post(JSON.stringify(body)), 500, 'internal_error');
+    } finally {
+      installServerRuntime(jobs.harness.runtime);
+    }
+    expect(await storedEvent(eventIdOf(body))).toEqual([]);
+    // RevenueCat retries the delivery, which is then accepted normally.
+    await expectOutcome(await post(JSON.stringify(body)), 'accepted');
+  });
+
   it('answers duplicate for a replayed event id and enqueues nothing more', async () => {
     const body = delivery({ app_user_id: await newUser() });
     const raw = JSON.stringify(body);
