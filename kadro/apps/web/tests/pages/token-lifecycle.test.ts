@@ -163,6 +163,21 @@ describe('releasing an unused token', () => {
     expect(capture.read(RESET)).toEqual({ kind: 'valid', token });
   });
 
+  it('the release of an unmounted page never drops a newer token whose page mounts later', () => {
+    vi.useFakeTimers();
+    const second = freshToken();
+    const browser = fakeBrowser(RESET, `#token=${freshToken()}`);
+    const capture = createTokenCapture(browser);
+    // The page of the first token unmounts; its release is pending.
+    capture.subscribe(() => undefined)();
+    // A second link arrives before the page for it has subscribed.
+    browser.navigateFragment(`#token=${second}`);
+    const held = capture.snapshot(RESET);
+    vi.runAllTimers();
+    expect(capture.read(RESET)).toEqual({ kind: 'valid', token: second });
+    expect(held.signal.aborted).toBe(false);
+  });
+
   it('forget with the version of a replaced token keeps the newer token', () => {
     const second = freshToken();
     const browser = fakeBrowser(RESET, `#token=${freshToken()}`);

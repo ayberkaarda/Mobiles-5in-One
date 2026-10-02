@@ -110,6 +110,9 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
 
   /** Replaces the held token: the old one's request is aborted and a new version starts. */
   const replace = (pathname: string | null, token: FragmentToken) => {
+    // A pending unmount release belongs to the token being replaced, never to the new one.
+    clearTimeout(releaseTimer);
+    releaseTimer = undefined;
     controller.abort();
     controller = new AbortController();
     capturedOn = pathname;
@@ -134,8 +137,9 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
     replace(pathname, token);
   };
 
-  const release = () => {
-    if (current.token.kind === 'valid') {
+  /** Releases the held token; with `version`, only while that token is still the held one. */
+  const release = (version?: number) => {
+    if (current.token.kind === 'valid' && (version === undefined || version === current.version)) {
       replace(capturedOn, MISSING);
     }
   };
@@ -190,7 +194,9 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
     };
     browser.addEventListener('hashchange', fromLocation);
     browser.addEventListener('popstate', fromLocation);
-    browser.addEventListener('pagehide', release);
+    browser.addEventListener('pagehide', () => {
+      release();
+    });
     browser.addEventListener('pageshow', (event) => {
       if (event.persisted === true) {
         release();
@@ -214,7 +220,11 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
         listeners.delete(listener);
         if (listeners.size === 0) {
           clearTimeout(releaseTimer);
-          releaseTimer = setTimeout(release, 0);
+          const version = current.version;
+          releaseTimer = setTimeout(() => {
+            releaseTimer = undefined;
+            release(version);
+          }, 0);
         }
       };
     },
