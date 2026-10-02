@@ -1,11 +1,112 @@
-import { Stack } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { useFonts } from 'expo-font';
+import {
+  type ErrorBoundaryProps,
+  ThemeProvider as NavigationThemeProvider,
+  SplashScreen,
+  Stack,
+} from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { I18nextProvider } from 'react-i18next';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { session } from '../src/api/instance';
+import { routeAccess, useAuthStatus } from '../src/auth-store';
+import { errorMessage } from '../src/i18n/error-copy';
+import { i18n } from '../src/i18n/instance';
+import {
+  clearQueryCaches,
+  connectFocusManager,
+  createQueryClient,
+  createQueryPersister,
+  QueryProvider,
+} from '../src/query';
+import { FONT_MAP, navigationTheme, ThemeProvider, useTheme } from '../src/theme';
+import { ErrorState } from '../src/ui';
+
+void SplashScreen.preventAutoHideAsync();
+connectFocusManager();
+
+const queryClient = createQueryClient();
+const queryPersister = createQueryPersister(AsyncStorage);
+const cacheBuster = Constants.expoConfig?.version ?? 'dev';
+// Registered before the session is read, so even the start-up check clears a stale cache.
+session.onSignOut(() => clearQueryCaches(queryClient, queryPersister));
+
+/** Last-resort screen for a render error outside every screen boundary. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <ThemeProvider>
+      <ErrorState
+        title={i18n.t('common:state.errorTitle')}
+        message={errorMessage(i18n, error)}
+        retry={{ label: i18n.t('common:state.retry'), onPress: () => void retry() }}
+      />
+    </ThemeProvider>
+  );
+}
+
+function RootStack() {
+  const theme = useTheme();
+  const access = routeAccess(useAuthStatus());
+  return (
+    <NavigationThemeProvider value={navigationTheme(theme)}>
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={access.signedInRoutes}>
+          <Stack.Screen name="(tabs)" />
+        </Stack.Protected>
+        {/* Signed-out side: the entry screen; the (auth) group joins this guard. */}
+        <Stack.Protected guard={access.signedOutRoutes}>
+          <Stack.Screen name="index" />
+        </Stack.Protected>
+      </Stack>
+    </NavigationThemeProvider>
+  );
+}
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(FONT_MAP);
+  const status = useAuthStatus();
+
+  useEffect(() => {
+    session.bootstrap().catch(() => {
+      // Secure storage unreadable: continue signed out rather than keep the splash up forever.
+      void session.signOut({ revokeRemote: false, reason: 'expired' });
+    });
+  }, []);
+
+  // A font that fails to load falls back to the system face; it never blocks the app.
+  const ready = (fontsLoaded || fontError !== null) && routeAccess(status).pending === false;
+
+  useEffect(() => {
+    if (ready) {
+      void SplashScreen.hideAsync();
+    }
+  }, [ready]);
+
+  if (!ready) {
+    return null;
+  }
+
   return (
-    <>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <I18nextProvider i18n={i18n}>
+            <QueryProvider
+              client={queryClient}
+              persister={queryPersister}
+              cacheBuster={cacheBuster}
+            >
+              <RootStack />
+            </QueryProvider>
+          </I18nextProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
