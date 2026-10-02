@@ -34,11 +34,10 @@ const INSTALLED = Symbol.for('kadro.web.processHandlers');
 export function installProcessHandlers(options: ProcessHandlerOptions): void {
   const target = options.target ?? process;
   const exit = options.exit ?? ((code: number) => process.exit(code));
-  const marked = target as { [INSTALLED]?: true };
-  if (marked[INSTALLED] === true) {
+  if (Reflect.get(target, INSTALLED) === true) {
     return;
   }
-  marked[INSTALLED] = true;
+  Reflect.set(target, INSTALLED, true);
   let exiting = false;
 
   target.on('uncaughtException', (error: unknown) => {
