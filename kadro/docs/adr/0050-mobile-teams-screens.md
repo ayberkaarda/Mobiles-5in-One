@@ -50,7 +50,11 @@ as captain or co-captain, change roles and remove members. The API for all of th
 
 - Optimistic only where the effect is one field the server is about to confirm and a rollback is
   exact: a role change between co-captain and player, and removing another member. On failure the
-  previous roster is put back and the catalog copy is shown; afterwards the roster is refetched.
+  previous roster is put back and the catalog copy is shown, unless a refetch has replaced the
+  optimistic roster meanwhile (that data is newer and is kept).
+- After every write the affected queries are invalidated and refetched in the background; a write
+  never waits for that refetch, so a screen navigates as soon as the server confirmed the write,
+  even when a GET on a weak connection runs through its retries.
 - Not optimistic: captaincy transfer (two rows change and the actor's own role), leaving (the team
   disappears from every list), creating and joining (server-assigned ids), creating and revoking
   invites.
