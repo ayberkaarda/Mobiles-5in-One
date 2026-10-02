@@ -1,40 +1,42 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
-export default function HomeScreen() {
+import { ProviderButtons } from '../src/auth/components';
+import { providerSignIn } from '../src/auth/instance';
+import { useTheme } from '../src/theme';
+import { Button, Screen, Text } from '../src/ui';
+
+/** Signed-out entry: the brand line and the way into sign-in or registration. */
+export default function WelcomeScreen() {
+  const { t } = useTranslation('auth');
+  const theme = useTheme();
+  const router = useRouter();
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.content}>
-        <Text accessibilityRole="header" style={styles.wordmark}>
-          KADRO
+    <Screen scroll testID="welcome-screen">
+      <View style={{ paddingHorizontal: theme.spacing['6'], paddingTop: theme.spacing['10'] }}>
+        <Text variant="display" accessibilityRole="header">
+          {t('welcome.title')}
         </Text>
-        <Text style={styles.tagline}>Kadron eksik kalmasın.</Text>
+        <Text variant="title3" tone="muted" style={{ marginTop: theme.spacing['3'] }}>
+          {t('welcome.subtitle')}
+        </Text>
+        <View style={{ marginTop: theme.spacing['8'] }}>
+          <Button
+            label={t('welcome.signIn')}
+            onPress={() => router.push('/giris')}
+            testID="welcome-sign-in"
+            style={{ marginBottom: theme.spacing['3'] }}
+          />
+          <Button
+            label={t('welcome.signUp')}
+            variant="secondary"
+            onPress={() => router.push('/kayit')}
+            testID="welcome-sign-up"
+          />
+          <ProviderButtons providers={providerSignIn} />
+        </View>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F4F6F0',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  wordmark: {
-    color: '#0E1A14',
-    fontSize: 40,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  tagline: {
-    color: '#1B7F4B',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 12,
-  },
-});
