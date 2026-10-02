@@ -84,6 +84,9 @@ function RootStack() {
           <Stack.Screen name="profil/duzenle" />
           <Stack.Screen name="ayarlar/index" />
           <Stack.Screen name="ayarlar/hesabi-sil" />
+          {/* Venue directory: a venue (`/saha/<slug>`, the app-link path) and the add form. */}
+          <Stack.Screen name="saha/[slug]" />
+          <Stack.Screen name="saha/yeni" />
         </Stack.Protected>
         {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>
