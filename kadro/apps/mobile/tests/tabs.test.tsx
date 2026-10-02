@@ -122,6 +122,7 @@ describe('Maçlar tab', () => {
 describe('Eksik Var tab', () => {
   it('lists public open calls with the number of missing players', async () => {
     mswServer.use(
+      http.get(apiUrl('/api/v1/districts'), () => HttpResponse.json({ items: [] })),
       http.get(apiUrl('/api/v1/open-calls'), () =>
         HttpResponse.json({
           items: [
