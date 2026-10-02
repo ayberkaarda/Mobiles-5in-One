@@ -9,6 +9,18 @@ import { type ApplicationsPage } from './queries';
 
 /** `expires_at ≥ now() + 15 min` (`LIMITS.openCallMinLifetimeSeconds`, ADR-0037). */
 export const CALL_MIN_LIFETIME_MS = 15 * 60 * 1000;
+/**
+ * Slack on top of the 15-minute minimum, so a form left open for a moment (and the request's
+ * travel time) does not turn a valid choice into `invalid_call_expiry`.
+ */
+export const EXPIRY_SLACK_MS = 2 * 60 * 1000;
+/**
+ * Earliest instant a call may end, seen from `now`. Both the publish gate and the expiry choices
+ * use it, so the form is offered only when at least one expiry (the kick-off) can be chosen.
+ */
+export function earliestExpiry(now: number): number {
+  return now + CALL_MIN_LIFETIME_MS + EXPIRY_SLACK_MS;
+}
 /** Largest missing count of a call (`LIMITS.missingCount.max`). */
 export const MISSING_COUNT_MAX = 29;
 
@@ -44,7 +56,7 @@ export type PublishBlocker =
   | 'proLocked'
   /** The match is not `open` (draft, locked, played, cancelled). */
   | 'notOpen'
-  /** The match starts in less than the minimum call lifetime. */
+  /** The match starts before the earliest possible end of a call (`earliestExpiry`). */
   | 'tooLate'
   /** No free place left. */
   | 'full';
@@ -68,7 +80,7 @@ export function publishBlocker(
   if (match.status !== 'open') {
     return 'notOpen';
   }
-  if (Date.parse(match.startsAt) < now + CALL_MIN_LIFETIME_MS) {
+  if (Date.parse(match.startsAt) < earliestExpiry(now)) {
     return 'tooLate';
   }
   return freeSlots(match) < 1 ? 'full' : null;

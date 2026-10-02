@@ -8,7 +8,7 @@ import {
 
 import { ApiError } from '../api/errors';
 import { matchKeys } from '../matches/queries';
-import { queryKeys } from '../query/keys';
+import { QUERY_ROOTS, queryKeys } from '../query/keys';
 import { type CallsApi } from './calls-api';
 import {
   type Application,
@@ -109,19 +109,30 @@ export function useSetApplicationStatus(
       if (application.status !== 'accepted') {
         return;
       }
-      if (matchId !== null) {
-        const stored = client.getQueryData<OpenCall | null>(callKeys.matchCall(matchId));
-        if (stored !== undefined && stored !== null && stored.id === callId) {
-          // Footnote 21: one place fewer; at zero the call is closed.
-          const missingCount = Math.max(0, stored.missingCount - 1);
-          client.setQueryData<OpenCall>(callKeys.matchCall(matchId), {
-            ...stored,
-            missingCount,
-            status: missingCount === 0 ? 'closed' : stored.status,
-          });
+      // Footnote 21: one place fewer; at zero the call is closed. Every kept staff copy of this
+      // call is updated, whichever screen accepted (the list screen does not know the match).
+      client.setQueriesData<OpenCall | null>({ queryKey: callKeys.matchCalls() }, (stored) => {
+        if (stored === undefined || stored === null || stored.id !== callId) {
+          return stored;
         }
-        void client.invalidateQueries({ queryKey: matchKeys.detail(matchId) });
-      }
+        const missingCount = Math.max(0, stored.missingCount - 1);
+        return { ...stored, missingCount, status: missingCount === 0 ? 'closed' : stored.status };
+      });
+      // The match gained a participant. Its id comes from the screen or from a kept staff copy
+      // of the call; when neither knows it, every cached match detail refetches.
+      const knownMatchId =
+        matchId ??
+        client
+          .getQueriesData<OpenCall | null>({ queryKey: callKeys.matchCalls() })
+          .map(([, stored]) => stored)
+          .find((stored) => stored !== undefined && stored !== null && stored.id === callId)
+          ?.matchId ??
+        null;
+      void client.invalidateQueries({
+        queryKey:
+          knownMatchId === null ? [QUERY_ROOTS.matches, 'detail'] : matchKeys.detail(knownMatchId),
+      });
+      void client.invalidateQueries({ queryKey: callKeys.call(callId) });
       void client.invalidateQueries({ queryKey: callKeys.applications(callId) });
       refreshLists(client);
     },

@@ -11,15 +11,24 @@ import { type CallFilters, type CallsApi } from './calls-api';
 import { type Application, type OpenCall, type OpenCallPublic, type Paginated } from './contracts';
 
 /**
- * Query keys of the open-call area, all under the persisted `open-calls` root (and `districts`),
- * so the last list, call and applications are shown offline. Every key is cleared at sign-out
- * with the rest of the cache.
+ * Root of the open-call data that stays in memory only. It is not in `PERSISTED_QUERY_ROOTS`
+ * (`src/query/persistence.ts`), so it is never written to the device: applications carry other
+ * users' notes and profile cards, and the staff view of a call is of no use without them. Like
+ * every query, it is dropped at sign-out (`clearQueryCaches`).
+ */
+export const OPEN_CALL_PRIVATE_ROOT = 'open-call-private';
+
+/**
+ * Query keys of the open-call area.
+ * Persisted (`open-calls` and `districts` roots, shown offline, cleared at sign-out):
  * - `list(filters)`: one filtered list; `lists()` covers every filter combination.
  * - `call(id)`: the public projection of one call, copied from a list (there is no
  *   `GET open-calls/:id`).
+ * - `districts()`: reference data.
+ * Memory only (`OPEN_CALL_PRIVATE_ROOT`):
  * - `applications(id)`: what the viewer may read of the call's applications.
  * - `matchCall(matchId)`: the staff view of the match's latest call, as the publish or close
- *   answer returned it (the match response does not carry it).
+ *   answer returned it (the match response does not carry it); `matchCalls()` covers all.
  */
 export const callKeys = {
   lists: () => queryKeys.openCalls(),
@@ -29,8 +38,9 @@ export const callKeys = {
       { district: filters.district, level: filters.level, position: filters.position },
     ] as const,
   call: (callId: string) => [QUERY_ROOTS.openCalls, 'call', callId] as const,
-  applications: (callId: string) => [QUERY_ROOTS.openCalls, 'applications', callId] as const,
-  matchCall: (matchId: string) => [QUERY_ROOTS.openCalls, 'match', matchId] as const,
+  applications: (callId: string) => [OPEN_CALL_PRIVATE_ROOT, 'applications', callId] as const,
+  matchCalls: () => [OPEN_CALL_PRIVATE_ROOT, 'match'] as const,
+  matchCall: (matchId: string) => [OPEN_CALL_PRIVATE_ROOT, 'match', matchId] as const,
   districts: () => [QUERY_ROOTS.districts, 'list'] as const,
 };
 
@@ -75,6 +85,33 @@ export function findListedCall(client: QueryClient, callId: string): OpenCallPub
     }
     for (const page of data.pages) {
       const found = page.items.find((call) => call.id === callId);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * A listed call that belongs to this match, recognized by team name and start (the public
+ * projection carries no match id). Used only to tell staff that a call is already live; it is
+ * never used to decide or close anything.
+ */
+export function findListedCallForMatch(
+  client: QueryClient,
+  match: { readonly team: { readonly name: string }; readonly startsAt: string },
+): OpenCallPublic | undefined {
+  const startsAt = Date.parse(match.startsAt);
+  for (const query of client.getQueryCache().findAll({ queryKey: callKeys.lists() })) {
+    const data: unknown = query.state.data;
+    if (!isListData(data)) {
+      continue;
+    }
+    for (const page of data.pages) {
+      const found = page.items.find(
+        (call) => call.teamName === match.team.name && Date.parse(call.startsAt) === startsAt,
+      );
       if (found !== undefined) {
         return found;
       }

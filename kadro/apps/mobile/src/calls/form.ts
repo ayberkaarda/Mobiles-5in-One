@@ -1,4 +1,4 @@
-import { CALL_MIN_LIFETIME_MS } from './permissions';
+import { earliestExpiry } from './permissions';
 import { type DistrictPublic, type Level, type Position } from './contracts';
 
 /**
@@ -54,22 +54,16 @@ const EXPIRY_BEFORE_START_MS: Readonly<Record<ExpiryChoice, number>> = {
   hours24: 24 * HOUR_MS,
 };
 
-/**
- * Slack on top of the 15-minute minimum, so a form left open for a moment (and the request's
- * travel time) does not turn a valid choice into `invalid_call_expiry`.
- */
-export const EXPIRY_SLACK_MS = 2 * 60 * 1000;
+export { EXPIRY_SLACK_MS } from './permissions';
 
 export function expiryInstant(startsAt: string, choice: ExpiryChoice): number {
   // eslint-disable-next-line security/detect-object-injection -- choice is a typed ExpiryChoice
   return Date.parse(startsAt) - EXPIRY_BEFORE_START_MS[choice];
 }
 
-/** Choices whose instant lies in `[now + 15 min (+ slack), starts_at]`. */
+/** Choices whose instant lies in `[earliestExpiry(now), starts_at]`. */
 export function availableExpiries(startsAt: string, now: number): ExpiryChoice[] {
-  return EXPIRY_CHOICES.filter(
-    (choice) => expiryInstant(startsAt, choice) >= now + CALL_MIN_LIFETIME_MS + EXPIRY_SLACK_MS,
-  );
+  return EXPIRY_CHOICES.filter((choice) => expiryInstant(startsAt, choice) >= earliestExpiry(now));
 }
 
 /** One hour before the start when that is possible, else the latest possible: the start. */
