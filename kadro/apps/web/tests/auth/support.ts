@@ -10,6 +10,7 @@ import {
 import { emailTokens, type NewUser, users } from '@kadro/db';
 import { eq } from 'drizzle-orm';
 import { exportJWK, generateKeyPair, type JWK, SignJWT } from 'jose';
+import type pg from 'pg';
 import { expect } from 'vitest';
 
 import { installAuthServices } from '../../lib/server/auth/services';
@@ -288,6 +289,85 @@ export async function createUser(
     throw new Error('user insert failed');
   }
   return { id: row.id, email, password };
+}
+
+/** A query held back by `holdNextQuery` until the test releases it. */
+export interface QueryGate {
+  /** Resolves once the matching query was issued and is being held (not yet sent). */
+  readonly held: Promise<void>;
+  /** Sends the held query to the database. */
+  release(): void;
+  /** Stops intercepting; releases a query still held. */
+  dispose(): void;
+}
+
+type QueryMethod = (...args: unknown[]) => unknown;
+
+function queryText(args: readonly unknown[]): { text: string; values: readonly unknown[] } {
+  const [first, second] = args;
+  if (typeof first === 'string') {
+    return { text: first, values: Array.isArray(second) ? second : [] };
+  }
+  // drizzle passes `({ text, rowMode, types }, params)`; node-postgres also accepts `{ values }`.
+  const config = (first ?? {}) as { text?: unknown; values?: unknown };
+  const values = Array.isArray(config.values) ? config.values : second;
+  return {
+    text: typeof config.text === 'string' ? config.text : '',
+    values: Array.isArray(values) ? values : [],
+  };
+}
+
+/**
+ * Holds the first query on `pool` that `matches` until `release()`, so a test can force an exact
+ * interleaving of concurrent requests (for example: run one request to its commit between two
+ * statements of another request's transaction). Only that one query is held; every other query,
+ * including later matching ones, passes through unchanged.
+ */
+export function holdNextQuery(
+  pool: pg.Pool,
+  matches: (text: string, values: readonly unknown[]) => boolean,
+): QueryGate {
+  let armed = true;
+  let signalHeld: () => void = () => undefined;
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    signalHeld = resolve;
+  });
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const patched = new Map<pg.PoolClient, QueryMethod>();
+  const onAcquire = (client: pg.PoolClient) => {
+    if (patched.has(client)) {
+      return;
+    }
+    const target = client as unknown as { query: QueryMethod };
+    const original = target.query;
+    patched.set(client, original);
+    target.query = (...args: unknown[]) => {
+      const { text, values } = queryText(args);
+      if (armed && matches(text, values)) {
+        armed = false;
+        signalHeld();
+        return released.then(() => original.apply(client, args));
+      }
+      return original.apply(client, args);
+    };
+  };
+  pool.on('acquire', onAcquire);
+  return {
+    held,
+    release,
+    dispose() {
+      armed = false;
+      release();
+      pool.off('acquire', onAcquire);
+      for (const [client, original] of patched) {
+        (client as unknown as { query: QueryMethod }).query = original;
+      }
+      patched.clear();
+    },
+  };
 }
 
 export async function userRow(auth: AuthHarness, id: string) {
