@@ -16,9 +16,10 @@
  *   (a longer max-age passes), `X-Content-Type-Options: nosniff`, `Permissions-Policy` with
  *   `camera=()`, `microphone=()`, `geolocation=(self)`, and the surface's `Referrer-Policy`;
  * - `X-Robots-Tag: noindex` exactly on the surfaces marked `noindex`, absent on the others;
- * - the surface's `Cache-Control` where the table sets one; on the other nonce surfaces a
- *   response that is not shared-cacheable (`private` or `no-store`, never `public` or
- *   `s-maxage`), because a cached page would replay one nonce to every visitor;
+ * - the surface's `Cache-Control` directives where the table sets one; and on every nonce surface
+ *   (token pages included) a response that no cache may reuse: `private` or `no-store`, and none
+ *   of `public`, `s-maxage`, `max-age` above 0, `stale-while-revalidate`, `stale-if-error`,
+ *   `immutable`, because a reused page would replay one nonce to every visitor;
  * - nonce surfaces: `script-src 'self' 'nonce-…' 'strict-dynamic'` (no `'unsafe-inline'`, no
  *   `'unsafe-eval'`), `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, and a
  *   fresh nonce per response;
@@ -152,39 +153,70 @@ function denyAllCspCheck(target: string, csp: string | null): HeaderCheck {
   );
 }
 
-function cacheDirectives(value: string | null): string[] {
-  return (value ?? '')
-    .split(',')
-    .map((part) => part.trim().toLowerCase().split('=')[0] ?? '')
-    .filter((part) => part !== '');
+/** `Cache-Control` value → directive name → argument (`''` without one). */
+function cacheDirectives(value: string | null): Map<string, string> {
+  const directives = new Map<string, string>();
+  for (const part of (value ?? '').split(',')) {
+    const [name = '', argument = ''] = part.trim().toLowerCase().split('=');
+    if (name !== '') {
+      directives.set(name, argument.replace(/"/g, ''));
+    }
+  }
+  return directives;
 }
 
-function cacheControlCheck(
+/** Directives that let a shared or browser cache reuse the response (and so its nonce). */
+function reusableDirectives(directives: Map<string, string>): string[] {
+  const found: string[] = [];
+  for (const name of [
+    'public',
+    's-maxage',
+    'stale-while-revalidate',
+    'stale-if-error',
+    'immutable',
+  ]) {
+    if (directives.has(name)) {
+      found.push(name);
+    }
+  }
+  const maxAge = directives.get('max-age');
+  if (maxAge !== undefined && maxAge !== '0') {
+    found.push(`max-age=${maxAge}`);
+  }
+  return found;
+}
+
+function cacheControlChecks(
   target: string,
   surface: SecurityHeaders.Surface,
   value: string | null,
-): HeaderCheck | null {
+): HeaderCheck[] {
   const observed = cacheDirectives(value);
+  const results: HeaderCheck[] = [];
   if (surface.cacheControl !== null) {
-    const required = cacheDirectives(surface.cacheControl);
-    return check(
-      target,
-      `Cache-Control ${surface.cacheControl}`,
-      required.every((directive) => observed.includes(directive)),
-      value ?? 'missing',
+    const required = [...cacheDirectives(surface.cacheControl).keys()];
+    results.push(
+      check(
+        target,
+        `Cache-Control ${surface.cacheControl}`,
+        required.every((directive) => observed.has(directive)),
+        value ?? 'missing',
+      ),
     );
   }
-  if (surface.csp !== 'nonce') {
-    return null;
+  if (surface.csp === 'nonce') {
+    // Every nonce surface, the token pages included: a reusable response replays one nonce.
+    const reusable = reusableDirectives(observed);
+    results.push(
+      check(
+        target,
+        'Cache-Control not shared-cacheable (per-request nonce)',
+        (observed.has('private') || observed.has('no-store')) && reusable.length === 0,
+        reusable.length === 0 ? (value ?? 'missing') : `${value ?? ''} [${reusable.join(', ')}]`,
+      ),
+    );
   }
-  return check(
-    target,
-    'Cache-Control private or no-store (per-request nonce)',
-    (observed.includes('private') || observed.includes('no-store')) &&
-      !observed.includes('public') &&
-      !observed.includes('s-maxage'),
-    value ?? 'missing',
-  );
+  return results;
 }
 
 function robotsCheck(
@@ -255,11 +287,8 @@ function surfaceChecks(target: Target, headers: Headers): HeaderCheck[] {
     permissionsPolicyCheck(label, headers.get('permissions-policy')),
     robotsCheck(label, surface, headers.get('x-robots-tag')),
     ...(surface.csp === 'nonce' ? nonceCspChecks(label, csp) : [denyAllCspCheck(label, csp)]),
+    ...cacheControlChecks(label, surface, headers.get('cache-control')),
   ];
-  const cache = cacheControlCheck(label, surface, headers.get('cache-control'));
-  if (cache !== null) {
-    results.push(cache);
-  }
   return results;
 }
 

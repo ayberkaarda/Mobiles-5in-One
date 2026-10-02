@@ -124,10 +124,48 @@ describe('headers-check reads the shared surface table', () => {
         "email-link-page /giris: CSP script-src 'self' 'nonce-…' 'strict-dynamic'",
         "email-link-page /giris: CSP script-src without 'unsafe-inline' and 'unsafe-eval'",
         'seo /sahalar/istanbul: X-Robots-Tag absent (indexable)',
-        'page /: Cache-Control private or no-store (per-request nonce)',
+        'page /: Cache-Control not shared-cacheable (per-request nonce)',
       ]),
     );
     expect(failed.filter((name) => name.startsWith('missing page'))).toEqual([]);
+  });
+
+  it('fails a token page whose no-store comes with shared-cache directives', async () => {
+    const shared = [
+      'no-store, public, s-maxage=300',
+      'no-store, max-age=60',
+      'no-store, stale-while-revalidate=30',
+      'private, no-store, stale-if-error=60',
+      'no-store, immutable',
+    ];
+    for (const value of shared) {
+      const results = await checkSecurityHeaders(
+        'https://kadro.app',
+        proxyFetch((pathname, headers) => {
+          if (pathname === '/sifre-sifirla') {
+            headers.set('cache-control', value);
+          }
+        }),
+      );
+      const failed = results
+        .filter((result) => !result.ok)
+        .map((result) => `${result.target}: ${result.name}`);
+      expect(failed, value).toEqual([
+        'token-page /sifre-sifirla: Cache-Control not shared-cacheable (per-request nonce)',
+      ]);
+    }
+  });
+
+  it('accepts the Next.js dynamic page value and max-age=0', async () => {
+    const results = await checkSecurityHeaders(
+      'https://kadro.app',
+      proxyFetch((pathname, headers) => {
+        if (pathname === '/giris') {
+          headers.set('cache-control', 'no-store, max-age=0');
+        }
+      }),
+    );
+    expect(formatReport(results.filter((result) => !result.ok))).toBe('');
   });
 });
 
