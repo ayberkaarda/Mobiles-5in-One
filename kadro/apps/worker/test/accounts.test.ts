@@ -8,6 +8,7 @@ import {
   mvpVotes,
   newId,
   openCallApplications,
+  recordPushResend,
   refreshTokens,
   teamMembers,
   teams,
@@ -290,6 +291,14 @@ async function scene(): Promise<Scene> {
   });
   const callId = await fixtures.openCall(callMatch, new Date(Date.now() + DAY_MS));
   await fixtures.application(callId, victim.id);
+  // A coalesced push to the victim (a captain) whose follow-up is still pending (ADR-0044).
+  await recordPushResend(db(), {
+    singletonKey: `rsvp:${openMatchId}:${victim.id}`,
+    type: 'rsvp.changed',
+    userId: victim.id,
+    refId: openMatchId,
+    requestedAt: new Date(),
+  });
   await db()
     .insert(auditLogs)
     .values({ actorId: victim.id, action: 'auth.login', targetType: 'user', metadata: {} });

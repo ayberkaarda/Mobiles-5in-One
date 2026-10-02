@@ -144,6 +144,8 @@ nothing (its completion is fenced to the attempt and only touches `active` jobs)
   once more as a follow-up summary with the same content; accepted, since telling the two apart
   would need a state version the domain does not keep.
 - Every dropped repeat costs one upsert and an advisory lock in the domain transaction.
+- Account hard delete (ADR-0032 step 6) deletes the user's rows, since `user_id` has no foreign
+  key to cascade; the deletion proof's table dump covers the table.
 - `JobContext` gains `singletonKey`; the worker's `enqueue` accepts a coalescing key.
 - The maintenance sweep reports `pushResends` and deletes rows whose `updated_at` is more than a
   day old, each under its key's lock and re-checked there. Not `requested_at`: a new change on a

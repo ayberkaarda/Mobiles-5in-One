@@ -10,6 +10,7 @@ import {
   mvpVotes,
   newId,
   openCallApplications,
+  pushResends,
   subscriptions,
   teamMembers,
   teams,
@@ -388,6 +389,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
 
       await tx.delete(venueReviews).where(eq(venueReviews.userId, userId));
       await tx.delete(openCallApplications).where(eq(openCallApplications.userId, userId));
+      // Pending re-sends of coalesced pushes to this user carry the id without a foreign key
+      // (ADR-0044); the follow-up would be skipped anyway.
+      await tx.delete(pushResends).where(eq(pushResends.userId, userId));
       await tx
         .update(venues)
         .set({ createdBy: null, updatedAt: now })
