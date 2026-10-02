@@ -58,8 +58,8 @@ export async function createServerRuntime(
     createDbClient({
       connectionString: env.DATABASE_URL,
       applicationName: 'kadro-web',
-      onIdleClientError: (error) => {
-        logger.error({ err: error }, 'idle database client failed');
+      onClientError: (error) => {
+        logger.error({ err: error }, 'database client failed');
       },
     }).db;
   const now = overrides.now ?? (() => new Date());

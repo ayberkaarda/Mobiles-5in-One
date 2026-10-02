@@ -22,9 +22,13 @@ export interface DbClientOptions {
   /** Server-side statement timeout in milliseconds. Defaults to 15 000. */
   readonly statementTimeoutMs?: number;
   /**
-   * Called when an idle pooled connection fails (for example a server restart). Without a
-   * handler the error is raised on the pool and terminates the process.
+   * Called when any pooled connection fails outside a query's own promise: while idle, or while
+   * checked out (a transaction, a running statement) when the socket drops. The failing query
+   * itself still rejects. Without a listener Node would terminate the process on the client's
+   * `error` event, so one is always installed; this callback only adds logging.
    */
+  readonly onClientError?: (error: Error) => void;
+  /** @deprecated Alias of `onClientError`, kept for existing callers. */
   readonly onIdleClientError?: (error: Error) => void;
 }
 
@@ -45,9 +49,28 @@ export function createDbClient(options: DbClientOptions): DbClient {
     application_name: options.applicationName ?? 'kadro',
     statement_timeout: options.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS,
   });
-  if (options.onIdleClientError) {
-    pool.on('error', options.onIdleClientError);
-  }
+  // An idle failure reaches both the client and the pool listener with the same error object.
+  const reported = new WeakSet<Error>();
+  const reportClientError = (error: Error): void => {
+    if (reported.has(error)) {
+      return;
+    }
+    reported.add(error);
+    // A logging failure must never turn into an uncaught exception.
+    try {
+      (options.onClientError ?? options.onIdleClientError)?.(error);
+    } catch {
+      // ignored
+    }
+  };
+  // Idle clients: pg-pool forwards their errors here and discards the connection.
+  pool.on('error', reportClientError);
+  // Checked-out clients (transactions, running statements): pg-pool removes its own listener
+  // while a client is borrowed, so without this a dropped socket is an unhandled 'error' event.
+  // pg rejects the in-flight query and releases the broken client, which drops it from the pool.
+  pool.on('connect', (client) => {
+    client.on('error', reportClientError);
+  });
   const db = drizzle({ client: pool, schema });
   return {
     db,
