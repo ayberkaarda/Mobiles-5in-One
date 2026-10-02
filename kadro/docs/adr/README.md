@@ -99,5 +99,6 @@ the same number: 0045–0046 for the preparation wave, 0047–0054 for Phase 3, 
 Phase 4, 0063–0072 for Phase 5, 0073 for the portfolio delivery scope and 0074 for error
 monitoring (the single Phase 5 decision outside its range, added after 0063–0072 were reserved).
 Phase 6 continues from 0075. A row without a link is a reserved number whose record lands with
-its phase; titles and statuses of reserved rows are updated when each phase closes, and work
-branches do not edit this table.
+its phase; titles and statuses of reserved rows are updated when each phase closes. Apart from
+the preparation-wave change that reserves these rows, Phase 3–5 work branches do not edit this
+table.
