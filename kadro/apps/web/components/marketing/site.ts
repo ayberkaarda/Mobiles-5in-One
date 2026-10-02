@@ -3,7 +3,7 @@ import type { Route } from 'next';
 /**
  * Site facts and navigation of the marketing shell (ADR-0056). Product copy is Turkish first
  * (product spec §2). Every link target is a page that exists today: `typedRoutes` rejects an
- * unknown path at type-check time and `tests/marketing/site.test.ts` checks each one against the
+ * unknown path at type-check time and `tests/marketing/marketing.test.ts` checks each one against the
  * `app/` tree. Pages delivered by later work (legal pages, blog, FAQ, about, contact, venue and
  * open-call listings) add their entries here together with the page.
  */

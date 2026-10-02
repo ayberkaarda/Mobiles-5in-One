@@ -2,7 +2,7 @@
  * Turkish product copy of the marketing pages (product spec §2 tone: short, friendly "sen").
  * Every statement describes the MVP scope of spec §3; nothing here claims users, prices, ratings
  * or availability that do not exist. Each page opens with a 40 to 60 word answer-first paragraph
- * that defines Kadro (spec §7, GEO), checked in `tests/marketing/content.test.ts`.
+ * that defines Kadro (spec §7, GEO), checked in `tests/marketing/marketing.test.ts`.
  */
 
 export interface TextItem {

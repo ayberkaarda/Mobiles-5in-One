@@ -2,7 +2,7 @@
  * Light-theme colors of `packages/brand/tokens.json` used by the marketing shell (ADR-0056),
  * exposed as `--m-*` custom properties on the shell's `style` attribute, which the page CSP
  * allows through `style-src-attr` (ADR-0055). `marketing.module.css` reads colors only through
- * these properties. `tests/marketing/theme.test.ts` checks every value against the token file and
+ * these properties. `tests/marketing/marketing.test.ts` checks every value against the token file and
  * every pair below against the WCAG minimums.
  */
 export const MARKETING_THEME = {

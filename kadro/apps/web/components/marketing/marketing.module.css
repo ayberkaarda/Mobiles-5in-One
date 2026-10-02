@@ -1,7 +1,7 @@
 /*
  * Marketing shell and pages (ADR-0056). Colors come only from the `--m-*` custom properties set
  * by `theme.ts` on `.shell`; fonts from the `next/font` variables in `fonts.ts`. Every text pair
- * meets 4.5:1 (tests/marketing/theme.test.ts). Interactive targets are at least 44 px high, focus
+ * meets 4.5:1 (tests/marketing/marketing.test.ts). Interactive targets are at least 44 px high, focus
  * is always visible, motion is reduced on request, and the layout works from 320 px wide and at
  * 200 % zoom without horizontal scrolling.
  */
@@ -52,7 +52,7 @@
 /* Header */
 
 .header {
-  border-bottom: 1px solid rgb(14 26 20 / 12%);
+  border-bottom: 1px solid color-mix(in srgb, var(--m-text) 12%, transparent);
   background-color: var(--m-surface);
 }
 
@@ -157,7 +157,7 @@
   right: -120px;
   width: 360px;
   height: 360px;
-  border: 2px solid rgb(255 255 255 / 22%);
+  border: 2px solid color-mix(in srgb, var(--m-onPrimary) 22%, transparent);
   border-radius: 50%;
   transform: translateY(-50%);
   pointer-events: none;
@@ -170,7 +170,7 @@
   bottom: 0;
   right: 59px;
   width: 2px;
-  background-color: rgb(255 255 255 / 22%);
+  background-color: color-mix(in srgb, var(--m-onPrimary) 22%, transparent);
   pointer-events: none;
 }
 
@@ -340,7 +340,7 @@
 
 .card {
   padding: 24px;
-  border: 1px solid rgb(14 26 20 / 12%);
+  border: 1px solid color-mix(in srgb, var(--m-text) 12%, transparent);
   border-radius: 20px;
   background-color: var(--m-surface);
 }
@@ -483,7 +483,7 @@
 /* Footer */
 
 .footer {
-  border-top: 1px solid rgb(14 26 20 / 12%);
+  border-top: 1px solid color-mix(in srgb, var(--m-text) 12%, transparent);
   background-color: var(--m-surface);
 }
 
