@@ -49,7 +49,7 @@ function recipientLockKey(userId: string) {
 }
 
 /**
- * Account hard delete (ADR-0032, ADR-0044): the first statement of the deletion transaction. Waits
+ * Account hard delete (ADR-0032, ADR-0044): the first lock of the deletion transaction (after `setLockTimeout`). Waits
  * until every producer transaction that recorded a change for this user has ended (a producer keeps
  * its shared lock until its commit or rollback), and makes later ones skip until the deletion has
  * committed or rolled back. Taken before any other lock, so it never waits while

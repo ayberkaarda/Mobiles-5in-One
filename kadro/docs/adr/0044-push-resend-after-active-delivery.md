@@ -124,8 +124,8 @@ the deleted id after it (no foreign key, ADR-0032 proof broken). Options weighed
   PostgreSQL breaks by aborting one side.
 - **Chosen: a per-recipient advisory lock, exclusive for the deletion, tried shared by producers.**
   The hard delete takes `pg_advisory_xact_lock(hashtextextended('push-recipient:<userId>', 0))` as
-  the first statement of its transaction, before any other lock, so it only ever waits holding
-  nothing. The producer, before recording, calls `pg_try_advisory_xact_lock_shared` on the same key
+  the first lock of its transaction (after setting `lock_timeout`), before any other lock, so it
+  only ever waits holding nothing. The producer, before recording, calls `pg_try_advisory_xact_lock_shared` on the same key
   and then checks that the user row exists; the guarantee lives in the recording helper, whatever
   locks the caller holds. A producer that got the shared lock records only while the user exists,
   and a deletion that starts later waits for it and deletes the row; a producer that comes after
@@ -137,16 +137,17 @@ the deleted id after it (no foreign key, ADR-0032 proof broken). Options weighed
   producer transaction: the shared lock is transaction-scoped and held until that domain
   transaction commits or rolls back, not only while the helper runs. Multi-match loops (team leave
   in `teams/members.ts`, the web account deletion in `account/deletion.ts`) can make that longer.
-  The deletion's waiting statement is bounded by `statement_timeout` (15 s, the `packages/db`
-  client default); there is no `lock_timeout`. A timeout fails that attempt and pg-boss retries the
-  deletion; it is not a bound on how long a producer transaction runs.
+  The deletion's wait is bounded by `lock_timeout` (5 s, set as the first statement of its
+  transaction; the 15 s `statement_timeout` of the `packages/db` client default stays as the outer
+  bound). A timeout fails that attempt with `55P03` and pg-boss retries the deletion; it is not a
+  bound on how long a producer transaction runs.
 - **Tested and not tested.** Tests cover: a producer that read the victim before the deletion
   committed (records nothing), a deletion that waits on the recipient lock held by a producer
   that has recorded (`pg_locks`: ungranted exclusive advisory lock blocked by the producer), a
   recipient deleted after the window opened and a recipient that never existed, and the helper
   skipping while the deletion lock is held. Not covered: a deletion that rolls back after a
   producer skipped (the change is then lost, as accepted above) and a deletion attempt that hits
-  `statement_timeout` while waiting.
+  `statement_timeout` while waiting (the `lock_timeout` path is tested: 55P03 within the bound).
 
 ### Worker (`apps/worker/src/push/resend.ts`, `handler.ts`)
 
