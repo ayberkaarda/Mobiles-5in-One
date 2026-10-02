@@ -209,11 +209,11 @@ describe('districtFromLink', () => {
 
   it('finds the district by province and district slug', () => {
     expect(districtFromLink('istanbul', 'kadikoy', districts)).toEqual({
-      key: 'istanbul/kadikoy',
+      slugs: 'istanbul/kadikoy',
       districtId: DISTRICT_A,
     });
     expect(districtFromLink('ankara', 'kadikoy', districts)).toEqual({
-      key: 'ankara/kadikoy',
+      slugs: 'ankara/kadikoy',
       districtId: null,
     });
   });

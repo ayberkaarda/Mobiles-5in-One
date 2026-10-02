@@ -8,7 +8,7 @@ interface DistrictRef {
 
 export interface DistrictLink {
   /** `<il>/<ilce>`, so one link is applied once even when the screen re-renders. */
-  readonly key: string;
+  readonly slugs: string;
   /** The district of the link, or `null` when the list has no such district. */
   readonly districtId: string | null;
 }
@@ -35,5 +35,5 @@ export function districtFromLink(
     return null;
   }
   const match = districts.find((item) => item.provinceSlug === province && item.slug === district);
-  return { key: `${province}/${district}`, districtId: match?.id ?? null };
+  return { slugs: `${province}/${district}`, districtId: match?.id ?? null };
 }

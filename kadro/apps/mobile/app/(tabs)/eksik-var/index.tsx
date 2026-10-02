@@ -43,15 +43,15 @@ export default function OpenCallsTab() {
   const calls = query.data?.pages.flatMap((page) => page.items) ?? [];
   const filtered = activeFilterCount(filters);
   const params = useLocalSearchParams<{ il?: string | string[]; ilce?: string | string[] }>();
-  const [linkedKey, setLinkedKey] = useState<string | null>(null);
+  const [linkedSlugs, setLinkedSlugs] = useState<string | null>(null);
   const [linkMissing, setLinkMissing] = useState(false);
 
   // District link `/eksik-var/<il>/<ilce>` (ADR-0045): once the district list is known, the
   // district filter is set from the slugs, once per link; an unknown district shows a notice.
   const link = districtFromLink(params.il, params.ilce, districts.data?.items);
-  if (link !== null && link.key !== linkedKey) {
+  if (link !== null && link.slugs !== linkedSlugs) {
     const districtId = link.districtId;
-    setLinkedKey(link.key);
+    setLinkedSlugs(link.slugs);
     setLinkMissing(districtId === null);
     if (districtId !== null) {
       setFilters((current) => ({ ...current, district: districtId }));
