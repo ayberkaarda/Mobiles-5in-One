@@ -43,6 +43,27 @@ export function createSession(deps: SessionDeps): Session {
   const now = deps.now ?? Date.now;
   const listeners = new Set<SignOutListener>();
   let inFlightRefresh: Promise<string | null> | null = null;
+  /**
+   * Session generation: incremented by every sign-out and sign-in. A refresh remembers the
+   * generation it started in; its result is dropped when the generation has moved on, so a slow
+   * rotation can neither revive a signed-out session nor replace the tokens of a new account.
+   */
+  let generation = 0;
+  /** Token writes and deletions run one after another, in the order they were requested. */
+  let storageQueue: Promise<unknown> = Promise.resolve();
+
+  function serialized<T>(task: () => Promise<T>): Promise<T> {
+    const next = storageQueue.then(task, task);
+    storageQueue = next.catch(() => undefined);
+    return next;
+  }
+
+  function nextGeneration(): number {
+    generation += 1;
+    // A refresh of the previous generation is no longer shared with new callers.
+    inFlightRefresh = null;
+    return generation;
+  }
 
   function applyTokens(tokens: SessionTokens): void {
     const expiresAt = Date.parse(tokens.accessTokenExpiresAt);
@@ -54,8 +75,9 @@ export function createSession(deps: SessionDeps): Session {
   }
 
   async function clearLocal(reason: SignOutReason): Promise<void> {
+    nextGeneration();
     deps.store.setState(SIGNED_OUT_STATE);
-    await deps.storage.clear();
+    await serialized(() => deps.storage.clear());
     for (const listener of listeners) {
       try {
         await listener(reason);
@@ -66,7 +88,11 @@ export function createSession(deps: SessionDeps): Session {
   }
 
   async function runRefresh(): Promise<string | null> {
+    const startedIn = generation;
     const refreshToken = await deps.storage.readRefreshToken();
+    if (startedIn !== generation) {
+      return null;
+    }
     if (refreshToken === null) {
       await clearLocal('expired');
       return null;
@@ -78,17 +104,25 @@ export function createSession(deps: SessionDeps): Session {
       // 401: expired, revoked, or a reused (already rotated) token whose family the server has
       // just revoked (ADR-0019). Never retried: the user signs in again.
       if (error instanceof ApiError && error.kind === 'problem' && error.status === 401) {
-        await clearLocal('expired');
+        if (startedIn === generation) {
+          await clearLocal('expired');
+        }
         return null;
       }
       // Offline or server failure: the stored token is still the latest one; keep the session.
       throw error;
     }
     // The rotated token is persisted before any waiter resumes, so no later call can present
-    // the spent one.
-    await deps.storage.writeRefreshToken(tokens.refreshToken);
-    applyTokens(tokens);
-    return tokens.accessToken;
+    // the spent one. The generation is checked inside the storage queue: a sign-out requested
+    // meanwhile has already advanced it, and its deletion runs after this write.
+    return serialized(async () => {
+      if (startedIn !== generation) {
+        return null;
+      }
+      await deps.storage.writeRefreshToken(tokens.refreshToken);
+      applyTokens(tokens);
+      return tokens.accessToken;
+    });
   }
 
   return {
@@ -103,8 +137,14 @@ export function createSession(deps: SessionDeps): Session {
     },
 
     async establish(tokens) {
-      await deps.storage.writeRefreshToken(tokens.refreshToken);
-      applyTokens(tokens);
+      const current = nextGeneration();
+      await serialized(async () => {
+        if (current !== generation) {
+          return;
+        }
+        await deps.storage.writeRefreshToken(tokens.refreshToken);
+        applyTokens(tokens);
+      });
     },
 
     getAccessToken() {
@@ -122,9 +162,14 @@ export function createSession(deps: SessionDeps): Session {
     refreshAccessToken() {
       // Single flight (ADR-0019): every caller during a refresh shares the same promise, so a
       // burst of 401s rotates the refresh token exactly once.
-      inFlightRefresh ??= runRefresh().finally(() => {
-        inFlightRefresh = null;
-      });
+      if (inFlightRefresh === null) {
+        const started: Promise<string | null> = runRefresh().finally(() => {
+          if (inFlightRefresh === started) {
+            inFlightRefresh = null;
+          }
+        });
+        inFlightRefresh = started;
+      }
       return inFlightRefresh;
     },
 
