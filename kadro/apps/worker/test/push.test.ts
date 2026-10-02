@@ -1,5 +1,6 @@
 import { NOTIFICATION_TYPES, type PushSendJob, pushSendJobSchema } from '@kadro/contracts';
 import {
+  jobReceipts,
   lockPushResend,
   newId,
   pushResends,
@@ -689,6 +690,63 @@ describe('a change while a coalesced push is being delivered (ADR-0044)', () => 
         expect(bodies()).toHaveLength(2);
         expect(bodies()[1]).toContain(target.summary(target.before + 1));
         expect(await jobsFor(target)).toHaveLength(1);
+        expect(await pendingRows(target)).toEqual([]);
+      });
+
+      it('a failure after the receipt commits still hands the change on in the retry', async () => {
+        const target = await coalescedScene(type);
+        const held = holdFirstSend();
+        const first = await deliveringJob(target, held, clock.now());
+        const changedRef = await target.change();
+        expect(await produce(target, changedRef, clock.now())).toBeNull();
+
+        // Hold the key's lock so the settle transaction waits after the receipt has committed,
+        // then cancel its statement: the failure lands between receipt and completion.
+        const blocker = await database.admin.pool.connect();
+        try {
+          await blocker.query('begin');
+          const { rows } = await blocker.query<{ pid: number }>('select pg_backend_pid() as pid');
+          await blocker.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+            `push-resend:${target.singletonKey}`,
+          ]);
+          held.release();
+          const waiter = await waitFor(
+            async () => {
+              const result = await database.admin.pool.query<{ pid: number }>(
+                `select pid from pg_stat_activity
+                  where wait_event_type = 'Lock' and wait_event = 'advisory'
+                    and $1 = any(pg_blocking_pids(pid))`,
+                [rows[0]?.pid],
+              );
+              return result.rows[0];
+            },
+            { label: 'the settle transaction waiting on the key lock' },
+          );
+          const receipts = await database.admin.db
+            .select({ key: jobReceipts.idempotencyKey })
+            .from(jobReceipts)
+            .where(eq(jobReceipts.queue, 'push.send'));
+          const deliveryKey = (await jobsFor(target)).find((job) => job.id === first)?.data
+            .idempotencyKey;
+          expect(receipts.map((receipt) => receipt.key)).toContain(deliveryKey);
+          await database.admin.pool.query('select pg_cancel_backend($1)', [waiter.pid]);
+        } finally {
+          await blocker.query('rollback');
+          blocker.release();
+        }
+
+        const job = await waitForJobState(database, 'push.send', first, ['completed']);
+        expect(job.retryCount).toBe(1);
+        expect(job.output).toEqual({ outcome: 'duplicate' });
+        expect(bodies()).toHaveLength(1);
+        expect(bodies()[0]).toContain(target.summary(target.before));
+
+        const [successor] = (await jobsFor(target)).filter((row) => row.state === 'created');
+        expect(successor?.data.refId).toBe(changedRef);
+        await release(successor?.id ?? '');
+        expect(await outcomeOf(successor?.id ?? '')).toEqual({ outcome: 'sent' });
+        expect(bodies()).toHaveLength(2);
+        expect(bodies()[1]).toContain(target.summary(target.before + 1));
         expect(await pendingRows(target)).toEqual([]);
       });
     });

@@ -113,6 +113,12 @@ For a coalesced job (type above and `singletonKey` ≠ `idempotencyKey`):
    = opened + 10 min, then delete the row.
 4. A thrown error (transient failure) settles nothing: the row stays, pg-boss retries the job, and
    the retry reads the row and the state again.
+5. A failure after the receipt has committed and before settle commits (a crash, a failed settle
+   transaction) leaves the job active or retrying with its receipt written. The retry returns
+   `duplicate` without reading any state, so it cannot know which recorded changes the earlier
+   delivery covered: it settles with `seen` = 0 and hands every pending row on. The cost is at
+   most one extra summary after such a failure; the alternative, treating the row as covered,
+   loses a change made after the earlier state read.
 
 pg-boss's own completion after the handler returns finds the job already completed and changes
 nothing (its completion is fenced to the attempt and only touches `active` jobs).
@@ -127,6 +133,7 @@ nothing (its completion is fenced to the attempt and only touches `active` jobs)
 | while settle holds the lock                   | producer waits; finds the job completed; new window  |
 | after settle                                  | no job holds the key; new window                     |
 | during a failed attempt                       | row kept; the retry reads it                         |
+| before a failure between receipt and settle   | the retry (`duplicate`) hands the row on             |
 
 ## Consequences
 

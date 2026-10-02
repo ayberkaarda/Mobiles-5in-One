@@ -63,7 +63,9 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
  * `push.send` (ADR-0031): one notification to every device of one user. A coalesced push also
  * settles its pending re-send (ADR-0044): the row's version is read before the state, and the job
  * completes together with that check once the delivery has an outcome. A thrown error leaves the
- * row for the retry, which reads the state again.
+ * row for the retry, which reads the state again. A `duplicate` outcome means an earlier attempt
+ * delivered and wrote its receipt but did not settle: this attempt read no state, so it cannot
+ * tell which recorded changes that delivery covered and hands every pending one on.
  */
 export function createPushSendHandler(dependencies: PushHandlerDependencies) {
   const { db, boss, clock } = dependencies;
@@ -82,7 +84,7 @@ export function createPushSendHandler(dependencies: PushHandlerDependencies) {
       coalesced,
       context,
       outcome,
-      seenVersion,
+      outcome === 'duplicate' ? 0 : seenVersion,
     );
     return outcome;
   };
