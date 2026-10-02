@@ -14,12 +14,15 @@ export interface AuthState {
   readonly accessToken: string | null;
   /** Epoch milliseconds after which `accessToken` is no longer sent. */
   readonly accessTokenExpiresAt: number | null;
+  /** Id of the current sign-in; scopes the persisted query cache. `null` when signed out. */
+  readonly cacheScope: string | null;
 }
 
 export const SIGNED_OUT_STATE: AuthState = {
   status: 'signedOut',
   accessToken: null,
   accessTokenExpiresAt: null,
+  cacheScope: null,
 };
 
 /**
@@ -31,6 +34,7 @@ export function createAuthStore() {
     status: 'unknown',
     accessToken: null,
     accessTokenExpiresAt: null,
+    cacheScope: null,
   }));
 }
 

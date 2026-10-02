@@ -64,6 +64,7 @@ describe('session storage', () => {
       status: 'signedIn',
       accessToken: null,
       accessTokenExpiresAt: null,
+      cacheScope: expect.any(String),
     });
     expect(routeAccess(restarted.store.getState().status)).toEqual({
       pending: false,

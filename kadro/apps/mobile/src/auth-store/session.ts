@@ -14,6 +14,8 @@ export interface SessionTokens {
 export const ACCESS_TOKEN_SKEW_MS = 30_000;
 
 export type SignOutReason = 'user' | 'expired';
+/** Where a tolerated failure happened; reported without any token or server text. */
+export type SessionErrorStage = 'read' | 'revoke' | 'clear' | 'listener';
 export type SignOutListener = (reason: SignOutReason) => void | Promise<void>;
 
 export interface SessionDeps {
@@ -24,6 +26,8 @@ export interface SessionDeps {
   /** `POST /api/v1/auth/logout` revoking the presented family; failures are ignored. */
   readonly revoke?: (refreshToken: string, accessToken: string | null) => Promise<void>;
   readonly now?: () => number;
+  /** Receives failures that sign-out tolerates, so they are not lost silently. */
+  readonly reportError?: (stage: SessionErrorStage, error: unknown) => void;
 }
 
 export interface Session extends SessionPort {
@@ -39,8 +43,20 @@ export interface Session extends SessionPort {
   onSignOut(listener: SignOutListener): () => void;
 }
 
+/** Random id for a new sign-in; distinctness is all that matters, it is not a secret. */
+function newCacheScope(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export function createSession(deps: SessionDeps): Session {
   const now = deps.now ?? Date.now;
+  const report = (stage: SessionErrorStage, error: unknown): void => {
+    try {
+      deps.reportError?.(stage, error);
+    } catch {
+      // Reporting must never break the cleanup it reports on.
+    }
+  };
   const listeners = new Set<SignOutListener>();
   let inFlightRefresh: Promise<string | null> | null = null;
   /**
@@ -77,12 +93,27 @@ export function createSession(deps: SessionDeps): Session {
   async function clearLocal(reason: SignOutReason): Promise<void> {
     nextGeneration();
     deps.store.setState(SIGNED_OUT_STATE);
-    await serialized(() => deps.storage.clear());
+    // Secure storage and the caches are cleaned independently: a failure in one never skips the
+    // other, and each failure is reported.
+    await serialized(async () => {
+      try {
+        await deps.storage.clear();
+      } catch (error) {
+        report('clear', error);
+        try {
+          // An entry that cannot be deleted is overwritten, so a restart does not sign back in.
+          await deps.storage.writeRefreshToken('');
+        } catch (overwriteError) {
+          report('clear', overwriteError);
+        }
+      }
+    });
     for (const listener of listeners) {
       try {
         await listener(reason);
-      } catch {
+      } catch (error) {
         // One failing cleanup must not leave the other caches populated.
+        report('listener', error);
       }
     }
   }
@@ -133,7 +164,17 @@ export function createSession(deps: SessionDeps): Session {
         await clearLocal('expired');
         return;
       }
-      deps.store.setState({ status: 'signedIn', accessToken: null, accessTokenExpiresAt: null });
+      let cacheScope = await deps.storage.readCacheScope();
+      if (cacheScope === null) {
+        cacheScope = newCacheScope();
+        await deps.storage.writeCacheScope(cacheScope);
+      }
+      deps.store.setState({
+        status: 'signedIn',
+        accessToken: null,
+        accessTokenExpiresAt: null,
+        cacheScope,
+      });
     },
 
     async establish(tokens) {
@@ -142,7 +183,10 @@ export function createSession(deps: SessionDeps): Session {
         if (current !== generation) {
           return;
         }
+        const cacheScope = newCacheScope();
         await deps.storage.writeRefreshToken(tokens.refreshToken);
+        await deps.storage.writeCacheScope(cacheScope);
+        deps.store.setState({ cacheScope });
         applyTokens(tokens);
       });
     },
@@ -174,17 +218,26 @@ export function createSession(deps: SessionDeps): Session {
     },
 
     async signOut({ revokeRemote = true, reason = 'user' } = {}) {
-      if (revokeRemote && deps.revoke !== undefined) {
-        const refreshToken = await deps.storage.readRefreshToken();
-        if (refreshToken !== null) {
+      try {
+        if (revokeRemote && deps.revoke !== undefined) {
+          let refreshToken: string | null = null;
           try {
-            await deps.revoke(refreshToken, deps.store.getState().accessToken);
-          } catch {
-            // Local sign-out must complete even offline; the family expires server-side.
+            refreshToken = await deps.storage.readRefreshToken();
+          } catch (error) {
+            report('read', error);
+          }
+          if (refreshToken !== null) {
+            try {
+              await deps.revoke(refreshToken, deps.store.getState().accessToken);
+            } catch (error) {
+              // Local sign-out must complete even offline; the family expires server-side.
+              report('revoke', error);
+            }
           }
         }
+      } finally {
+        await clearLocal(reason);
       }
-      await clearLocal(reason);
     },
 
     onSignOut(listener) {

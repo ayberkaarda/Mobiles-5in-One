@@ -214,6 +214,7 @@ describe('single-flight refresh (ADR-0019)', () => {
       status: 'signedOut',
       accessToken: null,
       accessTokenExpiresAt: null,
+      cacheScope: null,
     });
     expect(secureStoreContents().has(REFRESH_TOKEN_KEY)).toBe(false);
     expect(signOuts).toEqual(['expired']);

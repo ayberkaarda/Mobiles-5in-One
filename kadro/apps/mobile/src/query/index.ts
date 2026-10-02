@@ -1,6 +1,7 @@
 export { QUERY_ROOTS, queryKeys, type QueryRoot } from './keys';
 export { ListQueryView, type ListQueryState, type ListQueryViewProps } from './ListQueryView';
 export {
+  cacheBusterFor,
   containsSensitiveField,
   createQueryPersister,
   PERSISTED_QUERY_ROOTS,

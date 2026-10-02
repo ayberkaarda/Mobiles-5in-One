@@ -2,9 +2,9 @@ import { http, HttpResponse } from 'msw';
 
 import { type ApiClientOptions, createApiClient } from '../../src/api/client';
 import { type MobileRefreshResponse } from '../../src/api/contracts';
-import { createSession, type SessionTokens } from '../../src/auth-store/session';
+import { createSession, type SessionDeps, type SessionTokens } from '../../src/auth-store/session';
 import { createAuthStore } from '../../src/auth-store/store';
-import { secureTokenStorage } from '../../src/auth-store/token-storage';
+import { secureTokenStorage, type TokenStorage } from '../../src/auth-store/token-storage';
 import { registerSecret } from './async-storage';
 import { apiUrl, mswServer, TEST_API_URL } from './msw';
 
@@ -89,12 +89,22 @@ export function rotatingRefreshServer(initialRefreshToken: string): RefreshServe
 }
 
 /** Session and API client wired like `src/api/instance.ts`, against the MSW base URL. */
-export function createTestApi(overrides: Partial<ApiClientOptions> = {}) {
+export interface TestApiOptions extends Partial<ApiClientOptions> {
+  readonly storage?: TokenStorage;
+  readonly reportError?: SessionDeps['reportError'];
+}
+
+export function createTestApi({
+  storage = secureTokenStorage,
+  reportError,
+  ...overrides
+}: TestApiOptions = {}) {
   const store = createAuthStore();
   const revoked: string[] = [];
   const session = createSession({
     store,
-    storage: secureTokenStorage,
+    storage,
+    reportError,
     async refresh(refreshToken) {
       const response = await api.request<MobileRefreshResponse>('/api/v1/auth/refresh', {
         method: 'POST',

@@ -9,15 +9,17 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { useStore } from 'zustand';
 import { I18nextProvider } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { session } from '../src/api/instance';
-import { routeAccess, useAuthStatus } from '../src/auth-store';
+import { authStore, routeAccess, useAuthStatus } from '../src/auth-store';
 import { errorMessage } from '../src/i18n/error-copy';
 import { i18n } from '../src/i18n/instance';
 import {
+  cacheBusterFor,
   clearQueryCaches,
   connectFocusManager,
   createQueryClient,
@@ -32,7 +34,7 @@ connectFocusManager();
 
 const queryClient = createQueryClient();
 const queryPersister = createQueryPersister(AsyncStorage);
-const cacheBuster = Constants.expoConfig?.version ?? 'dev';
+const appVersion = Constants.expoConfig?.version ?? 'dev';
 // Registered before the session is read, so even the start-up check clears a stale cache.
 session.onSignOut(() => clearQueryCaches(queryClient, queryPersister));
 
@@ -71,6 +73,11 @@ function RootStack() {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FONT_MAP);
   const status = useAuthStatus();
+  // The persisted cache belongs to one sign-in; another sign-in (or none) restores nothing.
+  const cacheBuster = cacheBusterFor(
+    appVersion,
+    useStore(authStore, (state) => state.cacheScope),
+  );
 
   useEffect(() => {
     session.bootstrap().catch(() => {
@@ -98,6 +105,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <I18nextProvider i18n={i18n}>
             <QueryProvider
+              key={cacheBuster}
               client={queryClient}
               persister={queryPersister}
               cacheBuster={cacheBuster}

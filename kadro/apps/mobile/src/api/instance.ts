@@ -17,6 +17,14 @@ const { EXPO_PUBLIC_API_URL: apiUrl } = loadMobilePublicEnv();
 export const session = createSession({
   store: authStore,
   storage: secureTokenStorage,
+  reportError(stage, error) {
+    // Sign-out tolerates these failures; in development they are surfaced (no token or server
+    // text is part of the stage or the error name).
+    if (__DEV__) {
+      // eslint-disable-next-line no-console -- development diagnostics until error reporting exists
+      console.warn(`session ${stage} failed: ${error instanceof Error ? error.name : 'unknown'}`);
+    }
+  },
   async refresh(refreshToken) {
     const response = await api.request<MobileRefreshResponse>('/api/v1/auth/refresh', {
       method: 'POST',

@@ -69,7 +69,16 @@ export function createQueryPersister(storage: PersistStorage): QueryPersister {
   });
 }
 
-/** `buster` invalidates the stored cache whenever the app version changes. */
+/**
+ * Persisted-cache buster: the app version plus the id of the current sign-in. A cache written
+ * under another version or another sign-in (or while signed out) is discarded on restore, so a
+ * cleanup that failed at sign-out can never show the previous account's data.
+ */
+export function cacheBusterFor(appVersion: string, cacheScope: string | null): string {
+  return `${appVersion}:${cacheScope ?? 'signed-out'}`;
+}
+
+/** `buster` invalidates the stored cache whenever it differs (see `cacheBusterFor`). */
 export function persistOptions(
   persister: QueryPersister,
   buster: string,
