@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-// @ts-expect-error -- plain ES module script without type declarations
 import { resolveExportEnv } from '../scripts/export.mjs';
 
 type Env = Record<string, string | undefined>;
