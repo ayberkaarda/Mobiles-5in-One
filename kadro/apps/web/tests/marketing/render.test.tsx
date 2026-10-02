@@ -22,6 +22,7 @@ vi.mock('../../components/marketing/fonts', () => ({
 
 const { MarketingShell, MAIN_ID } = await import('../../components/marketing/marketing-shell');
 const { StoreBadges } = await import('../../components/marketing/store-badges');
+const { STORE_ENTRIES } = await import('../../components/marketing/site');
 const { default: HomePage } = await import('../../app/(marketing)/page');
 const { default: FeaturesPage } = await import('../../app/(marketing)/ozellikler/page');
 const { default: MarketingError } = await import('../../app/(marketing)/error');
@@ -49,11 +50,25 @@ function expectHeadingOrder(html: string): void {
   }
 }
 
-function expectSafeMarkup(html: string): void {
+/** External hrefs (`http:`, `https:`, `//`) in the markup. */
+function externalHrefs(html: string): string[] {
+  return [...html.matchAll(/href="([^"]*)"/g)]
+    .map((match) => match[1] ?? '')
+    .filter((href) => /^(https?:|\/\/)/i.test(href));
+}
+
+/** The store listings: the only external links the marketing pages may render. */
+const STORE_HREFS: readonly string[] = STORE_ENTRIES.flatMap((entry) =>
+  entry.href === null ? [] : [entry.href],
+);
+
+function expectSafeMarkup(html: string, allowedExternal: readonly string[] = STORE_HREFS): void {
   expect(html).not.toMatch(/<script\b/);
   expect(html).not.toMatch(/\son[a-z]+="/);
   expect(html).not.toMatch(/<style\b/);
-  expect(html).not.toMatch(/href="https?:/);
+  for (const href of externalHrefs(html)) {
+    expect(allowedExternal, href).toContain(href);
+  }
 }
 
 beforeEach(() => {
@@ -114,6 +129,21 @@ describe('marketing shell', () => {
     );
     expect(html).toContain('href="/magaza-ornegi"');
     expect(html).toContain('rel="noopener"');
+  });
+
+  it('accepts an external link only when it is an allowed store listing', () => {
+    const listing = 'https://store.example/kadro';
+    const html = render(
+      <StoreBadges entries={[{ store: 'appStore', label: 'App Store', href: listing }]} />,
+    );
+    expect(externalHrefs(html)).toEqual([listing]);
+    expectSafeMarkup(html, [listing]);
+    expect(() => {
+      expectSafeMarkup(html);
+    }).toThrow();
+    expect(() => {
+      expectSafeMarkup(`${html}<a href="//other.example/x">x</a>`, [listing]);
+    }).toThrow();
   });
 });
 

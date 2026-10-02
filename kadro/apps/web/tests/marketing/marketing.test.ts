@@ -106,8 +106,16 @@ describe('marketing theme (brand tokens, WCAG 1.4.3 and 1.4.11)', () => {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path in the package
   const css = readFileSync(CSS_FILE, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
-  it('reads colors only from the theme properties (no literal colors besides overlays)', () => {
+  it('reads colors only from the theme properties (overlays are color-mix of a property)', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(css).not.toMatch(/\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i);
+    expect(css).not.toMatch(/:\s*(black|white)\b/i);
+    const mixes = css.split('color-mix(').length - 1;
+    const tokenMixes = [
+      ...css.matchAll(/color-mix\(in srgb, var\(--m-[a-zA-Z]+\) \d{1,2}%, transparent\)/g),
+    ].length;
+    expect(mixes).toBeGreaterThan(0);
+    expect(tokenMixes).toBe(mixes);
     const used = new Set([...css.matchAll(/var\(--m-([a-zA-Z]+)\)/g)].map((match) => match[1]));
     for (const name of used) {
       if (name !== undefined && !name.startsWith('font')) {
