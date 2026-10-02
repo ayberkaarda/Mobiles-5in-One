@@ -128,12 +128,15 @@ describe('POST open-calls/:id/applications', () => {
       [world.team.captain.id, world.team.coCaptain.id].sort(),
     );
     for (const job of jobs) {
+      const singletonKey = `application:${world.callId}:${String(job.data.userId)}`;
+      expect(job.singletonKey).toBe(singletonKey);
       expect(job.data).toEqual({
         type: 'application.received',
         userId: job.data.userId,
         refId: body.id,
-        idempotencyKey: `application:${world.callId}:${String(job.data.userId)}`,
+        idempotencyKey: expect.stringMatching(/^application:[\w-]+:[\w-]+:\d+$/) as unknown,
       });
+      expect(String(job.data.idempotencyKey).startsWith(`${singletonKey}:`)).toBe(true);
       expect(job.startAfter.getTime()).toBeGreaterThanOrEqual(now() + COALESCE_DELAY_MS - 1_000);
     }
   });

@@ -87,6 +87,11 @@ ADR asks for it.
   (`singletonKey` = `rsvp:<matchId>:<recipientId>` with a 10-minute `startAfter`, the handler
   summarises the latest state).
 - `application.received` is coalesced the same way per call and recipient.
+- Coalescing key and delivery key differ: the `singletonKey` above only drops repeats while a job
+  is queued or active; the job's `idempotencyKey` (the worker's receipt key) is
+  `<singletonKey>:<windowOpenedEpochMilliseconds>`. A window opens with the first event that finds
+  no queued or active job and ends when that job has run, so the next event after a delivery opens
+  a new window and is sent instead of being dropped as a duplicate for the 30-day receipt lifetime.
 - Producers are bounded by the API rate limits (groups O, C, G); a single user cannot cause more
   pushes than their mutations allow.
 

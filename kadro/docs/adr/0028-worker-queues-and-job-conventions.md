@@ -51,7 +51,8 @@ ADRs of those phases. Every queue has a dead-letter queue named `<queue>.dead`.
   `reminder:<matchId>:24h:<startsAtEpochMilliseconds>`); when no business key exists, it is the
   SHA-256 of the canonical JSON of `{ queue, data }`. The same value is passed as pg-boss
   `singletonKey`, so a duplicate enqueue while the first job is still queued or active is dropped
-  by pg-boss.
+  by pg-boss. Exception: coalesced notifications (ADR-0031) use a per-object `singletonKey` and an
+  `idempotencyKey` that also names the coalescing window, because a receipt outlives the window.
 
 ### Idempotent handlers
 

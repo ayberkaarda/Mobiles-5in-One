@@ -280,9 +280,13 @@ export async function acceptInvite(
     if (counted === undefined) {
       throw new ApiError('not_found');
     }
-    await tx
+    const [membership] = await tx
       .insert(teamMembers)
-      .values({ teamId: invite.teamId, userId: actorId, role: 'player', joinedAt: now });
+      .values({ teamId: invite.teamId, userId: actorId, role: 'player', joinedAt: now })
+      .returning({ id: teamMembers.id });
+    if (membership === undefined) {
+      throw new Error('membership insert returned no row');
+    }
     await recordAudit(tx, runtime.keyedHash, {
       actorId,
       action: 'invite.accepted',
@@ -294,8 +298,7 @@ export async function acceptInvite(
     await notifyMemberJoined(runtime.jobs, tx, {
       teamId: invite.teamId,
       captainId: relation.ownerId,
-      memberId: actorId,
-      joinedAt: now,
+      membershipId: membership.id,
     });
     const team = await loadTeamSummary(tx, invite.teamId, actorId, mediaUrlBuilder(runtime.env));
     if (team === null) {

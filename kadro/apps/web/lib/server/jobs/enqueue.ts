@@ -25,10 +25,17 @@ export type JobData<TQueue extends JobQueue> = Omit<JobPayload<TQueue>, 'idempot
 
 export interface EnqueueOptions {
   /**
-   * Stable business key (ADR-0028), also the pg-boss `singletonKey`: while a job with the same key
-   * is queued or active, a second enqueue is dropped (`exclusive` queue policy).
+   * Stable business key (ADR-0028), also the pg-boss `singletonKey` unless `singletonKey` is given:
+   * while a job with the same key is queued or active, a second enqueue is dropped (`exclusive`
+   * queue policy). The worker records it as the delivery receipt key.
    */
   readonly idempotencyKey: string;
+  /**
+   * Coalescing key of a coalesced notification (ADR-0031): the per-object key that drops repeats
+   * while one job is queued or active. The `idempotencyKey` then names the coalescing window, so a
+   * later window is a new delivery instead of a duplicate of the first one's receipt.
+   */
+  readonly singletonKey?: string;
   /** Delayed start (reminders, coalesced notifications, hard delete). */
   readonly startAfter?: Date;
 }
@@ -88,6 +95,10 @@ export function createJobSender(client: SendOnlyClient): JobSender {
       if (!key.success) {
         throw new JobContractError(queue, 'invalid idempotency key');
       }
+      const singleton = idempotencyKeySchema.safeParse(options.singletonKey ?? key.data);
+      if (!singleton.success) {
+        throw new JobContractError(queue, 'invalid singleton key');
+      }
       // eslint-disable-next-line security/detect-object-injection -- queue is a typed JobQueue key
       const schema = JOB_PAYLOAD_SCHEMAS[queue];
       const parsed = schema.safeParse({ ...payload, idempotencyKey: key.data });
@@ -98,7 +109,7 @@ export function createJobSender(client: SendOnlyClient): JobSender {
       }
       const boss = await client.boss();
       return boss.send(queue, parsed.data, {
-        singletonKey: key.data,
+        singletonKey: singleton.data,
         ...(options.startAfter === undefined ? {} : { startAfter: options.startAfter }),
         db: fromDrizzle(tx, sql),
       });

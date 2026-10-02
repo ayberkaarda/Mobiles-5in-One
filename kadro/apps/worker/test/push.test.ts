@@ -1,4 +1,4 @@
-import { NOTIFICATION_TYPES, type PushSendJob } from '@kadro/contracts';
+import { NOTIFICATION_TYPES, type PushSendJob, pushSendJobSchema } from '@kadro/contracts';
 import { newId, pushTokens, rateLimitBuckets } from '@kadro/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -26,6 +26,9 @@ import {
   waitFor,
   waitForJobState,
 } from './support.js';
+
+/** Coalescing window of `rsvp.changed` and `application.received` (ADR-0031). */
+const COALESCE_WINDOW_MS = 10 * MINUTE_MS;
 
 let database: TestDatabase;
 let provider: FakeProvider;
@@ -319,6 +322,62 @@ describe('push.send (ADR-0031)', () => {
     await waitFor(async () =>
       (await jobsIn(database, 'push.send.dead')).find((row) => row.data.type === 'broadcast.all'),
     );
+  });
+});
+
+describe('coalesced push.send windows (ADR-0031)', () => {
+  /**
+   * The web producer's keys for `rsvp.changed`: `singletonKey` = `rsvp:<matchId>:<recipientId>`
+   * coalesces, `idempotencyKey` adds the moment the window opened and is the delivery receipt key.
+   */
+  async function sendCoalesced(
+    target: Scene,
+    windowOpenedAt: Date,
+    startAfter?: Date,
+  ): Promise<string | null> {
+    const singletonKey = `rsvp:${target.matchId}:${target.captainId}`;
+    const data = pushSendJobSchema.parse({
+      type: 'rsvp.changed',
+      userId: target.captainId,
+      refId: target.matchId,
+      idempotencyKey: `${singletonKey}:${windowOpenedAt.getTime()}`,
+    });
+    return worker.runtime.boss.send('push.send', data, {
+      singletonKey,
+      ...(startAfter === undefined ? {} : { startAfter }),
+    });
+  }
+
+  it('sends the next window after a delivered one and drops a repeat inside a window', async () => {
+    const current = await scene();
+    await fixtures.pushToken(current.captainId);
+
+    const opened = clock.now();
+    const first = await sendCoalesced(current, opened);
+    expect(await outcomeOf(first ?? '')).toEqual({ outcome: 'sent' });
+
+    // Ten minutes later a new change opens the next window: same coalescing key, new delivery key.
+    clock.advance(COALESCE_WINDOW_MS);
+    const second = await sendCoalesced(current, clock.now());
+    expect(second).not.toBeNull();
+    expect(await outcomeOf(second ?? '')).toEqual({ outcome: 'sent' });
+    expect(sendRequests()).toHaveLength(2);
+
+    // A replay of a delivered window is still a duplicate (the receipt key is per window).
+    const replay = await sendCoalesced(current, opened);
+    expect(await outcomeOf(replay ?? '')).toEqual({ outcome: 'duplicate' });
+    expect(sendRequests()).toHaveLength(2);
+
+    // Inside an open window the queued job absorbs the repeat.
+    clock.advance(COALESCE_WINDOW_MS);
+    const queued = await sendCoalesced(
+      current,
+      clock.now(),
+      new Date(Date.now() + COALESCE_WINDOW_MS),
+    );
+    expect(queued).not.toBeNull();
+    clock.advance(MINUTE_MS);
+    expect(await sendCoalesced(current, clock.now())).toBeNull();
   });
 });
 
