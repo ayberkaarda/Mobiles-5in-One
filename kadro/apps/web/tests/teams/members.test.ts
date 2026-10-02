@@ -1,5 +1,5 @@
 import { teamMemberSchema } from '@kadro/contracts';
-import { auditLogs, matchRsvps, teamMembers } from '@kadro/db';
+import { auditLogs, matchRsvps, subscriptions, teamMembers } from '@kadro/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -203,6 +203,39 @@ describe('PATCH /api/v1/teams/:id/members/:userId (member.updateRole)', () => {
     expect(await captainsOf(team.id)).toEqual([team.captain.id]);
     expect((await teamRow(t, team.id))?.ownerId).toBe(team.captain.id);
     expect(await auditRows('team.captaincyTransfer', team.captain.id)).toHaveLength(0);
+  });
+
+  it('transfers to a Pro user who already owns a team; a lapsed Pro row does not count (matrix §7)', async () => {
+    const team = await teamFixture(t);
+    await insertTeam(t, team.coCaptain.id);
+    const [row] = await t.db
+      .insert(subscriptions)
+      .values({
+        userId: team.coCaptain.id,
+        rcAppUserId: team.coCaptain.id,
+        productId: 'kadro_pro_monthly',
+        status: 'active',
+        expiresAt: new Date(t.harness.runtime.now().getTime() - 60_000),
+        environment: 'production',
+        store: 'app_store',
+      })
+      .returning({ id: subscriptions.id });
+    // Still `active` in the table, but expired: the target is free and owns a team.
+    await expectProblem(
+      await api.updateMember(team.captain.headers, team.id, team.coCaptain.id, { role: 'captain' }),
+      403,
+      'entitlement_required',
+    );
+    await t.db
+      .update(subscriptions)
+      .set({ expiresAt: new Date(t.harness.runtime.now().getTime() + 86_400_000) })
+      .where(eq(subscriptions.id, row?.id ?? ''));
+    await expectJson(
+      await api.updateMember(team.captain.headers, team.id, team.coCaptain.id, { role: 'captain' }),
+      200,
+    );
+    expect(await captainsOf(team.id)).toEqual([team.coCaptain.id]);
+    expect((await teamRow(t, team.id))?.ownerId).toBe(team.coCaptain.id);
   });
 
   it('concurrent transfers to two members leave exactly one captain who owns the team', async () => {

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { meResponseSchema } from '@kadro/contracts';
-import { districts, newId, users } from '@kadro/db';
+import { meResponseSchema, NO_ENTITLEMENTS } from '@kadro/contracts';
+import { districts, newId, type NewSubscription, subscriptions, users } from '@kadro/db';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -172,5 +172,129 @@ describe('PATCH me', () => {
     const { user, headers } = await signedIn({ role: 'moderator' });
     await expectProblem(await patch(headers, { role: 'admin' }), 400, 'validation_failed');
     expect((await userRow(auth, user.id))?.role).toBe('moderator');
+  });
+});
+
+describe('me.entitlements (ADR-0063 decision 7, ADR-0065)', () => {
+  const HOUR = 3_600_000;
+  const at = (offsetMs: number) => new Date(auth.harness.runtime.now().getTime() + offsetMs);
+
+  async function subscribe(
+    userId: string,
+    values: Partial<NewSubscription> & Pick<NewSubscription, 'status'>,
+  ): Promise<void> {
+    await auth.database.client.db.insert(subscriptions).values({
+      userId,
+      rcAppUserId: userId,
+      productId: 'kadro_pro_monthly',
+      environment: 'production',
+      store: 'app_store',
+      expiresAt: at(HOUR),
+      ...values,
+    });
+  }
+
+  async function entitlementsOf(headers: Record<string, string>) {
+    const response = await call(getMe, { headers, path: '/api/v1/me' });
+    const text = await response.text();
+    expect(response.status, text).toBe(200);
+    const body = JSON.parse(text) as Record<string, unknown>;
+    // Present on every profile response, never left out.
+    expect(Object.keys(body)).toContain('entitlements');
+    return meResponseSchema.parse(body).entitlements;
+  }
+
+  it('is NO_ENTITLEMENTS without a subscription row, on GET, PATCH and login', async () => {
+    const { user, headers } = await signedIn();
+    expect(await entitlementsOf(headers)).toEqual(NO_ENTITLEMENTS);
+    const patched = meResponseSchema.parse(
+      await (await patch(headers, { level: 'casual' })).json(),
+    );
+    expect(patched.entitlements).toEqual(NO_ENTITLEMENTS);
+    const session = await mobileLogin(login, user.email, user.password);
+    expect(session.user.entitlements).toEqual(NO_ENTITLEMENTS);
+  });
+
+  it('reports an active subscription with its expiry and store', async () => {
+    const { user, headers } = await signedIn();
+    const expiresAt = at(HOUR);
+    await subscribe(user.id, { status: 'active', expiresAt, store: 'play_store' });
+    expect(await entitlementsOf(headers)).toEqual({
+      pro: true,
+      status: 'active',
+      expiresAt: expiresAt.toISOString(),
+      store: 'play_store',
+    });
+    const session = await mobileLogin(login, user.email, user.password);
+    expect(session.user.entitlements?.pro).toBe(true);
+  });
+
+  it('an active row with a past expiry is not Pro and reads as expired', async () => {
+    const { user, headers } = await signedIn();
+    const expiresAt = at(-HOUR);
+    await subscribe(user.id, { status: 'active', expiresAt });
+    expect(await entitlementsOf(headers)).toEqual({
+      pro: false,
+      status: 'expired',
+      expiresAt: expiresAt.toISOString(),
+      store: 'app_store',
+    });
+  });
+
+  it('a lapsed grace period reads as billing_issue; a running one is Pro', async () => {
+    const lapsed = await signedIn();
+    await subscribe(lapsed.user.id, { status: 'grace_period', expiresAt: at(-HOUR) });
+    expect(await entitlementsOf(lapsed.headers)).toMatchObject({
+      pro: false,
+      status: 'billing_issue',
+    });
+    const running = await signedIn();
+    await subscribe(running.user.id, { status: 'grace_period', expiresAt: at(HOUR) });
+    expect(await entitlementsOf(running.headers)).toMatchObject({
+      pro: true,
+      status: 'grace_period',
+    });
+  });
+
+  it('a granting row decides over a later-expiring non-granting one', async () => {
+    const { user, headers } = await signedIn();
+    const monthly = at(HOUR);
+    await subscribe(user.id, { status: 'active', expiresAt: monthly });
+    await subscribe(user.id, {
+      productId: 'kadro_pro_yearly',
+      status: 'cancelled',
+      expiresAt: at(400 * 24 * HOUR),
+    });
+    expect(await entitlementsOf(headers)).toEqual({
+      pro: true,
+      status: 'active',
+      expiresAt: monthly.toISOString(),
+      store: 'app_store',
+    });
+  });
+
+  it('without a granting row the latest expiry decides', async () => {
+    const { user, headers } = await signedIn();
+    const later = at(-HOUR);
+    await subscribe(user.id, { status: 'expired', expiresAt: at(-48 * HOUR) });
+    await subscribe(user.id, {
+      productId: 'kadro_pro_yearly',
+      status: 'cancelled',
+      expiresAt: later,
+      store: 'promotional',
+    });
+    expect(await entitlementsOf(headers)).toEqual({
+      pro: false,
+      status: 'cancelled',
+      expiresAt: later.toISOString(),
+      store: 'promotional',
+    });
+  });
+
+  it("never shows another user's subscription", async () => {
+    const owner = await signedIn();
+    const other = await signedIn();
+    await subscribe(owner.user.id, { status: 'active' });
+    expect(await entitlementsOf(other.headers)).toEqual(NO_ENTITLEMENTS);
   });
 });

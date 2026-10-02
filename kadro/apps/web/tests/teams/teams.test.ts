@@ -5,7 +5,15 @@ import {
   teamSummarySchema,
   type TeamDetail,
 } from '@kadro/contracts';
-import { auditLogs, matches, teamInvites, teamMembers, teams, users } from '@kadro/db';
+import {
+  auditLogs,
+  matches,
+  subscriptions,
+  teamInvites,
+  teamMembers,
+  teams,
+  users,
+} from '@kadro/db';
 import { and, eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -165,6 +173,27 @@ describe('POST /api/v1/teams', () => {
       403,
       'entitlement_required',
     );
+  });
+
+  it('lets a Pro user own more teams, from the real POST teams route (matrix §7)', async () => {
+    const actor = await account(t);
+    await t.db.insert(subscriptions).values({
+      userId: actor.id,
+      rcAppUserId: actor.id,
+      productId: 'kadro_pro_yearly',
+      status: 'grace_period',
+      expiresAt: new Date(t.harness.runtime.now().getTime() + 86_400_000),
+      environment: 'production',
+      store: 'play_store',
+    });
+    for (const name of ['Birinci', 'İkinci', 'Üçüncü']) {
+      await expectJson(
+        await api.createTeam(actor.headers, { name, districtId: t.districtId }),
+        201,
+      );
+    }
+    const owned = await t.db.select().from(teams).where(eq(teams.ownerId, actor.id));
+    expect(owned).toHaveLength(3);
   });
 
   it('memberships of other teams do not count against the owned-team limit', async () => {

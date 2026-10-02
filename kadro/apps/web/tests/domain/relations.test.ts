@@ -9,6 +9,7 @@ import {
   matchRsvps,
   type MatchStatus,
   newId,
+  subscriptions,
   openCallApplications,
   openCalls,
   teamMembers,
@@ -76,6 +77,8 @@ let reviewCapA = '';
 let uploadCapA = '';
 
 const DAY = 86_400_000;
+/** Clock of the relation loaders; subscription expiries are placed around it. */
+const NOW = new Date();
 
 async function insertUser(name: Fixture, extra: Partial<typeof users.$inferInsert> = {}) {
   const [row] = await db
@@ -345,7 +348,7 @@ describe('team relationship', () => {
 
 describe('member target relationship', () => {
   it('loads actor and target membership of the same team', async () => {
-    const relation = await loadMemberTargetRelation(db, u.coA, teamA, u.plyA);
+    const relation = await loadMemberTargetRelation(db, u.coA, teamA, u.plyA, NOW);
     expect(relation?.facts.teamRole).toBe('co_captain');
     expect(relation?.target).toEqual({
       userId: u.plyA,
@@ -357,7 +360,7 @@ describe('member target relationship', () => {
   });
 
   it('marks self and counts owned teams for a captaincy transfer', async () => {
-    const self = await loadMemberTargetRelation(db, u.capA, teamA, u.capA);
+    const self = await loadMemberTargetRelation(db, u.capA, teamA, u.capA, NOW);
     expect(self?.target?.facts).toEqual({
       isSelf: true,
       targetTeamRole: 'captain',
@@ -368,17 +371,56 @@ describe('member target relationship', () => {
   });
 
   it('a target outside the team is null, never a member of another team', async () => {
-    const relation = await loadMemberTargetRelation(db, u.capA, teamA, u.capB);
+    const relation = await loadMemberTargetRelation(db, u.capA, teamA, u.capB, NOW);
     expect(relation?.facts.teamRole).toBe('captain');
     expect(relation?.target).toBeNull();
-    expect((await loadMemberTargetRelation(db, u.capA, teamA, 'x'))?.target).toBeNull();
-    expect(await loadMemberTargetRelation(db, u.capA, randomUUID(), u.plyA)).toBeNull();
+    expect((await loadMemberTargetRelation(db, u.capA, teamA, 'x', NOW))?.target).toBeNull();
+    expect(await loadMemberTargetRelation(db, u.capA, randomUUID(), u.plyA, NOW)).toBeNull();
   });
 
   it('a deactivated actor is not a member even of its own team', async () => {
-    const relation = await loadMemberTargetRelation(db, u.uDeactivated, teamA, u.uDeactivated);
+    const relation = await loadMemberTargetRelation(db, u.uDeactivated, teamA, u.uDeactivated, NOW);
     expect(relation?.facts.teamRole).toBeNull();
     expect(relation?.target?.facts.isSelf).toBe(false);
+  });
+
+  it("reports the target's Pro entitlement at the loader's clock (matrix §7)", async () => {
+    const [row] = await db
+      .insert(subscriptions)
+      .values({
+        userId: u.coA,
+        rcAppUserId: u.coA,
+        productId: 'kadro_pro_monthly',
+        status: 'active',
+        expiresAt: new Date(NOW.getTime() + DAY),
+        environment: 'production',
+        store: 'app_store',
+      })
+      .returning({ id: subscriptions.id });
+    const subscriptionId = row?.id ?? '';
+    const targetIsPro = async (now: Date) =>
+      (await loadMemberTargetRelation(db, u.capA, teamA, u.coA, now))?.target?.facts.targetIsPro;
+    try {
+      expect(await targetIsPro(NOW)).toBe(true);
+      // An `active` row whose expiry has passed no longer grants Pro.
+      expect(await targetIsPro(new Date(NOW.getTime() + 2 * DAY))).toBe(false);
+      await db
+        .update(subscriptions)
+        .set({ status: 'billing_issue' })
+        .where(eq(subscriptions.id, subscriptionId));
+      expect(await targetIsPro(NOW)).toBe(false);
+      await db
+        .update(subscriptions)
+        .set({ status: 'grace_period', expiresAt: null })
+        .where(eq(subscriptions.id, subscriptionId));
+      expect(await targetIsPro(NOW)).toBe(true);
+      // Another user's subscription never leaks into the target's facts.
+      expect(
+        (await loadMemberTargetRelation(db, u.capA, teamA, u.plyA, NOW))?.target?.facts.targetIsPro,
+      ).toBe(false);
+    } finally {
+      await db.delete(subscriptions).where(eq(subscriptions.id, subscriptionId));
+    }
   });
 
   it('counts owned teams for team.create', async () => {
@@ -772,7 +814,7 @@ describe('query count', () => {
   it('each loader is exactly one query', async () => {
     const probe = countingDb();
     await loadTeamRelation(probe.db, u.coA, teamA);
-    await loadMemberTargetRelation(probe.db, u.coA, teamA, u.plyA);
+    await loadMemberTargetRelation(probe.db, u.coA, teamA, u.plyA, NOW);
     await loadTeamCreateFacts(probe.db, u.coA);
     await loadMatchRelation(probe.db, u.coA, m1);
     await loadOpenCallRelation(probe.db, u.coA, c1);
@@ -796,7 +838,7 @@ describe('query count', () => {
 
   it('the request loader reads each resource once, however often it is asked', async () => {
     const probe = countingDb();
-    const loader = createRelationLoader(probe.db, u.coA);
+    const loader = createRelationLoader(probe.db, u.coA, NOW);
     const [first, second] = await Promise.all([loader.match(m1), loader.match(m1)]);
     expect(first).toBe(second);
     await loader.match(m1);
@@ -828,7 +870,7 @@ describe('query count', () => {
         throw new Error('boom');
       },
     } as unknown as Database;
-    const loader = createRelationLoader(failing, u.coA);
+    const loader = createRelationLoader(failing, u.coA, NOW);
     await expect(loader.team(teamA)).rejects.toThrow('boom');
     await expect(loader.team(teamA)).rejects.toThrow('boom');
     expect(calls).toBe(2);
