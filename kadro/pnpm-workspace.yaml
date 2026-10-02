@@ -50,3 +50,9 @@ minimumReleaseAgeExclude:
   - vitest@5.0.3
   - '@aws-sdk/client-s3@3.1144.0'
   - '@aws-sdk/s3-request-presigner@3.1144.0'
+
+# Documented audit exception, see docs/adr/0043-node-forge-advisory-exception.md.
+# Only this advisory is ignored; the CI gate (`--audit-level=high`) is unchanged.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-86w9-cpqp-85rv
