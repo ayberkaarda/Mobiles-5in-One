@@ -58,7 +58,8 @@ status" and blocks the merge.
   result (failure, cancelled, empty) fails it.
 - **Required check.** The `main` ruleset should require only `Kadro CI gate`, not the individual
   job names, so adding or renaming jobs does not change the ruleset. Setting up the ruleset is an
-  owner action outside this repository's files.
+  owner action outside this repository's files. (Updated by ADR-0046: `Kadro Security gate` is
+  now a second required check next to `Kadro CI gate`.)
 
 ## Consequences
 
@@ -67,7 +68,8 @@ status" and blocks the merge.
 - The test job builds once more than `verify` does and has a 30-minute limit.
 - A missing build or browser in CI now fails loudly instead of passing silently; locally the
   suites still skip so `pnpm test` works without Chrome or a prior build.
-- `Kadro Security` keeps its path filter and is not covered by the gate; it should not be made a
-  required check in its current form.
+- `Kadro Security` kept its path filter and was not covered by the gate; it should not have been
+  made a required check in that form. Superseded by ADR-0046, which removes the path filter and
+  adds `Kadro Security gate`.
 - A job added to `kadro-ci.yml` has to be added to the gate's `needs` and result list, otherwise
   the gate ignores it.

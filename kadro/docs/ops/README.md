@@ -48,7 +48,20 @@ Both images build from the repository root as context.
 | `test`    | `Test`                   | on Kadro changes; `CI=true`, build, then all suites (Docker + Chrome) |
 | `gate`    | `Kadro CI gate`          | always; Kadro change: verify and test passed, else: both skipped      |
 
-Mark only `Kadro CI gate` as the required status check of the `main` ruleset. With `CI=true` a
+`.github/workflows/kadro-security.yml` runs on every pull request, every push to `main`, weekly and
+on demand, also without a path filter ([ADR-0046](../adr/0046-security-workflow-gate.md)):
+
+| Job ID        | Check name                             | Runs                                                                |
+| ------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| `changes`     | `Detect Kadro changes`                 | always; the weekly and manual runs always report Kadro changes      |
+| `gitleaks`    | `Gitleaks (full history)`              | on Kadro changes; all commits of all refs                           |
+| `audit`       | `Dependency audit (high and critical)` | on Kadro changes                                                    |
+| `secret-grep` | `Secret grep`                          | on Kadro changes                                                    |
+| `gate`        | `Kadro Security gate`                  | every run; Kadro change: three jobs passed, else: all three skipped |
+
+Mark exactly two status checks as required in the `main` ruleset: `Kadro CI gate` and
+`Kadro Security gate`, not the individual job names. A gate that stays `cancelled` (a newer push
+cancelled that run) has to be re-run before it counts. With `CI=true` a
 suite that cannot find the production build or a browser fails instead of skipping; locally it
 skips and prints why. Reproduce the test job on a machine with Docker and Chrome or Edge:
 
