@@ -116,13 +116,21 @@ store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` 
   temporary grant → `active`; `CANCELLATION` and `SUBSCRIPTION_PAUSED` keep `active` while the
   carried expiry is after the event time, else `cancelled` / `paused`; `BILLING_ISSUE` →
   `grace_period` while the expiry lies ahead, else `billing_issue`; `EXPIRATION` → `expired`.
-  `PRODUCT_CHANGE` and `TRANSFER` enqueue a per-user `subscription.reconcile` instead of writing,
-  because the event alone does not name the resulting product. The source account of a transfer
-  is corrected by the nightly run.
+  `PRODUCT_CHANGE` names the product being left: it keeps `active` until the carried expiry
+  (else `expired`), and the new product's own purchase or renewal event writes its row; a change
+  from a non-Pro product is stored as `foreign_product`. `TRANSFER` enqueues a per-user
+  `subscription.reconcile` for the receiving account, since `webhook_events` keeps only one
+  `app_user_id`. Without `REVENUECAT_API_KEY` a transfer is left unprocessed with the job outcome
+  `deferred_no_api_key` (logged at warn) so it can be replayed once a key exists.
 - The nightly run is scheduled in UTC (other schedules stay in Europe/Istanbul) with
-  `{ userId: null }`. It reads RevenueCat REST API v1 `GET /v1/subscribers/{app_user_id}` and
-  writes each Pro product with the response's request time as the event time. A transient
-  failure for one user is handed to a per-user job five minutes later; a rejected key ends the
-  run without retries. Without `REVENUECAT_API_KEY` the job completes as skipped.
+  `{ userId: null }` and walks users with a subscription row, skipping deleted accounts. It reads
+  RevenueCat REST API v1 `GET /v1/subscribers/{app_user_id}` and writes each Pro product with the
+  response's request time as the event time. A Pro row the answer no longer contains (purchases
+  transferred away, subscription removed, unknown subscriber) is written as `expired` with the
+  same event time, so the source account of a transfer loses Pro here; the staleness rule still
+  protects newer webhook events. A transient failure for one user is handed to a per-user job
+  five minutes later; other per-user failures are counted, logged and skipped; only a rejected
+  key ends the run, without retries. A run that exceeds its expiry restarts from the first user.
+  Without `REVENUECAT_API_KEY` the job completes as skipped.
 - Verification is limited to fixtures, a real PostgreSQL and an in-memory RevenueCat client. The
   REST client is not exercised against RevenueCat.
