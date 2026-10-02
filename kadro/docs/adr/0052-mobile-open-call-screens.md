@@ -67,28 +67,43 @@ applications and close the call. The API for this exists (`listOpenCalls`, `publ
 
 ### Publishing, deciding, closing (staff)
 
-- Publishing is offered per footnote 19: staff, team not read-only, match `open`, start later
-  than now + 15 minutes, at least one free place. Missing count 1..min(29, slots − confirmed);
-  position (or any); level; district optional (default: the venue's or the team's, server side);
-  expiry as a choice relative to the start (kick-off, 1 h, 3 h or 24 h before), offered only
-  when it lies in `[now + 15 min + 2 min slack, starts_at]`.
-- The publish answer (and the close answer) is kept under `open-calls/match/<matchId>`. A call
-  published from another device is not known to this one: publishing then answers
-  `open_call_exists`, and the screen offers to close that call, which needs only the match id.
+- Publishing is offered per footnote 19: staff, team not read-only, match `open`, at least one
+  free place, and a start no earlier than the earliest possible end of a call (now + 15 minutes +
+  2 minutes of slack for a form left open and the request's travel time). Missing count
+  1..min(29, slots − confirmed); position (or any); level; district optional (default: the
+  venue's or the team's, server side); expiry as a choice relative to the start (kick-off, 1 h,
+  3 h or 24 h before), offered only when it lies in `[now + 17 min, starts_at]`. The publish gate
+  and the expiry choices use the same threshold, so the form is shown only when at least the
+  kick-off can be chosen.
+- The publish answer (and the close answer) is kept in memory for the match. A kept call counts as
+  live only while it is stored `open`, before its end and before the start, and while the match
+  itself is still `open` (a lock, cancel or played status closes the call on the server); otherwise
+  it is shown as the last call, read-only, without accept or reject.
+- A live call this device did not publish (another staff member or device) is recognized when
+  publishing answers `open_call_exists`, or when a cached public list holds a call with the
+  match's team name and start. The publish form is then hidden; the screen says that the call's
+  details and applications cannot be shown here, offers to open the listed call (where staff see
+  and decide the applications) and offers to close the call by match id, with a confirmation that
+  warns that pending applications not visible here are rejected and cannot apply again.
 - Accept and reject are offered on pending applications while the call is active (footnote 21);
   reject asks for a confirmation (a rejected applicant cannot apply again, ADR-0010).
 
 ### Data and writes
 
-- Query keys under the persisted `open-calls` root: `list/<filters>`, `call/<id>`,
-  `applications/<id>`, `match/<matchId>`; districts under `districts/list` (stale after a day). The
-  last copies are shown offline with the "showing saved data" notice; sign-out clears them with
-  the rest of the cache (ADR-0047).
+- Persisted query keys (`open-calls` root): `list/<filters>` and `call/<id>`, both the public
+  projection; districts under `districts/list` (stale after a day). The last copies are shown
+  offline with the "showing saved data" notice.
+- Memory-only keys (`open-call-private` root, not in the persisted allow-list):
+  `applications/<id>` (other users' notes and profile cards) and `match/<matchId>` (the staff view
+  of the call). They are never written to the device, like the team invites (ADR-0050). Sign-out
+  clears every key (ADR-0047).
 - Nothing is optimistic. Apply, withdraw, publish, close, accept and reject wait for the server;
   the answer is written into the cache and the related lists refetch in the background (never
-  awaited, ADR-0050). An acceptance also refetches the match (a participant joined) and lowers the
-  kept call's missing count by one, closing it at zero as the server does (footnote 21), since
-  there is no read of the call to confirm it. Any 409 re-reads the applications.
+  awaited, ADR-0050). An acceptance, on either screen, lowers the missing count of every kept
+  staff copy of that call by one, closing it at zero as the server does (footnote 21), since there
+  is no read of the call to confirm it. It also marks the match stale: the match id comes from the
+  screen or from a kept copy of the call; when neither knows it (staff deciding from the public
+  list), every cached match detail is marked stale. Any 409 re-reads the applications.
 - Writes on one call share a mutation key, and so do writes on one match's call; the controls are
   disabled while one runs.
 
@@ -103,8 +118,9 @@ applications and close the call. The API for this exists (`listOpenCalls`, `publ
 - Story 6 works on the phone end to end against the existing API: find, apply, decide, close.
 - Known limits, recorded as contract handoffs rather than worked around: no single-call read (a
   shared or restored link to a call the app never listed shows "not found"); no open-call field on
-  the staff match view (a call published from another device is found only through
-  `open_call_exists`, and the kept copy lasts as long as the persisted cache, 24 h); no match id
+  the staff match view (a call published from another device is recognized only through
+  `open_call_exists` or a cached list entry, and its applications are reachable only while it is
+  listed; the kept copy lasts until the app restarts); no match id
   for an accepted applicant (the guest cannot open the match from the call; ADR-0051 notes the
   same gap); `GET districts` is in the contracts but not yet served by the web app.
 
