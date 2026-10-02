@@ -32,7 +32,7 @@ deleted afterwards and are not part of the history.
 | Flight payload hash across two clean builds   | differs on every page (the payload embeds the build id, e.g. `BHrU_zP8odHZ8IO77_M2C` vs `1bjeEszSTj-hl0YzzCl1W`); the bootstrap hash is stable                                                                |
 | Flight payload of the ISR page                | contains the rendered data (the timestamp); three responses across one regeneration had three different payload hashes (`G2/h1/…`, `Uwm9A6J7…`, `sMg/M5+L…`)                                                  |
 | Headers served for the static pages           | `Cache-Control: s-maxage=31536000` (ISR: `s-maxage=5, stale-while-revalidate=…`), `x-nextjs-cache: HIT`, and the proxy's nonce CSP although the HTML has 0 nonce attributes, so every script would be blocked |
-| ISR regeneration under the nonce proxy        | the regenerated HTML carried 11 `nonce="…"` attributes: Next.js wrote the nonce of the request that triggered the regeneration into the cached page, which is then served to every later visitor              |
+| ISR regeneration under the nonce proxy        | the revalidated HTML carried 11 `nonce="…"` attributes: Next.js wrote the nonce of the request that triggered the regeneration into the cached page, which is then served to every later visitor              |
 | Size of a hash-only `script-src` for one page | 125 bytes (two hashes); no header-size problem                                                                                                                                                                |
 
 ## Decision
