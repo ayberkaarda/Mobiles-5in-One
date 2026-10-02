@@ -5,11 +5,13 @@ import {
   type Transaction,
   auditLogs,
   deletionRequests,
+  lockPushRecipientForDeletion,
   matchRsvps,
   matches,
   mvpVotes,
   newId,
   openCallApplications,
+  pushResends,
   subscriptions,
   teamMembers,
   teams,
@@ -358,6 +360,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
     const { userId } = precheck;
 
     const result = await db.transaction(async (tx) => {
+      // First, before any other lock: producers recording a push re-send for this user finish
+      // first, later ones skip (ADR-0044).
+      await lockPushRecipientForDeletion(tx, userId);
       const now = clock.now();
       const check = await eligibility(tx, job.deletionRequestId, now, true);
       if (!check.due) {
@@ -388,6 +393,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
 
       await tx.delete(venueReviews).where(eq(venueReviews.userId, userId));
       await tx.delete(openCallApplications).where(eq(openCallApplications.userId, userId));
+      // Pending re-sends of coalesced pushes to this user carry the id without a foreign key
+      // (ADR-0044); the follow-up would be skipped anyway.
+      await tx.delete(pushResends).where(eq(pushResends.userId, userId));
       await tx
         .update(venues)
         .set({ createdBy: null, updatedAt: now })

@@ -150,3 +150,41 @@ export const jobReceipts = pgTable(
     check('job_receipts_queue_length', sql`char_length(${t.queue}) between 1 and 100`),
   ],
 );
+
+/** Notification types whose `push.send` jobs coalesce per object and recipient (ADR-0031). */
+export const COALESCED_PUSH_TYPES = ['rsvp.changed', 'application.received'] as const;
+export type CoalescedPushType = (typeof COALESCED_PUSH_TYPES)[number];
+
+/**
+ * Pending re-send of a coalesced push (ADR-0044): a change whose `push.send` enqueue was dropped
+ * because a job with the same coalescing key was queued, retrying or active. The web producer
+ * writes the row in the transaction of the change; the worker deletes it when the job that covered
+ * the change completes, or turns it into the next delivery when the change came after the job had
+ * read the state it renders. `version` counts the dropped changes, so the worker can tell whether
+ * one arrived after it read the row. `user_id` and `ref_id` carry no foreign key, as in the job
+ * payloads they mirror; rows are short-lived and swept by the maintenance job.
+ */
+export const pushResends = pgTable(
+  'push_resends',
+  {
+    id: primaryId(),
+    singletonKey: text('singleton_key').notNull(),
+    type: text('type').$type<CoalescedPushType>().notNull(),
+    userId: uuid('user_id').notNull(),
+    refId: uuid('ref_id').notNull(),
+    /** First dropped change since the row was last cleared; opens the follow-up window. */
+    requestedAt: timestamptz('requested_at').notNull(),
+    version: integer('version').notNull().default(1),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('push_resends_singleton_key_key').on(t.singletonKey),
+    index('push_resends_updated_at_idx').on(t.updatedAt),
+    check(
+      'push_resends_singleton_key_length',
+      sql`char_length(${t.singletonKey}) between 1 and 128`,
+    ),
+    check('push_resends_type', sql`${t.type} in ('rsvp.changed', 'application.received')`),
+    check('push_resends_version_positive', sql`${t.version} >= 1`),
+  ],
+);

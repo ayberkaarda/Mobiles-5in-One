@@ -3,7 +3,9 @@ import { JOB_QUEUES, type JobQueue, deadLetterQueue } from '@kadro/contracts';
 /**
  * Queue options of ADR-0028. Every queue uses the `exclusive` policy: at most one job per
  * `singletonKey` (the job's `idempotencyKey`) may be queued, retrying or active, so a duplicate
- * enqueue is dropped by pg-boss. Exhausted jobs move to `<queue>.dead`.
+ * enqueue is dropped by pg-boss. Coalesced pushes use a per-object `singletonKey` that differs from
+ * the `idempotencyKey` (ADR-0031) and carry a dropped change forward (ADR-0044). Exhausted jobs move
+ * to `<queue>.dead`.
  */
 
 /** pg-boss keeps its tables in a dedicated schema, created by migration 0010. */

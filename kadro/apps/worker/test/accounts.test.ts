@@ -1,13 +1,18 @@
 import { randomBytes } from 'node:crypto';
 
 import {
+  type Transaction,
   auditLogs,
   deletionRequests,
   emailTokens,
+  lockPushResend,
+  pushResends,
   matchRsvps,
   mvpVotes,
   newId,
   openCallApplications,
+  recordPushResend,
+  recordPushResendForRecipient,
   refreshTokens,
   teamMembers,
   teams,
@@ -16,13 +21,13 @@ import {
   venueReviews,
   venues,
 } from '@kadro/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { TOMBSTONE_DISPLAY_NAME } from '../src/accounts/hard-delete.js';
 import { DAY_MS, HOUR_MS } from '../src/clock.js';
 import { sha256Hex } from '../src/email/tokens.js';
-import { enqueue } from '../src/enqueue.js';
+import { bossExecutor, enqueue } from '../src/enqueue.js';
 import { hardDeleteIdempotencyKey } from '../src/maintenance/sweep.js';
 import {
   type FakeProvider,
@@ -290,6 +295,14 @@ async function scene(): Promise<Scene> {
   });
   const callId = await fixtures.openCall(callMatch, new Date(Date.now() + DAY_MS));
   await fixtures.application(callId, victim.id);
+  // A coalesced push to the victim (a captain) whose follow-up is still pending (ADR-0044).
+  await recordPushResend(db(), {
+    singletonKey: `rsvp:${openMatchId}:${victim.id}`,
+    type: 'rsvp.changed',
+    userId: victim.id,
+    refId: openMatchId,
+    requestedAt: new Date(),
+  });
   await db()
     .insert(auditLogs)
     .values({ actorId: victim.id, action: 'auth.login', targetType: 'user', metadata: {} });
@@ -595,5 +608,185 @@ describe('account.hard_delete (ADR-0032, ADR-0033)', () => {
     expect(job.retryCount).toBe(0);
     expect(await db().select().from(users).where(eq(users.id, user.id))).toEqual([]);
     expect(worker.metrics.count('email_delivery_failed', { kind: 'deletion_completed' })).toBe(1);
+  });
+});
+
+describe('account.hard_delete and a concurrent coalesced push producer (ADR-0044)', () => {
+  interface RaceScene {
+    readonly victimId: string;
+    readonly requestId: string;
+    readonly teamId: string;
+    readonly matchId: string;
+  }
+
+  /** The victim is a co-captain without an RSVP; a coalesced job to them holds the key. */
+  async function raceScene(): Promise<RaceScene> {
+    const captain = await fixtures.user();
+    const victim = await fixtures.user({ deactivatedAt: new Date(Date.now() - 8 * DAY_MS) });
+    const requestId = await deletionRequest(victim.id, new Date(Date.now() - HOUR_MS));
+    const teamId = await fixtures.team(captain.id, 'Yarış Kadro');
+    await fixtures.member(teamId, victim.id, 'co_captain');
+    const matchId = await fixtures.match(teamId, { startsAt: new Date(Date.now() + 2 * DAY_MS) });
+    const key = `rsvp:${matchId}:${victim.id}`;
+    const queued = await worker.runtime.boss.send(
+      'push.send',
+      { type: 'rsvp.changed', userId: victim.id, refId: matchId, idempotencyKey: `${key}:1` },
+      { singletonKey: key, startAfter: new Date(Date.now() + HOUR_MS) },
+    );
+    expect(queued).not.toBeNull();
+    return { victimId: victim.id, requestId, teamId, matchId };
+  }
+
+  /** Staff of the team, read without a lock as the web producer does (`teamStaffIds`). */
+  async function staffOf(tx: Transaction, teamId: string): Promise<string[]> {
+    const rows = await tx
+      .select({ userId: teamMembers.userId })
+      .from(teamMembers)
+      .where(
+        and(eq(teamMembers.teamId, teamId), inArray(teamMembers.role, ['captain', 'co_captain'])),
+      );
+    return rows.map((row) => row.userId).sort();
+  }
+
+  /** The rest of the web producer (`notify.ts` `pushCoalesced`) for the staff it read. */
+  async function produceFor(
+    tx: Transaction,
+    target: RaceScene,
+    recipients: readonly string[],
+  ): Promise<void> {
+    const now = new Date();
+    for (const userId of recipients) {
+      const singletonKey = `rsvp:${target.matchId}:${userId}`;
+      await lockPushResend(tx, singletonKey);
+      const jobId = await worker.runtime.boss.send(
+        'push.send',
+        {
+          type: 'rsvp.changed',
+          userId,
+          refId: target.matchId,
+          idempotencyKey: `${singletonKey}:${now.getTime()}`,
+        },
+        {
+          singletonKey,
+          startAfter: new Date(now.getTime() + 10 * 60_000),
+          db: bossExecutor(tx),
+        },
+      );
+      if (jobId === null) {
+        await recordPushResendForRecipient(tx, {
+          singletonKey,
+          type: 'rsvp.changed',
+          userId,
+          refId: target.matchId,
+          requestedAt: now,
+        });
+      }
+    }
+  }
+
+  async function tracesOf(userId: string) {
+    return (await dumpAllTables()).filter(
+      (entry) => entry.row.includes(userId) && entry.table !== 'audit_logs',
+    );
+  }
+
+  it('a producer that read the victim as staff before the deletion records nothing after it', async () => {
+    const target = await raceScene();
+    let staffRead: () => void = () => undefined;
+    const hasRead = new Promise<void>((resolve) => {
+      staffRead = resolve;
+    });
+    let resume: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const producing = db().transaction(async (tx) => {
+      const staff = await staffOf(tx, target.teamId);
+      expect(staff).toContain(target.victimId);
+      staffRead();
+      await gate;
+      await produceFor(tx, target, staff);
+    });
+
+    // Barrier: the recipient list is read; the deletion commits before the producer goes on.
+    await hasRead;
+    try {
+      expect((await runDeletion(target.requestId)).output).toEqual({ outcome: 'deleted' });
+    } finally {
+      resume();
+    }
+    await producing;
+    expect(await tracesOf(target.victimId)).toEqual([]);
+  });
+
+  it('a deletion waits for a producer that is recording a change for the victim', async () => {
+    const target = await raceScene();
+    let recorded: () => void = () => undefined;
+    const hasRecorded = new Promise<void>((resolve) => {
+      recorded = resolve;
+    });
+    let resume: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    let producerPid = 0;
+    let recordedRows: { version: number }[] = [];
+    const producing = db().transaction(async (tx) => {
+      const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      producerPid = Number(result.rows[0]?.pid);
+      await produceFor(tx, target, await staffOf(tx, target.teamId));
+      recordedRows = await tx
+        .select({ version: pushResends.version })
+        .from(pushResends)
+        .where(eq(pushResends.singletonKey, `rsvp:${target.matchId}:${target.victimId}`));
+      recorded();
+      await gate;
+    });
+    await hasRecorded;
+    // The producer really recorded the victim's change and holds the shared recipient lock.
+    expect(recordedRows).toEqual([{ version: 1 }]);
+    const held = await database.admin.pool.query<{ mode: string }>(
+      `select mode from pg_locks where locktype = 'advisory' and granted and pid = $1`,
+      [producerPid],
+    );
+    expect(held.rows.map((row) => row.mode)).toContain('ShareLock');
+
+    const jobId = await enqueue(worker.runtime.boss, 'account.hard_delete', {
+      deletionRequestId: target.requestId,
+      idempotencyKey: `${hardDeleteIdempotencyKey(target.requestId)}:${newId()}`,
+    });
+    try {
+      // The deletion waits on the recipient lock itself: an ungranted exclusive advisory lock,
+      // blocked by the producer, requested by the lock statement.
+      const waiter = await waitFor(
+        async () => {
+          const waiting = await database.admin.pool.query<{ mode: string; query: string }>(
+            `select l.mode, a.query from pg_locks l join pg_stat_activity a on a.pid = l.pid
+              where l.locktype = 'advisory' and not l.granted
+                and $1 = any(pg_blocking_pids(l.pid))`,
+            [producerPid],
+          );
+          return waiting.rows[0];
+        },
+        { label: 'the deletion waiting on the recipient lock' },
+      );
+      expect(waiter.mode).toBe('ExclusiveLock');
+      expect(waiter.query).toContain('pg_advisory_xact_lock');
+      expect(
+        (await jobsIn(database, 'account.hard_delete')).find((job) => job.id === jobId)?.state,
+      ).toBe('active');
+    } finally {
+      resume();
+    }
+    await producing;
+    const job = await waitForJobState(
+      database,
+      'account.hard_delete',
+      jobId ?? '',
+      ['completed'],
+      30_000,
+    );
+    expect(job.output).toEqual({ outcome: 'deleted' });
+    expect(await tracesOf(target.victimId)).toEqual([]);
   });
 });
