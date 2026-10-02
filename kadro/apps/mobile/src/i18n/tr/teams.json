@@ -5,7 +5,7 @@
   "list": {
     "create": "Takım kur",
     "join": "Kodla katıl",
-    "openHint": "Takımın kadrosunu ve ayarlarını açar.",
+    "openHint": "Takımın kadrosunu açar.",
     "locked": "Salt okunur"
   },
   "create": {
@@ -60,7 +60,7 @@
   },
   "member": {
     "role": "Rol: {{role}}",
-    "joined": "Katılma: {{date}}",
+    "joined": "Katıldı: {{date}}",
     "position": {
       "GK": "Kaleci",
       "DEF": "Defans",

@@ -5,7 +5,7 @@
   "list": {
     "create": "Create a team",
     "join": "Join with a code",
-    "openHint": "Opens the team's squad and settings.",
+    "openHint": "Opens the team's squad.",
     "locked": "Read-only"
   },
   "create": {
