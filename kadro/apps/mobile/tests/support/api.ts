@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { type ApiClientOptions, createApiClient } from '../../src/api/client';
 import { type MobileRefreshResponse } from '../../src/api/contracts';
 import { createSession, type SessionDeps, type SessionTokens } from '../../src/auth-store/session';
-import { createAuthStore } from '../../src/auth-store/store';
+import { type AuthStore, createAuthStore } from '../../src/auth-store/store';
 import { secureTokenStorage, type TokenStorage } from '../../src/auth-store/token-storage';
 import { registerSecret } from './async-storage';
 import { apiUrl, mswServer, TEST_API_URL } from './msw';
@@ -91,15 +91,17 @@ export function rotatingRefreshServer(initialRefreshToken: string): RefreshServe
 /** Session and API client wired like `src/api/instance.ts`, against the MSW base URL. */
 export interface TestApiOptions extends Partial<ApiClientOptions> {
   readonly storage?: TokenStorage;
+  /** Auth state to use, e.g. the app-wide store that components read; a fresh one by default. */
+  readonly store?: AuthStore;
   readonly reportError?: SessionDeps['reportError'];
 }
 
 export function createTestApi({
   storage = secureTokenStorage,
+  store = createAuthStore(),
   reportError,
   ...overrides
 }: TestApiOptions = {}) {
-  const store = createAuthStore();
   const revoked: string[] = [];
   const session = createSession({
     store,

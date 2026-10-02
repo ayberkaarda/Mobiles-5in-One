@@ -4,6 +4,9 @@ import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 
 import { resetAsyncStorage, takeAsyncStorageViolations } from './support/async-storage';
 import { resetSecureStore } from './support/expo-secure-store';
+import { resetAppleDouble } from './support/expo-apple-authentication';
+import { __setLinkingURL } from './support/expo-linking';
+import { resetRouterDouble } from './support/expo-router';
 import { mswServer } from './support/msw';
 import * as reactNativeDouble from './support/react-native';
 
@@ -40,6 +43,10 @@ afterEach(async () => {
   await cleanup();
   mswServer.resetHandlers();
   resetSecureStore();
+  resetRouterDouble();
+  resetAppleDouble();
+  __setLinkingURL(null);
+  reactNativeDouble.__resetShare();
   const violations = takeAsyncStorageViolations();
   resetAsyncStorage();
   // Threat model T-MOB-01: a credential written to AsyncStorage fails the test that wrote it.

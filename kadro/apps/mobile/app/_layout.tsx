@@ -60,11 +60,22 @@ function RootStack() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={access.signedInRoutes}>
           <Stack.Screen name="(tabs)" />
+          {/* Team screens open above the tabs; an invite link (`/mac/<code>`) needs a session. */}
+          <Stack.Screen name="takim/yeni" />
+          <Stack.Screen name="takim/katil" />
+          <Stack.Screen name="takim/[id]/index" />
+          <Stack.Screen name="takim/[id]/davet" />
+          <Stack.Screen name="takim/[id]/uye/[userId]" />
+          <Stack.Screen name="mac/[code]" />
         </Stack.Protected>
-        {/* Signed-out side: the entry screen; the (auth) group joins this guard. */}
+        {/* Signed-out side: the entry screen and the (auth) group. */}
         <Stack.Protected guard={access.signedOutRoutes}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
         </Stack.Protected>
+        {/* Email links open in any session state; the tokens they carry are single use. */}
+        <Stack.Screen name="e-posta-dogrula" />
+        <Stack.Screen name="sifre-sifirla" />
       </Stack>
     </NavigationThemeProvider>
   );

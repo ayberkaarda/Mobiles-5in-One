@@ -1,0 +1,107 @@
+{
+  "nav": {
+    "back": "Back"
+  },
+  "list": {
+    "create": "Create a team",
+    "join": "Join with a code",
+    "openHint": "Opens the team's squad.",
+    "locked": "Read-only"
+  },
+  "create": {
+    "title": "Create a team",
+    "subtitle": "Name your team. You become the captain and add players later with an invite link.",
+    "name": "Team name",
+    "nameHint": "{{min}}–{{max}} characters.",
+    "districtFromProfile": "The team is created in the district set in your profile.",
+    "noDistrict": "To create a team, first choose your district in your profile.",
+    "openProfile": "Go to profile",
+    "unverified": "Verify your email address to create a team. Tap the verification link in your inbox.",
+    "submit": "Create team"
+  },
+  "validation": {
+    "nameTooShort": "The team name needs at least {{min}} characters.",
+    "nameTooLong": "The team name can have at most {{max}} characters.",
+    "nameInvalid": "The team name cannot contain invisible characters."
+  },
+  "join": {
+    "title": "Join a team",
+    "subtitle": "Paste the invite link or the invite code a friend sent you.",
+    "input": "Invite link or code",
+    "inputInvalid": "This is not an invite link or code. Paste the whole link.",
+    "submit": "Show invite",
+    "other": "Enter another code"
+  },
+  "invite": {
+    "title": "Team invite",
+    "members": "Squad of {{number}}",
+    "accept": "Join team",
+    "acceptHint": "You join the team as a player.",
+    "invalidTitle": "Invite not valid",
+    "invalidMessage": "This invite has expired, has no uses left or was cancelled by the captain. Ask the captain for a new link.",
+    "alreadyMember": "You are already on this team.",
+    "openTeams": "Go to my teams",
+    "unverified": "Verify your email address to join a team."
+  },
+  "detail": {
+    "summary": "Your role: {{role}} · squad of {{number}}",
+    "roster": "Squad",
+    "you": "{{name}} (you)",
+    "memberHint": "Opens role and membership options.",
+    "invite": "Invite players",
+    "locked": "This team is read-only: the Pro plan has ended, so no new invites or matches can be created.",
+    "leave": "Leave team",
+    "leaveQuestion": "Are you sure you want to leave {{team}}? You will need a new invite to join again.",
+    "leaveConfirm": "Leave",
+    "cancel": "Cancel",
+    "captainCannotLeave": "The captain cannot leave the team. Hand the captaincy to another player first.",
+    "missingTitle": "Team not found",
+    "missingMessage": "This team was deleted or you are no longer a member."
+  },
+  "member": {
+    "role": "Role: {{role}}",
+    "joined": "Joined: {{date}}",
+    "position": {
+      "GK": "Goalkeeper",
+      "DEF": "Defender",
+      "MID": "Midfielder",
+      "FWD": "Forward"
+    },
+    "makeCoCaptain": "Make co-captain",
+    "makePlayer": "Make player",
+    "transfer": "Hand over captaincy",
+    "transferQuestion": "Are you sure you want to make {{name}} the captain? You become a co-captain.",
+    "transferConfirm": "Hand over",
+    "remove": "Remove from team",
+    "removeQuestion": "Remove {{name}} from the team?",
+    "removeConfirm": "Remove",
+    "cancel": "Cancel",
+    "noActions": "There is nothing you can change for this player.",
+    "missingTitle": "Player not found",
+    "missingMessage": "This player is no longer on the team."
+  },
+  "invites": {
+    "title": "Invite players",
+    "intro": "Share the link or let them scan the QR code. Anyone who opens the link can join the team as a player.",
+    "create": "Create invite link",
+    "createAnother": "Create a new link",
+    "onceNotice": "This code is shown only now. You cannot see it again after leaving this screen; create a new link if needed.",
+    "code": "Invite code",
+    "link": "Link",
+    "qrLabel": "QR code of the invite link",
+    "validity": "Valid until {{date}} · up to {{number}} joins",
+    "share": "Share link",
+    "shareMessage": "Join {{team}} on Kadro: {{url}}",
+    "shareFailed": "The share sheet could not open. You can select and copy the code on screen.",
+    "active": "Active invites",
+    "activeEmpty": "No active invites.",
+    "activeItem": "Until {{date}} · {{uses}}/{{max}} joins",
+    "revoke": "Cancel invite",
+    "revokeQuestion": "Cancel this invite? The link stops working at once.",
+    "revokeConfirm": "Cancel invite",
+    "cancel": "Keep",
+    "locked": "This team is read-only, so no new invites can be created.",
+    "unverified": "Verify your email address to create invites.",
+    "staffOnly": "Only the captain and co-captains manage invites."
+  }
+}
