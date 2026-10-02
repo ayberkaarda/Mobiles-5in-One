@@ -148,9 +148,13 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
     }
 
     const history = browser.history;
+    // Advances on every history write and fragment navigation; a deferred router update runs
+    // only while it still describes the latest one, so it never undoes a later navigation.
+    let navigation = 0;
     const guard =
       (write: HistoryWrite): HistoryWrite =>
       (data, unused, url) => {
+        navigation += 1;
         let target: URL | null = null;
         try {
           target = url === undefined || url === null ? null : new URL(url, browser.location.href);
@@ -167,14 +171,18 @@ export function createTokenCapture(browser: BrowserLike | undefined): TokenCaptu
         // The router keeps the URL it wrote in its own state and writes it again on its next
         // update. Telling it the bare path (through its history patch, when there is one) keeps
         // the fragment out of its state.
+        const written = navigation;
         queueMicrotask(() => {
-          history.replaceState(null, '', pathname);
+          if (navigation === written) {
+            history.replaceState(null, '', pathname);
+          }
         });
       };
     history.pushState = guard(history.pushState.bind(history));
     history.replaceState = guard(history.replaceState.bind(history));
 
     const fromLocation = () => {
+      navigation += 1;
       const { pathname, hash } = browser.location;
       if (hash !== '' && isTokenPage(pathname)) {
         accept(pathname, takeFragmentToken(browser.location, browser.history));

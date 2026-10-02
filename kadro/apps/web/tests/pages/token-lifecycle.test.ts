@@ -88,6 +88,18 @@ describe('a new fragment in the same document', () => {
     expect(browser.native.replaceState).toHaveBeenLastCalledWith(null, '', RESET);
   });
 
+  it('a later write in the same task is not undone by the deferred router update', async () => {
+    const browser = fakeBrowser('/giris', '');
+    createTokenCapture(browser);
+    browser.history.pushState({ __NA: true }, '', `${RESET}#token=${freshToken()}`);
+    browser.history.pushState({ __NA: true }, '', '/giris');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(browser.location.pathname).toBe('/giris');
+    expect(browser.history.entries.at(-1)).toBe('https://kadro.test/giris');
+    expect(browser.native.replaceState).not.toHaveBeenCalledWith(null, '', RESET);
+  });
+
   it('leaves history writes for other pages and without a fragment untouched', () => {
     const browser = fakeBrowser('/giris', '');
     createTokenCapture(browser);
