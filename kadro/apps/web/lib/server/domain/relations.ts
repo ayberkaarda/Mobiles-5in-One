@@ -23,6 +23,8 @@ import {
 import { type AnyColumn, and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
+import { proSubscriptionExists } from '../billing/entitlements';
+
 /**
  * Relationship facts for `can()` (authorization matrix §1.3, §2 step 4, §5), loaded from the
  * database. Each loader is exactly one query that starts from the addressed resource and joins
@@ -181,13 +183,16 @@ export interface MemberTargetRelation extends TeamRelation {
 
 /**
  * `member.updateRole` / `member.remove`: the actor's membership and the target's membership of the
- * same team in one query (matrix §5, `team_members` target row).
+ * same team in one query (matrix §5, `team_members` target row). `targetIsPro` is the target's
+ * entitlement at `now` (matrix §7, ADR-0065): a captaincy transfer to a free user who already owns
+ * a team is refused.
  */
 export async function loadMemberTargetRelation(
   db: DbReader,
   actorId: string | null,
   teamId: string,
   targetUserId: string,
+  now: Date,
 ): Promise<MemberTargetRelation | null> {
   if (!isUuid(teamId)) {
     return null;
@@ -208,6 +213,9 @@ export async function loadMemberTargetRelation(
             .from(ownedTeam)
             .where(eq(ownedTeam.ownerId, targetUserId))})`.mapWith(Number)
         : sql<number>`0`.mapWith(Number),
+      targetIsPro: validTarget
+        ? proSubscriptionExists(db, targetUserId, now)
+        : sql<boolean>`false`.mapWith(Boolean),
     })
     .from(teams)
     .leftJoin(actor, actorJoin(actorId))
@@ -234,8 +242,7 @@ export async function loadMemberTargetRelation(
             isSelf: row.actorId !== null && row.targetUserId === row.actorId,
             targetTeamRole: row.targetTeamRole,
             targetOwnedTeams: row.targetOwnedTeams,
-            // Entitlements arrive with subscriptions in Phase 5; until then nobody is Pro.
-            targetIsPro: false,
+            targetIsPro: row.targetIsPro,
           },
         };
   return {
@@ -828,7 +835,11 @@ export interface RelationLoader {
   upload(uploadId: string): Promise<UploadOwnership>;
 }
 
-export function createRelationLoader(db: DbReader, actorId: string | null): RelationLoader {
+export function createRelationLoader(
+  db: DbReader,
+  actorId: string | null,
+  now: Date,
+): RelationLoader {
   const cache = new Map<string, Promise<unknown>>();
   const once = <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const cached = cache.get(key);
@@ -844,7 +855,7 @@ export function createRelationLoader(db: DbReader, actorId: string | null): Rela
     team: (teamId) => once(`team:${teamId}`, () => loadTeamRelation(db, actorId, teamId)),
     memberTarget: (teamId, targetUserId) =>
       once(`member:${teamId}:${targetUserId}`, () =>
-        loadMemberTargetRelation(db, actorId, teamId, targetUserId),
+        loadMemberTargetRelation(db, actorId, teamId, targetUserId, now),
       ),
     teamCreate: () => once('team-create', () => loadTeamCreateFacts(db, actorId)),
     match: (matchId) => once(`match:${matchId}`, () => loadMatchRelation(db, actorId, matchId)),

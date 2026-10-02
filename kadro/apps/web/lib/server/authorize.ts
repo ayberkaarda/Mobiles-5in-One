@@ -17,6 +17,7 @@ import {
 import { refreshTokens, users } from '@kadro/db';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
+import { proSubscriptionExists } from './billing/entitlements';
 import { csrfCookie, readCookie, sessionCookie } from './cookies';
 import { ApiError } from './errors';
 import { type ServerRuntime } from './runtime';
@@ -44,6 +45,11 @@ export interface Principal {
   readonly sessionRowId: string | null;
   /** `step_up_until` of the live session row (web) or refresh family (mobile). */
   readonly stepUpUntil: Date | null;
+  /**
+   * Kadro Pro at authentication time: a `subscriptions` row of the user grants it at the request's
+   * clock (ADR-0065). Loaded in the same query as the user row; never taken from a client claim.
+   */
+  readonly isPro: boolean;
   /** `Set-Cookie` values renewing the rolling web session, if it was extended. */
   readonly renewedCookies: readonly string[];
 }
@@ -113,12 +119,13 @@ async function authenticateMobile(runtime: ServerRuntime, request: Request): Pro
   // family is live while it holds an unrevoked, unexpired mobile row of this same user; logout,
   // password reset, deactivation and reuse detection revoke every row of it, so the access
   // token stops working on the next request instead of after its 15-minute lifetime.
+  const now = runtime.now();
   const liveFamilyRow = and(
     eq(refreshTokens.familyId, verdict.claims.sid),
     eq(refreshTokens.userId, users.id),
     eq(refreshTokens.client, 'mobile'),
     isNull(refreshTokens.revokedAt),
-    gt(refreshTokens.expiresAt, runtime.now()),
+    gt(refreshTokens.expiresAt, now),
   );
   const [user] = await runtime.db
     .select({
@@ -130,6 +137,7 @@ async function authenticateMobile(runtime: ServerRuntime, request: Request): Pro
         sql<Date | null>`(select max(${refreshTokens.stepUpUntil}) from ${refreshTokens} where ${liveFamilyRow})`.mapWith(
           refreshTokens.stepUpUntil,
         ),
+      isPro: proSubscriptionExists(runtime.db, users.id, now),
     })
     .from(users)
     .where(eq(users.id, verdict.claims.sub))
@@ -146,6 +154,7 @@ async function authenticateMobile(runtime: ServerRuntime, request: Request): Pro
     emailVerified: user.emailVerifiedAt !== null,
     sessionRowId: null,
     stepUpUntil: user.stepUpUntil ?? null,
+    isPro: user.isPro,
     renewedCookies: [],
   };
 }
@@ -198,6 +207,7 @@ async function authenticateWeb(runtime: ServerRuntime, request: Request): Promis
       role: users.role,
       emailVerifiedAt: users.emailVerifiedAt,
       deactivatedAt: users.deactivatedAt,
+      isPro: proSubscriptionExists(runtime.db, users.id, now),
     })
     .from(refreshTokens)
     .innerJoin(users, eq(users.id, refreshTokens.userId))
@@ -253,6 +263,7 @@ async function authenticateWeb(runtime: ServerRuntime, request: Request): Promis
     emailVerified: session.emailVerifiedAt !== null,
     sessionRowId: session.rowId,
     stepUpUntil: session.stepUpUntil,
+    isPro: session.isPro,
     renewedCookies,
   };
 }
@@ -282,8 +293,7 @@ export function actorContext(principal: Principal | null, stepUpUntil: Date | nu
     emailVerified: principal.emailVerified,
     deactivated: false,
     stepUpUntil,
-    // Entitlements arrive with subscriptions in Phase 5; until then nobody is Pro.
-    isPro: false,
+    isPro: principal.isPro,
   };
 }
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { hashToken } from '@kadro/auth';
-import { meResponseSchema } from '@kadro/contracts';
+import { meResponseSchema, meStatsResponseSchema } from '@kadro/contracts';
 import { emailTokens, refreshTokens, users } from '@kadro/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -464,6 +464,36 @@ const IDOR_ROWS: readonly IdorRow[] = [
       expect(meResponseSchema.parse(JSON.parse(text)).id).toBe(a.id);
       expect(text).not.toContain(b.id);
       expect(text).not.toContain(b.email);
+    },
+    victimIntact: ({ b }) => expectProfileUnchanged(b),
+  },
+  {
+    resource: 'profile statistics',
+    route: 'GET /api/v1/me/stats',
+    attempt: 'A names B in the query string',
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('GET /api/v1/me/stats', {
+        headers: bearer(a.mobile.accessToken),
+        query: { userId: b.id },
+      }),
+    expected: { status: 400, code: 'validation_failed' },
+    victimIntact: ({ b }) => expectProfileUnchanged(b),
+  },
+  {
+    resource: 'profile statistics',
+    route: 'GET /api/v1/me/stats',
+    attempt: "A reads stats: the caller's own rows and entitlement only",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a }, request) =>
+      request('GET /api/v1/me/stats', { headers: web(undefined, { cookie: a.web.cookie }) }),
+    expected: { status: 200 },
+    response: async (_world, response) => {
+      expect(meStatsResponseSchema.parse(await response.json())).toEqual({
+        tier: 'basic',
+        matchesPlayed: 0,
+        mvpCount: 0,
+      });
     },
     victimIntact: ({ b }) => expectProfileUnchanged(b),
   },

@@ -2,7 +2,15 @@ import { randomUUID } from 'node:crypto';
 
 import { generateOpaqueToken, hashToken, type ResourceContext } from '@kadro/auth';
 import { idSchema, updateMeRequestSchema } from '@kadro/contracts';
-import { districts, refreshTokens, teamMembers, teams, users } from '@kadro/db';
+import {
+  districts,
+  refreshTokens,
+  type SubscriptionStatus,
+  subscriptions,
+  teamMembers,
+  teams,
+  users,
+} from '@kadro/db';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -105,6 +113,23 @@ const updateTeam = route({
     await ctx.authorize('team.update', resource);
     await runtime.db.update(teams).set({ name: body.name }).where(eq(teams.id, team.id));
     return json({ ok: true });
+  },
+});
+
+/**
+ * `POST teams` (matrix §7): the actor's entitlement decides the owned-team limit. Answers the
+ * principal's `isPro` so the tests see the value the gate used.
+ */
+const createSecondTeam = route({
+  path: '/api/v1/test/teams',
+  method: 'POST',
+  auth: 'required',
+  params: noParams,
+  query: noQuery,
+  body: z.strictObject({}),
+  handler: async ({ ctx }) => {
+    await ctx.authorize('team.create', { actorOwnedTeams: 1 });
+    return json({ isPro: ctx.principal?.isPro ?? null });
   },
 });
 
@@ -565,5 +590,112 @@ describe('handler template order and status mapping (matrix §2, ADR-0013)', () 
     expect(
       await call(missingFact, { headers: account.bearer }).then((r) => r.text()),
     ).not.toContain('leaked');
+  });
+});
+
+describe('Pro entitlement of the actor (matrix §7, ADR-0065)', () => {
+  const HOUR = 3_600_000;
+
+  async function subscribe(
+    userId: string,
+    status: SubscriptionStatus,
+    expiresAt: Date | null,
+    productId = 'kadro_pro_monthly',
+  ): Promise<string> {
+    const [row] = await database.client.db
+      .insert(subscriptions)
+      .values({
+        userId,
+        rcAppUserId: userId,
+        productId,
+        status,
+        expiresAt,
+        environment: 'production',
+        store: 'play_store',
+      })
+      .returning({ id: subscriptions.id });
+    return row?.id ?? '';
+  }
+
+  const create = (headers: Record<string, string>) =>
+    call(createSecondTeam, { method: 'POST', headers, json: {} });
+
+  async function isPro(headers: Record<string, string>): Promise<boolean | null> {
+    const response = await create(headers);
+    if (response.status === 403) {
+      await expectProblem(response, 403, 'entitlement_required');
+      return false;
+    }
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { isPro: boolean | null }).isPro;
+  }
+
+  it('a user without a subscription row is not Pro', async () => {
+    const account = await createUser();
+    expect(await isPro(account.bearer)).toBe(false);
+  });
+
+  it.each([
+    ['active', true],
+    ['grace_period', true],
+    ['billing_issue', false],
+    ['paused', false],
+    ['cancelled', false],
+    ['expired', false],
+  ] as const)('a %s row with a future expiry → Pro %s', async (status, expected) => {
+    const account = await createUser();
+    await subscribe(account.id, status, new Date(harness.runtime.now().getTime() + HOUR));
+    expect(await isPro(account.bearer)).toBe(expected);
+  });
+
+  it('an active row whose expiry passed is not Pro, before any EXPIRATION event', async () => {
+    const account = await createUser();
+    await subscribe(account.id, 'active', new Date(harness.runtime.now().getTime() + 5 * 60_000));
+    expect(await isPro(account.bearer)).toBe(true);
+    harness.advance(10 * 60_000);
+    expect(await isPro(account.bearer)).toBe(false);
+  });
+
+  it('a granting row without an end date is Pro', async () => {
+    const account = await createUser();
+    await subscribe(account.id, 'active', null);
+    expect(await isPro(account.bearer)).toBe(true);
+  });
+
+  it('one granting row among lapsed ones is enough; other users never count', async () => {
+    const account = await createUser();
+    const other = await createUser();
+    await subscribe(account.id, 'expired', new Date(harness.runtime.now().getTime() - HOUR));
+    await subscribe(other.id, 'active', new Date(harness.runtime.now().getTime() + HOUR));
+    expect(await isPro(account.bearer)).toBe(false);
+    await subscribe(
+      account.id,
+      'active',
+      new Date(harness.runtime.now().getTime() + HOUR),
+      'kadro_pro_yearly',
+    );
+    expect(await isPro(account.bearer)).toBe(true);
+  });
+
+  it('is loaded for web sessions too', async () => {
+    const account = await createUser();
+    await subscribe(account.id, 'active', new Date(harness.runtime.now().getTime() + HOUR));
+    const session = await createWebSession(account.id);
+    expect(await isPro(webHeaders(session))).toBe(true);
+  });
+
+  it('takes a lapse into account on the next request with the same token', async () => {
+    const account = await createUser();
+    const id = await subscribe(
+      account.id,
+      'active',
+      new Date(harness.runtime.now().getTime() + HOUR),
+    );
+    expect(await isPro(account.bearer)).toBe(true);
+    await database.client.db
+      .update(subscriptions)
+      .set({ status: 'expired' })
+      .where(eq(subscriptions.id, id));
+    expect(await isPro(account.bearer)).toBe(false);
   });
 });

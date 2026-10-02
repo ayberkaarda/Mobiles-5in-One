@@ -4,6 +4,7 @@ import { type User, users } from '@kadro/db';
 import { eq, sql } from 'drizzle-orm';
 
 import { recordAudit } from '../audit';
+import { loadEntitlements } from '../billing/entitlements';
 import { ApiError, findPgError, SQLSTATE } from '../errors';
 import { type ProviderIdentity } from '../oauth/providers';
 import { type ServerRuntime } from '../runtime';
@@ -80,7 +81,11 @@ export async function loginWithPassword(
     return { session, user: fresh ?? user };
   });
   await context.attempts?.recordSuccess();
-  return signedInResponse(result.session, toMeResponse(result.user, mediaUrlBuilder(runtime.env)));
+  const entitlements = await loadEntitlements(runtime.db, result.user.id, runtime.now());
+  return signedInResponse(
+    result.session,
+    toMeResponse(result.user, mediaUrlBuilder(runtime.env), entitlements),
+  );
 }
 
 const FALLBACK_DISPLAY_NAME = 'Kadro';
@@ -219,5 +224,9 @@ export async function signInWithProvider(
     result = await resolve();
   }
   await context.attempts?.recordSuccess();
-  return signedInResponse(result.session, toMeResponse(result.user, mediaUrlBuilder(runtime.env)));
+  const entitlements = await loadEntitlements(runtime.db, result.user.id, runtime.now());
+  return signedInResponse(
+    result.session,
+    toMeResponse(result.user, mediaUrlBuilder(runtime.env), entitlements),
+  );
 }
