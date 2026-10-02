@@ -94,8 +94,8 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
     connectionString: withSessionRole(env.DATABASE_URL, WORKER_DB_ROLE),
     applicationName: 'kadro-worker',
     maxConnections: 10,
-    onIdleClientError: (error) => {
-      logger.error(describeError(error), 'idle database connection failed');
+    onClientError: (error) => {
+      logger.error(describeError(error), 'database connection failed');
     },
   });
   const { db } = dbClient;
