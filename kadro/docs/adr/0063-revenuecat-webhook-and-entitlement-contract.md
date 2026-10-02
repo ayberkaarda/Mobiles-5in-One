@@ -85,3 +85,17 @@ store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` 
   (ADR-0032) is an open owner decision and is not settled here.
 - The authorization matrix gains rows for `GET me/stats` and `GET districts` through the Phase 3
   docs work package; until then the registry test lists them as pending.
+
+## Schema (migration 0013)
+
+- `webhook_events` gains nullable normalized columns: `event_type`, `app_user_id` (as sent),
+  `product_id`, `store`, `environment`, `event_at`, `expires_at`, `outcome` (`accepted` or
+  `ignored`) and `ignored_reason` (set exactly for `ignored`). `processed_at` marks an applied
+  event. The helper `insertWebhookEventIfNew` inserts with `ON CONFLICT DO NOTHING` on
+  `(provider, event_id)`; no row back means `duplicate`.
+- `subscriptions` gains `store`, `last_event_at` and `last_event_id`. `upsertSubscriptionIfNotStale`
+  overwrites a row only if it has no event time or its `last_event_at` is not newer than the
+  incoming one, in a single statement, so unordered deliveries and concurrent jobs cannot move the
+  state backwards. A reconciliation passes the time it read RevenueCat as the event time and no
+  event id.
+- All columns are additive and nullable, so rows written before the migration stay valid.

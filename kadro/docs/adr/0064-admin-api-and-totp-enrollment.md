@@ -76,3 +76,16 @@ parallel, so the list endpoints, the enrollment flow and the error codes are fix
 - The authorization matrix lists `POST admin/totp/confirm` and the list endpoints through the
   Phase 5 docs work package; `GET admin/**` already covers the reads.
 - Admin routes are web-first; the mobile app has no admin screens.
+
+## Schema (migrations 0014 and 0015)
+
+- `users` gains `totp_pending_secret_enc` and `totp_pending_created_at`, a pending secret in the
+  same ciphertext format as `totp_secret_enc`. A check keeps the two columns both set or both
+  null, requires the active secret to be empty while one is pending, and forbids a pending secret
+  on a tombstone. `confirmPendingTotpSecret` promotes it to the active secret in one conditional
+  update that compares the verified ciphertext and the confirm window, so a concurrent new
+  enrollment or a second confirm cannot both succeed.
+- `venue_imports` holds the inline CSV (at most 900 000 characters), the status (`queued`,
+  `processing`, `completed`, `failed`), `dry_run`, the row counters and up to 50 issues as JSON.
+  `created_by` is set null when the admin account is deleted. The web role inserts and reads rows,
+  the worker reads and updates them, and neither role deletes.
