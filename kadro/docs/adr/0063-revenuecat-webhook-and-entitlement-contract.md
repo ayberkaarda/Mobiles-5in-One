@@ -100,3 +100,37 @@ store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` 
   two different events with an equal time cannot flip it: the first stays. A reconciliation passes the time it read RevenueCat as the event time and no
   event id.
 - All columns are additive and nullable, so rows written before the migration stay valid.
+
+## Implementation notes (webhook route and billing jobs)
+
+- The route wrapper gained an opt-in `verifyRequest` step (only with `auth: 'none'`) that runs
+  before params, query and body are read, and hands handlers the raw body bytes. The webhook uses
+  it for the secret check, so an unauthenticated caller gets 401 (or 503 without a secret) before
+  any validation feedback, and the stored hash is over the exact bytes received. The header may
+  carry the secret alone or as `Bearer <secret>`; both comparisons always run.
+- Play Store products arrive as `<productId>:<basePlanId>`; the Pro product check and the
+  `subscriptions.product_id` use the part before the colon. `webhook_events.product_id` keeps the
+  value as sent. For `TRANSFER` the stored `app_user_id` is the first receiving id that is a user
+  id (`transferred_to`), and the product check is skipped.
+- Event mapping in the processing job: purchase, renewal, uncancellation, extension and
+  temporary grant → `active`; `CANCELLATION` and `SUBSCRIPTION_PAUSED` keep `active` while the
+  carried expiry is after the event time, else `cancelled` / `paused`; `BILLING_ISSUE` →
+  `grace_period` while the expiry lies ahead, else `billing_issue`; `EXPIRATION` → `expired`.
+  `PRODUCT_CHANGE` names the product being left: it keeps `active` until the carried expiry
+  (else `expired`), and the new product's own purchase or renewal event writes its row; a change
+  from a non-Pro product is stored as `foreign_product`. `TRANSFER` enqueues a per-user
+  `subscription.reconcile` for the receiving account, since `webhook_events` keeps only one
+  `app_user_id`. Without `REVENUECAT_API_KEY` a transfer is left unprocessed with the job outcome
+  `deferred_no_api_key` (logged at warn) so it can be replayed once a key exists.
+- The nightly run is scheduled in UTC (other schedules stay in Europe/Istanbul) with
+  `{ userId: null }` and walks users with a subscription row, skipping deleted accounts. It reads
+  RevenueCat REST API v1 `GET /v1/subscribers/{app_user_id}` and writes each Pro product with the
+  response's request time as the event time. A Pro row the answer no longer contains (purchases
+  transferred away, subscription removed, unknown subscriber) is written as `expired` with the
+  same event time, so the source account of a transfer loses Pro here; the staleness rule still
+  protects newer webhook events. A transient failure for one user is handed to a per-user job
+  five minutes later; other per-user failures are counted, logged and skipped; only a rejected
+  key ends the run, without retries. A run that exceeds its expiry restarts from the first user.
+  Without `REVENUECAT_API_KEY` the job completes as skipped.
+- Verification is limited to fixtures, a real PostgreSQL and an in-memory RevenueCat client. The
+  REST client is not exercised against RevenueCat.

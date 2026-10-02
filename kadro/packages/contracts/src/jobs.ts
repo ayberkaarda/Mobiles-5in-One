@@ -20,9 +20,19 @@ export const JOB_QUEUES = [
   'opencall.expire',
   'maintenance.sweep',
   'venue.import',
+  'webhook.revenuecat.process',
+  'subscription.reconcile',
 ] as const;
 export const jobQueueSchema = z.enum(JOB_QUEUES);
 export type JobQueue = z.infer<typeof jobQueueSchema>;
+
+/** Queues of the RevenueCat integration (ADR-0063), a subset of `JOB_QUEUES`. */
+export const BILLING_JOB_QUEUES = [
+  'webhook.revenuecat.process',
+  'subscription.reconcile',
+] as const satisfies readonly JobQueue[];
+export const billingJobQueueSchema = z.enum(BILLING_JOB_QUEUES);
+export type BillingJobQueue = z.infer<typeof billingJobQueueSchema>;
 
 /** Every queue has a dead-letter queue named `<queue>.dead` (ADR-0028). */
 export function deadLetterQueue(queue: JobQueue): `${JobQueue}.dead` {
@@ -164,33 +174,9 @@ export const venueImportJobSchema = z.strictObject({
 });
 export type VenueImportJob = z.infer<typeof venueImportJobSchema>;
 
-/** Payload schema per queue; producer and consumer both parse with it. */
-export const JOB_PAYLOAD_SCHEMAS = {
-  'email.send': emailSendJobSchema,
-  'push.send': pushSendJobSchema,
-  'push.receipts': pushReceiptsJobSchema,
-  'match.reminder': matchReminderJobSchema,
-  'upload.process': uploadProcessJobSchema,
-  'account.hard_delete': accountHardDeleteJobSchema,
-  'opencall.expire': scheduledJobSchema,
-  'maintenance.sweep': scheduledJobSchema,
-  'venue.import': venueImportJobSchema,
-} as const satisfies Record<JobQueue, z.ZodType>;
-
-export type JobPayload<TQueue extends JobQueue> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[TQueue]>;
-
 // ---------------------------------------------------------------------------
 // Billing queues (Phase 5, ADR-0063)
 // ---------------------------------------------------------------------------
-
-/**
- * Queues of the RevenueCat integration. They are defined here first so producer and consumer
- * share one contract; they join `JOB_QUEUES` in the same change that adds their worker queue
- * definitions (the worker types its definitions as a record over `JobQueue`).
- */
-export const BILLING_JOB_QUEUES = ['webhook.revenuecat.process', 'subscription.reconcile'] as const;
-export const billingJobQueueSchema = z.enum(BILLING_JOB_QUEUES);
-export type BillingJobQueue = z.infer<typeof billingJobQueueSchema>;
 
 /**
  * `webhook.revenuecat.process`: applies one stored delivery. The webhook route stores the
@@ -224,6 +210,22 @@ export const BILLING_JOB_PAYLOAD_SCHEMAS = {
 export type BillingJobPayload<TQueue extends BillingJobQueue> = z.infer<
   (typeof BILLING_JOB_PAYLOAD_SCHEMAS)[TQueue]
 >;
+
+/** Payload schema per queue; producer and consumer both parse with it. */
+export const JOB_PAYLOAD_SCHEMAS = {
+  'email.send': emailSendJobSchema,
+  'push.send': pushSendJobSchema,
+  'push.receipts': pushReceiptsJobSchema,
+  'match.reminder': matchReminderJobSchema,
+  'upload.process': uploadProcessJobSchema,
+  'account.hard_delete': accountHardDeleteJobSchema,
+  'opencall.expire': scheduledJobSchema,
+  'maintenance.sweep': scheduledJobSchema,
+  'venue.import': venueImportJobSchema,
+  ...BILLING_JOB_PAYLOAD_SCHEMAS,
+} as const satisfies Record<JobQueue, z.ZodType>;
+
+export type JobPayload<TQueue extends JobQueue> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[TQueue]>;
 
 /** Nightly reconciliation schedule (cron, UTC): 03:17 every day. */
 export const SUBSCRIPTION_RECONCILE_CRON = '17 3 * * *';

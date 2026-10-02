@@ -64,6 +64,10 @@ function sampleJob(queue: (typeof JOB_QUEUES)[number]): Record<string, unknown> 
       return { idempotencyKey };
     case 'venue.import':
       return { importId: uuidv7(), idempotencyKey };
+    case 'webhook.revenuecat.process':
+      return { webhookEventId: uuidv7(), idempotencyKey };
+    case 'subscription.reconcile':
+      return { userId: null, idempotencyKey };
   }
 }
 

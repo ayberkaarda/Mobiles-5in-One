@@ -101,9 +101,12 @@ export async function bootstrapQueues(
     }
 
     if (definition.cron !== undefined) {
-      await boss.schedule(definition.name, definition.cron, scheduledPayload(definition.name), {
-        tz: SCHEDULE_TIME_ZONE,
-      });
+      await boss.schedule(
+        definition.name,
+        definition.cron,
+        { ...definition.scheduleData, ...scheduledPayload(definition.name) },
+        { tz: definition.cronTimeZone ?? SCHEDULE_TIME_ZONE },
+      );
     }
   }
   await grantSendAccess(db);

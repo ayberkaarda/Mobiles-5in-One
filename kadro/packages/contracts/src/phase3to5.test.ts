@@ -17,6 +17,7 @@ import {
   ERROR_CODES,
   grantsPro,
   isErrorCode,
+  JOB_PAYLOAD_SCHEMAS,
   JOB_QUEUES,
   LIMITS,
   listDistrictsQuerySchema,
@@ -200,9 +201,10 @@ describe('RevenueCat webhook', () => {
 });
 
 describe('billing jobs', () => {
-  it('stay out of JOB_QUEUES until the worker defines them', () => {
+  it('are worker queues with the shared payload schemas', () => {
     for (const queue of BILLING_JOB_QUEUES) {
-      expect(JOB_QUEUES as readonly string[]).not.toContain(queue);
+      expect(JOB_QUEUES as readonly string[]).toContain(queue);
+      expect(JOB_PAYLOAD_SCHEMAS[queue]).toBe(BILLING_JOB_PAYLOAD_SCHEMAS[queue]);
     }
     expect(Object.keys(BILLING_JOB_PAYLOAD_SCHEMAS).sort()).toEqual([...BILLING_JOB_QUEUES].sort());
   });
