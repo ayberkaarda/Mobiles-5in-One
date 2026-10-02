@@ -1,6 +1,8 @@
 # ADR-0021: Content-Security-Policy per surface — nonce for the app, static policy for SEO pages
 
-- Status: Accepted (to be verified in Phase 4)
+- Status: Accepted; amended by [ADR-0055](0055-public-pages-render-per-request-with-nonce.md)
+  (verified in Phase 4: no hash-based CSP, every HTML surface keeps the nonce; surface table in
+  `apps/web/lib/server/security-headers.ts`)
 - Date: 2026-10-01
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §6 item 9, §7; threat model T-PLT-08, §6.2
