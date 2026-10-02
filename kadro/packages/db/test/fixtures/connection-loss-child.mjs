@@ -47,5 +47,10 @@ try {
 }
 
 const after = await client.db.execute(sql`select 1 as ok`);
-emit({ event: 'recovered', ok: after.rows[0].ok });
+emit({
+  event: 'recovered',
+  ok: after.rows[0].ok,
+  total: client.pool.totalCount,
+  idle: client.pool.idleCount,
+});
 await client.close();

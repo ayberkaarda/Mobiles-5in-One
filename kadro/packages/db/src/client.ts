@@ -49,7 +49,13 @@ export function createDbClient(options: DbClientOptions): DbClient {
     application_name: options.applicationName ?? 'kadro',
     statement_timeout: options.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS,
   });
+  // An idle failure reaches both the client and the pool listener with the same error object.
+  const reported = new WeakSet<Error>();
   const reportClientError = (error: Error): void => {
+    if (reported.has(error)) {
+      return;
+    }
+    reported.add(error);
     // A logging failure must never turn into an uncaught exception.
     try {
       (options.onClientError ?? options.onIdleClientError)?.(error);
