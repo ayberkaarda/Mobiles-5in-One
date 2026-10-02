@@ -66,7 +66,7 @@ Findings from the installed sources (React Native 0.86.3, whatwg-fetch 3.6.20):
     `redirects()` exists under `apps/web` (checked with `git grep`). Next.js answers a trailing
     slash with a 308, so the client refuses paths with a trailing slash.
   - Outside `local` the API URL must be https (`@kadro/config/mobile`), Android release builds
-    refuse cleartext (ADR-0014, build configuration test), so no http to https edge redirect is on
+    refuse cleartext (security checklist item 10, build configuration test), so no http to https edge redirect is on
     the path.
   - A response that was redirected or whose final URL is not on the API origin is rejected
     (`invalid_response`) before its body is read; a refresh answered that way changes nothing in
