@@ -35,7 +35,7 @@ Uygulanmış, adaptörün kodda bulunduğunu ifade eder; üretimde çalıştığ
 | S3 uyumlu depo / R2 | Avatar ve takım arması dosyaları ile nesne anahtarları. Sunucu adresi yerelde imzalar; cihaz doğrudan depoya yükler. İşçi görseli işler, yayımlar ve kaldırır. | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/storage/storage.ts`; `kadro/apps/worker/src/uploads/process.ts` |
 | Resend | Alıcı e-posta adresi, konu, doğrulama/sıfırlama bağlantısı ve işlem e-postası içeriği gönderilir. | `kadro/packages/emails/src/transport.ts` |
 | Expo Push | Push tokenı, bildirim başlığı/gövdesi ve nesne kimlikleri gönderilir; teslimat makbuzları sorgulanır. | `kadro/apps/worker/src/push/transport.ts` |
-| Apple / Google kimlik doğrulama | Sunucu yalnızca sağlayıcının açık anahtarlarını (JWKS) indirir; kullanıcı verisi sunucudan sağlayıcıya gitmez; giriş sırasında cihaz sağlayıcıyla doğrudan konuşur. Cihazın ilettiği kimlik belirteci sunucuda doğrulanır. | `kadro/apps/web/lib/server/oauth/providers.ts`; `kadro/apps/web/lib/server/oauth/jwks.ts`; `kadro/apps/web/lib/server/auth/provider-sign-in.ts` |
+| Apple / Google kimlik doğrulama | Sunucu yalnızca sağlayıcının açık anahtarlarını (JWKS) indirir; kullanıcı verisi sunucudan sağlayıcıya gitmez; tasarım gereği cihaz sağlayıcıyla doğrudan konuşur; mobil giriş akışı henüz uygulanmamıştır. Cihazın ilettiği kimlik belirteci sunucuda doğrulanır. | `kadro/apps/web/lib/server/oauth/providers.ts`; `kadro/apps/web/lib/server/oauth/jwks.ts`; `kadro/apps/web/lib/server/auth/provider-sign-in.ts` |
 | HIBP parola kontrolü | K-anonimlik sorgusunda parolanın SHA-1 özetinin ilk 5 karakteri gönderilir, parola gönderilmez. Kalan özet yerelde karşılaştırılır. | `kadro/packages/auth/src/hibp.ts` |
 
 ## Simüle edilen yerel akışlar
@@ -44,18 +44,18 @@ Uygulanmış, adaptörün kodda bulunduğunu ifade eder; üretimde çalıştığ
 | --- | --- | --- |
 | E-posta log transportu | Resend gönderimi yerine maskelenmiş alıcı, konu ve bağlantı/token içerebilen mesaj gövdesi yerel loga yazılır; yalnız local ortamında kullanılabilir. | `kadro/packages/emails/src/transport.ts` |
 | Push log transportu | Expo gönderimi yerine başlık, gövde ve nesne bilgileri loga yazılır; cihaz tokenı yazılmaz. Makbuzlar simüle edilir; yalnız local ortamında kullanılabilir. | `kadro/apps/worker/src/push/transport.ts` |
-| MinIO depo | R2 akışı yerel S3 uyumlu MinIO deposunda yürütülür. R2 üzerinde üretim koşusu kanıtı değildir. | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/storage/storage.ts`; ADR-0030 |
+| Yerel S3 uyumlu depo | yerel S3 uyumlu depo (ADR-0030 tasarımı; yerel ortamda henüz çalışan bir depo servisi yoktur). R2 üzerinde üretim koşusu kanıtı değildir. | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/storage/storage.ts`; ADR-0030 |
 
 ## Planlanmış akışlar
 
 | Hizmet | Plan ve mevcut sınır | Kaynak |
 | --- | --- | --- |
 | RevenueCat | Abonelik kullanıcı kimliği, ürün, durum, bitiş zamanı ve olay özeti için veri modeli vardır. Silme işçisi, abonelik kaydı varsa dış temizlik borcunu kaydeder; dış entegrasyon Faz 5'tir. Bu plan kapsamında mağaza aboneliği ayrıca iptal edilir. | `kadro/packages/db/src/schema/system.ts`; `kadro/packages/db/src/schema/users.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`; ADR-0032 |
-| Sentry | Hata izleme ve alan temizliği spec'te yer alır; bu kaynak durumunda entegrasyon kodu yoktur, planlanmıştır. Gönderilecek olay alanları uygulama ve test sonrası kesinleşecektir. | `kadro/01-kadro-react-native-expo.md` §6 madde 14 ve §8; `legal-drafts/scope-joint-r2.md` B4 ve (c). Kod atfı verilemez: entegrasyon henüz yoktur. |
+| Sentry | Hata izleme ve alan temizliği spec'te yer alır; bu kaynak durumunda entegrasyon kodu yoktur, planlanmıştır. Gönderilecek olay alanları uygulama ve test sonrası kesinleşecektir. | `kadro/01-kadro-react-native-expo.md` §6 madde 14 ve §8. Kod atfı verilemez: entegrasyon henüz yoktur. |
 
 ## Hesabını nasıl silersin?
 
-Uygulama içi yol **Ayarlar → Hesabımı sil** olarak tasarlanmıştır. Webde [hesap silme sayfasını](/hesap-silme) kullanabilirsin. Yeniden kimlik doğrulaması gerekir; talepte hesap kapanır, oturumlar iptal edilir ve push tokenları kaldırılır. **7 günlük** beklemede başarılı giriş silme talebini iptal eder; değişen maç katılımı kendiliğinden geri dönmez. Ardından işçi hesabı, avatarları, yorumları ve başvuruları kaldırır. Tek üyeli takımlar silinir, paylaşılan takımlarda kaptanlık devredilir. Mobil ekranın ve dış servislerin gerçek yayın doğrulaması beklenmektedir. Kaynak: `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/apps/web/lib/server/account/deletion.ts`; `kadro/apps/web/lib/server/auth/account-state.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`.
+Mobil için uygulama içi hesap silme akışı tasarlanmıştır. Webde [/hesap-silme sayfasını](/hesap-silme) kullanabilirsin. Mevcut web sayfasındaki yönlendirme **Profil › Hesabı sil** şeklindedir. Yeniden kimlik doğrulaması gerekir; talepte hesap kapanır, oturumlar iptal edilir ve push tokenları kaldırılır. **7 günlük** beklemede başarılı giriş silme talebini iptal eder; değişen maç katılımı kendiliğinden geri dönmez. Ardından işçi hesabı, avatarları, yorumları ve başvuruları kaldırır. Tek üyeli takımlar silinir, paylaşılan takımlarda kaptanlık devredilir. Mobil ekranın ve dış servislerin gerçek yayın doğrulaması beklenmektedir. Kaynak: `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/apps/web/app/(app)/hesap-silme/page.tsx`; `kadro/apps/web/components/auth/delete-account.tsx`; `kadro/apps/web/lib/server/account/deletion.ts`; `kadro/apps/web/lib/server/auth/account-state.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`.
 
 ## Ne kadar saklanır?
 

@@ -2,9 +2,9 @@
 
 ## Amaç ve durum
 
-Durum: **partial**. İki sayfa portfolyo için teknik veri işleme örneğidir. Gerçek veri sorumlusu, başvuru kanalı ve nihai işleme şartları belirlenmediğinden aydınlatma yükümlülüğünün tamamlandığı veya OAuth/mağaza için hazır gizlilik politikası olduğu sonucuna varılmaz. Dayanak: `legal-drafts/scope-joint-r2.md` B1–B11, B ve (c).
+Durum: **partial**. İki sayfa portfolyo için teknik veri işleme örneğidir. Gerçek veri sorumlusu, başvuru kanalı ve nihai işleme şartları belirlenmediğinden aydınlatma yükümlülüğünün tamamlandığı veya OAuth/mağaza için hazır gizlilik politikası olduğu sonucuna varılmaz. Dayanak: `kadro/docs/adr/0002-hosting.md`; bu belgenin “Gerçek yayına dönüş yolu” bölümü ve 1–36 inceleme maddeleri.
 
-Kaynak taslaklar atılmadan birleştirildi: `legal-drafts/kvkk-aydinlatma.tr-yurtici.md`, `legal-drafts/kvkk-aydinlatma.tr-yurtdisi.md`, `legal-drafts/gizlilik.tr-yurtici.md`, `legal-drafts/gizlilik.tr-yurtdisi.md` ve `legal-drafts/ACIK-ALANLAR.md`. Yalnız üç teslim dosyası düzenlenir; kaynak beş taslak salt okunur korunur. Bu kontrol listesi ortak kararın teknik doküman dili istisnasıyla Türkçedir.
+İnceleme kapsamı iki örnek sayfanın veri kategorileri, teknik akışları ve bu belgedeki açık yayın koşullarıdır.
 
 Kanıt sınırı: kod/ADR okuması ve statik metin/biçim kontrolü; node, pnpm, Docker, built-page, mobil ve üretim koşusu yapılmadı. Sayfa tarihleri 2026-10-02 örnek yayın/değişiklik tarihidir. Her açık maddenin kapanışı için inceleyen, tarih ve kanıt eklenmelidir; kaynakta süre bulunması üretimde işletildiğini kanıtlamaz.
 
@@ -19,9 +19,11 @@ Gerçek kişisel veri alan bir yayında örnek etiketi yeterli sayılmaz.
 - [ ] Apple privacy labels gerçek veri envanteri, SDK ve bu sayfalarla eşlensin; mağaza konsoluna giriş ayrıca kanıtlansın.
 - [ ] /hesap-silme erişilebilirliği ve aydınlatma bağlantısı web sahibi tarafından doğrulansın; ADR-0040 gereği app yüzeyinin noindex niteliği korunsun.
 - [ ] Planlanan entegrasyonlar uygulandığında katmanları yalnız doğrulanmış kod ve etkin ayarlar üzerinden güncellensin; mağaza aboneliği cümlesi Faz 5 sonrası gerçek akışla eşlensin.
-- [ ] Release-readiness belgesine bu kapılar ve açık kanıt sınırları aktarılsın; örnek etiketi kaldırmak tek başına geçiş ölçütü sayılmasın.
+- [ ] Bu kontrol listesinin “Gerçek yayına dönüş yolu” bölümündeki kapılar ve açık kanıt sınırları kapatılsın; örnek etiketi kaldırmak tek başına geçiş ölçütü sayılmasın.
 
-Kaynak: `legal-drafts/scope-joint-r2.md` B7–B9, B §1 ve §7; `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`. Bu teslim rota, metadata, konsol veya release-readiness dosyasını değiştirmez.
+Kaynak: `kadro/docs/adr/0002-hosting.md`; `kadro/docs/ops/README.md`; `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`; `kadro/docs/legal/review-checklist.md` — “Gerçek yayına dönüş yolu”.
+
+Sayfa rotaları ve MDX render'i web pazarlama kabuğu ile gelir; o zamana kadar iç bağlantılar çalışmaz.
 
 ## Hukuki sebep eşleştirme taslağı
 
@@ -41,7 +43,7 @@ Kaynak: `legal-drafts/scope-joint-r2.md` B7–B9, B §1 ve §7; `kadro/docs/adr/
 | İşlem güvenliği: bağlantı IP'si, anahtarlı IP/e-posta özetleri, istek kimliği, işlem zamanı, hız sınırlama sayaçları, denetim eylemi/hedefi/metadata, hata ve iş kuyruğu kayıtları | Kötüye kullanım önleme, erişim denetimi, hata çözümü ve işlem tutarlılığı | Hak ve özgürlükleri zedelemeyen gerekli güvenlik işlemleri için m.5/2-f; somut bir hakkın korunması için m.5/2-e. Özetlenmiş veri kendiliğinden anonim sayılmaz |
 | Silme ve başvuru: talep zamanı, bekleme/sonuç bilgisi, dış temizlik durumu; KVKK başvurusunda verilen kimlik, iletişim ve talep bilgileri | Silme işlemi, hak taleplerinin karşılanması ve ispatı | İlgili hukuki yükümlülük için m.5/2-ç; somut hakkın korunması için m.5/2-e |
 
-Eşleştirmelerde sözleşmeyle doğrudan ilişki ve zorunluluk, amaç sınırı, ölçülülük ve meşru menfaat denge testi ayrı kaydedilmelidir. Hukuki yükümlülük için somut hüküm belirlenmelidir; kanuni saklama varsayılmamalıdır. Profil/görsel, hassas konum ve push için ayrıca rıza gereği ve geri alma etkisi incelenmelidir; cihaz izni veya metni kabul etmek genel rıza değildir. Özel nitelikli veri için güncel m.6 şartları ve ek tedbirler ayrıca değerlendirilir. Kaynak: ilk KVKK taslaklarının kategori tablosu; [Kurumun işleme şartları açıklaması](https://www.kvkk.gov.tr/Icerik/2050/Kisisel-Veriler).
+Eşleştirmelerde sözleşmeyle doğrudan ilişki ve zorunluluk, amaç sınırı, ölçülülük ve meşru menfaat denge testi ayrı kaydedilmelidir. Hukuki yükümlülük için somut hüküm belirlenmelidir; kanuni saklama varsayılmamalıdır. Profil/görsel, hassas konum ve push için ayrıca rıza gereği ve geri alma etkisi incelenmelidir; cihaz izni veya metni kabul etmek genel rıza değildir. Özel nitelikli veri için güncel m.6 şartları ve ek tedbirler ayrıca değerlendirilir. Kaynak: `kadro/packages/db/src/schema/users.ts`; `kadro/packages/db/src/schema/system.ts`; [Kurumun işleme şartları açıklaması](https://www.kvkk.gov.tr/Icerik/2050/Kisisel-Veriler).
 
 ## Barındırma senaryoları
 
@@ -52,14 +54,14 @@ Eşleştirmelerde sözleşmeyle doğrudan ilişki ve zorunluluk, amaç sınırı
 
 ADR-0002 bölgeyi aday bırakır; üretim ortamı yok. Mimari kabulü bölge seçiminin tamamlandığı anlamına gelmez. ADR-0002'nin 72–74. satırları yalnız R2, Resend, Sentry ve RevenueCat'i Türkiye dışı olarak niteler; Expo/Apple/Google veya HIBP için bu kaynaktan ülke/bölge çıkarılamaz. Yayın sayfalarında alıcı bazında bölge beyanı verilmedi.
 
-Her düzenli ve devam aktarımı için ilgili işleme şartı ile uygulanabilir yeterlilik kararı; yoksa etkili haklar/kanun yolları ve uygun güvence değerlendirilmelidir. Standart sözleşmenin modülü, ekleri, tarafları ve bildirim işlemi; taahhütname yolunda izin ayrıca doğrulanmalıdır. Açık rızalı arızi istisna sürekli barındırmayı genel olarak karşılamaz. Kaynak: `kadro/docs/adr/0002-hosting.md`; iki KVKK/gizlilik varyantının barındırma bölümleri; [Kurumun yurt dışına aktarım açıklaması](https://www.kvkk.gov.tr/Icerik/2053/Yurtdisina-Aktarim). Standart sözleşmenin imzaları tamamlandıktan sonra 5 iş günü içinde bildirimi ayrıca izlenmelidir: [Kurumun standart sözleşme duyurusu](https://www.kvkk.gov.tr/Icerik/8170/Yurt-Disina-Kisisel-Veri-Aktariminda-Kullanilacak-Standart-Sozlesmelerde-Dikkat-Edilmesi-Gereken-Hususlara-Iliskin-Kamuoyu-Duyurusu).
+Her düzenli ve devam aktarımı için ilgili işleme şartı ile uygulanabilir yeterlilik kararı; yoksa etkili haklar/kanun yolları ve uygun güvence değerlendirilmelidir. Standart sözleşmenin modülü, ekleri, tarafları ve bildirim işlemi; taahhütname yolunda izin ayrıca doğrulanmalıdır. Açık rızalı arızi istisna sürekli barındırmayı genel olarak karşılamaz. Kaynak: `kadro/docs/adr/0002-hosting.md`; bu belgenin “Barındırma senaryoları” bölümü; [Kurumun yurt dışına aktarım açıklaması](https://www.kvkk.gov.tr/Icerik/2053/Yurtdisina-Aktarim). Standart sözleşmenin imzaları tamamlandıktan sonra 5 iş günü içinde bildirimi ayrıca izlenmelidir: [Kurumun standart sözleşme duyurusu](https://www.kvkk.gov.tr/Icerik/8170/Yurt-Disina-Kisisel-Veri-Aktariminda-Kullanilacak-Standart-Sozlesmelerde-Dikkat-Edilmesi-Gereken-Hususlara-Iliskin-Kamuoyu-Duyurusu).
 
 ## Etkin ortam/hosting/alt sağlayıcı envanteri
 
 **AÇIK:** kodda adaptör bulunması gerçek yayında o sağlayıcının etkin olduğu kanıtı değildir. Ortam ayarları, gerçek bağlantılar ve sözleşmeler henüz doğrulanmadı.
 
 - [ ] local / preview / production için etkin servisler, endpoint ve veri kapsamı ayrı kaydedilsin; gizli anahtar/değer yayımlanmasın.
-- [ ] VPS ve veritabanı, R2/MinIO, Resend/log, Expo/log, Apple/Google JWKS, HIBP ve planlanan RevenueCat/Sentry tek envanterde izlensin.
+- [ ] VPS ve veritabanı, R2/yerel S3 uyumlu depo (ADR-0030 tasarımı; yerel ortamda henüz çalışan bir depo servisi yoktur), Resend/log, Expo/log, Apple/Google JWKS, HIBP ve planlanan RevenueCat/Sentry tek envanterde izlensin.
 - [ ] Her hizmet için sözleşme tarafı, hukuki rol, alt sağlayıcı, depolama, yedek, erişim/destek, devam aktarımı, ek IP/telemetri ve sağlayıcı saklama/silme bilgileri kanıtlansın.
 - [ ] R2 görsel yükleme/presign kodu, Faz 6 yedek yükleme uygulamasının kanıtı sayılmasın. Ham görsel metadata ve doğrudan depo isteği bağlantı verisi ayrı değerlendirilsin.
 - [ ] RevenueCat dış silme çağrısı varsayılmasın: mevcut işçi yalnız abonelik varsa external_pending kaydeder. Sentry için mevcut entegrasyon dosyası bulunmadı.
@@ -79,11 +81,11 @@ Kaynak: `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/s
 - [ ] Sunucudan yapılan Resend/Expo/HIBP/JWKS çağrıları browser sayfa taramasından ayrı ölçülsün.
 - [ ] Site geneli çerez yokluğu ancak kapsamı belli başarılı test sonucu üzerine yazılsın.
 
-Kaynak: `legal-drafts/scope-joint-r2.md` B6 ve (c) WP4-8/WP5-9; `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`; `kadro/apps/web/lib/server/cookies.ts`; `kadro/apps/web/lib/server/auth/sessions.ts`; `kadro/packages/config/src/schema.ts`.
+Kaynak: `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`; `kadro/apps/web/lib/server/cookies.ts`; `kadro/apps/web/lib/server/auth/sessions.ts`; `kadro/packages/config/src/schema.ts`.
 
-## ACIK-ALANLAR.md — 36 inceleme maddesinin güncel hali
+## 36 açık inceleme maddesi
 
-Kaynak numaraları korunmuştur. Tüm maddeler açıktır; teknik alt konunun kodda doğrulanması hukuki/üretim incelemesini kapatmaz. Eski köşeli yer tutucu başlıkları inceleme konusuna dönüştürülmüştür.
+İnceleme maddeleri 1–36 olarak numaralandırılmıştır. Tüm maddeler açıktır; teknik alt konunun kodda doğrulanması hukuki/üretim incelemesini kapatmaz. Eski köşeli yer tutucu başlıkları inceleme konusuna dönüştürülmüştür.
 
 ### 1. Açık — VERİ SORUMLUSU BİLGİSİ: tebligat ve başvuru adresi
 
@@ -236,9 +238,9 @@ Yayın sayfalarındaki iddiaların izleri aşağıdadır. İnceleme maddeleri ge
 
 | İddia / inceleme izi | Dosya / sınır |
 | --- | --- |
-| Örnek etiketi, kimliğin belirlenmemesi, partial, TR/AB birleştirme, üç katman | `legal-drafts/scope-joint-r2.md` B1–B11, B ve (c) |
-| Kategori/amaç taslağı, m.5 tablosu, senaryo farkları | `legal-drafts/kvkk-aydinlatma.tr-yurtici.md`; `legal-drafts/kvkk-aydinlatma.tr-yurtdisi.md`; `legal-drafts/gizlilik.tr-yurtici.md`; `legal-drafts/gizlilik.tr-yurtdisi.md` |
-| 36 maddelik kaynak ve inceleme kapsamı | `legal-drafts/ACIK-ALANLAR.md`; bu belgenin 1–36 maddeleri |
+| Örnek etiketi, kimliğin belirlenmemesi, partial ve üç katman | `kadro/apps/web/content/legal/kvkk-aydinlatma.mdx`; `kadro/apps/web/content/legal/gizlilik.mdx`; `kadro/docs/legal/review-checklist.md` — “Amaç ve durum” |
+| Kategori/amaç taslağı, m.5 tablosu, senaryo farkları | `kadro/docs/legal/review-checklist.md` — “Hukuki sebep eşleştirme taslağı” ve “Barındırma senaryoları”; `kadro/docs/adr/0002-hosting.md` |
+| 36 maddelik inceleme kapsamı | `kadro/docs/legal/review-checklist.md` — 1–36 inceleme maddeleri |
 | Hesap/e-posta/sağlayıcı kimlikleri, profil, TOTP, token, silme kaydı | `kadro/packages/db/src/schema/users.ts` |
 | Takım, rol ve davet alanları | `kadro/packages/db/src/schema/teams.ts` |
 | Katılım, diziliş, başvuru, MVP, ücret işaretleme; kart/banka alanı içermeyen model | `kadro/packages/db/src/schema/matches.ts` |
@@ -248,14 +250,14 @@ Yayın sayfalarındaki iddiaların izleri aşağıdadır. İnceleme maddeleri ge
 | Bölge adayları, yalnız dört sağlayıcı için Türkiye dışı nitelemesi, 30 günlük yedek tasarımı | `kadro/docs/adr/0002-hosting.md`; üretim kanıtı yok |
 | Web 7 gün, mobil 15 dakika/30 gün geçerlilik | `kadro/docs/adr/0014-client-type-and-session-transport.md`; geçerlilik satır silme süresi değildir |
 | S3 presign yerelde; dosya cihazdan depoya | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/docs/adr/0030-image-upload-pipeline.md` |
-| R2/S3 depo işçi işlemleri; yerel MinIO karşılığı | `kadro/apps/worker/src/storage/storage.ts`; `kadro/docs/adr/0030-image-upload-pipeline.md` |
+| R2/S3 depo işçi işlemleri; yerel S3 uyumlu depo (ADR-0030 tasarımı; yerel ortamda henüz çalışan bir depo servisi yoktur) | `kadro/apps/worker/src/storage/storage.ts`; `kadro/docs/adr/0030-image-upload-pipeline.md` |
 | Resend mesaj alanları ve local logun bağlantı/token içermesi, local sınırı | `kadro/packages/emails/src/transport.ts` |
 | Expo gönderim/receipt ve local log; cihaz tokenı loglanmaz | `kadro/apps/worker/src/push/transport.ts`; `kadro/docs/adr/0031-push-notifications.md` |
 | Apple/Google sadece JWKS GET, yerel belirteç doğrulaması | `kadro/apps/web/lib/server/oauth/providers.ts`; `kadro/apps/web/lib/server/oauth/jwks.ts`; `kadro/apps/web/lib/server/auth/provider-sign-in.ts` |
-| Cihazın girişte sağlayıcıyla doğrudan konuşması | `legal-drafts/scope-joint-r2.md` B4; sunucu dosyaları yalnız doğrulama kısmını kanıtlar, istemci uygulaması/gerçek koşu açık |
+| Tasarım gereği cihaz sağlayıcıyla doğrudan konuşur; mobil giriş akışı henüz uygulanmamıştır | `kadro/01-kadro-react-native-expo.md`; `kadro/apps/mobile/app/index.tsx`; `kadro/apps/web/lib/server/oauth/providers.ts`; sunucu dosyaları yalnız doğrulama kısmını kanıtlar |
 | HIBP ilk 5 SHA-1 karakteri, parola gönderilmez | `kadro/packages/auth/src/hibp.ts` |
 | RevenueCat modeli ve abonelik varsa koşullu external_pending; dış çağrı yok, Faz 5 | `kadro/packages/db/src/schema/system.ts`; `kadro/packages/db/src/schema/users.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`; `kadro/docs/adr/0032-account-deletion-flow.md` |
-| Sentry hata izleme/temizleme planı | `kadro/01-kadro-react-native-expo.md` §6 madde 14 ve §8; `legal-drafts/scope-joint-r2.md` (c); taranan TS/TSX/JSON kaynaklarında entegrasyon bulunmadı |
+| Sentry hata izleme/temizleme planı | `kadro/01-kadro-react-native-expo.md` §6 madde 14 ve §8; taranan TS/TSX/JSON kaynaklarında entegrasyon bulunmadı |
 | Görünürlük sınırları | `kadro/docs/security/authorization-matrix.md` §6; tasarım ile fiili ekran/API eşleşmesi açık |
 | Public medya, ham metadata, yayımlanan metadata temizliği | `kadro/docs/adr/0030-image-upload-pipeline.md`; `kadro/apps/worker/src/uploads/image.ts`; `kadro/apps/worker/src/uploads/process.ts` |
 | Gelen depo 1 gün; public medya max-age=31536000; kaldırma | `kadro/docs/adr/0030-image-upload-pipeline.md`; `kadro/apps/worker/src/uploads/process.ts`; üretim yaşam döngüsü/CDN purge açık |
@@ -265,15 +267,16 @@ Yayın sayfalarındaki iddiaların izleri aşağıdadır. İnceleme maddeleri ge
 | Silme 7 gün, anında devre dışı/oturum iptali/token temizliği, girişle iptal | `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/apps/web/lib/server/account/deletion.ts`; `kadro/apps/web/lib/server/auth/account-state.ts` |
 | Hesap/avatar/yorum/başvuru kaldırma, kaptanlık devri, tek üyeli takım silme, saha ekleyen bağlantısını kaldırma | `kadro/apps/worker/src/accounts/hard-delete.ts`; `kadro/docs/adr/0032-account-deletion-flow.md` |
 | Tombstone: kişisel tanımlayıcılardan arındırılmış kayıt, süresiz; takım silinince geçmiş kalkabilir | `kadro/docs/adr/0033-per-account-history-tombstone.md`; `kadro/apps/worker/src/accounts/hard-delete.ts`; anonimlik sonucu çıkarılmaz |
+| Anahtarlı IP özeti; audit_logs.ip_hash ham IP içermez | `kadro/packages/db/src/schema/system.ts`; `kadro/apps/web/lib/server/audit.ts`; `kadro/apps/web/lib/server/keyed-hash.ts`; `kadro/docs/adr/0023-keyed-hash-secret.md`; azami saklama süresi belirlenmedi |
 | Append-only denetim kalır; azami süre belirlenmedi | `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/packages/db/src/schema/system.ts` |
 | Host uygulama logları 30 gün; yedekte 30 güne kadar | `kadro/docs/ops/README.md`; `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/docs/adr/0002-hosting.md`; tasarım, üretim kanıtı yok |
 | Çerez adları, nitelikler, varsayılan 7 gün ve aynı CSRF ttl | `kadro/apps/web/lib/server/cookies.ts`; `kadro/apps/web/lib/server/auth/sessions.ts`; `kadro/packages/config/src/schema.ts` |
 | E-posta bağlantı yüzeylerinde analitik/üçüncü taraf kaynak yok; noindex | `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`; site geneline uygulanmaz |
-| Mobil Ayarlar → Hesabımı sil tasarımı ve /hesap-silme | `kadro/01-kadro-react-native-expo.md` §6 madde 21; `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`; mobil gerçek koşu açık |
-| Yaş, hassas cihaz konumu, özel nitelikli veri, rıza, başvuru/cevap ve değişiklik bildirimi | `legal-drafts/ACIK-ALANLAR.md` maddeler 6–10, 27, 29–30, 35; kesin süreçler belirlenmedi |
-| Güvenlik denetimi partial ve 3 moderate notu | `legal-drafts/scope-joint-r2.md` B10; ADR-0043 güncel bulgu kapanışı bu teslimde doğrulanmadı |
-| İşleme şartları ve m.11 hakları | İlk taslaklar; aşağıdaki resmi kaynaklarla karşılaştırıldı, nihai hukuki inceleme açık |
-| m.9 aktarım ve 5 iş günü bildirim | İlk taslak madde 19 ve senaryolar; resmi aktarım/standart sözleşme duyuruları |
+| Mobil uygulama içi hesap silme akışı; webde /hesap-silme sayfası ve mevcut “Profil › Hesabı sil” yönlendirmesi | `kadro/apps/web/app/(app)/hesap-silme/page.tsx`; `kadro/apps/web/components/auth/delete-account.tsx`; `kadro/docs/adr/0032-account-deletion-flow.md`; mobil ekran henüz uygulanmamıştır |
+| Yaş, hassas cihaz konumu, özel nitelikli veri, rıza, başvuru/cevap ve değişiklik bildirimi | `kadro/docs/legal/review-checklist.md` — maddeler 6–10, 27, 29–30, 35; kesin süreçler belirlenmedi |
+| Güvenlik doğrulaması ve bağımlılık istisnası | `kadro/docs/security/verification-matrix.md`; `kadro/docs/adr/0043-node-forge-advisory-exception.md`; güncel bulgu kapanışı bu teslimde doğrulanmadı |
+| İşleme şartları ve m.11 hakları | `kadro/docs/legal/review-checklist.md` — “Hukuki sebep eşleştirme taslağı”; `kadro/apps/web/content/legal/kvkk-aydinlatma.mdx` — “İlgili kişinin hakları ve başvuru”; nihai hukuki inceleme açık |
+| m.9 aktarım ve bildirim incelemesi | `kadro/docs/legal/review-checklist.md` — “Barındırma senaryoları” ve madde 19; `kadro/docs/adr/0002-hosting.md` |
 
 Hukuki inceleme kaynakları: [işleme şartları](https://www.kvkk.gov.tr/Icerik/2050/Kisisel-Veriler), [ilgili kişi hakları](https://www.kvkk.gov.tr/Icerik/2036/Ilgili-Kisinin-Haklari), [yurt dışına aktarım](https://www.kvkk.gov.tr/Icerik/2053/Yurtdisina-Aktarim), [standart sözleşme bildirim koşulları](https://www.kvkk.gov.tr/Icerik/8170/Yurt-Disina-Kisisel-Veri-Aktariminda-Kullanilacak-Standart-Sozlesmelerde-Dikkat-Edilmesi-Gereken-Hususlara-Iliskin-Kamuoyu-Duyurusu), [özel nitelikli veriler](https://www.kvkk.gov.tr/Icerik/2051/Ozel-Nitelikli-Kisisel-Veriler). Başvuru m.13, cevap/bildirim ve Tebliğ usulü madde 29/35 kapsamında güncel Türkçe mevzuatla kesinleştirilecektir.
 
