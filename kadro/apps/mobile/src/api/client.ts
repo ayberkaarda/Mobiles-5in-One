@@ -271,6 +271,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     if (response.status !== 401 || token === null) {
       return response;
     }
+    // A 401 for a token that has been replaced meanwhile (another request already refreshed):
+    // replay with the current token instead of rotating again.
+    const current = options.session.getAccessToken();
+    if (current !== null && current !== token) {
+      return send(url, method, body, current, signal);
+    }
     // The access token was rejected (expired early, revoked): refresh once through the shared
     // gate and replay. Concurrent 401s all wait for the same refresh.
     const refreshed = await refreshFor(signal);

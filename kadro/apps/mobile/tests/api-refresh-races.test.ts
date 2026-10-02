@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { type MobileRefreshResponse } from '../src/api/contracts';
 import { REFRESH_TOKEN_KEY } from '../src/auth-store/token-storage';
 import { createTestApi, issueTokens, problem } from './support/api';
 import { deferred } from './support/deferred';
@@ -55,6 +56,46 @@ describe('a failed refresh is never repeated by the request retry (ADR-0019)', (
     await expect(api.request('/api/v1/teams')).rejects.toMatchObject({ kind: 'network' });
     expect(refreshCalls).toBe(1);
     expect(teamCalls).toBe(0);
+  });
+});
+
+describe('a late 401 for an already replaced token', () => {
+  it('replays with the current token instead of rotating a second time', async () => {
+    const { api, session, store } = createTestApi();
+    const initial = issueTokens();
+    await session.establish(initial);
+    const rotated = issueTokens();
+    const refreshed = deferred();
+    store.subscribe((state) => {
+      if (state.accessToken === rotated.accessToken) {
+        refreshed.resolve();
+      }
+    });
+    let refreshCalls = 0;
+    let staleRequests = 0;
+    mswServer.use(
+      http.post(apiUrl('/api/v1/auth/refresh'), () => {
+        refreshCalls += 1;
+        const body: MobileRefreshResponse = { tokens: rotated };
+        return HttpResponse.json(body);
+      }),
+      http.get(apiUrl('/api/v1/teams'), async ({ request }) => {
+        if (request.headers.get('authorization') === `Bearer ${rotated.accessToken}`) {
+          return HttpResponse.json(TEAMS);
+        }
+        staleRequests += 1;
+        if (staleRequests === 2) {
+          // Request B was sent with the old token; its 401 arrives after A's refresh finished.
+          await refreshed.promise;
+        }
+        return problem(401, 'unauthenticated');
+      }),
+    );
+
+    const results = await Promise.all([api.request('/api/v1/teams'), api.request('/api/v1/teams')]);
+
+    expect(results).toEqual([TEAMS, TEAMS]);
+    expect(refreshCalls).toBe(1);
   });
 });
 
