@@ -28,9 +28,17 @@ export interface ProcessHandlerOptions {
   readonly exit?: (code: number) => void;
 }
 
+/** Marks a target that already has the handlers, so repeated set-up (hot reload) adds nothing. */
+const INSTALLED = Symbol.for('kadro.web.processHandlers');
+
 export function installProcessHandlers(options: ProcessHandlerOptions): void {
   const target = options.target ?? process;
   const exit = options.exit ?? ((code: number) => process.exit(code));
+  const marked = target as { [INSTALLED]?: true };
+  if (marked[INSTALLED] === true) {
+    return;
+  }
+  marked[INSTALLED] = true;
   let exiting = false;
 
   target.on('uncaughtException', (error: unknown) => {

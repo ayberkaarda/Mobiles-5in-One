@@ -86,4 +86,24 @@ describe('process-level handlers', () => {
     expect(() => other.emit('uncaughtException', new Error('x'))).not.toThrow();
     expect(exit).toHaveBeenCalledWith(1);
   });
+
+  it('is idempotent per target', () => {
+    const lines: string[] = [];
+    const logger = createLogger({
+      level: 'info',
+      destination: { write: (line: string) => void lines.push(line) },
+    });
+    const target = new EventEmitter();
+    const exit = vi.fn();
+    installProcessHandlers({ logger, target, exit });
+    installProcessHandlers({ logger, target, exit });
+    expect(target.listenerCount('uncaughtException')).toBe(1);
+    expect(target.listenerCount('unhandledRejection')).toBe(1);
+
+    target.emit('unhandledRejection', new Error('x'));
+    expect(lines).toHaveLength(1);
+    target.emit('uncaughtException', new Error('y'));
+    target.emit('uncaughtException', new Error('z'));
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
 });
