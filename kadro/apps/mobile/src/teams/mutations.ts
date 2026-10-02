@@ -55,16 +55,39 @@ function dropFromTeamList(client: QueryClient, teamId: string): void {
   );
 }
 
-async function refreshTeam(client: QueryClient, teamId: string): Promise<void> {
-  await Promise.all([
-    client.invalidateQueries({ queryKey: queryKeys.teamDetail(teamId) }),
-    client.invalidateQueries({ queryKey: queryKeys.teams() }),
-  ]);
+/**
+ * Marks the team's roster and the team list stale and refetches them in the background. Never
+ * awaited by a write: a refetch on a weak connection can take the client's full GET retry budget,
+ * and the screen must not stay busy (or keep the user from navigating) for it.
+ */
+function refreshTeam(client: QueryClient, teamId: string): void {
+  void client.invalidateQueries({ queryKey: queryKeys.teamDetail(teamId) });
+  void client.invalidateQueries({ queryKey: queryKeys.teams() });
 }
 
 interface RoleChange {
   readonly userId: string;
   readonly role: TeamRole;
+}
+
+interface OptimisticContext {
+  /** Roster before the write. */
+  readonly previous: TeamDetail | undefined;
+  /** Roster the write put into the cache; a rollback only replaces this exact object. */
+  readonly optimistic: TeamDetail | undefined;
+}
+
+/**
+ * Puts the roster from before an optimistic write back, unless something newer (a refetch that
+ * finished meanwhile) has replaced the optimistic roster: that data is fresher than both.
+ */
+function rollBack(client: QueryClient, key: readonly unknown[], context?: OptimisticContext): void {
+  if (context?.previous === undefined || context.optimistic === undefined) {
+    return;
+  }
+  if (client.getQueryData(key) === context.optimistic) {
+    client.setQueryData(key, context.previous);
+  }
 }
 
 /** Role change; `captain` is a captaincy transfer (ADR-0008) and is not applied in advance. */
@@ -74,22 +97,20 @@ export function useChangeMemberRole(teams: TeamsApi, teamId: string) {
   return useMutation({
     mutationKey: rosterMutationKey(teamId),
     mutationFn: ({ userId, role }: RoleChange) => teams.updateMemberRole(teamId, userId, role),
-    onMutate: async ({ userId, role }: RoleChange) => {
+    onMutate: async ({ userId, role }: RoleChange): Promise<OptimisticContext> => {
       if (role === 'captain') {
-        return { previous: undefined };
+        return { previous: undefined, optimistic: undefined };
       }
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData<TeamDetail>(key);
-      if (previous !== undefined) {
-        client.setQueryData<TeamDetail>(key, withMemberRole(previous, userId, role));
-      }
-      return { previous };
+      // The object the cache holds after the write (structural sharing may copy it).
+      const optimistic =
+        previous === undefined
+          ? undefined
+          : client.setQueryData<TeamDetail>(key, withMemberRole(previous, userId, role));
+      return { previous, optimistic };
     },
-    onError: (_error, _change, context) => {
-      if (context?.previous !== undefined) {
-        client.setQueryData(key, context.previous);
-      }
-    },
+    onError: (_error, _change, context) => rollBack(client, key, context),
     onSettled: () => refreshTeam(client, teamId),
   });
 }
@@ -101,19 +122,16 @@ export function useRemoveMember(teams: TeamsApi, teamId: string) {
   return useMutation({
     mutationKey: rosterMutationKey(teamId),
     mutationFn: (userId: string) => teams.removeMember(teamId, userId),
-    onMutate: async (userId: string) => {
+    onMutate: async (userId: string): Promise<OptimisticContext> => {
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData<TeamDetail>(key);
-      if (previous !== undefined) {
-        client.setQueryData<TeamDetail>(key, withoutMember(previous, userId));
-      }
-      return { previous };
+      const optimistic =
+        previous === undefined
+          ? undefined
+          : client.setQueryData<TeamDetail>(key, withoutMember(previous, userId));
+      return { previous, optimistic };
     },
-    onError: (_error, _userId, context) => {
-      if (context?.previous !== undefined) {
-        client.setQueryData(key, context.previous);
-      }
-    },
+    onError: (_error, _userId, context) => rollBack(client, key, context),
     onSettled: () => refreshTeam(client, teamId),
   });
 }
@@ -124,13 +142,13 @@ export function useLeaveTeam(teams: TeamsApi, teamId: string) {
   return useMutation({
     mutationKey: rosterMutationKey(teamId),
     mutationFn: (myUserId: string) => teams.removeMember(teamId, myUserId),
-    onSuccess: async () => {
-      await client.cancelQueries({ queryKey: queryKeys.teamDetail(teamId) });
+    onSuccess: () => {
+      void client.cancelQueries({ queryKey: queryKeys.teamDetail(teamId) });
       client.removeQueries({ queryKey: queryKeys.teamDetail(teamId) });
       client.removeQueries({ queryKey: queryKeys.teamMatches(teamId) });
       client.removeQueries({ queryKey: queryKeys.teamInvites(teamId) });
       dropFromTeamList(client, teamId);
-      await client.invalidateQueries({ queryKey: queryKeys.teams() });
+      void client.invalidateQueries({ queryKey: queryKeys.teams() });
     },
   });
 }
@@ -139,9 +157,9 @@ export function useCreateTeam(teams: TeamsApi) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: { name: string; districtId: string }) => teams.createTeam(body),
-    onSuccess: async (team) => {
+    onSuccess: (team) => {
       client.setQueryData(queryKeys.teamDetail(team.id), team);
-      await client.invalidateQueries({ queryKey: queryKeys.teams() });
+      void client.invalidateQueries({ queryKey: queryKeys.teams() });
     },
   });
 }
@@ -152,9 +170,7 @@ export function useAcceptInvite(teams: TeamsApi) {
     mutationFn: (code: string) => teams.acceptInvite(code),
     // The code is a credential: the finished mutation is not kept in the cache.
     gcTime: 0,
-    onSuccess: async ({ team }) => {
-      await refreshTeam(client, team.id);
-    },
+    onSuccess: ({ team }) => refreshTeam(client, team.id),
   });
 }
 
@@ -163,8 +179,8 @@ export function useCreateInvite(teams: TeamsApi, teamId: string) {
   return useMutation({
     mutationFn: () => teams.createInvite(teamId),
     gcTime: 0,
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: queryKeys.teamInvites(teamId) });
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.teamInvites(teamId) });
     },
   });
 }
@@ -173,8 +189,8 @@ export function useRevokeInvite(teams: TeamsApi, teamId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (inviteId: string) => teams.revokeInvite(teamId, inviteId),
-    onSettled: async () => {
-      await client.invalidateQueries({ queryKey: queryKeys.teamInvites(teamId) });
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.teamInvites(teamId) });
     },
   });
 }
