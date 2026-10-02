@@ -69,6 +69,24 @@ export async function registerDevice(
   return 'registered';
 }
 
+/**
+ * Start-up registration (ADR-0031: `POST me/push-tokens` on app start refreshes `last_seen_at`).
+ * Never asks: it registers only when the permission is already granted and resolves to `null`
+ * otherwise. API failures reject with the `ApiError`.
+ */
+export async function refreshRegistration(
+  port: PushPort,
+  profile: Pick<ProfileApi, 'registerPushToken'>,
+): Promise<PushRegistration | null> {
+  if (port.platform === null) {
+    return 'unavailable';
+  }
+  if ((await port.permission()) !== 'granted') {
+    return null;
+  }
+  return registerDevice(port, profile);
+}
+
 export interface PushState {
   /** Whether this device's token was registered in the current sign-in. Memory only. */
   readonly registered: boolean;

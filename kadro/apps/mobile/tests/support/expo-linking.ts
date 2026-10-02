@@ -24,3 +24,18 @@ export function openedURLs(): readonly string[] {
 export function __resetOpenedURLs(): void {
   opened = [];
 }
+
+let settingsOpened = 0;
+
+/** Records that the system settings were requested instead of leaving the app. */
+export async function openSettings(): Promise<void> {
+  settingsOpened += 1;
+}
+
+export function settingsOpenCount(): number {
+  return settingsOpened;
+}
+
+export function __resetSettingsOpened(): void {
+  settingsOpened = 0;
+}

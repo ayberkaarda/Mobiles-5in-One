@@ -19,6 +19,8 @@ export default defineConfig({
       { find: /^expo-localization$/, replacement: support('expo-localization.ts') },
       { find: /^expo-router$/, replacement: support('expo-router.tsx') },
       { find: /^expo-linking$/, replacement: support('expo-linking.ts') },
+      { find: /^expo-constants$/, replacement: support('expo-constants.ts') },
+      { find: /^expo-notifications$/, replacement: support('expo-notifications.ts') },
       {
         find: /^expo-apple-authentication$/,
         replacement: support('expo-apple-authentication.ts'),

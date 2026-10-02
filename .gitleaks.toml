@@ -23,5 +23,11 @@ paths = ['''kadro/apps/mobile/tests/profile-(units|screens)\.test\.tsx?''']
 targetRules = ['generic-api-key', 'jwt']
 
 [[allowlists]]
+description = "Plain district slug pair in the mobile deep link tests"
+condition = "AND"
+paths = ['''kadro/apps/mobile/tests/links-units\.test\.tsx?''']
+targetRules = ['generic-api-key']
+
+[[allowlists]]
 description = "Generated build output (Next.js preview and server-action keys) and installed dependencies"
 paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''']

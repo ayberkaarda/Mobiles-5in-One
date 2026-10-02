@@ -32,7 +32,8 @@
     "results": "Matching districts",
     "loading": "Loading districts",
     "loadFailed": "The district list could not be loaded.",
-    "retry": "Reload districts"
+    "retry": "Reload districts",
+    "linkNotFound": "The district in the link was not found; showing all calls."
   },
   "level": {
     "any": "All levels",

@@ -6,6 +6,7 @@ import { useStore } from 'zustand';
 import { FormError, ProviderButtons } from '../src/auth/components';
 import { providerSignIn } from '../src/auth/instance';
 import { useAsyncAction } from '../src/auth/use-async-action';
+import { pendingLink } from '../src/links/instance';
 import { DELETION_GRACE_DAYS } from '../src/settings/deletion';
 import { deletionNotice } from '../src/settings/notice';
 import { useTheme } from '../src/theme';
@@ -19,6 +20,8 @@ export default function WelcomeScreen() {
   const action = useAsyncAction();
   // Fallback when the grace screen did not survive the sign-out after a deletion request.
   const deletionPending = useStore(deletionNotice, (state) => state.pending);
+  // An invite link opened while signed out; it opens after sign-in (ADR-0075).
+  const invitePending = useStore(pendingLink, (state) => state.target?.kind === 'teamInvite');
   return (
     <Screen scroll testID="welcome-screen">
       <View style={{ paddingHorizontal: theme.spacing['6'], paddingTop: theme.spacing['10'] }}>
@@ -36,6 +39,11 @@ export default function WelcomeScreen() {
             <Text tone="muted" style={{ marginTop: theme.spacing['2'] }}>
               {t('common:deletion.doneCancel', { days: DELETION_GRACE_DAYS })}
             </Text>
+          </Card>
+        ) : null}
+        {invitePending ? (
+          <Card style={{ marginTop: theme.spacing['6'] }} testID="welcome-invite-pending">
+            <Text accessibilityLiveRegion="polite">{t('welcome.invitePending')}</Text>
           </Card>
         ) : null}
         <View style={{ marginTop: theme.spacing['8'] }}>
