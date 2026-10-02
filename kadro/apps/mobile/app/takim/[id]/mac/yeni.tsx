@@ -17,6 +17,7 @@ import { canCreateMatch } from '../../../../src/matches/permissions';
 import { Notice, ResourceState, Section } from '../../../../src/teams/components';
 import { teamsApi } from '../../../../src/teams/instance';
 import { teamDetailQuery } from '../../../../src/teams/queries';
+import { useVenuePrefill } from '../../../../src/venues/prefill';
 
 function createBody(values: MatchFormValues, status: 'draft' | 'open'): CreateMatchRequest {
   return {
@@ -38,8 +39,10 @@ function createBody(values: MatchFormValues, status: 'draft' | 'open'): CreateMa
 export default function CreateMatchScreen() {
   const { t } = useTranslation('matches');
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const params = useLocalSearchParams<{ id?: string | string[]; venue?: string | string[] }>();
   const teamId = typeof params.id === 'string' ? params.id : '';
+  // "Bu sahada maç kur" passes a venue id; its name comes from the cached venue data, never the URL.
+  const initial = useVenuePrefill(EMPTY_MATCH_FORM, params.venue);
   const team = useQuery({ ...teamDetailQuery(teamsApi, teamId), enabled: teamId !== '' });
   const create = useCreateMatch(matchesApi, teamId);
   const action = useAsyncAction();
@@ -91,7 +94,7 @@ export default function CreateMatchScreen() {
         <FormError error={action.error} />
       </Section>
       <MatchForm
-        initial={EMPTY_MATCH_FORM}
+        initial={initial}
         busy={action.busy}
         actions={[
           {

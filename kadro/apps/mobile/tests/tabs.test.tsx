@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
+import { fireEvent, screen } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,9 +8,12 @@ import ProfileTab from '../app/(tabs)/profil/index';
 import TeamsTab from '../app/(tabs)/takimlar/index';
 import { session } from '../src/api/instance';
 import { issueTokens, problem } from './support/api';
-import { secureStoreContents } from './support/expo-secure-store';
+import { routerCalls } from './support/expo-router';
 import { apiUrl, mswServer } from './support/msw';
 import { renderWithProviders } from './support/render';
+
+// The profile photo component loads `expo-image`, a native module.
+vi.mock('expo-image', () => import('./support/expo-image'));
 
 // The tab screens use the app's API client; here it is wired to the MSW base URL.
 vi.mock('../src/api/instance', async () => {
@@ -150,8 +153,7 @@ describe('Eksik Var tab', () => {
 });
 
 describe('Profil tab', () => {
-  it('shows the own profile and signs out with a full local cleanup', async () => {
-    let logoutCalls = 0;
+  it('shows the own profile with its statistics and opens the editor and the settings', async () => {
     mswServer.use(
       http.get(apiUrl('/api/v1/me'), () =>
         HttpResponse.json({
@@ -162,24 +164,29 @@ describe('Profil tab', () => {
           level: 'regular',
           email: 'ayse@example.com',
           emailVerified: false,
-          role: 'player',
+          role: 'user',
           districtId: null,
           providers: { password: true, apple: false, google: false },
           createdAt: '2026-09-01T10:00:00.000Z',
         }),
       ),
-      http.post(apiUrl('/api/v1/auth/logout'), () => {
-        logoutCalls += 1;
-        return new HttpResponse(null, { status: 204 });
-      }),
+      http.get(apiUrl('/api/v1/me/stats'), () =>
+        HttpResponse.json({ tier: 'basic', matchesPlayed: 12, mvpCount: 3 }),
+      ),
     );
     await renderWithProviders(<ProfileTab />);
     expect(await screen.findByText('Ayşe Kaleci')).toBeTruthy();
     expect(screen.getByText('E-posta adresin henüz doğrulanmadı.')).toBeTruthy();
+    expect(screen.getByLabelText('Mevki: Kaleci')).toBeTruthy();
+    expect(screen.getByLabelText('İlçe: Belirtilmedi')).toBeTruthy();
+    expect(await screen.findByLabelText('Oynanan maç: 12')).toBeTruthy();
+    expect(screen.getByLabelText('Maçın oyuncusu: 3')).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Çıkış yap' }));
-    await waitFor(() => expect(secureStoreContents().size).toBe(0));
-    expect(logoutCalls).toBe(1);
-    expect(session.hasSession()).toBe(false);
+    await fireEvent.press(screen.getByRole('button', { name: 'Profili düzenle' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Ayarlar' }));
+    expect(routerCalls()).toEqual([
+      { method: 'push', href: '/profil/duzenle' },
+      { method: 'push', href: '/ayarlar' },
+    ]);
   });
 });

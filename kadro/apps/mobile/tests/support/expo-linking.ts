@@ -8,3 +8,19 @@ export function useLinkingURL(): string | null {
 export function __setLinkingURL(next: string | null): void {
   url = next;
 }
+
+let opened: string[] = [];
+
+/** Records the URL instead of leaving the app. */
+export async function openURL(next: string): Promise<true> {
+  opened.push(next);
+  return true;
+}
+
+export function openedURLs(): readonly string[] {
+  return opened;
+}
+
+export function __resetOpenedURLs(): void {
+  opened = [];
+}

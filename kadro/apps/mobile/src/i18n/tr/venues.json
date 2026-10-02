@@ -1,0 +1,142 @@
+{
+  "list": {
+    "searchLabel": "Saha ara",
+    "searchHelp": "Sahanın adından {{min}}-{{max}} karakter yaz.",
+    "search": "Ara",
+    "districtShow": "İlçe seç",
+    "districtSet": "İlçe seçildi",
+    "districtHint": "İlçe filtresini açar veya kapatır.",
+    "districtAll": "Tüm ilçeler",
+    "add": "Saha ekle",
+    "reset": "Filtreleri temizle",
+    "openHint": "Sahanın bilgilerini ve yorumlarını açar.",
+    "emptyTitle": "Henüz saha yok",
+    "emptyMessage": "Saha rehberine eklenen sahalar burada listelenir. Bildiğin bir sahayı ekleyebilirsin.",
+    "emptyFilteredTitle": "Bu aramaya uyan saha yok",
+    "emptyFilteredMessage": "Başka bir ad veya ilçe dene ya da filtreleri temizle."
+  },
+  "badge": {
+    "sample": "[ÖRNEK] Gerçek saha değil",
+    "verified": "Doğrulanmış",
+    "unverified": "Doğrulanmamış"
+  },
+  "rating": {
+    "none": "Henüz yorum yok",
+    "few": "{{number}} yorum (puan en az {{min}} yorumla gösterilir)",
+    "average": "{{average}} / 5 · {{number}} yorum"
+  },
+  "facts": {
+    "district": "İlçe",
+    "type": "Saha tipi",
+    "indoor": "Kapalı",
+    "outdoor": "Açık",
+    "price": "Saatlik ücret",
+    "priceUnknown": "Belirtilmemiş",
+    "rating": "Puan",
+    "address": "Adres",
+    "phone": "Telefon",
+    "call": "Ara: {{phone}}",
+    "featuresPresent": "Var",
+    "featuresAbsent": "Yok",
+    "featuresUnknown": "Bilinmiyor"
+  },
+  "feature": {
+    "lighting": "Aydınlatma",
+    "changingRoom": "Soyunma odası",
+    "shower": "Duş",
+    "parking": "Otopark"
+  },
+  "detail": {
+    "missingTitle": "Saha bulunamadı",
+    "missingMessage": "Bu saha kaldırılmış ya da artık görüntülenemiyor.",
+    "toList": "Saha listesine dön",
+    "retry": "Tekrar dene",
+    "sampleNotice": "Bu bir örnek kayıttır, gerçek bir saha değildir. Uygulamayı denemen için gösterilir.",
+    "unverifiedNotice": "Bu saha henüz doğrulanmadı. Doğrulanana kadar yalnızca sen görürsün; telefon ve adres doğrulamadan sonra herkese açılır."
+  },
+  "matchHere": {
+    "title": "Bu sahada maç kur",
+    "label": "Bu sahada maç kur",
+    "hintTeam": "{{team}} için bu sahada yeni maç formunu açar.",
+    "hintChoose": "Maçı hangi takımla kuracağını seçmeni sağlar.",
+    "forTeam": "{{team}} ile kur",
+    "none": "Maç kurmak için bir takımda kaptan veya yardımcı kaptan olman gerekir.",
+    "teamsMissing": "Takımların yüklenemedi."
+  },
+  "review": {
+    "mineTitle": "Senin yorumun",
+    "othersTitle": "Son yorumlar",
+    "othersEmpty": "Bu saha için başka yorum yok.",
+    "partial": "Son {{shown}} yorum gösteriliyor, toplam {{number}} yorum var.",
+    "offline": "Yorumlar için bağlantı gerekiyor. Saha bilgileri son kaydedilen hâliyle gösteriliyor.",
+    "meMissing": "Hesap bilgilerin yüklenemedi.",
+    "mine": "Senin yorumun",
+    "eligibility": "Yalnızca bu sahada oynanmış bir maçta \"Geliyorum\" dediysen yorum yazabilirsin.",
+    "unverified": "Yorum yazmak için önce e-posta adresini doğrula.",
+    "ratingLabel": "Puanın",
+    "ratingSpoken": "5 üzerinden {{rating}}",
+    "textLabel": "Yorumun (isteğe bağlı)",
+    "textHelp": "En fazla {{max}} karakter, düz metin.",
+    "submit": "Yorumu gönder",
+    "cancel": "Vazgeç",
+    "rewrite": "Yorumu yeniden yaz",
+    "rewriteHint": "Yorumlar düzenlenemez: eski yorumun silinir ve yenisi gönderilir.",
+    "rewriteNotice": "Yorumlar düzenlenemez. Gönderdiğinde eski yorumun silinir ve yenisi kaydedilir.",
+    "rewriteSubmit": "Sil ve yenisini gönder",
+    "rewriteDeleted": "Eski yorumun silindi ama yenisi kaydedilemedi. Metnin aşağıda, tekrar gönderebilirsin.",
+    "delete": "Yorumu sil",
+    "deleteQuestion": "Yorumun silinsin mi? Bu geri alınamaz.",
+    "deleteConfirm": "Evet, sil"
+  },
+  "add": {
+    "title": "Saha ekle",
+    "unverifiedNotice": "Eklediğin saha önce doğrulanmamış olarak kaydedilir. Bir moderatör doğrulayana kadar yalnızca sen görürsün; telefon ve adres doğrulamadan sonra herkese açılır.",
+    "unverifiedEmail": "Saha eklemek için önce e-posta adresini doğrula.",
+    "name": "Sahanın adı",
+    "nameHelp": "{{min}}-{{max}} karakter.",
+    "districtNone": "Henüz ilçe seçilmedi.",
+    "location": "Konum (enlem, boylam)",
+    "locationHelp": "Harita uygulamasından kopyaladığın koordinatı yaz, örneğin 40.98765, 29.02345.",
+    "address": "Adres (isteğe bağlı)",
+    "addressHelp": "En fazla {{addressMax}} karakter.",
+    "phone": "Telefon (isteğe bağlı)",
+    "phoneHelp": "{{phoneMin}}-{{phoneMax}} karakter: rakam ve boşluk, başta + olabilir.",
+    "priceMin": "En düşük saatlik ücret (TL, isteğe bağlı)",
+    "priceMax": "En yüksek saatlik ücret (TL, isteğe bağlı)",
+    "priceHelp": "Örneğin 1.500 veya 1500,50.",
+    "featuresTitle": "Olanaklar",
+    "featureChoice": {
+      "yes": "Var",
+      "no": "Yok",
+      "unknown": "Bilmiyorum"
+    },
+    "submit": "Sahayı gönder"
+  },
+  "validation": {
+    "nameTooShort": "Saha adı en az {{min}} karakter olmalı.",
+    "nameTooLong": "Saha adı en fazla {{max}} karakter olabilir.",
+    "textInvalid": "Görünmeyen veya özel karakterleri kaldır.",
+    "districtRequired": "Bir ilçe seç.",
+    "locationInvalid": "Konumu enlem ve boylam olarak yaz, örneğin 40.98765, 29.02345.",
+    "addressTooLong": "Adres en fazla {{addressMax}} karakter olabilir.",
+    "phoneInvalid": "Telefonu rakamlarla yaz, örneğin 0216 000 00 00.",
+    "indoorRequired": "Sahanın kapalı mı açık mı olduğunu seç.",
+    "priceInvalid": "Ücreti lira olarak yaz, örneğin 1.500 veya 1500,50.",
+    "priceTooHigh": "Bu ücret çok yüksek.",
+    "priceOrder": "En düşük ücret en yüksek ücretten büyük olamaz.",
+    "ratingRequired": "1 ile 5 arasında bir puan seç.",
+    "reviewTooLong": "Yorum en fazla {{max}} karakter olabilir.",
+    "reviewInvalid": "Görünmeyen veya özel karakterleri kaldır.",
+    "searchTooShort": "En az {{min}} karakter yaz.",
+    "searchTooLong": "En fazla {{max}} karakter yazabilirsin.",
+    "searchInvalid": "Görünmeyen veya özel karakterleri kaldır."
+  },
+  "errors": {
+    "review_not_eligible": "Bu sahaya yorum yazmak için burada oynanmış bir maçta \"Geliyorum\" demiş olman gerekir.",
+    "already_reviewed": "Bu sahaya zaten yorum yazdın. Yorumun aşağıda.",
+    "venue_exists": "Bu ilçede bu adla bir saha zaten var. Listede adıyla aramayı dene.",
+    "email_unverified": "Bunun için önce e-posta adresini doğrula.",
+    "rateLimitedVenue": "Bugün için saha ekleme sınırına ulaştın. Yarın tekrar dene.",
+    "rateLimitedReview": "Bugün için yorum sınırına ulaştın. Yarın tekrar dene."
+  }
+}

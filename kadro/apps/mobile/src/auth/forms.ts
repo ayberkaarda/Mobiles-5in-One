@@ -8,11 +8,11 @@ import { type ValidationKey } from './validation';
  * translates. This stands in for the contract schemas until `@kadro/contracts` and `zod` are
  * dependencies of the app (the validation rules are compared with those schemas in tests).
  */
-export function issueResolver<Values extends FieldValues>(
-  check: (values: Values) => Readonly<Record<string, ValidationKey | null>>,
+export function issueResolver<Values extends FieldValues, Key extends string = ValidationKey>(
+  check: (values: Values) => Readonly<Record<string, Key | null>>,
 ): Resolver<Values> {
   return (values) => {
-    const errors: Record<string, { type: string; message: ValidationKey }> = {};
+    const errors: Record<string, { type: string; message: string }> = {};
     for (const [field, issue] of Object.entries(check(values))) {
       if (issue !== null) {
         // eslint-disable-next-line security/detect-object-injection -- field names come from the form's own check function
