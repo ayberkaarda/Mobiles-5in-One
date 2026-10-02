@@ -144,11 +144,14 @@ rules above make safe. The container stop grace period is 40 s.
 ## Process-level handlers
 
 - The worker installs `uncaughtException` and `unhandledRejection` handlers
-  (`apps/worker/src/process-handlers.ts`). They log one `fatal` record (error type and code only,
-  never the message), run the graceful stop for at most 5 seconds, then exit with code 1 so the
-  process supervisor restarts the worker. The handler runs once and never throws.
+  (`apps/worker/src/process-handlers.ts`). They log one `fatal` record (error type, code and
+  sanitized stack frames; never the message), run the graceful stop, then exit with code 1 so the
+  process supervisor restarts the worker. The 5 second limit is a timer, so it holds only while
+  the event loop keeps running; a blocked loop needs the supervisor's own kill timeout. The
+  handler runs once and never throws.
 - Logger calls inside event listeners (pg-boss `error` and `warning`, the web send-only client) go
-  through `safeLog`: a failing log transport must not become an uncaught exception.
+  through `safeLog`: a logger that throws synchronously must not become an uncaught exception.
+  Asynchronous transport failures are not covered.
 - The web server installs the same hooks from `instrumentation.ts` on the Node.js runtime only:
   `uncaughtException` is logged at `fatal` and exits with code 1; `unhandledRejection` is logged at
   `error` and the server keeps serving.
