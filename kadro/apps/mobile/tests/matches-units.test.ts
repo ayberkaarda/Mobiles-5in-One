@@ -30,8 +30,8 @@ import {
 import { draftToAssignments, sideCapacity, suggestLineup } from '../src/matches/lineup';
 import { tabMatches } from '../src/matches/list';
 import { createMatchesApi } from '../src/matches/matches-api';
-import { confirmedShares, formatMinor } from '../src/matches/money';
-import { predictedRsvp, withOwnRsvp, withSides } from '../src/matches/mutations';
+import { formatMinor, paymentSummary } from '../src/matches/money';
+import { predictable, predictedRsvp, withOwnRsvp, withSides } from '../src/matches/mutations';
 import {
   canCreateMatch,
   canEditMatch,
@@ -246,11 +246,36 @@ describe('edit sends only what changed', () => {
 });
 
 describe('fee split', () => {
-  it('splits to the kuruş with the remainder on the first players (ADR-0036)', () => {
-    const shares = confirmedShares(100_001, ['a', 'b', 'c']);
-    expect([...shares.values()]).toEqual([33_334, 33_334, 33_333]);
-    expect([...shares.values()].reduce((sum, value) => sum + value, 0)).toBe(100_001);
-    expect(confirmedShares(100, []).size).toBe(0);
+  it('does not depend on the order participants arrive in', () => {
+    const rows = [
+      { userId: 'a', paid: true },
+      { userId: 'b', paid: false },
+      { userId: 'c', paid: true },
+    ];
+    const forward = paymentSummary(100_001, rows, 33_333, 'c', 33_334);
+    const reversed = paymentSummary(100_001, [...rows].reverse(), 33_333, 'c', 33_334);
+    expect(reversed.collectedMinor).toBe(forward.collectedMinor);
+    // Base share for others, the server's exact share for the viewer; a lower bound while uneven.
+    expect(forward.collectedMinor).toBe(33_333 + 33_334);
+    expect(forward.uneven).toBe(true);
+    expect(['a', 'b', 'c'].map(forward.shareOf)).toEqual([33_333, 33_333, 33_334]);
+    expect(['a', 'b', 'c'].map(reversed.shareOf)).toEqual([33_333, 33_333, 33_334]);
+  });
+
+  it('is exact when the fee splits evenly', () => {
+    const summary = paymentSummary(
+      150_000,
+      [
+        { userId: 'a', paid: true },
+        { userId: 'b', paid: true },
+      ],
+      75_000,
+      null,
+      null,
+    );
+    expect(summary.uneven).toBe(false);
+    expect(summary.collectedMinor).toBe(150_000);
+    expect(paymentSummary(100, [], null, null, null).uneven).toBe(false);
   });
 
   it('shows whole lira without decimals and a share to the kuruş', () => {
@@ -352,6 +377,11 @@ describe('RSVP prediction and optimistic row', () => {
       participants: [],
     };
     expect(predictedRsvp(guest, 'in')).toBe('in');
+    // The guest projection has no slots: a guest's `in` is never shown before the server answers
+    // (a full match answers 409 `match_full`, not the waitlist).
+    expect(predictable(guest, 'in')).toBe(false);
+    expect(predictable(guest, 'out')).toBe(true);
+    expect(predictable(memberView(), 'in')).toBe(true);
   });
 });
 

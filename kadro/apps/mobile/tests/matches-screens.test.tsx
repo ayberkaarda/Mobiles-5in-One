@@ -841,18 +841,47 @@ describe('lineup', () => {
 });
 
 describe('payments', () => {
-  const locked = () =>
-    match({
+  // 100_001 kuruş over 3 players: base share 33_333; the server says Ali's own share is 33_334.
+  const locked = (order: 'rsvp' | 'reversed' = 'rsvp') => {
+    const rows = [
+      participant(ZEYNEP, 'in'),
+      participant(MERT, 'in', { paid: true }),
+      participant(ALI, 'in'),
+    ];
+    return match({
       status: 'locked',
       lockedAt: inFuture(-1),
       feeTotalMinor: 100_001,
       counts: { in: 3, maybe: 0, out: 0, waitlist: 0 },
-      participants: [
-        participant(ZEYNEP, 'in'),
-        participant(MERT, 'in', { paid: true }),
-        participant(ALI, 'in'),
-      ],
+      sharePerPlayerMinor: 33_333,
+      myRsvp: 'in',
+      myShareMinor: 33_334,
+      participants: order === 'rsvp' ? rows : [...rows].reverse(),
     });
+  };
+
+  it('shows the same shares and total whatever order the participants arrive in', async () => {
+    serveMe();
+    serveTeam(team('player'));
+    const server = serveMatch(locked('rsvp'));
+    openMatch();
+    await render(<PaymentsScreen />);
+    const read = () => ({
+      zeynep: screen.getByLabelText('Zeynep, ₺333,33, Ödemedi'),
+      self: screen.getByLabelText('Ali Kaptan (sen), ₺333,34, Ödemedi'),
+      collected: screen.getByLabelText('Toplanan (en az): ₺333,33'),
+      uneven: screen.getByTestId('payments-uneven'),
+    });
+    await screen.findByLabelText('Ödeyen: 1/3');
+    expect(read()).toBeTruthy();
+    await act(async () => {
+      await screen.unmount();
+    });
+    server.set(locked('reversed'));
+    await render(<PaymentsScreen />, createTestQueryClient());
+    await screen.findByLabelText('Ödeyen: 1/3');
+    expect(read()).toBeTruthy();
+  });
 
   it('lets the captain mark a player paid once the server confirms', async () => {
     serveMe();
@@ -878,15 +907,15 @@ describe('payments', () => {
     openMatch();
     await render(<PaymentsScreen />);
     expect(await screen.findByLabelText('Ödeyen: 1/3')).toBeTruthy();
-    // Shares to the kuruş, the remainder on the first confirmed players (ADR-0036).
-    expect(screen.getByLabelText('Zeynep, ₺333,34, Ödemedi')).toBeTruthy();
-    expect(screen.getByLabelText('Ali Kaptan (sen), ₺333,33, Ödemedi')).toBeTruthy();
+    // Others show the base share; the viewer's row shows the server's exact share.
+    expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
+    expect(screen.getByLabelText('Ali Kaptan (sen), ₺333,34, Ödemedi')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Zeynep ödedi olarak işaretle' }));
     await waitFor(() => expect(bodies).toEqual([{ paid: true }]));
     // Pessimistic: nothing changes before the answer.
-    expect(screen.getByLabelText('Zeynep, ₺333,34, Ödemedi')).toBeTruthy();
+    expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
     gate.resolve();
-    expect(await screen.findByLabelText('Zeynep, ₺333,34, Ödedi')).toBeTruthy();
+    expect(await screen.findByLabelText('Zeynep, ₺333,33, Ödedi')).toBeTruthy();
     expect(screen.getByLabelText('Ödeyen: 2/3')).toBeTruthy();
     // The captain may mark their own share.
     expect(screen.getByRole('button', { name: 'Ali Kaptan ödedi olarak işaretle' })).toBeTruthy();
@@ -968,6 +997,116 @@ describe('MVP vote', () => {
     expect(await screen.findByTestId('mvp-winners')).toBeTruthy();
     expect(screen.getAllByText('Zeynep').length).toBeGreaterThan(1);
     expect(screen.queryByRole('button', { name: 'Oyumu ver' })).toBeNull();
+  });
+});
+
+describe('review fixes', () => {
+  function guestView(overrides: Partial<MatchGuestView> = {}): MatchGuestView {
+    return {
+      projection: 'guest',
+      id: MATCH_ID,
+      team: { id: TEAM_ID, name: 'Yıldızlar FK' },
+      venue: null,
+      venueText: 'Moda Sahası',
+      startsAt: inFuture(48),
+      format: '7v7',
+      status: 'open',
+      mvpVoteClosesAt: null,
+      sharePerPlayerMinor: null,
+      myShareMinor: null,
+      myRsvp: {
+        matchId: MATCH_ID,
+        status: 'out',
+        side: null,
+        updatedAt: '2026-09-20T10:00:00.000Z',
+      },
+      mvp: null,
+      participants: [],
+      ...overrides,
+    };
+  }
+
+  it('does not show a guest "in" before the server answers, so a full match never flashes a place', async () => {
+    serveMe();
+    const before = guestView();
+    serveMatch(before, { offlineAfterFirstRead: true });
+    const gate = deferred();
+    mswServer.use(
+      http.put(apiUrl(`/api/v1/matches/${MATCH_ID}/rsvp`), async () => {
+        await gate.promise;
+        return problem(409, 'match_full', 'req-full-1');
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    openMatch();
+    await render(<MatchDetailScreen />, queryClient);
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Geliyorum' }));
+    await settle();
+    expect(screen.getByText('Yanıtın: Gelmiyorum')).toBeTruthy();
+    gate.resolve();
+    expect(await screen.findByText('Maç dolu.')).toBeTruthy();
+    expect(screen.getByText('Yanıtın: Gelmiyorum')).toBeTruthy();
+    expect(queryClient.getQueryData(matchKeys.detail(MATCH_ID))).toEqual(before);
+  });
+
+  it('writes a guest "in" once the server confirms it', async () => {
+    serveMe();
+    serveMatch(guestView(), { offlineAfterFirstRead: true });
+    mswServer.use(
+      http.put(apiUrl(`/api/v1/matches/${MATCH_ID}/rsvp`), () =>
+        HttpResponse.json({
+          matchId: MATCH_ID,
+          status: 'in',
+          side: null,
+          updatedAt: new Date().toISOString(),
+        }),
+      ),
+    );
+    openMatch();
+    await render(<MatchDetailScreen />);
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Geliyorum' }));
+    expect(await screen.findByText('Yanıtın: Geliyorum')).toBeTruthy();
+  });
+
+  it('sends a guest back to the tab, not to the team list they cannot open', async () => {
+    serveMe();
+    serveMatch(guestView());
+    openMatch();
+    await render(<MatchDetailScreen />);
+    await screen.findByLabelText('Saha: Moda Sahası');
+    await fireEvent.press(screen.getByRole('button', { name: 'Geri' }));
+    expect(lastRouterCall()).toEqual({ method: 'replace', href: '/maclar' });
+  });
+
+  it('shows a retry instead of hiding staff controls when the team role fails to load', async () => {
+    serveMe();
+    serveMatch(match());
+    let failTeam = true;
+    mswServer.use(
+      http.get(apiUrl(`/api/v1/teams/${TEAM_ID}`), () =>
+        failTeam
+          ? problem(503, 'service_unavailable', 'req-team-9')
+          : HttpResponse.json(team('captain')),
+      ),
+    );
+    openMatch();
+    await render(<MatchDetailScreen />);
+    expect(await screen.findByTestId('role-error')).toBeTruthy();
+    expect(screen.getByText('Hata kodu: req-team-9')).toBeTruthy();
+    failTeam = false;
+    await fireEvent.press(screen.getByRole('button', { name: 'Tekrar dene' }));
+    expect(await screen.findByRole('button', { name: 'Kadroyu kilitle' })).toBeTruthy();
+    expect(screen.queryByTestId('role-error')).toBeNull();
+  });
+
+  it('does not tell a captain they may not edit when the team role fails to load', async () => {
+    serveMe();
+    serveMatch(match());
+    mswServer.use(http.get(apiUrl(`/api/v1/teams/${TEAM_ID}`), () => HttpResponse.error()));
+    openMatch();
+    await render(<EditMatchScreen />);
+    expect(await screen.findByTestId('role-error')).toBeTruthy();
+    expect(screen.queryByTestId('edit-match-not-allowed')).toBeNull();
   });
 });
 
