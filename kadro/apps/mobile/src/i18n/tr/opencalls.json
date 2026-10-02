@@ -32,7 +32,8 @@
     "results": "Bulunan ilçeler",
     "loading": "İlçeler yükleniyor",
     "loadFailed": "İlçe listesi yüklenemedi.",
-    "retry": "İlçeleri tekrar yükle"
+    "retry": "İlçeleri tekrar yükle",
+    "linkNotFound": "Bağlantıdaki ilçe bulunamadı; tüm ilanlar gösteriliyor."
   },
   "level": {
     "any": "Tüm seviyeler",

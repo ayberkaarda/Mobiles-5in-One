@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -12,10 +12,11 @@ import { callsApi } from '../../../src/calls/instance';
 import { callHref } from '../../../src/calls/links';
 import { callKeys, districtsQuery, openCallListQuery } from '../../../src/calls/queries';
 import { formatDateTime } from '../../../src/i18n/format';
+import { districtFromLink } from '../../../src/links/district';
 import { ChoiceGroup } from '../../../src/matches/components';
 import { ListQueryView, QueryBoundary } from '../../../src/query';
 import { useTheme } from '../../../src/theme';
-import { Button, ListItem, Screen } from '../../../src/ui';
+import { Button, ListItem, Screen, Text } from '../../../src/ui';
 
 const ANY = 'any';
 
@@ -41,6 +42,21 @@ export default function OpenCallsTab() {
   const districts = useQuery(districtsQuery(callsApi));
   const calls = query.data?.pages.flatMap((page) => page.items) ?? [];
   const filtered = activeFilterCount(filters);
+  const params = useLocalSearchParams<{ il?: string | string[]; ilce?: string | string[] }>();
+  const [linkedKey, setLinkedKey] = useState<string | null>(null);
+  const [linkMissing, setLinkMissing] = useState(false);
+
+  // District link `/eksik-var/<il>/<ilce>` (ADR-0045): once the district list is known, the
+  // district filter is set from the slugs, once per link; an unknown district shows a notice.
+  const link = districtFromLink(params.il, params.ilce, districts.data?.items);
+  if (link !== null && link.key !== linkedKey) {
+    const districtId = link.districtId;
+    setLinkedKey(link.key);
+    setLinkMissing(districtId === null);
+    if (districtId !== null) {
+      setFilters((current) => ({ ...current, district: districtId }));
+    }
+  }
 
   const place = (call: OpenCallPublic): string | null =>
     call.venue?.name ?? districtLabel(districts.data?.items, call.districtId);
@@ -61,6 +77,16 @@ export default function OpenCallsTab() {
           onPress={() => setShowFilters((value) => !value)}
           testID="filters-toggle"
         />
+        {linkMissing ? (
+          <Text
+            tone="muted"
+            accessibilityLiveRegion="polite"
+            style={{ marginTop: theme.spacing['2'] }}
+            testID="district-link-missing"
+          >
+            {t('district.linkNotFound')}
+          </Text>
+        ) : null}
         {showFilters ? (
           <View style={{ marginTop: theme.spacing['3'], gap: theme.spacing['3'] }} testID="filters">
             <DistrictPicker
