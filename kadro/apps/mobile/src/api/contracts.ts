@@ -8,6 +8,7 @@ export type {
   ErrorCode,
   MatchSummary,
   MeResponse,
+  MobileAuthResponse,
   MobileRefreshResponse,
   OpenCallPublic,
   Paginated,
