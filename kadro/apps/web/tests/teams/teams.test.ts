@@ -6,7 +6,7 @@ import {
   type TeamDetail,
 } from '@kadro/contracts';
 import { auditLogs, matches, teamInvites, teamMembers, teams, users } from '@kadro/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { DELETE } from '../../app/api/v1/teams/[id]/route';
@@ -56,6 +56,39 @@ async function matchIds(teamId: string): Promise<string[]> {
     .from(matches)
     .where(eq(matches.teamId, teamId));
   return rows.map((row) => row.id).sort();
+}
+
+/**
+ * Resolves once another backend of this database waits on a heavyweight lock held by `holderPid`
+ * (`pg_blocking_pids`) while running a statement that matches `statement`. Rejects when the
+ * request settles first, or after a generous bound that only limits a failing run.
+ */
+async function waitForLockWaiter(
+  holderPid: number,
+  settled: () => boolean,
+  statement: RegExp,
+): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  for (;;) {
+    const waiting = await t.database.client.pool.query<{ query: string }>(
+      `select query from pg_stat_activity
+        where datname = current_database() and wait_event_type = 'Lock'
+          and $1::int = any(pg_blocking_pids(pid))`,
+      [holderPid],
+    );
+    if (waiting.rows.some((row) => statement.test(row.query))) {
+      return;
+    }
+    if (settled()) {
+      throw new Error('the request finished without waiting on the team lock');
+    }
+    if (Date.now() > deadline) {
+      throw new Error(
+        `no backend waits on the team lock; waiting statements: ${JSON.stringify(waiting.rows)}`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
 
 function deletedAudit(teamId: string) {
@@ -602,12 +635,20 @@ describe('DELETE /api/v1/teams/:id (team.delete)', () => {
     let pending: Promise<Response> | undefined;
     await t.db.transaction(async (tx) => {
       await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, team.id)).for('update');
+      const holder = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+      const holderPid = holder.rows[0]?.pid;
+      if (holderPid === undefined) {
+        throw new Error('no backend pid');
+      }
       pending = api.deleteTeam(team.captain.headers, team.id);
-      const raced = await Promise.race([
-        pending.then(() => 'settled'),
-        new Promise((resolve) => setTimeout(() => resolve('waiting'), 200)),
-      ]);
-      expect(raced).toBe('waiting');
+      let settled = false;
+      void pending.then(
+        () => (settled = true),
+        () => (settled = true),
+      );
+      // Proof from the database, not from elapsed time: the request's backend waits on a lock held
+      // by this transaction, and the statement it waits in is the team row lock (`for update`).
+      await waitForLockWaiter(holderPid, () => settled, /from "teams".* for update/i);
       await tx.update(matches).set({ status: 'played' }).where(eq(matches.id, match));
     });
     if (pending === undefined) {
