@@ -1,4 +1,4 @@
-# ADR-0055: Public pages render per request with the nonce CSP; data is cached, HTML is not
+# ADR-0055: Public pages render per request with the nonce CSP; data may be cached, HTML is not
 
 - Status: Accepted
 - Date: 2026-10-02
@@ -49,34 +49,62 @@ deleted afterwards and are not part of the history.
    - Combining a cached page with a nonce is unsafe in Next.js 16: the regeneration stores one
      request's nonce in shared HTML. A page must therefore never be prerendered while the proxy
      sends a nonce CSP for it.
-2. **Data is cached, HTML is not.** The spec's "ISR 5 min" is met at the data layer: public listing
-   and venue queries are wrapped in `unstable_cache` with `revalidate: 300` and tags for targeted
-   invalidation (for example when an open call expires). `use cache` needs the `cacheComponents`
-   option, which changes the rendering model of the whole app and is not enabled; revisit it in a
-   separate decision. The HTML response stays `private, no-store` (Next.js default for dynamic
-   pages), so no CDN or shared cache stores a nonce.
+2. **Data may be cached, HTML is not.** The HTML response stays `private, no-store` (Next.js
+   default for dynamic pages), so no CDN or shared cache stores a nonce. The spec's "ISR 5 min"
+   moves to the data layer, which is **not implemented yet**: no query is cached today. WP4-3
+   (programmatic pages) writes it, wrapping only public, user-independent queries (listings,
+   venues; never data read with a session) with keys that contain every query argument and tags
+   for targeted invalidation (for example when an open call expires).
+   - Freshness: `unstable_cache` with `revalidate: 300` is stale-while-revalidate. The installed
+     Next.js returns a stale entry and refreshes it in the background
+     (`server/web/spec-extension/unstable-cache.js`), so it gives **no upper bound** on data age;
+     an entry can be older than 5 minutes when traffic is sparse. "ISR 5 min" is read as "refreshed
+     about every 5 minutes", not as a guarantee.
+   - If a hard bound is required (for example expired open calls must never be listed), WP4-3 must
+     not serve stale entries: filter by time at read (`expires_at > now()` on the cached rows),
+     invalidate by tag on the state change, or skip the cache for that query; and add a test that a
+     row past its bound is absent from the next response.
+   - `use cache` needs the `cacheComponents` option, which changes the rendering model of the whole
+     app and is not enabled; revisit it in a separate decision.
 3. **One surface table.** `SURFACES` in `apps/web/lib/server/security-headers.ts` lists every
    surface with its paths, a probe path, CSP variant (`nonce` or `deny-all`), `noindex`,
    `Referrer-Policy` and `Cache-Control`: `api`, `token-page`, `email-link-page`, `marketing`,
    `seo` and the catch-all `app`. The proxy and `scripts/security/headers-check.ts` read the same
-   table; the check requests the probe path of every surface and fails a nonce surface whose
-   response is shared-cacheable (`public` or `s-maxage`).
-4. **Render mode lives with the surface.** The root layout no longer calls `connection()`.
+   table; the check requests the probe path of every surface and fails a nonce surface (token
+   pages included) whose response a cache may reuse: it needs `private` or `no-store` and none of
+   `public`, `s-maxage`, `max-age` above 0, `stale-while-revalidate`, `stale-if-error`,
+   `immutable`.
+4. **Paths are classified as the router may read them.** The router can match a page by its
+   decoded path, so the table is matched against a canonical path: percent-decoded exactly once,
+   case-folded, with empty segments (`//`, trailing `/`) and `.`/`..` segments removed. A spelling
+   that could reach a page therefore gets that page's headers (`/sifre%2dsifirla`,
+   `/SIFRE-SIFIRLA` get the token-page headers); a spelling the router does not serve only gets
+   stricter headers on its 404. A path with an encoded `/` or `\` (`%2f`, `%5c`), an encoded or
+   raw control character (`%00`–`%1f`, `%7f`), a raw `\` or an invalid escape or UTF-8 sequence
+   has no single meaning: the proxy answers it with `400 Bad Request`, the deny-all CSP,
+   `no-store` and `noindex`, and it never reaches a page or route handler. Measured on the
+   production build before the change: encoded and upper-case spellings of the token pages
+   answered 404 with the `app` headers (no page was served, but the classification disagreed with
+   the router); `//x` and `x/` answered 308 to the canonical path; `/x/../sifre-sifirla` was
+   already normalized. `tests/built-server.test.ts` sends these paths raw (`node:http`, no
+   client normalization) and asserts the result end to end.
+5. **Render mode lives with the surface.** The root layout no longer calls `connection()`.
    `(app)/layout.tsx`, `app/page.tsx` and `app/not-found.tsx` call it; future `(marketing)` and
    `(seo)` layouts call it as well. `tests/built-server.test.ts` fails when the production build
    prerenders any route other than Next.js' own `/_global-error`, and checks that every script of
    every HTML surface probe carries the response nonce.
-5. **JSON-LD.** `components/seo/json-ld.tsx` renders structured data as the React text child of a
+6. **JSON-LD.** `components/seo/json-ld.tsx` renders structured data as the React text child of a
    `<script type="application/ld+json">` data block with the request nonce (read from the `x-nonce`
    request header the proxy forwards). The serializer escapes `<`, `>`, `&`, U+2028 and U+2029, so
    `</script>` and `<!--` in data cannot change the markup. `dangerouslySetInnerHTML` stays
-   forbidden; the page source guards allow exactly this one data block in this one file.
+   forbidden; the source guards scan every file under `app/` and `components/` and allow exactly
+   this one data block in this one file.
 
 ## Consequences
 
-- Product spec §7 "ISR 5 min" is read as "data at most 5 min old"; listing pages pay one render per
-  request (no database round trip within the cache window). Lighthouse budgets (Phase 4) are
-  measured against dynamic HTML.
+- Product spec §7 "ISR 5 min" is read as "data refreshed about every 5 min" once WP4-3 adds the
+  data cache; until then every request reads the database. Listing pages pay one render per
+  request. Lighthouse budgets (Phase 4) are measured against dynamic HTML.
 - ADR-0021 group 2 keeps its path list and indexing rules but not its static CSP; ADR-0021 is
   marked as amended by this ADR.
 - A page added to `(marketing)` or `(seo)` without a per-request call fails the build test before
