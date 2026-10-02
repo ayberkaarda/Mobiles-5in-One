@@ -6,6 +6,7 @@ import {
   deletionRequests,
   emailTokens,
   lockPushResend,
+  pushResends,
   matchRsvps,
   mvpVotes,
   newId,
@@ -729,34 +730,51 @@ describe('account.hard_delete and a concurrent coalesced push producer (ADR-0044
       resume = resolve;
     });
     let producerPid = 0;
+    let recordedRows: { version: number }[] = [];
     const producing = db().transaction(async (tx) => {
       const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
       producerPid = Number(result.rows[0]?.pid);
       await produceFor(tx, target, await staffOf(tx, target.teamId));
+      recordedRows = await tx
+        .select({ version: pushResends.version })
+        .from(pushResends)
+        .where(eq(pushResends.singletonKey, `rsvp:${target.matchId}:${target.victimId}`));
       recorded();
       await gate;
     });
     await hasRecorded;
+    // The producer really recorded the victim's change and holds the shared recipient lock.
+    expect(recordedRows).toEqual([{ version: 1 }]);
+    const held = await database.admin.pool.query<{ mode: string }>(
+      `select mode from pg_locks where locktype = 'advisory' and granted and pid = $1`,
+      [producerPid],
+    );
+    expect(held.rows.map((row) => row.mode)).toContain('ShareLock');
 
     const jobId = await enqueue(worker.runtime.boss, 'account.hard_delete', {
       deletionRequestId: target.requestId,
       idempotencyKey: `${hardDeleteIdempotencyKey(target.requestId)}:${newId()}`,
     });
     try {
-      // Either the deletion waits on the producer, or (without the recipient lock) it finishes.
-      await waitFor(
+      // The deletion waits on the recipient lock itself: an ungranted exclusive advisory lock,
+      // blocked by the producer, requested by the lock statement.
+      const waiter = await waitFor(
         async () => {
-          const waiting = await database.admin.pool.query(
-            `select pid from pg_stat_activity
-              where wait_event_type = 'Lock' and $1 = any(pg_blocking_pids(pid))`,
+          const waiting = await database.admin.pool.query<{ mode: string; query: string }>(
+            `select l.mode, a.query from pg_locks l join pg_stat_activity a on a.pid = l.pid
+              where l.locktype = 'advisory' and not l.granted
+                and $1 = any(pg_blocking_pids(l.pid))`,
             [producerPid],
           );
-          if (waiting.rows.length > 0) return true;
-          const jobs = await jobsIn(database, 'account.hard_delete');
-          return jobs.some((job) => job.id === jobId && job.state === 'completed');
+          return waiting.rows[0];
         },
-        { label: 'the deletion waiting on the producer or finishing' },
+        { label: 'the deletion waiting on the recipient lock' },
       );
+      expect(waiter.mode).toBe('ExclusiveLock');
+      expect(waiter.query).toContain('pg_advisory_xact_lock');
+      expect(
+        (await jobsIn(database, 'account.hard_delete')).find((job) => job.id === jobId)?.state,
+      ).toBe('active');
     } finally {
       resume();
     }

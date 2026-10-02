@@ -102,29 +102,49 @@ Per recipient, in sorted order (a fixed lock order), inside the caller's transac
 
 ### Recipients deleted concurrently
 
-Producers read their recipients without a lock (`teamStaffIds`), and an account hard delete
-removes a co-captain's membership without the team lock. A producer that read the victim before
-the deletion committed could record a row with the deleted id after it (no foreign key, ADR-0032
-proof broken). Options weighed:
+Producers read their recipients with a plain query (`teamStaffIds`), and an account hard delete
+removes a co-captain's membership without that team's lock (it locks only the teams the user
+captains). A producer that read the victim before the deletion committed could record a row with
+the deleted id after it (no foreign key, ADR-0032 proof broken). Options weighed:
 
-- **Hard delete locks every team the user belongs to, in a fixed order.** Only helps if every
-  producer takes the team lock before reading staff; the RSVP and application producers lock the
-  match or the call instead, so all of them (outside the job layer) would change, and the hard
-  delete would hold more locks for longer.
+- **Hard delete locks every team the user belongs to, in a fixed order.** Today's producers take
+  the team row lock before they read staff: the RSVP producer through `lockMatch`, the application
+  producer through `lockCall` (team, match, call), team leave and the web account deletion lock the
+  team directly. A hard delete that also locked every member team (sorted by id, after the user
+  row, as it does for captained teams) would therefore serialize with them as well. Not chosen:
+  the guarantee would rest on every call site outside the job layer keeping that order (a future
+  producer that reads staff without the team lock reopens the gap unnoticed), and the hard delete
+  would hold every member team's lock for its whole transaction, including object deletion and the
+  confirmation email, blocking unrelated team operations.
 - **A foreign key to `users` with cascade, or a blocking `FOR KEY SHARE` re-check of the user row.**
-  The hard delete holds the user row `FOR UPDATE` from its start and later locks matches; a
-  producer that holds a match lock would then wait on the user row: a lock cycle that PostgreSQL
-  breaks by aborting one side.
+  The hard delete holds the user row `FOR UPDATE` from its start and then locks teams and matches;
+  a producer that holds its team and match locks would then wait on the user row: a lock cycle that
+  PostgreSQL breaks by aborting one side.
 - **Chosen: a per-recipient advisory lock, exclusive for the deletion, tried shared by producers.**
   The hard delete takes `pg_advisory_xact_lock(hashtextextended('push-recipient:<userId>', 0))` as
   the first statement of its transaction, before any other lock, so it only ever waits holding
   nothing. The producer, before recording, calls `pg_try_advisory_xact_lock_shared` on the same key
-  (producers never block each other or the deletion) and then checks that the user row exists. A
-  producer that got the shared lock records only while the user exists, and a deletion that starts
-  later waits for it and deletes the row; a producer that comes after the deletion committed finds
-  no user; one that fails to get the lock is racing a running deletion and records nothing (if
-  that deletion rolls back, the change for that user is lost: accepted). Cost per dropped repeat:
-  one advisory lock attempt and one primary-key read.
+  and then checks that the user row exists; the guarantee lives in the recording helper, whatever
+  locks the caller holds. A producer that got the shared lock records only while the user exists,
+  and a deletion that starts later waits for it and deletes the row; a producer that comes after
+  the deletion committed finds no user; one that fails to get the lock is racing a running
+  deletion and records nothing (if that deletion rolls back, the change for that user is lost:
+  accepted). Cost per dropped repeat: one advisory lock attempt and one primary-key read.
+- **Who waits for whom.** A producer never waits for the recipient lock (it only tries it), and
+  producers do not block each other (shared mode). The deletion, however, can wait for the end of a
+  producer transaction: the shared lock is transaction-scoped and held until that domain
+  transaction commits or rolls back, not only while the helper runs. Multi-match loops (team leave
+  in `teams/members.ts`, the web account deletion in `account/deletion.ts`) can make that longer.
+  The deletion's waiting statement is bounded by `statement_timeout` (15 s, the `packages/db`
+  client default); there is no `lock_timeout`. A timeout fails that attempt and pg-boss retries the
+  deletion; it is not a bound on how long a producer transaction runs.
+- **Tested and not tested.** Tests cover: a producer that read the victim before the deletion
+  committed (records nothing), a deletion that waits on the recipient lock held by a producer
+  that has recorded (`pg_locks`: ungranted exclusive advisory lock blocked by the producer), a
+  recipient deleted after the window opened and a recipient that never existed, and the helper
+  skipping while the deletion lock is held. Not covered: a deletion that rolls back after a
+  producer skipped (the change is then lost, as accepted above) and a deletion attempt that hits
+  `statement_timeout` while waiting.
 
 ### Worker (`apps/worker/src/push/resend.ts`, `handler.ts`)
 

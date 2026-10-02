@@ -265,7 +265,27 @@ describe('push producers', () => {
         ]);
       });
 
-      it(`${scenario.type}: a dropped repeat for a deleted recipient records nothing`, async () => {
+      it(`${scenario.type}: a recipient deleted after the window opened records nothing`, async () => {
+        const objectId = newId();
+        const userId = await recipient();
+        const singletonKey = `${scenario.prefix}:${objectId}:${userId}`;
+        const opened = new Date(Date.now() + 60_000);
+        expect(
+          await produced('push.send', (tx) =>
+            scenario.produce(tx, objectId, newId(), userId, opened),
+          ),
+        ).toHaveLength(1);
+        // The account hard delete removes the user row (its job holds the push-recipient lock).
+        await jobs.database.client.pool.query('delete from users where id = $1', [userId]);
+        expect(
+          await produced('push.send', (tx) =>
+            scenario.produce(tx, objectId, newId(), userId, new Date(opened.getTime() + 60_000)),
+          ),
+        ).toHaveLength(0);
+        expect(await pendingResends(singletonKey)).toEqual([]);
+      });
+
+      it(`${scenario.type}: a dropped repeat for an unknown recipient records nothing`, async () => {
         const objectId = newId();
         const userId = newId();
         const singletonKey = `${scenario.prefix}:${objectId}:${userId}`;
