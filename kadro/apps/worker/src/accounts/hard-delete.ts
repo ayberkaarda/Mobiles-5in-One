@@ -1,5 +1,6 @@
 import { type AccountHardDeleteJob } from '@kadro/contracts';
 import {
+  LOCK_TIMEOUT_MS,
   type Database,
   type ExternalCleanupTarget,
   type Transaction,
@@ -12,6 +13,7 @@ import {
   newId,
   openCallApplications,
   pushResends,
+  setLockTimeout,
   subscriptions,
   teamMembers,
   teams,
@@ -52,6 +54,8 @@ export interface HardDeleteDependencies {
   readonly webOrigin: string;
   readonly clock: Clock;
   readonly metrics: Metrics;
+  /** Lock wait bound of the deletion transaction; defaults to {@link LOCK_TIMEOUT_MS}. */
+  readonly lockTimeoutMs?: number;
 }
 
 export interface HardDeleteSummary {
@@ -351,6 +355,7 @@ async function repointHistory(tx: Transaction, userId: string, now: Date): Promi
  */
 export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
   const { db, boss, storage, buckets, emailTransport, webOrigin, clock, metrics } = dependencies;
+  const lockTimeoutMs = dependencies.lockTimeoutMs ?? LOCK_TIMEOUT_MS;
 
   return async (job: AccountHardDeleteJob, context: JobContext): Promise<string> => {
     const precheck = await eligibility(db, job.deletionRequestId, clock.now(), false);
@@ -360,6 +365,9 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
     const { userId } = precheck;
 
     const result = await db.transaction(async (tx) => {
+      // A blocked lock fails the attempt with 55P03 after the timeout and the job is retried; the
+      // deletion never hangs a worker behind a stuck transaction.
+      await setLockTimeout(tx, lockTimeoutMs);
       // First, before any other lock: producers recording a push re-send for this user finish
       // first, later ones skip (ADR-0044).
       await lockPushRecipientForDeletion(tx, userId);

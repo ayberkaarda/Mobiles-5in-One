@@ -39,6 +39,8 @@ the state read becomes the next window's job.
   completes the job. And by completing the job inside that transaction (`boss.complete(...,
 { db })`, fenced to the fetched attempt), so the follow-up job can take the same `singletonKey`
   and a producer that waited on the lock finds the job completed and enqueues normally.
+  The worker's settling transaction bounds its lock wait with `lock_timeout` (5 s): a blocked lock
+  fails with `55P03` and the job retries, so a stuck producer cannot hang a worker.
 - Double send: none. The follow-up job has a new window key; a row whose version the job read
   before its state read is deleted without a follow-up.
 - Accumulation: one row per key at most (unique key, `version` counts changes). Rows live until

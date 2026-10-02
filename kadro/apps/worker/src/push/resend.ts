@@ -5,6 +5,7 @@ import {
   type Database,
   lockPushResend,
   pushResends,
+  setLockTimeout,
 } from '@kadro/db';
 import { and, eq, lte } from 'drizzle-orm';
 import { type PgBoss } from 'pg-boss';
@@ -78,15 +79,22 @@ export type SettleResult =
  * `seenVersion` is what {@link readResendVersion} returned before the state was read.
  */
 export async function settleCoalesced(
-  dependencies: { readonly db: Database; readonly boss: PgBoss; readonly now: Date },
+  dependencies: {
+    readonly db: Database;
+    readonly boss: PgBoss;
+    readonly now: Date;
+    /** Lock wait bound; defaults to the database package's `LOCK_TIMEOUT_MS`. */
+    readonly lockTimeoutMs?: number;
+  },
   job: PushSendJob,
   coalesced: CoalescedJob,
   context: JobContext,
   outcome: string,
   seenVersion: number,
 ): Promise<{ readonly result: SettleResult; readonly nextJobId?: string | null }> {
-  const { db, boss, now } = dependencies;
+  const { db, boss, now, lockTimeoutMs } = dependencies;
   return db.transaction(async (tx) => {
+    await setLockTimeout(tx, lockTimeoutMs);
     await lockPushResend(tx, coalesced.singletonKey);
     const completion = await boss.complete(
       SEND_QUEUE,
