@@ -56,3 +56,18 @@ A build whose environment is incomplete or invalid (such as a plain-HTTP API URL
   universal links (`applinks:` on iOS, verified https intent filters on Android) derived from it.
 - Updates: code signing configuration is prepared (`updatesConfig` in `app.config.ts`) and is only
   emitted when a certificate path is supplied; no certificate or key is committed.
+
+## Documentation
+
+Guides for this app are in [`docs/mobile`](../../docs/mobile):
+
+- [`architecture.md`](../../docs/mobile/architecture.md): routing, state, API client, refresh
+  single flight, i18n and error copy, offline behaviour.
+- [`screens.md`](../../docs/mobile/screens.md): every screen with its data, states and test ids.
+- [`deep-links-and-push.md`](../../docs/mobile/deep-links-and-push.md): link schemes and paths, held
+  invite links, push registration and notification taps.
+- [`billing.md`](../../docs/mobile/billing.md): the RevenueCat port and what is not verified.
+- [`running-and-testing.md`](../../docs/mobile/running-and-testing.md): environment, commands,
+  Vitest, Maestro, EAS and known limits.
+
+End-to-end flows: [`e2e/README.md`](e2e/README.md) (Maestro, Android).
