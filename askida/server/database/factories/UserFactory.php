@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Domain\Auth\Enums\UserKind;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -13,33 +14,62 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Plain password every factory user with a password shares; tests read it from here.
      */
-    protected static ?string $password;
+    public const PASSWORD = 'factory-pass-phrase';
 
     /**
-     * Define the model's default state.
-     *
+     * Hash of PASSWORD, computed once per process.
+     */
+    protected static ?string $passwordHash = null;
+
+    /**
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => Str::lower(fake()->unique()->userName()).'@example.test',
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'password' => static::$passwordHash ??= Hash::make(self::PASSWORD),
+            'kind' => UserKind::Donor,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
+    public function donor(): static
+    {
+        return $this->state(fn (array $attributes) => ['kind' => UserKind::Donor]);
+    }
+
+    public function merchant(): static
+    {
+        return $this->state(fn (array $attributes) => ['kind' => UserKind::Merchant]);
+    }
+
     public function unverified(): static
     {
+        return $this->state(fn (array $attributes) => ['email_verified_at' => null]);
+    }
+
+    public function appleOnly(): static
+    {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'password' => null,
+            'apple_sub' => 'apple-'.Str::lower(Str::random(12)),
         ]);
+    }
+
+    public function googleOnly(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'password' => null,
+            'google_sub' => 'google-'.Str::lower(Str::random(12)),
+        ]);
+    }
+
+    public function deactivated(): static
+    {
+        return $this->state(fn (array $attributes) => ['deactivated_at' => now()]);
     }
 }
