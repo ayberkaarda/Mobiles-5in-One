@@ -10,7 +10,7 @@ import { pendingLink } from '../src/links/instance';
 import { DELETION_GRACE_DAYS } from '../src/settings/deletion';
 import { deletionNotice } from '../src/settings/notice';
 import { useTheme } from '../src/theme';
-import { Button, Card, Screen, Text } from '../src/ui';
+import { Button, Card, EksikSlot, KitNumber, Screen, Text } from '../src/ui';
 
 /** Signed-out entry: the brand line and the way into sign-in or registration. */
 export default function WelcomeScreen() {
@@ -25,6 +25,22 @@ export default function WelcomeScreen() {
   return (
     <Screen scroll testID="welcome-screen">
       <View style={{ paddingHorizontal: theme.spacing['6'], paddingTop: theme.spacing['10'] }}>
+        {/* Brand mark: a squad sheet with one place open (decorative). */}
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing['2'],
+            marginBottom: theme.spacing['6'],
+          }}
+        >
+          {[7, 8, 9, 10].map((number) => (
+            <KitNumber key={number} number={number} size={36} />
+          ))}
+          <EksikSlot size={36} />
+        </View>
         <Text variant="display" accessibilityRole="header">
           {t('welcome.title')}
         </Text>
