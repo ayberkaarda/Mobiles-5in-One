@@ -111,12 +111,14 @@ async function main() {
   }
 
   const tokens = new Map();
+  const userIds = new Map();
   for (const person of people) {
     const session = await request('/api/v1/auth/login', {
       method: 'POST',
       body: { email: email(person.role), password },
     });
     tokens.set(person.role, session.tokens.accessToken);
+    userIds.set(person.role, session.user.id);
     if (person.role !== 'empty') {
       await request('/api/v1/me', {
         method: 'PATCH',
@@ -190,6 +192,20 @@ async function main() {
       body: { status },
     });
   }
+  // A saved lineup for the pitch diagram: two confirmed players per side, the rest of each side
+  // stays open (eksik markers).
+  await request(`/api/v1/matches/${match.id}/lineup`, {
+    method: 'PUT',
+    token: tokens.get('captain'),
+    body: {
+      sides: [
+        { userId: userIds.get('captain'), side: 'A' },
+        { userId: userIds.get('p2'), side: 'A' },
+        { userId: userIds.get('p1'), side: 'B' },
+        { userId: userIds.get('p4'), side: 'B' },
+      ],
+    },
+  });
 
   const hostTeam = await request('/api/v1/teams', {
     method: 'POST',
