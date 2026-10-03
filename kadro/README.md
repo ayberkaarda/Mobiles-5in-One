@@ -23,6 +23,88 @@ texts for a portfolio project, labelled as such, not reviewed legal text.
 (reminders, push, email, uploads, venue import, deletion, billing, `cost.guard`), and `apps/web`
 serves the REST API under `/api/v1`, the public web pages and the staff panel under `/admin`.
 
+## Screenshots
+
+The screenshots show sample data labelled `[ÖRNEK]`: the web pages come from a local stack and the mobile screens from an Android emulator. Real devices, real venues and a deployed site are not shown. The full sets, with the capture method, are in [`docs/screenshots/README.md`](docs/screenshots/README.md) (mobile) and [`docs/screenshots/web-README.md`](docs/screenshots/web-README.md) (web).
+
+### Web (follows the system light or dark setting)
+
+<table>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-01-home-dark.png">
+        <img src="docs/screenshots/web/web-01-home-light.png" alt="Kadro web: Home page" width="480">
+      </picture><br>
+      <sub>Home page</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-02-features-dark.png">
+        <img src="docs/screenshots/web/web-02-features-light.png" alt="Kadro web: Features page" width="480">
+      </picture><br>
+      <sub>Features page</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-04-blog-article-dark.png">
+        <img src="docs/screenshots/web/web-04-blog-article-light.png" alt="Kadro web: Blog article" width="480">
+      </picture><br>
+      <sub>Blog article</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-05-venue-dark.png">
+        <img src="docs/screenshots/web/web-05-venue-light.png" alt="Kadro web: Venue page" width="480">
+      </picture><br>
+      <sub>Venue page</sub>
+    </td>
+  </tr>
+</table>
+
+### Mobile (top row light, bottom row dark)
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro app: Lineup, light" width="220"><br>
+      <sub>Lineup</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/03-matches-light.png" alt="Kadro app: Matches, light" width="220"><br>
+      <sub>Matches</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/09-open-calls-light.png" alt="Kadro app: Open calls, light" width="220"><br>
+      <sub>Open calls</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/07-team-light.png" alt="Kadro app: Team, light" width="220"><br>
+      <sub>Team</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/mobile/18-match-lineup-dark.png" alt="Kadro app: Lineup, dark" width="220"><br>
+      <sub>Lineup</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/03-matches-dark.png" alt="Kadro app: Matches, dark" width="220"><br>
+      <sub>Matches</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/09-open-calls-dark.png" alt="Kadro app: Open calls, dark" width="220"><br>
+      <sub>Open calls</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/07-team-dark.png" alt="Kadro app: Team, dark" width="220"><br>
+      <sub>Team</sub>
+    </td>
+  </tr>
+</table>
+
 ## MVP features
 
 "Implemented" means the code, the API contract and automated tests exist on `main`. Mobile rows

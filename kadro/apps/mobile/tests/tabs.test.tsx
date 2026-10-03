@@ -68,7 +68,7 @@ describe('Takımlar tab', () => {
       ),
     );
     await renderWithProviders(<TeamsTab />);
-    expect(await screen.findByLabelText('Yıldızlar FK, Kaptan · 9 oyuncu')).toBeTruthy();
+    expect(await screen.findByLabelText('Yıldızlar FK, Kaptan, 9 oyuncu')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Takımlar' })).toBeTruthy();
   });
 
@@ -109,7 +109,7 @@ describe('Maçlar tab', () => {
       ),
     );
     await renderWithProviders(<MatchesTab />);
-    const rows = await screen.findAllByText('Yıldızlar FK · 7v7 · Moda Sahası');
+    const rows = await screen.findAllByText('Yıldızlar FK, 7v7, Moda Sahası');
     expect(rows).toHaveLength(2);
     expect(screen.getAllByText('9/14')).toHaveLength(2);
   });
@@ -149,7 +149,7 @@ describe('Eksik Var tab', () => {
     );
     await renderWithProviders(<OpenCallsTab />);
     expect(await screen.findByText('Moda Gençlik')).toBeTruthy();
-    expect(screen.getByText('2 eksik')).toBeTruthy();
+    expect(screen.getByLabelText('2 eksik')).toBeTruthy();
   });
 });
 

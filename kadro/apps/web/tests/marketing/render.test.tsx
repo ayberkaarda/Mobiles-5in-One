@@ -23,6 +23,7 @@ vi.mock('../../components/seo/site-json-ld', () => ({ SiteJsonLd: () => null }))
 
 const { MarketingShell, MAIN_ID } = await import('../../components/marketing/marketing-shell');
 const { StoreBadges } = await import('../../components/marketing/store-badges');
+const { ThemePreferenceProvider } = await import('../../components/marketing/theme-context');
 const { STORE_ENTRIES } = await import('../../components/marketing/site');
 const { default: HomePage } = await import('../../app/(marketing)/page');
 const { default: FeaturesPage } = await import('../../app/(marketing)/ozellikler/page');
@@ -98,8 +99,27 @@ describe('marketing shell', () => {
     expect(html).toContain('© Kadro. Kadro bir portfolyo projesidir.');
     expect(html).not.toContain('Teknoloji');
     expect(html).toContain('font-class');
-    expect(html).toContain('--m-primary:#1B7F4B');
+    expect(html).not.toContain('style=');
+    expect(html).not.toContain('--m-');
+    expect(count(html, /<link rel="preload"/g)).toBe(1);
     expectSafeMarkup(html);
+  });
+
+  it('draws the wordmark inline, decorative in the named header link and named in the footer', () => {
+    const html = render(
+      <MarketingShell>
+        <h1>Başlık</h1>
+      </MarketingShell>,
+    );
+    const svgs = [...html.matchAll(/<svg\b[^>]*>/g)].map((match) => match[0]);
+    expect(svgs).toHaveLength(2);
+    expect(svgs[0]).toContain('aria-hidden="true"');
+    expect(svgs[1]).toContain('role="img"');
+    expect(svgs[1]).toContain('aria-label="Kadro"');
+    for (const svg of svgs) {
+      expect(svg).toContain('viewBox="-75 -88 3152 861"');
+    }
+    expect(html).not.toMatch(/fill="#|stroke="#/);
   });
 
   it('marks the current page in both navigations', () => {
@@ -149,11 +169,65 @@ describe('marketing shell', () => {
   });
 });
 
+describe('theme toggle (no JavaScript needed)', () => {
+  function toggleForm(html: string): string {
+    return /<form\b[^>]*action="\/tema"[\s\S]*?<\/form>/.exec(html)?.[0] ?? '';
+  }
+
+  it('posts the choice and the current path to /tema with three submit buttons', () => {
+    navigation.pathname = '/blog/kadro-nasil-kurulur';
+    const form = toggleForm(
+      render(
+        <MarketingShell>
+          <h1>Başlık</h1>
+        </MarketingShell>,
+      ),
+    );
+    const formTag = /^<form\b[^>]*>/.exec(form)?.[0] ?? '';
+    expect(formTag).toContain('action="/tema"');
+    expect(formTag).toContain('method="post"');
+    expect(form).toContain('<input type="hidden" name="geri" value="/blog/kadro-nasil-kurulur"/>');
+    expect(form).toContain('<legend');
+    const buttons = [...form.matchAll(/<button\b[^>]*>([^<]*)<\/button>/g)].map((match) => ({
+      tag: match[0],
+      label: match[1],
+    }));
+    expect(buttons.map((button) => button.label)).toEqual(['Sistem', 'Açık', 'Koyu']);
+    for (const [index, value] of ['system', 'light', 'dark'].entries()) {
+      expect(buttons[index]?.tag).toContain('type="submit"');
+      expect(buttons[index]?.tag).toContain('name="tema"');
+      expect(buttons[index]?.tag).toContain(`value="${value}"`);
+    }
+  });
+
+  it('marks the stored preference as pressed (system without a provider)', () => {
+    const pressed = (html: string) =>
+      [...toggleForm(html).matchAll(/<button\b[^>]*aria-pressed="true"[^>]*>([^<]*)</g)].map(
+        (match) => match[1],
+      );
+    const shell = (
+      <MarketingShell>
+        <h1>Başlık</h1>
+      </MarketingShell>
+    );
+    expect(pressed(render(shell))).toEqual(['Sistem']);
+    expect(
+      pressed(render(<ThemePreferenceProvider value="dark">{shell}</ThemePreferenceProvider>)),
+    ).toEqual(['Koyu']);
+    expect(
+      pressed(render(<ThemePreferenceProvider value="light">{shell}</ThemePreferenceProvider>)),
+    ).toEqual(['Açık']);
+  });
+});
+
 describe('marketing pages', () => {
   it('home page: one h1, ordered headings, download section and no inline script', () => {
     const html = render(<HomePage />);
     expect(count(html, /<h1\b/g)).toBe(1);
-    expect(html).toContain('Kadron eksik kalmasın.');
+    const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '';
+    const lines = [...h1.matchAll(/<span\b[^>]*>([^<]*)<\/span>/g)].map((match) => match[1]);
+    expect(lines).toEqual(['Kadroyu kur,', 'eksiği kapat,', 'ücreti böl.']);
+    expect(h1.replace(/<[^>]+>/g, '')).toBe('Kadroyu kur, eksiği kapat, ücreti böl.');
     expect(html).toContain('id="indir"');
     expect(html).toContain('href="#indir"');
     expect(html).toContain('href="/ozellikler"');

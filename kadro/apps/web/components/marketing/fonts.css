@@ -1,58 +1,47 @@
 /*
- * Brand fonts (product spec section 2: Sora for display, Inter for body), self-hosted from
- * public/fonts as subset WOFF2 variable files. Same origin only (`font-src 'self'`), no third-party
- * host. `font-display: swap` shows text in the fallback at once (spec section 7). Turkish needs the
- * latin-ext subset (U+011E-011F, U+0130-0131, U+015E-015F), so each family has two faces that the
- * browser picks by `unicode-range`; a face is only downloaded when a character of its range is used.
+ * Brand font (ADR-0084): Archivo, one variable family at two widths, self-hosted from
+ * public/fonts as the two WOFF2 subsets of `@kadro/brand` (`typography.fontFiles.web`). Same
+ * origin only (`font-src 'self'`), no third-party host. Each face keeps the axis ranges the system
+ * uses (`wdth` 75-100, `wght` 400-800); the width is selected with `font-stretch`, never with
+ * `font-variation-settings`, so a fallback face degrades cleanly. `font-display: swap` shows text
+ * in the fallback at once. The latin file also carries the Turkish capitals and dotless i, G-breve,
+ * S-cedilla and the lira sign, so a Turkish page needs only that file (it is the one preloaded);
+ * the latin-ext face downloads only when a character of its range is used.
  */
 
 @font-face {
-  font-family: 'Kadro Sora';
+  font-family: 'Archivo';
   font-style: normal;
-  font-weight: 100 800;
+  font-weight: 400 800;
+  font-stretch: 75% 100%;
   font-display: swap;
-  src: url('/fonts/sora-latin-ext-wght-normal.woff2') format('woff2-variations');
+  src: url('/fonts/archivo-latin-ext-wdth-wght.woff2') format('woff2');
   unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
+    U+0100-011D, U+0120-012F, U+0132-015D, U+0160-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20B9,
+    U+20BB-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
-  font-family: 'Kadro Sora';
+  font-family: 'Archivo';
   font-style: normal;
-  font-weight: 100 800;
+  font-weight: 400 800;
+  font-stretch: 75% 100%;
   font-display: swap;
-  src: url('/fonts/sora-latin-wght-normal.woff2') format('woff2-variations');
+  src: url('/fonts/archivo-latin-wdth-wght.woff2') format('woff2');
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD, U+011E-011F,
+    U+0130, U+015E-015F, U+20BA;
 }
 
-@font-face {
-  font-family: 'Kadro Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-
-@font-face {
-  font-family: 'Kadro Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
+/*
+ * Font class of the marketing shell. `--m-font-display` and `--m-font-body` are the deprecated
+ * names still read by `components/content/prose.module.css`; they resolve to the brand family
+ * until that stylesheet moves to `--k-font-family`.
+ */
 .kadroFonts {
-  --m-font-display: 'Kadro Sora';
-  --m-font-body: 'Kadro Inter';
+  font-family: var(--k-font-family);
+  --m-font-display: var(--k-font-family);
+  --m-font-body: var(--k-font-family);
 }

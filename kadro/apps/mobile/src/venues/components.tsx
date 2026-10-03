@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { FormError } from '../auth/components';
@@ -8,7 +8,7 @@ import { formatDateTime, formatPriceRange } from '../i18n/format';
 import { ChoiceGroup } from '../matches/components';
 import { ConfirmAction } from '../teams/components';
 import { useTheme } from '../theme';
-import { Button, Card, Text, TextField } from '../ui';
+import { Badge, Button, Card, Chip, Numeral, Text, TextField } from '../ui';
 import { type VenueRating, type VenueReview, type VenueSummary } from './contracts';
 import { formatRating, RATING_MIN_REVIEWS, ratingView } from './display';
 import { type Rating, RATINGS, reviewBody, type ReviewDraftResult, VENUE_LIMITS } from './form';
@@ -45,40 +45,99 @@ export function venueSubtitle(
     formatPriceRange(venue.priceMinMinor, venue.priceMaxMinor, language),
   ]
     .filter((part): part is string => part !== null && part !== '')
-    .join(' · ');
+    .join(', ');
 }
 
-/** Small label on a card edge: sample row, verified, unverified. */
-function Badge({
-  label,
-  tone,
-  testID,
+/**
+ * One row of the venue directory: the name with its sample / unverified tags, the district and
+ * the pitch type, then the price range in kit-number figures and the rating. The whole row is one
+ * button that speaks the name, the tags and the facts.
+ */
+export function VenueRow({
+  venue,
+  district,
+  onPress,
 }: {
-  readonly label: string;
-  readonly tone: 'accent' | 'muted' | 'primary';
-  readonly testID: string;
+  readonly venue: Pick<
+    VenueSummary,
+    | 'id'
+    | 'name'
+    | 'isSample'
+    | 'verified'
+    | 'indoor'
+    | 'priceMinMinor'
+    | 'priceMaxMinor'
+    | 'rating'
+  >;
+  readonly district: string | null;
+  readonly onPress: () => void;
 }) {
+  const { t, i18n } = useTranslation('venues');
   const theme = useTheme();
-  const color =
-    tone === 'accent'
-      ? theme.colors.accent
-      : tone === 'primary'
-        ? theme.colors.primary
-        : theme.colors.border;
+  const price = formatPriceRange(venue.priceMinMinor, venue.priceMaxMinor, i18n.language);
+  const rating = ratingText(t, venue.rating, i18n.language);
+  const spoken = [
+    venue.name,
+    venue.isSample ? t('badge.sample') : null,
+    venue.verified ? null : t('badge.unverified'),
+    venueSubtitle(t, venue, district, i18n.language),
+    rating,
+  ]
+    .filter((part): part is string => part !== null && part !== '')
+    .join(', ');
   return (
-    <View
-      testID={testID}
-      style={{
-        borderWidth: 1,
-        borderColor: color,
-        borderRadius: theme.radius.md,
-        paddingHorizontal: theme.spacing['2'],
-        paddingVertical: theme.spacing['1'],
-        alignSelf: 'flex-start',
-      }}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={spoken}
+      accessibilityHint={t('list.openHint')}
+      onPress={onPress}
+      testID={`venue-${venue.id}`}
+      style={({ pressed }) => ({
+        minHeight: theme.layout.rowMinHeight,
+        paddingHorizontal: theme.spacing['4'],
+        paddingVertical: theme.spacing['3'],
+        gap: theme.spacing['1'],
+        backgroundColor: pressed ? theme.colors.pressed : theme.colors.surface,
+      })}
     >
-      <Text variant="caption">{label}</Text>
-    </View>
+      <Text variant="bodyStrong" numberOfLines={2}>
+        {venue.name}
+      </Text>
+      {venue.isSample || !venue.verified ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
+          {venue.isSample ? <Badge label={t('badge.sample')} tone="sample" /> : null}
+          {venue.verified ? null : <Badge label={t('badge.unverified')} tone="neutral" />}
+        </View>
+      ) : null}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: theme.spacing['2'],
+        }}
+      >
+        {district === null ? null : (
+          <Text variant="footnote" tone="muted">
+            {district}
+          </Text>
+        )}
+        <Chip label={t(venue.indoor ? 'facts.indoor' : 'facts.outdoor')} />
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: theme.spacing['3'],
+        }}
+      >
+        {price === null ? <View /> : <Numeral value={price} />}
+        <Text variant="caption" tone="muted" style={{ flexShrink: 1 }} align="right">
+          {rating}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -96,12 +155,12 @@ export function VenueBadges({
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
       {venue.isSample ? (
-        <Badge label={t('badge.sample')} tone="accent" testID="badge-sample" />
+        <Badge label={t('badge.sample')} tone="sample" testID="badge-sample" />
       ) : null}
       {venue.verified ? (
-        <Badge label={t('badge.verified')} tone="primary" testID="badge-verified" />
+        <Badge label={t('badge.verified')} tone="verified" testID="badge-verified" />
       ) : (
-        <Badge label={t('badge.unverified')} tone="muted" testID="badge-unverified" />
+        <Badge label={t('badge.unverified')} tone="neutral" testID="badge-unverified" />
       )}
     </View>
   );
@@ -178,20 +237,31 @@ export function ReviewCard({
   const theme = useTheme();
   return (
     <Card testID={`review-${review.id}`} style={{ marginBottom: theme.spacing['3'] }}>
-      <Text variant="label">{own ? t('review.mine') : review.authorDisplayName}</Text>
-      <Text
-        tone="muted"
-        accessibilityLabel={t('review.ratingSpoken', { rating: review.rating })}
-        testID={`review-${review.id}-rating`}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: theme.spacing['3'],
+        }}
       >
-        {`${'★'.repeat(review.rating)}${'☆'.repeat(VENUE_LIMITS.ratingMax - review.rating)}`}
-      </Text>
+        <Text variant="bodyStrong" style={{ flexShrink: 1 }}>
+          {own ? t('review.mine') : review.authorDisplayName}
+        </Text>
+        <Text
+          variant="label"
+          accessibilityLabel={t('review.ratingSpoken', { rating: review.rating })}
+          testID={`review-${review.id}-rating`}
+        >
+          {`${'★'.repeat(review.rating)}${'☆'.repeat(VENUE_LIMITS.ratingMax - review.rating)}`}
+        </Text>
+      </View>
       {review.text === null ? null : (
         <Text style={{ marginTop: theme.spacing['2'] }} testID={`review-${review.id}-text`}>
           {review.text}
         </Text>
       )}
-      <Text variant="footnote" tone="muted" style={{ marginTop: theme.spacing['2'] }}>
+      <Text variant="caption" tone="muted" style={{ marginTop: theme.spacing['2'] }}>
         {formatDateTime(review.createdAt, i18n.language)}
       </Text>
     </Card>

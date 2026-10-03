@@ -172,6 +172,17 @@ describe('app.config.ts', () => {
     expect(JSON.stringify(app)).not.toContain(VALID_PUBLIC_ENV.EXPO_PUBLIC_API_URL);
   });
 
+  it('takes the native root background from the light brand background', () => {
+    stubPublicEnv();
+    const tokensFile = path.join(PROJECT_ROOT, '../../packages/brand/theme/tokens.json');
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed workspace path
+    const tokens = JSON.parse(readFileSync(tokensFile, 'utf8')) as {
+      color: { theme: { light: { background: string } } };
+    };
+    expect(resolvedConfig().backgroundColor).toBe(tokens.color.theme.light.background);
+    expect(resolvedConfig().backgroundColor).toBe('#F5F6F1');
+  });
+
   it('defines no update code signing without a certificate', () => {
     stubPublicEnv();
     const app = resolvedConfig();

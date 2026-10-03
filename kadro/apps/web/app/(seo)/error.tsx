@@ -1,6 +1,10 @@
 'use client';
 
-import styles from '../../components/marketing/marketing.module.css';
+import { Button } from '../../components/marketing/button';
+import { cx } from '../../components/marketing/class-names';
+import { Container } from '../../components/marketing/section';
+import { typeClassName } from '../../components/marketing/typography';
+import styles from '../../components/seo/seo.module.css';
 
 /**
  * Error boundary of the SEO pages (security checklist item 13), for example while the database is
@@ -15,19 +19,26 @@ export default function SeoError({
   readonly retry: () => void;
 }) {
   return (
-    <div className={styles.statusBlock}>
-      <h1 className={styles.pageTitle}>Bir şeyler ters gitti</h1>
-      <p className={styles.pageLead}>
-        Beklenmeyen bir hata oluştu. Lütfen biraz sonra tekrar dene.
-      </p>
-      {error.digest === undefined ? null : (
-        <p className={styles.digest}>Referans: {error.digest}</p>
-      )}
-      <div className={styles.statusActions}>
-        <button type="button" className={styles.buttonSolid} onClick={() => retry()}>
-          Tekrar dene
-        </button>
+    <Container>
+      <div className={styles.statusBlock}>
+        <h1 className={cx(typeClassName('display'), styles.title)}>Bir şeyler ters gitti</h1>
+        <p className={cx(typeClassName('lead'), styles.lead)}>
+          Beklenmeyen bir hata oluştu. Lütfen biraz sonra tekrar dene.
+        </p>
+        {error.digest === undefined ? null : (
+          <p className={styles.digest}>Referans: {error.digest}</p>
+        )}
+        <div className={styles.cta}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              retry();
+            }}
+          >
+            Tekrar dene
+          </Button>
+        </div>
       </div>
-    </div>
+    </Container>
   );
 }

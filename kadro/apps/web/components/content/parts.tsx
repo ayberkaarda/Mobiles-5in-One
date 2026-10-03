@@ -14,6 +14,23 @@ export function formatContentDate(date: string): string {
   return DATE_FORMAT.format(new Date(`${date}T00:00:00Z`));
 }
 
+const MONTH_FORMAT = new Intl.DateTimeFormat('tr-TR', {
+  timeZone: 'UTC',
+  month: 'long',
+  year: 'numeric',
+});
+
+/** Decorative date column of a blog row: the day as a numeral, month and year in caption. */
+export function ArticleDate({ date }: { readonly date: string }) {
+  const instant = new Date(`${date}T00:00:00Z`);
+  return (
+    <span className={styles.articleDate} aria-hidden="true">
+      <span className={styles.articleDay}>{instant.getUTCDate()}</span>
+      <span className={styles.articleMonth}>{MONTH_FORMAT.format(instant)}</span>
+    </span>
+  );
+}
+
 /** Visible notice of a sample text: the page is part of a portfolio project (review checklist). */
 export function SampleNotice() {
   return (

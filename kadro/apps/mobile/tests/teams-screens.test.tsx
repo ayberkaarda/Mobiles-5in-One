@@ -174,7 +174,7 @@ describe('Takımlar tab', () => {
     );
     await render(<TeamsTab />);
     await fireEvent.press(
-      await screen.findByRole('button', { name: 'Yıldızlar FK, Kaptan · 9 oyuncu' }),
+      await screen.findByRole('button', { name: 'Yıldızlar FK, Kaptan, 9 oyuncu' }),
     );
     expect(lastRouterCall()).toEqual({ method: 'push', href: `/takim/${TEAM_ID}` });
     await fireEvent.press(screen.getByRole('button', { name: 'Takım kur' }));
@@ -191,7 +191,7 @@ describe('Takımlar tab', () => {
     );
     await render(<TeamsTab />);
     expect(
-      await screen.findByRole('button', { name: 'Yıldızlar FK, Kaptan · 3 oyuncu, Salt okunur' }),
+      await screen.findByRole('button', { name: 'Yıldızlar FK, Kaptan, 3 oyuncu, Salt okunur' }),
     ).toBeTruthy();
   });
 });
@@ -381,8 +381,8 @@ describe('team detail', () => {
       .getAllByTestId(/^member-/)
       .map((element) => element.props.accessibilityLabel as string);
     expect(labels).toEqual([
-      'Ali Kaptan (sen), Kaptan · Kaleci',
-      'Zeynep, Yardımcı kaptan · Orta saha',
+      'Ali Kaptan (sen), Kaptan, Kaleci',
+      'Zeynep, Yardımcı kaptan, Orta saha',
       'Mert, Oyuncu',
     ]);
     // The captain has no controls on their own row.
@@ -884,7 +884,7 @@ describe('writes return at once and show their state', () => {
         <TeamDetailScreen />
       </>,
     );
-    await screen.findByRole('button', { name: 'Yıldızlar FK, Oyuncu · 3 oyuncu' });
+    await screen.findByRole('button', { name: 'Yıldızlar FK, Oyuncu, 3 oyuncu' });
     await fireEvent.press(await screen.findByRole('button', { name: 'Takımdan ayrıl' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Ayrıl' }));
     await waitFor(() => expect(lastRouterCall()).toEqual({ method: 'replace', href: '/takimlar' }));
@@ -951,7 +951,7 @@ describe('writes return at once and show their state', () => {
       </>,
     );
     const zeynepRow = await screen.findByRole('button', {
-      name: 'Zeynep, Yardımcı kaptan · Orta saha',
+      name: 'Zeynep, Yardımcı kaptan, Orta saha',
     });
     expect(zeynepRow.props.accessibilityState).toEqual({ disabled: false });
     await fireEvent.press(screen.getByRole('button', { name: 'Takımdan çıkar' }));
@@ -962,7 +962,7 @@ describe('writes return at once and show their state', () => {
       ).toEqual({ disabled: true, busy: true }),
     );
     expect(
-      screen.getByRole('button', { name: 'Zeynep, Yardımcı kaptan · Orta saha' }).props
+      screen.getByRole('button', { name: 'Zeynep, Yardımcı kaptan, Orta saha' }).props
         .accessibilityState,
     ).toEqual({ disabled: true });
     gate.resolve();

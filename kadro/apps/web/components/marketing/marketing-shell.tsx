@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
+import { buttonClassName } from './button';
+import { cx } from './class-names';
 import { FONT_CLASS, PRELOADED_FONTS } from './fonts';
 import styles from './marketing.module.css';
 import { NavLink } from './nav-link';
@@ -12,22 +14,23 @@ import {
   SITE_NAME,
   SITE_TAGLINE,
 } from './site';
-import { marketingThemeVariables } from './theme';
+import { ThemeToggle } from './theme-toggle';
+import { Wordmark } from './wordmark';
 
 /** Target of the skip link: the page's `main` landmark. */
 export const MAIN_ID = 'icerik';
 
 /**
- * Frame of every marketing page (ADR-0056): skip link, `header` with the primary navigation,
- * one `main` landmark that the skip link focuses, and a `footer` with the secondary navigation.
- * Server-rendered; the only client code is the current-page marker of {@link NavLink}.
+ * Frame of every marketing page (ADR-0056, ADR-0084): skip link, `header` with the wordmark and
+ * the primary navigation, one `main` landmark that the skip link focuses, and a `footer` with the
+ * secondary navigation and the Sistem / Açık / Koyu toggle. Server-rendered, no `style`
+ * attribute: colours come from `@kadro/brand/theme.css` through the class names, and the scheme
+ * from `data-theme` on `<html>`. The client code is the current-page marker of {@link NavLink}
+ * and the current path of the toggle form.
  */
 export function MarketingShell({ children }: { readonly children: ReactNode }) {
   return (
-    <div
-      className={`${styles.shell} ${FONT_CLASS}`}
-      style={marketingThemeVariables() as CSSProperties}
-    >
+    <div className={cx(styles.shell, FONT_CLASS)}>
       {PRELOADED_FONTS.map((href) => (
         <link
           key={href}
@@ -44,12 +47,12 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.brand} aria-label="Kadro ana sayfa">
-            KADRO
+            <Wordmark className={styles.brandMark} />
           </Link>
           <nav aria-label="Ana menü" className={styles.nav}>
             <ul className={styles.navList}>
               {HEADER_LINKS.map((link) => (
-                <li key={link.href}>
+                <li key={link.href} className={link.href === '/' ? styles.navHome : undefined}>
                   <NavLink href={link.href} className={styles.navLink}>
                     {link.label}
                   </NavLink>
@@ -57,8 +60,12 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
               ))}
             </ul>
           </nav>
-          <a href={`/#${DOWNLOAD_ANCHOR}`} className={styles.headerCta}>
-            Uygulamayı indir
+          <a
+            href={`/#${DOWNLOAD_ANCHOR}`}
+            className={cx(buttonClassName('secondary'), styles.headerCta)}
+          >
+            <span className={styles.ctaLong}>Uygulamayı indir</span>
+            <span className={styles.ctaShort}>İndir</span>
           </a>
         </div>
       </header>
@@ -68,7 +75,9 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
-            <p className={styles.footerWordmark}>KADRO</p>
+            <p className={styles.footerWordmark}>
+              <Wordmark title={SITE_NAME} className={styles.footerMark} />
+            </p>
             <p className={styles.footerText}>{SITE_TAGLINE}</p>
           </div>
           <nav aria-label="Alt menü" className={styles.footerNav}>
@@ -87,6 +96,7 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
               </div>
             ))}
           </nav>
+          <ThemeToggle className={styles.footerTheme} />
           <p className={styles.footerLegal}>
             © {SITE_NAME}. {PORTFOLIO_NOTE}
           </p>

@@ -40,7 +40,14 @@ import {
   QueryProvider,
 } from '../src/query';
 import { restoreLanguage } from '../src/settings/language';
-import { FONT_MAP, navigationTheme, ThemeProvider, useTheme } from '../src/theme';
+import {
+  colorPreference,
+  FONT_MAP,
+  navigationTheme,
+  statusBarStyle,
+  ThemeProvider,
+  useTheme,
+} from '../src/theme';
 import { ErrorState } from '../src/ui';
 
 void SplashScreen.preventAutoHideAsync();
@@ -53,6 +60,8 @@ const appVersion = Constants.expoConfig?.version ?? 'dev';
 session.onSignOut(() => clearQueryCaches(queryClient, queryPersister));
 // The language chosen in the settings, if any, replaces the device language.
 void restoreLanguage(i18n, AsyncStorage);
+// The colour scheme chosen in the settings (Sistem / Açık / Koyu); read before the splash hides.
+void colorPreference.restore();
 configureForegroundNotifications();
 
 /** Last-resort screen for a render error outside every screen boundary. */
@@ -99,7 +108,7 @@ function RootStack() {
   useStoreCustomer();
   return (
     <NavigationThemeProvider value={navigationTheme(theme)}>
-      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={statusBarStyle(theme)} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={access.signedInRoutes}>
           <Stack.Screen name="(tabs)" />
@@ -148,6 +157,8 @@ function RootStack() {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FONT_MAP);
   const status = useAuthStatus();
+  // Keeps the splash up until the stored scheme is known, so the first frame is in that scheme.
+  const schemeRestored = useStore(colorPreference.store, (state) => state.restored);
   // The persisted cache belongs to one sign-in; another sign-in (or none) restores nothing.
   const cacheBuster = cacheBusterFor(
     appVersion,
@@ -162,7 +173,8 @@ export default function RootLayout() {
   }, []);
 
   // A font that fails to load falls back to the system face; it never blocks the app.
-  const ready = (fontsLoaded || fontError !== null) && routeAccess(status).pending === false;
+  const ready =
+    (fontsLoaded || fontError !== null) && schemeRestored && routeAccess(status).pending === false;
 
   useEffect(() => {
     if (ready) {

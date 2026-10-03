@@ -20,8 +20,10 @@ import {
 } from '../../components/marketing/og';
 import {
   OG_CACHE_CONTROL,
+  OG_FONT_DIR,
   OG_FONT_FILES,
   OG_PALETTE,
+  OG_WORDMARK_BOX,
   OG_WORDMARK_FILE,
 } from '../../components/marketing/og-image';
 import { serializeJsonLd } from '../../components/seo/json-ld';
@@ -41,7 +43,7 @@ import {
 const WEB_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const APP_DIR = join(WEB_DIR, 'app');
 const TOKENS_FILE = fileURLToPath(
-  new URL('../../../../packages/brand/tokens.json', import.meta.url),
+  new URL('../../../../packages/brand/theme/tokens.json', import.meta.url),
 );
 const ORIGIN = 'https://kadro.example';
 
@@ -214,21 +216,41 @@ describe('card image metadata (ADR-0083)', () => {
 });
 
 describe('card image renderer inputs', () => {
-  it('uses the palette of packages/brand/tokens.json', () => {
+  it('uses the v3 palette of packages/brand/theme/tokens.json, light scheme ground and text', () => {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path in the repo
     const tokens = JSON.parse(readFileSync(TOKENS_FILE, 'utf8')) as {
-      color: { palette: Record<string, string> };
+      color: {
+        palette: Record<string, string>;
+        theme: { light: Record<string, string> };
+      };
     };
     for (const [name, value] of Object.entries(OG_PALETTE)) {
       expect(tokens.color.palette[name], name).toBe(value);
     }
+    expect(OG_PALETTE.chalkWhite).toBe(tokens.color.theme.light.background);
+    expect(OG_PALETTE.ink).toBe(tokens.color.theme.light.text);
+    expect(OG_PALETTE.neutral).toBe(tokens.color.theme.light.textMuted);
+    expect(OG_PALETTE.turfDeep).toBe(tokens.color.theme.light.pitch);
   });
 
-  it('reads static font instances and the brand wordmark from the repository', () => {
+  it('keeps the 3152 x 861 ratio of the wordmark in its image box', () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed brand file name
+    const svg = readFileSync(join(WEB_DIR, OG_WORDMARK_FILE), 'utf8');
+    const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1]?.split(/\s+/).map(Number) ?? [];
+    expect(viewBox).toHaveLength(4);
+    const [, , width = 0, height = 1] = viewBox;
+    expect(OG_WORDMARK_BOX.width).toBe(234);
+    expect(OG_WORDMARK_BOX.width / OG_WORDMARK_BOX.height).toBeCloseTo(width / height, 1);
+    // The ink wordmark is the one for a light ground.
+    expect(svg).toContain('fill="#0F1A14"');
+  });
+
+  it('reads static Archivo instances and the brand wordmark from the repository', () => {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed brand file name
     expect(existsSync(join(WEB_DIR, OG_WORDMARK_FILE))).toBe(true);
     for (const name of Object.values(OG_FONT_FILES)) {
-      const relative = join('assets', 'og-fonts', name);
+      expect(name).toMatch(/^Archivo(Condensed)?-[A-Za-z]+\.ttf$/);
+      const relative = join(OG_FONT_DIR, name);
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- names in OG_FONT_FILES
       const tags = tableTags(readFileSync(join(WEB_DIR, relative)));
       // A variable font (fvar/gvar) makes the renderer fail; the instances are static.
@@ -236,10 +258,8 @@ describe('card image renderer inputs', () => {
       expect(tags, relative).not.toContain('fvar');
       expect(tags, relative).not.toContain('gvar');
     }
-    for (const licence of ['sora-OFL.txt', 'inter-OFL.txt']) {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed licence names
-      expect(existsSync(join(WEB_DIR, 'assets', 'og-fonts', licence)), licence).toBe(true);
-    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed licence path
+    expect(existsSync(join(WEB_DIR, OG_FONT_DIR, '..', 'OFL.txt'))).toBe(true);
   });
 
   it('marks the cards cacheable by shared caches, not immutable', () => {

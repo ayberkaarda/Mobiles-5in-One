@@ -15,14 +15,13 @@ import { storeTermsUrl } from '../src/billing/links';
 import { offersQuery } from '../src/billing/queries';
 import { type BillingOffer, type BillingPeriod, billingFailure } from '../src/billing/port';
 import { formatDateTime } from '../src/i18n/format';
-import { ChoiceGroup } from '../src/matches/components';
 import { ProfileScreen } from '../src/profile/components';
 import { meQuery } from '../src/query';
 import { appLegalLinks } from '../src/settings/instance';
 import { legalLink } from '../src/settings/legal';
 import { Notice, Section } from '../src/teams/components';
 import { useTheme } from '../src/theme';
-import { Button, Text } from '../src/ui';
+import { Button, ListItem, SegmentedControl, Text } from '../src/ui';
 
 const BENEFITS = ['unlimitedTeams', 'lineupHistory', 'advancedStats', 'noUpsell'] as const;
 
@@ -86,11 +85,14 @@ export default function PaywallScreen() {
         <>
           <Section>
             <Text tone="muted">{t('paywall.subtitle')}</Text>
-            <View style={{ marginTop: theme.spacing['3'], gap: theme.spacing['1'] }}>
+            <View style={{ marginTop: theme.spacing['3'] }}>
               {BENEFITS.map((benefit) => (
-                <Text key={benefit} testID={`paywall-benefit-${benefit}`}>
-                  {`• ${t(`paywall.benefit.${benefit}`)}`}
-                </Text>
+                <ListItem
+                  key={benefit}
+                  title={t(`paywall.benefit.${benefit}`)}
+                  divider
+                  testID={`paywall-benefit-${benefit}`}
+                />
               ))}
             </View>
           </Section>
@@ -118,7 +120,7 @@ export default function PaywallScreen() {
               <Notice testID="paywall-empty">{t('paywall.offersEmpty')}</Notice>
             ) : (
               <>
-                <ChoiceGroup<BillingPeriod>
+                <SegmentedControl<BillingPeriod>
                   label={t('paywall.plans')}
                   options={list.map((offer) => ({
                     value: offer.period,

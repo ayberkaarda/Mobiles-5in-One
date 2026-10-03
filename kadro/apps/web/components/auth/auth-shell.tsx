@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
+import { Wordmark } from '../marketing/wordmark';
 import { themeVariables } from '../../lib/client/theme';
 import styles from './auth.module.css';
 
@@ -21,7 +22,7 @@ export function AuthShell({
     <div className={styles.page} style={themeVariables() as CSSProperties}>
       <main className={styles.card}>
         <Link href="/" className={styles.brand} aria-label="Kadro ana sayfa">
-          KADRO
+          <Wordmark />
         </Link>
         <h1 className={styles.title}>{title}</h1>
         {lead === undefined ? null : <p className={styles.lead}>{lead}</p>}

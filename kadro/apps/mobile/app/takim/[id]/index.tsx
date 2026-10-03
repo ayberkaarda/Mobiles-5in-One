@@ -14,6 +14,8 @@ import {
   Notice,
   ResourceState,
   Section,
+  SectionHeading,
+  TeamCrest,
   TEAMS_HOME,
   TeamScreen,
 } from '../../../src/teams/components';
@@ -90,9 +92,12 @@ export default function TeamDetailScreen() {
     <TeamScreen title={team.name} testID="team-screen">
       <CachedNotice visible={query.isError} />
       <Section>
-        <Text tone="muted" tabular>
-          {t('detail.summary', { role: roleName(team.myRole), number: team.memberCount })}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing['3'] }}>
+          <TeamCrest name={team.name} />
+          <Text tone="muted" tabular style={{ flex: 1 }}>
+            {t('detail.summary', { role: roleName(team.myRole), number: team.memberCount })}
+          </Text>
+        </View>
       </Section>
       {team.isProLocked ? (
         <Section>
@@ -103,20 +108,22 @@ export default function TeamDetailScreen() {
         <Section>
           <Button
             label={t('detail.invite')}
-            variant="accent"
+            variant="primary"
             onPress={() => router.push(`/takim/${encodeURIComponent(team.id)}/davet`)}
             testID="team-invite"
           />
         </Section>
       ) : null}
 
-      <Text
-        variant="title3"
-        style={{ paddingHorizontal: theme.spacing['4'], marginBottom: theme.spacing['2'] }}
+      <SectionHeading>{t('detail.roster')}</SectionHeading>
+      <View
+        style={{
+          marginBottom: theme.spacing['5'],
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+        }}
+        testID="team-roster"
       >
-        {t('detail.roster')}
-      </Text>
-      <View style={{ marginBottom: theme.spacing['5'] }} testID="team-roster">
         {sortedRoster(team.members).map((member) => {
           const isSelf = member.user.id === myId;
           const target = { role: member.role, isSelf };
@@ -126,30 +133,28 @@ export default function TeamDetailScreen() {
           const position =
             member.user.position === null ? null : t(`member.position.${member.user.position}`);
           return (
-            <View
+            <ListItem
               key={member.user.id}
-              style={{ borderBottomWidth: 1, borderBottomColor: theme.colors.border }}
-            >
-              <ListItem
-                title={
-                  isSelf
-                    ? t('detail.you', { name: member.user.displayName })
-                    : member.user.displayName
-                }
-                subtitle={[roleName(member.role), position].filter(Boolean).join(' · ')}
-                accessibilityHint={manageable ? t('detail.memberHint') : undefined}
-                disabled={rosterBusy}
-                onPress={
-                  manageable
-                    ? () =>
-                        router.push(
-                          `/takim/${encodeURIComponent(team.id)}/uye/${encodeURIComponent(member.user.id)}`,
-                        )
-                    : undefined
-                }
-                testID={`member-${member.user.id}`}
-              />
-            </View>
+              divider
+              chevron={manageable}
+              title={
+                isSelf
+                  ? t('detail.you', { name: member.user.displayName })
+                  : member.user.displayName
+              }
+              subtitle={[roleName(member.role), position].filter(Boolean).join(', ')}
+              accessibilityHint={manageable ? t('detail.memberHint') : undefined}
+              disabled={rosterBusy}
+              onPress={
+                manageable
+                  ? () =>
+                      router.push(
+                        `/takim/${encodeURIComponent(team.id)}/uye/${encodeURIComponent(member.user.id)}`,
+                      )
+                  : undefined
+              }
+              testID={`member-${member.user.id}`}
+            />
           );
         })}
       </View>

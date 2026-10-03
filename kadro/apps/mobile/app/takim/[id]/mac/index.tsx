@@ -61,6 +61,7 @@ export default function TeamMatchesScreen() {
           keyExtractor={(match) => match.id}
           renderItem={(match) => (
             <ListItem
+              chevron
               title={formatDateTime(match.startsAt, i18n.language)}
               subtitle={[
                 t(`status.${match.status}`),
@@ -68,7 +69,7 @@ export default function TeamMatchesScreen() {
                 match.venue?.name ?? match.venueText,
               ]
                 .filter((part): part is string => part !== null && part !== '')
-                .join(' · ')}
+                .join(', ')}
               meta={t('team.slots', { confirmed: match.counts.in, slots: match.slots })}
               accessibilityHint={t('tab.openHint')}
               onPress={() => router.push(matchHref(teamId, match.id))}

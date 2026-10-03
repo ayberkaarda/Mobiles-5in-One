@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { useTheme } from '../theme';
 import { Text } from './Text';
@@ -9,8 +10,14 @@ export interface ListItemProps {
   readonly subtitle?: string;
   /** Right-aligned value such as a time, a count or a fee; rendered with tabular digits. */
   readonly meta?: string;
-  /** Element before the text (badge, avatar). Decorative: hidden from screen readers. */
+  /** Element before the text (kit number, avatar). Decorative: hidden from screen readers. */
   readonly leading?: ReactNode;
+  /** Element after the text (chip, badge). Decorative: the row label already carries the text. */
+  readonly trailing?: ReactNode;
+  /** Shows a chevron; use it only when the row opens another screen. */
+  readonly chevron?: boolean;
+  /** Draws the 1 px `border` hairline under the row (lists that do not draw separators). */
+  readonly divider?: boolean;
   /** Makes the row a button; without it the row is plain text. */
   readonly onPress?: () => void;
   /** A pressable row that is temporarily unavailable: announced as disabled, ignores presses. */
@@ -19,12 +26,15 @@ export interface ListItemProps {
   readonly testID?: string;
 }
 
-/** One row of a list: at least 44 pt tall, announced as a single element with all its text. */
+/** One row of a list: at least 56 pt tall, announced as a single element with all its text. */
 export function ListItem({
   title,
   subtitle,
   meta,
   leading,
+  trailing,
+  chevron = false,
+  divider = false,
   onPress,
   disabled = false,
   accessibilityHint,
@@ -58,13 +68,42 @@ export function ListItem({
           {meta}
         </Text>
       )}
+      {trailing === undefined ? null : (
+        <View
+          style={{ marginLeft: theme.spacing['3'] }}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {trailing}
+        </View>
+      )}
+      {chevron ? (
+        <Svg
+          width={20}
+          height={20}
+          viewBox="0 0 24 24"
+          style={{ marginLeft: theme.spacing['2'] }}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Path
+            d="M9 5l7 7-7 7"
+            stroke={theme.colors.textMuted}
+            strokeWidth={2}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      ) : null}
     </>
   );
   const rowStyle = {
-    minHeight: theme.minTouchTarget,
+    minHeight: theme.layout.rowMinHeight,
     paddingHorizontal: theme.spacing['4'],
     paddingVertical: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
+    ...(divider ? { borderBottomWidth: 1, borderBottomColor: theme.colors.border } : {}),
   };
 
   if (onPress === undefined) {

@@ -8,6 +8,7 @@
   },
   "list": {
     "missing": "{{number}} eksik",
+    "missingUnit": "eksik",
     "openHint": "İlanın ayrıntılarını açar.",
     "emptyTitle": "Şu an eksik oyuncu ilanı yok",
     "emptyMessage": "Bir takım oyuncu aradığında ilan burada çıkar.",

@@ -56,6 +56,23 @@ name: screenshots
 - scroll
 - waitForAnimationToEnd
 - takeScreenshot: 05-match-participants
+- scrollUntilVisible:
+    element:
+      id: match-lineup
+    direction: DOWN
+- tapOn:
+    id: match-lineup
+- extendedWaitUntil:
+    visible:
+      id: lineup-counts
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 18-match-lineup
+- back
+- extendedWaitUntil:
+    visible:
+      id: match-screen
+    timeout: 20000
 - back
 - tapOn:
     id: tab-teams

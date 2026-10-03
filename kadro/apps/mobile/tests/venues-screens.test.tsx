@@ -284,15 +284,18 @@ describe('Sahalar tab', () => {
     );
     await render(<VenuesTab />);
     expect(await screen.findByText('Moda Sahası')).toBeTruthy();
-    await waitFor(() =>
-      expect(screen.getByText('Kadıköy, İstanbul · Açık · ₺1.200–₺1.800')).toBeTruthy(),
-    );
-    expect(screen.getByText('4,3 / 5 · 3 yorum')).toBeTruthy();
+    const row = (id: string) => within(screen.getByTestId(`venue-${id}`));
+    await waitFor(() => expect(row(VENUE_ID).getByText('Kadıköy, İstanbul')).toBeTruthy());
+    expect(row(VENUE_ID).getByText('Açık')).toBeTruthy();
+    expect(row(VENUE_ID).getByText('1.200–1.800\u00A0₺')).toBeTruthy();
+    expect(row(VENUE_ID).getByText('4,3 / 5 (3 yorum)')).toBeTruthy();
     expect(screen.getByText('[ÖRNEK] Kadıköy Halı Saha A')).toBeTruthy();
-    expect(screen.getByText(/^\[ÖRNEK\] Gerçek saha değil · Kadıköy/)).toBeTruthy();
+    expect(row(SAMPLE_ID).getByText('[ÖRNEK] Gerçek saha değil')).toBeTruthy();
+    expect(row(SAMPLE_ID).getByText('Kadıköy, İstanbul')).toBeTruthy();
     // Two reviews: no average yet, even a perfect one.
     expect(screen.getByText('2 yorum (puan en az 3 yorumla gösterilir)')).toBeTruthy();
-    expect(screen.getByText('Doğrulanmamış · Kadıköy, İstanbul · Kapalı')).toBeTruthy();
+    expect(row(MINE_ID).getByText('Doğrulanmamış')).toBeTruthy();
+    expect(row(MINE_ID).getByText('Kapalı')).toBeTruthy();
     expect(screen.getByText('Henüz yorum yok')).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`venue-${SAMPLE_ID}`));
     expect(routerCalls().at(-1)).toEqual({
@@ -385,9 +388,9 @@ describe('venue detail', () => {
     expect(screen.getByTestId('venue-sample-notice')).toBeTruthy();
     expect(screen.getByTestId('badge-verified')).toBeTruthy();
     expect(screen.queryByTestId('venue-unverified-notice')).toBeNull();
-    expect(screen.getByLabelText('Saatlik ücret: ₺1.200–₺1.800')).toBeTruthy();
+    expect(screen.getByLabelText('Saatlik ücret: 1.200–1.800\u00A0₺')).toBeTruthy();
     expect(screen.getByLabelText('Saha tipi: Açık')).toBeTruthy();
-    expect(screen.getByLabelText('Puan: 4,3 / 5 · 3 yorum')).toBeTruthy();
+    expect(screen.getByLabelText('Puan: 4,3 / 5 (3 yorum)')).toBeTruthy();
     expect(screen.getByLabelText('Var: Aydınlatma')).toBeTruthy();
     expect(screen.getByLabelText('Yok: Otopark')).toBeTruthy();
     expect(screen.getByLabelText('Bilinmiyor: Soyunma odası, Duş')).toBeTruthy();

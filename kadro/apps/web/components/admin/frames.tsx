@@ -8,10 +8,14 @@ import { roleLabel } from './labels';
 import { PanelNav, SignOutButton } from './panel-nav';
 import { ADMIN_PATHS } from './paths';
 
-/** Outer frame of every staff page: theme variables and one `main` landmark per page. */
+/**
+ * Outer frame of every staff page: theme variables and one `main` landmark per page. The panel
+ * stays in the light scheme whatever the visitor's scheme is (`data-theme="light"` re-scopes the
+ * brand colour roles for everything inside).
+ */
 export function AdminPage({ children }: { readonly children: ReactNode }) {
   return (
-    <div className={styles.page} style={themeVariables() as CSSProperties}>
+    <div className={styles.page} data-theme="light" style={themeVariables() as CSSProperties}>
       {children}
     </div>
   );
@@ -60,7 +64,7 @@ export function PanelFrame({
         <PanelNav isAdmin={role === 'admin'} />
         <div className={styles.account}>
           <span>
-            {displayName} · {roleLabel(role)}
+            {displayName}, {roleLabel(role)}
           </span>
           <SignOutButton csrfCookieName={csrfCookieName} />
         </div>

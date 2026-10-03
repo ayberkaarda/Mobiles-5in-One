@@ -1,23 +1,26 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { FormError } from '../auth/components';
 import { formatDateTime } from '../i18n/format';
-import { ChoiceGroup, Fact } from '../matches/components';
+import { ChoiceGroup } from '../matches/components';
 import { ConfirmAction, Notice, ResourceState } from '../teams/components';
 import { useTheme } from '../theme';
-import { Button, Card, Text, TextField } from '../ui';
+import { Button, Card, Chip, EksikSlot, Numeral, Text, TextField, type TextTone } from '../ui';
 import { type CallsApi } from './calls-api';
 import {
   type Application,
+  type ApplicationStatus,
   type DistrictPublic,
   type Level,
   type MatchDetail,
+  type OpenCallPublic,
   type Position,
 } from './contracts';
+import { kickoffParts, MAX_DRAWN_SLOTS } from './display';
 import { districtLabel, searchDistricts } from './form';
 import { matchCallHref } from './links';
 import { useCallBusy, useSetApplicationStatus } from './mutations';
@@ -168,7 +171,197 @@ export function DistrictPicker({
   );
 }
 
-/** The public facts of a call, read as one element per line. */
+/**
+ * One fact of a fact grid: caption label over the value, read as one element ("Yer: Kadıköy").
+ * Half the grid width, or the full width for long values (`wide`); `numeral` sets the value in
+ * the kit-number figures (fees, times).
+ */
+export function FactCell({
+  label,
+  value,
+  wide = false,
+  numeral = false,
+  testID,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly wide?: boolean;
+  readonly numeral?: boolean;
+  readonly testID?: string;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+      testID={testID}
+      style={{ width: wide ? '100%' : '50%', paddingRight: theme.spacing['2'] }}
+    >
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
+      {numeral ? (
+        <Numeral value={value} />
+      ) : (
+        <Text variant="bodyStrong" tabular>
+          {value}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Grid of `FactCell`s: two columns, 12 pt between rows. */
+export function FactGrid({ children }: { readonly children: ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: theme.spacing['3'] }}>
+      {children}
+    </View>
+  );
+}
+
+/** 1 px `border` hairline between the blocks of a card. */
+export function Hairline() {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        height: 1,
+        backgroundColor: theme.colors.border,
+        marginVertical: theme.spacing['4'],
+      }}
+    />
+  );
+}
+
+/**
+ * The missing count as the brand draws it: the outlined figure with "eksik" under it and, for
+ * small counts, one dashed empty slot per missing player (decorative). The figure carries the
+ * spoken text.
+ */
+function MissingCount({
+  count,
+  accessibilityLabel,
+  slots = false,
+}: {
+  readonly count: number;
+  readonly accessibilityLabel: string;
+  readonly slots?: boolean;
+}) {
+  const { t } = useTranslation('opencalls');
+  const theme = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing['3'] }}>
+      <View style={{ alignItems: 'center', minWidth: theme.spacing['12'] }}>
+        <Numeral value={count} variant="score" outlined accessibilityLabel={accessibilityLabel} />
+        <Text variant="caption" tone="muted">
+          {t('list.missingUnit')}
+        </Text>
+      </View>
+      {slots && count <= MAX_DRAWN_SLOTS ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing['1'] }}>
+          {Array.from({ length: count }, (_, index) => (
+            <EksikSlot key={index} size={28} testID={`missing-slot-${index}`} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Row of the Eksik Var list, laid out as a scoreboard line: the missing count as an outlined
+ * figure on the left; the day and the kick-off time, the team, the place and the position, level
+ * and format chips in the middle. The whole row is one button that speaks all of its text.
+ */
+export function OpenCallRow({
+  call,
+  place,
+  onPress,
+}: {
+  readonly call: OpenCallPublic;
+  readonly place: string | null;
+  readonly onPress: () => void;
+}) {
+  const { t, i18n } = useTranslation('opencalls');
+  const theme = useTheme();
+  const kickoff = kickoffParts(call.startsAt, i18n.language);
+  const missing = t('list.missing', { number: call.missingCount });
+  const position = positionLabel(t, call.position);
+  const level = levelLabel(t, call.level);
+  const spoken = [
+    call.teamName,
+    formatDateTime(call.startsAt, i18n.language),
+    place,
+    position,
+    level,
+    call.format,
+    missing,
+  ]
+    .filter((part): part is string => part !== null && part !== '')
+    .join(', ');
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={spoken}
+      accessibilityHint={t('list.openHint')}
+      onPress={onPress}
+      testID={`open-call-${call.id}`}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: theme.spacing['3'],
+        minHeight: theme.layout.rowMinHeight,
+        paddingHorizontal: theme.spacing['4'],
+        paddingVertical: theme.spacing['3'],
+        backgroundColor: pressed ? theme.colors.pressed : theme.colors.surface,
+      })}
+    >
+      <MissingCount count={call.missingCount} accessibilityLabel={missing} />
+      <View style={{ flex: 1, gap: theme.spacing['1'] }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: theme.spacing['2'],
+          }}
+        >
+          <Text variant="caption" tone="muted" style={{ flexShrink: 1 }}>
+            {kickoff.day}
+          </Text>
+          <Numeral value={kickoff.time} />
+        </View>
+        <Text variant="bodyStrong" numberOfLines={2}>
+          {call.teamName}
+        </Text>
+        {place === null ? null : (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {place}
+          </Text>
+        )}
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: theme.spacing['2'],
+            marginTop: theme.spacing['1'],
+          }}
+        >
+          <Chip label={position} />
+          <Chip label={level} />
+          <Chip label={call.format} />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * The public facts of a call: the missing count as the outlined figure with its empty slots and
+ * the place, then a two-column grid (kick-off, format, position, level) and the deadline.
+ */
 export function CallFacts({
   call,
   place,
@@ -186,28 +379,58 @@ export function CallFacts({
 }) {
   const { t, i18n } = useTranslation('opencalls');
   const theme = useTheme();
+  const missing = `${t('facts.missing')}: ${call.missingCount}`;
   return (
     <Card>
-      <View style={{ gap: theme.spacing['2'] }}>
+      <View accessible accessibilityLabel={missing} testID="call-missing">
+        <MissingCount count={call.missingCount} accessibilityLabel={missing} slots />
+      </View>
+      {place === null ? null : (
+        <View
+          accessible
+          accessibilityLabel={`${t('facts.place')}: ${place}`}
+          testID="call-place"
+          style={{ marginTop: theme.spacing['3'] }}
+        >
+          <Text variant="caption" tone="muted">
+            {t('facts.place')}
+          </Text>
+          <Text variant="title3" accessibilityRole="text">
+            {place}
+          </Text>
+        </View>
+      )}
+      <Hairline />
+      <FactGrid>
         {call.startsAt === undefined ? null : (
-          <Fact label={t('facts.startsAt')} value={formatDateTime(call.startsAt, i18n.language)} />
+          <FactCell
+            label={t('facts.startsAt')}
+            value={formatDateTime(call.startsAt, i18n.language)}
+          />
         )}
-        {place === null ? null : (
-          <Fact label={t('facts.place')} value={place} testID="call-place" />
+        {call.format === undefined ? null : (
+          <FactCell label={t('facts.format')} value={call.format} />
         )}
-        {call.format === undefined ? null : <Fact label={t('facts.format')} value={call.format} />}
-        <Fact label={t('facts.missing')} value={String(call.missingCount)} testID="call-missing" />
-        <Fact label={t('facts.position')} value={positionLabel(t, call.position)} />
-        <Fact label={t('facts.level')} value={levelLabel(t, call.level)} />
-        <Fact
+        <FactCell label={t('facts.position')} value={positionLabel(t, call.position)} />
+        <FactCell label={t('facts.level')} value={levelLabel(t, call.level)} />
+        <FactCell
           label={t('facts.expiresAt')}
           value={formatDateTime(call.expiresAt, i18n.language)}
+          wide
           testID="call-expires"
         />
-      </View>
+      </FactGrid>
     </Card>
   );
 }
+
+/** Status word of an application: accepted in green text, closed ones muted. */
+const STATUS_TONE: Readonly<Record<ApplicationStatus, TextTone>> = {
+  pending: 'default',
+  accepted: 'primary',
+  rejected: 'muted',
+  withdrawn: 'muted',
+};
 
 function ApplicationRow({
   application,
@@ -231,29 +454,49 @@ function ApplicationRow({
     applicant.position === null ? null : positionLabel(t, applicant.position),
     applicant.level === null ? null : levelLabel(t, applicant.level),
   ].filter((part): part is string => part !== null);
+  const statusTone = STATUS_TONE[application.status];
   return (
     <Card testID={`application-${application.id}`} style={{ marginBottom: theme.spacing['3'] }}>
-      <Text variant="label">{applicant.displayName}</Text>
-      {details.length === 0 ? null : <Text tone="muted">{details.join(' · ')}</Text>}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: theme.spacing['3'],
+        }}
+      >
+        <Text variant="bodyStrong" style={{ flexShrink: 1 }}>
+          {applicant.displayName}
+        </Text>
+        <Text variant="label" tone={statusTone} testID={`application-${application.id}-status`}>
+          {t(`application.status.${application.status}`)}
+        </Text>
+      </View>
+      {details.length === 0 ? null : (
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: theme.spacing['2'],
+            marginTop: theme.spacing['2'],
+          }}
+        >
+          {details.map((detail) => (
+            <Chip key={detail} label={detail} />
+          ))}
+        </View>
+      )}
       {application.message === null ? null : (
         // Plain text: links in a message are never rendered as links (ADR-0037).
         <Text
-          style={{ marginTop: theme.spacing['2'] }}
+          style={{ marginTop: theme.spacing['3'] }}
           testID={`application-${application.id}-message`}
         >
           {application.message}
         </Text>
       )}
-      <Text
-        variant="footnote"
-        tone="muted"
-        style={{ marginTop: theme.spacing['2'] }}
-        testID={`application-${application.id}-status`}
-      >
-        {t(`application.status.${application.status}`)}
-      </Text>
       {decidable ? (
-        <View style={{ marginTop: theme.spacing['3'] }}>
+        <View style={{ marginTop: theme.spacing['4'] }}>
           <Button
             label={t('manage.accept')}
             accessibilityLabel={t('manage.acceptName', { name: applicant.displayName })}

@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { api } from '../../../src/api/instance';
 import { ListQueryView, QueryBoundary, teamsQuery } from '../../../src/query';
 import { useTheme } from '../../../src/theme';
+import { TeamCrest } from '../../../src/teams/components';
 import { Button, ListItem, Screen } from '../../../src/ui';
 
 /** Teams the user belongs to (`GET /api/v1/teams`), with the ways to create or join one. */
@@ -49,6 +50,8 @@ export default function TeamsTab() {
           keyExtractor={(team) => team.id}
           renderItem={(team) => (
             <ListItem
+              leading={<TeamCrest name={team.name} />}
+              chevron
               title={team.name}
               subtitle={t('teams.itemSubtitle', {
                 role: t(`teams.role.${team.myRole}`),

@@ -174,6 +174,15 @@ export function hrefPathname(href: string): string {
 
 const KNOWN_SEGMENTS: readonly string[] = Object.values(LINK_SEGMENTS);
 
+/**
+ * Home route of a session state. `/` is the signed-out entry screen: the root stack hides it from
+ * a signed-in user, so a navigation to `/` while signed in is dropped and the current screen
+ * stays. A signed-in user's home is the matches tab.
+ */
+export function homeHref(status: AuthStatus): string {
+  return status === 'signedIn' ? '/maclar' : '/';
+}
+
 export interface IncomingLinkResult {
   /** Path the router opens, or `null` to leave the link to the router unchanged. */
   readonly path: string | null;
@@ -188,8 +197,8 @@ export interface IncomingLinkResult {
  *   entry screen first);
  * - an email link, and a malformed link under one of the five paths, is left to its screen, which
  *   reads the token itself or shows the "link invalid" state;
- * - any other path on the app scheme or the web origin opens the home screen (ADR-0045:
- *   `kadro://match/<code>` is not a link);
+ * - any other path on the app scheme or the web origin opens the home screen of the session
+ *   state (`homeHref`; ADR-0045: `kadro://match/<code>` is not a link);
  * - links of other schemes (development client, sign-in redirects) are not touched.
  */
 export function routeIncomingLink(
@@ -214,7 +223,7 @@ export function routeIncomingLink(
   const first = parts.path.split('/')[1] ?? '';
   return KNOWN_SEGMENTS.includes(first)
     ? { path: null, pending: null }
-    : { path: '/', pending: null };
+    : { path: homeHref(status), pending: null };
 }
 
 export type PendingLinkStep =
