@@ -7,6 +7,7 @@ import { type PgBoss } from 'pg-boss';
 import { type Logger } from 'pino';
 
 import { createHardDeleteHandler } from './accounts/hard-delete.js';
+import { type BackupVerifyConfig, createBackupVerifyHandler } from './backup/verify.js';
 import { createRevenueCatProcessHandler } from './billing/process.js';
 import { createSubscriptionReconcileHandler } from './billing/reconcile.js';
 import {
@@ -14,6 +15,10 @@ import {
   type RevenueCatFetch,
   createRevenueCatRestClient,
 } from './billing/revenuecat-client.js';
+import {
+  type SubscriberDeleteRetry,
+  createSubscriberDeleteHandler,
+} from './billing/subscriber-delete.js';
 import { bootstrapQueues, createBoss, withSessionRole } from './boss.js';
 import { type Clock, systemClock } from './clock.js';
 import { createCostGuardHandler } from './cost/guard.js';
@@ -58,7 +63,19 @@ export type WorkerRuntimeEnv = Pick<
   | 'R2_INCOMING_BUCKET'
   | 'R2_MEDIA_BUCKET'
 > &
-  Partial<Pick<WorkerEnv, 'REVENUECAT_API_KEY' | 'REVENUECAT_API_BASE_URL'>>;
+  Partial<
+    Pick<
+      WorkerEnv,
+      | 'REVENUECAT_API_KEY'
+      | 'REVENUECAT_API_BASE_URL'
+      | 'BACKUP_BUCKET'
+      | 'BACKUP_PREFIX'
+      | 'BACKUP_ACCESS_KEY_ID'
+      | 'BACKUP_SECRET_ACCESS_KEY'
+      | 'BACKUP_MAX_AGE_HOURS'
+      | 'BACKUP_MIN_BYTES'
+    >
+  >;
 
 export interface WorkerRuntimeOptions {
   readonly env: WorkerRuntimeEnv;
@@ -86,6 +103,25 @@ export interface WorkerRuntimeOptions {
    * fake). `null` disables reconciliation as if no key were configured.
    */
   readonly revenueCatClient?: RevenueCatClient | null;
+  /** In-handler retry of the hard delete's RevenueCat call (tests shorten the delays). */
+  readonly revenueCatDeleteRetry?: SubscriberDeleteRetry;
+  /** Replaces the S3 client built from the `BACKUP_*` settings (tests); `null` disables the check. */
+  readonly backupStorage?: ObjectStorage | null;
+}
+
+/** Defaults of `packages/config` for callers that pass a partial environment (tests, smoke). */
+const BACKUP_DEFAULTS = { prefix: 'kadro-', maxAgeHours: 30, minBytes: 1_024 } as const;
+
+function backupConfigOf(env: WorkerRuntimeEnv): BackupVerifyConfig | null {
+  if (env.BACKUP_BUCKET === undefined) {
+    return null;
+  }
+  return {
+    bucket: env.BACKUP_BUCKET,
+    prefix: env.BACKUP_PREFIX ?? BACKUP_DEFAULTS.prefix,
+    maxAgeHours: env.BACKUP_MAX_AGE_HOURS ?? BACKUP_DEFAULTS.maxAgeHours,
+    minBytes: env.BACKUP_MIN_BYTES ?? BACKUP_DEFAULTS.minBytes,
+  };
 }
 
 export interface WorkerRuntime {
@@ -168,6 +204,20 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
             clock,
           });
 
+  const backupConfig = backupConfigOf(env);
+  const backupStorage =
+    options.backupStorage !== undefined
+      ? options.backupStorage
+      : backupConfig === null ||
+          env.BACKUP_ACCESS_KEY_ID === undefined ||
+          env.BACKUP_SECRET_ACCESS_KEY === undefined
+        ? null
+        : createS3Storage({
+            R2_ENDPOINT: env.R2_ENDPOINT,
+            R2_ACCESS_KEY_ID: env.BACKUP_ACCESS_KEY_ID,
+            R2_SECRET_ACCESS_KEY: env.BACKUP_SECRET_ACCESS_KEY,
+          });
+
   const handlers: { [TQueue in JobQueue]?: JobHandler<TQueue> } = {
     'email.send': createEmailHandler({
       db,
@@ -196,6 +246,22 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       buckets,
       emailTransport,
       webOrigin: env.WEB_ORIGIN,
+      clock,
+      metrics,
+      revenueCat: {
+        client: revenueCatClient,
+        ...(options.revenueCatDeleteRetry ? { retry: options.revenueCatDeleteRetry } : {}),
+      },
+    }),
+    'revenuecat.subscriber_delete': createSubscriberDeleteHandler({
+      db,
+      clock,
+      metrics,
+      client: revenueCatClient,
+    }),
+    'backup.verify': createBackupVerifyHandler({
+      storage: backupConfig === null ? null : backupStorage,
+      config: backupConfig,
       clock,
       metrics,
     }),
@@ -248,6 +314,7 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       emailTransport: emailTransport.name,
       pushTransport: pushTransport.name,
       revenueCatReconciliation: revenueCatClient === null ? 'disabled' : 'enabled',
+      backupVerify: backupConfig === null || backupStorage === null ? 'disabled' : 'enabled',
     },
     'worker ready',
   );

@@ -1,4 +1,5 @@
 import {
+  BACKUP_VERIFY_CRON,
   BILLING_JOB_QUEUES,
   COST_GUARD_CRON,
   JOB_PAYLOAD_SCHEMAS,
@@ -56,7 +57,7 @@ describe('queue bootstrap (ADR-0028)', () => {
     const queues = await worker.runtime.boss.getQueues();
     const names = queues.map((queue) => queue.name).sort();
     expect(names).toEqual(allQueueNames().sort());
-    expect(JOB_QUEUES).toHaveLength(12);
+    expect(JOB_QUEUES).toHaveLength(14);
   });
 
   it('applies the retry, backoff, expiry and dead-letter table of ADR-0028', async () => {
@@ -119,7 +120,14 @@ describe('queue bootstrap (ADR-0028)', () => {
       data: { idempotencyKey: 'schedule:cost.guard' },
     });
     expect(COST_GUARD_CRON).toBe('*/15 * * * *');
+    expect(byName['backup.verify']).toMatchObject({
+      cron: BACKUP_VERIFY_CRON,
+      timezone: 'UTC',
+      data: { idempotencyKey: 'schedule:backup.verify' },
+    });
+    expect(BACKUP_VERIFY_CRON).toBe('20 6 * * 1');
     expect(Object.keys(byName).sort()).toEqual([
+      'backup.verify',
       'cost.guard',
       'maintenance.sweep',
       'opencall.expire',
@@ -152,7 +160,7 @@ describe('queue bootstrap (ADR-0028)', () => {
     try {
       const queues = await second.runtime.boss.getQueues();
       expect(queues).toHaveLength(allQueueNames().length);
-      expect(await second.runtime.boss.getSchedules()).toHaveLength(4);
+      expect(await second.runtime.boss.getSchedules()).toHaveLength(5);
     } finally {
       await second.runtime.stop();
     }

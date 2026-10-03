@@ -216,6 +216,11 @@ const storageSecretAccessKey = z
   .string()
   .regex(/^[A-Za-z0-9/+=_-]{8,128}$/, 'must be a secret access key (8-128 characters)');
 
+/** Key prefix of backup objects: letters, digits and `._/-`, at most 200 characters. */
+const backupPrefix = z
+  .string()
+  .regex(/^[A-Za-z0-9._/-]{1,200}$/, 'must be 1-200 of [A-Za-z0-9._/-]');
+
 /**
  * Public base URL of the media bucket (ADR-0030): `avatarUrl` / `badgeUrl` are this value joined
  * with the stored key. Scheme, host, optional port and optional path; no credentials, query or
@@ -654,9 +659,42 @@ export const workerEnvSchema = z
     REVENUECAT_API_KEY: revenueCatSecretKey.optional(),
     /** Base origin of the REST API; overridden only to point tests at a local fake server. */
     REVENUECAT_API_BASE_URL: origin.default('https://api.revenuecat.com'),
+
+    /**
+     * Weekly `backup.verify` (ADR-0082): lists the backup bucket on `R2_ENDPOINT` with its own
+     * read-only key and checks the newest `<prefix>YYYYMMDD.dump.age` object. Optional: without
+     * BACKUP_BUCKET the check is skipped and logged. The key pair is required with the bucket.
+     */
+    BACKUP_BUCKET: bucketName.optional(),
+    BACKUP_PREFIX: backupPrefix.default('kadro-'),
+    BACKUP_ACCESS_KEY_ID: storageAccessKeyId.optional(),
+    BACKUP_SECRET_ACCESS_KEY: storageSecretAccessKey.optional(),
+    /** Newest backup older than this is reported `stale` (daily dump plus slack). */
+    BACKUP_MAX_AGE_HOURS: intSetting(1, 720, 30),
+    /** Newest backup smaller than this is reported `failed` (`too_small`). */
+    BACKUP_MIN_BYTES: intSetting(1, 1_000_000_000, 1_024),
   })
   .superRefine((env, ctx) => {
     requireProductionNodeEnv(env, ctx);
+
+    if (env.BACKUP_BUCKET !== undefined) {
+      for (const key of ['BACKUP_ACCESS_KEY_ID', 'BACKUP_SECRET_ACCESS_KEY'] as const) {
+        // eslint-disable-next-line security/detect-object-injection -- key iterates a literal tuple
+        if (env[key] === undefined) {
+          ctx.addIssue({ code: 'custom', path: [key], message: 'is required with BACKUP_BUCKET' });
+        }
+      }
+      if (
+        env.BACKUP_BUCKET === env.R2_INCOMING_BUCKET ||
+        env.BACKUP_BUCKET === env.R2_MEDIA_BUCKET
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['BACKUP_BUCKET'],
+          message: 'must differ from R2_INCOMING_BUCKET and R2_MEDIA_BUCKET',
+        });
+      }
+    }
 
     const local = env.APP_ENV === 'local';
     if (!local) {

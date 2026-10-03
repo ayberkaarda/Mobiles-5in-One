@@ -65,6 +65,7 @@ function sampleJob(queue: (typeof JOB_QUEUES)[number]): Record<string, unknown> 
     case 'opencall.expire':
     case 'maintenance.sweep':
     case 'cost.guard':
+    case 'backup.verify':
       return { idempotencyKey };
     case 'venue.import':
       return { importId: uuidv7(), idempotencyKey };
@@ -72,6 +73,8 @@ function sampleJob(queue: (typeof JOB_QUEUES)[number]): Record<string, unknown> 
       return { webhookEventId: uuidv7(), idempotencyKey };
     case 'subscription.reconcile':
       return { userId: null, idempotencyKey };
+    case 'revenuecat.subscriber_delete':
+      return { deletionRequestId: uuidv7(), appUserId: uuidv7(), idempotencyKey };
   }
 }
 

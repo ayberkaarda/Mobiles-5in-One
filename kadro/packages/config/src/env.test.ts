@@ -66,7 +66,45 @@ describe('parseWorkerEnv', () => {
       EMAIL_MONTHLY_CAP: 45_000,
       PUSH_DAILY_CAP: 50_000,
       REVENUECAT_API_BASE_URL: 'https://api.revenuecat.com',
+      BACKUP_PREFIX: 'kadro-',
+      BACKUP_MAX_AGE_HOURS: 30,
+      BACKUP_MIN_BYTES: 1_024,
     });
+  });
+
+  it('keeps backup.verify optional and requires its key pair with the bucket', () => {
+    expect(parseWorkerEnv(deployedWorker()).BACKUP_BUCKET).toBeUndefined();
+    const keys = {
+      BACKUP_ACCESS_KEY_ID: randomBytes(16).toString('hex'),
+      BACKUP_SECRET_ACCESS_KEY: randomBytes(32).toString('hex'),
+    };
+    const parsed = parseWorkerEnv({
+      ...deployedWorker(),
+      BACKUP_BUCKET: 'kadro-backups',
+      BACKUP_MAX_AGE_HOURS: '48',
+      ...keys,
+    });
+    expect(parsed).toMatchObject({ BACKUP_BUCKET: 'kadro-backups', BACKUP_MAX_AGE_HOURS: 48 });
+    const missing = captureError(() =>
+      parseWorkerEnv({ ...validWorker, BACKUP_BUCKET: 'kadro-backups' }),
+    );
+    expect(missing.issues.map((issue) => issue.key).sort()).toEqual([
+      'BACKUP_ACCESS_KEY_ID',
+      'BACKUP_SECRET_ACCESS_KEY',
+    ]);
+    const shared = captureError(() =>
+      parseWorkerEnv({ ...validWorker, BACKUP_BUCKET: 'kadro-media', ...keys }),
+    );
+    expect(shared.issues.map((issue) => issue.key)).toEqual(['BACKUP_BUCKET']);
+    for (const [key, value] of [
+      ['BACKUP_MAX_AGE_HOURS', '0'],
+      ['BACKUP_MAX_AGE_HOURS', '721'],
+      ['BACKUP_MIN_BYTES', '0'],
+      ['BACKUP_PREFIX', 'kadro dumps'],
+    ] as const) {
+      const error = captureError(() => parseWorkerEnv({ ...validWorker, [key]: value }));
+      expect(error.issues.map((issue) => issue.key)).toEqual([key]);
+    }
   });
 
   it('keeps the RevenueCat REST key optional and validates it without echoing it', () => {
