@@ -113,6 +113,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    # Real environment variables win over .env and over phpunit.xml <env> entries, so every
+    # value the tests depend on is set here. The tests use real Redis as the queue connection
+    # (tests/Feature/InfrastructureTest.php); cache and session stay on array like phpunit.xml.
     env:
       APP_ENV: testing
       DB_CONNECTION: pgsql
@@ -121,8 +133,12 @@ jobs:
       DB_DATABASE: askida_test
       DB_USERNAME: askida
       DB_PASSWORD: askida_ci_only
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_DB: "1"
       CACHE_STORE: array
-      QUEUE_CONNECTION: sync
+      QUEUE_CONNECTION: redis
       SESSION_DRIVER: array
       MAIL_MAILER: array
       PAYMENT_PROVIDER: fake
@@ -158,6 +174,40 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --no-interaction
+
+      # Fails early with a clear message when a service container is not reachable (max 30 s),
+      # instead of surfacing later as a test error. Plain bash TCP probes, no extra client needed.
+      - name: Wait for PostgreSQL and Redis
+        run: |
+          wait_for() {
+            name="$1"; host="$2"; port="$3"; probe="$4"
+            for _ in $(seq 1 30); do
+              if exec 3<>"/dev/tcp/${host}/${port}" 2>/dev/null; then
+                if [ -z "$probe" ]; then
+                  exec 3>&- 3<&-
+                  echo "$name reachable at ${host}:${port}"
+                  return 0
+                fi
+                printf '%s\r\n' "$probe" >&3
+                reply=""
+                read -r -t 2 reply <&3 || true
+                exec 3>&- 3<&-
+                case "$reply" in
+                  +PONG*)
+                    echo "$name reachable at ${host}:${port}"
+                    return 0
+                    ;;
+                esac
+              fi
+              sleep 1
+            done
+            echo "$name NOT reachable at ${host}:${port} after 30 s"
+            return 1
+          }
+          status=0
+          wait_for PostgreSQL "$DB_HOST" "$DB_PORT" "" || status=1
+          wait_for Redis "$REDIS_HOST" "$REDIS_PORT" "PING" || status=1
+          exit "$status"
 
       - name: Code style (Pint)
         run: vendor/bin/pint --test
@@ -233,8 +283,29 @@ jobs:
       - name: Build debug APK (dev flavor)
         run: flutter build apk --debug --flavor dev --dart-define-from-file=env/example.json
 
+  # Brand token validation: pure node script, no dependencies to install.
+  brand:
+    name: Askida brand
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Validate brand tokens
+        run: node askida/brand/scripts/validate-tokens.mjs
+
   # Leftover-marker grep over the tracked Askida sources, and a secret scan of the full history.
-  # Exclusions are explicit: third-party and generated trees (vendor, build, .dart_tool,
+  # Exclusions are explicit: third-party and build-output trees (vendor, build, .dart_tool,
   # node_modules) and dependency lockfiles. git grep only reads tracked files, so untracked
   # build output is never scanned anyway; the pathspecs keep that true if something is committed.
   # Case-sensitive TODO, FIXME, XXX and YOUR_; lorem is matched case-insensitively.
@@ -272,6 +343,22 @@ jobs:
           fi
           echo "No placeholder markers found."
 
+      # Turkish text must not be case-transformed (dotted and dotless i break under naive
+      # uppercasing), so the UI code never uppercases. Scanned: askida/app/lib,
+      # askida/server/app, askida/server/resources. Excluded: vendor, build and test trees.
+      - name: Uppercase transforms
+        run: |
+          set -- askida/app/lib askida/server/app askida/server/resources \
+            ':(exclude,glob)**/vendor/**' \
+            ':(exclude,glob)**/build/**' \
+            ':(exclude,glob)**/test/**' \
+            ':(exclude,glob)**/tests/**'
+          if git grep -n -I -E 'text-transform:[[:space:]]*uppercase|toUpperCase\(' -- "$@"; then
+            echo "Uppercase transforms are not allowed in Askida UI code."
+            exit 1
+          fi
+          echo "No uppercase transforms found."
+
       - name: Install gitleaks
         run: |
           archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
@@ -287,12 +374,12 @@ jobs:
         run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
 
   # The only check to mark as required on main. "changes" must succeed and report askida=true
-  # or askida=false. true: server, app and placeholder-grep must all succeed. false: all three
+  # or askida=false. true: server, app, brand and placeholder-grep must all succeed. false: all four
   # must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
   # When a job is added to this workflow, add it to "needs" and to the checks below.
   gate:
     name: Askida CI gate
-    needs: [changes, server, app, placeholder-grep]
+    needs: [changes, server, app, brand, placeholder-grep]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -303,11 +390,13 @@ jobs:
           ASKIDA_CHANGED: ${{ needs.changes.outputs.askida }}
           SERVER_RESULT: ${{ needs.server.result }}
           APP_RESULT: ${{ needs.app.result }}
+          BRAND_RESULT: ${{ needs.brand.result }}
           GREP_RESULT: ${{ needs.placeholder-grep.result }}
         run: |
           echo "changes: ${CHANGES_RESULT:-<none>} (askida=${ASKIDA_CHANGED:-<none>})"
           echo "server: ${SERVER_RESULT:-<none>}"
           echo "app: ${APP_RESULT:-<none>}"
+          echo "brand: ${BRAND_RESULT:-<none>}"
           echo "placeholder-grep: ${GREP_RESULT:-<none>}"
           if [ "$CHANGES_RESULT" != "success" ]; then
             echo "Askida CI failed: change detection did not succeed."
@@ -321,7 +410,7 @@ jobs:
               exit 1
               ;;
           esac
-          for result in "$SERVER_RESULT" "$APP_RESULT" "$GREP_RESULT"; do
+          for result in "$SERVER_RESULT" "$APP_RESULT" "$BRAND_RESULT" "$GREP_RESULT"; do
             if [ "$result" != "$expected" ]; then
               echo "Askida CI failed: askida=$ASKIDA_CHANGED requires every job to be $expected."
               exit 1
