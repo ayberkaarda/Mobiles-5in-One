@@ -106,6 +106,12 @@
   "settings": {
     "title": "Ayarlar",
     "language": "Dil",
+    "appearance": "Görünüm",
+    "colorScheme": {
+      "system": "Sistem",
+      "light": "Açık",
+      "dark": "Koyu"
+    },
     "push": "Bildirimler",
     "pushState": {
       "loading": "Bildirim durumu okunuyor",

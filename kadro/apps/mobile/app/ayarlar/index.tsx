@@ -28,7 +28,7 @@ import {
 } from '../../src/settings/push';
 import { Notice, Section } from '../../src/teams/components';
 import { useTheme } from '../../src/theme';
-import { Button, Card, Text } from '../../src/ui';
+import { Button, Card, ColorSchemeSetting, Text } from '../../src/ui';
 
 /** Each language is named in itself, so it can be found whatever the current language is. */
 function languageName(language: Language): string {
@@ -36,7 +36,7 @@ function languageName(language: Language): string {
 }
 
 /**
- * Settings: language, notifications of this device, legal pages, sign-out and the way to delete
+ * Settings: language, colour scheme, notifications of this device, legal pages, sign-out and the way to delete
  * the account (Apple guideline 5.1.1(v), security checklist item 21).
  */
 export default function SettingsScreen() {
@@ -60,6 +60,20 @@ export default function SettingsScreen() {
           selected={language}
           onSelect={(value) => void chooseLanguage(i18n, value, AsyncStorage)}
           testID="settings-language"
+        />
+      </Section>
+      <Section>
+        <Text variant="title3" style={{ marginBottom: theme.spacing['3'] }}>
+          {t('settings.appearance')}
+        </Text>
+        <ColorSchemeSetting
+          label={t('settings.appearance')}
+          labels={{
+            system: t('settings.colorScheme.system'),
+            light: t('settings.colorScheme.light'),
+            dark: t('settings.colorScheme.dark'),
+          }}
+          testID="settings-color-scheme"
         />
       </Section>
       <Section>
