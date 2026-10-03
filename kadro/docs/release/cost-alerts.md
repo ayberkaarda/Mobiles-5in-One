@@ -32,7 +32,7 @@ is responsible for reading them.
 
 Spec item 22 defines these. Status in code: the push hourly cap exists (ADR-0031, counted as
 `push_capped{type}`); `cost.guard` exists with the scope of ADR-0081 (daily push threshold, daily
-and rolling 30-day e-mail thresholds, deferrable pushes paused); the presign cap is not built.
+and rolling 30-day e-mail thresholds, deferrable pushes paused); the presign cap exists as rate-limit group U (rolling 24 h) plus a daily quota layer in `apps/web/lib/server/uploads/uploads.ts`.
 
 | Switch                | Limit                              | Behaviour above the limit                              |
 | --------------------- | ---------------------------------- | ------------------------------------------------------ |
@@ -82,11 +82,11 @@ pause on read errors; the 80 % alert fires once per day.
 
 ## 4. Owner checklist
 
-| #   | Task                                                                 | Status                                                 |
-| --- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| 1   | Confirm monthly ceiling `B` and fill concrete numbers into section 1 | owner task                                             |
-| 2   | Create billing alerts at the VPS provider and Cloudflare             | owner task                                             |
-| 3   | Enable usage alerts in Resend, RevenueCat and Sentry                 | owner task                                             |
-| 4   | Set up host disk and connection monitoring                           | owner task                                             |
-| 5   | Name the person who receives and acts on alerts                      | owner task                                             |
-| 6   | Implement `cost.guard` and the e-mail and presign caps per section 3 | partly done: `cost.guard` (ADR-0081); presign cap open |
+| #   | Task                                                                 | Status                                                                      |
+| --- | -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1   | Confirm monthly ceiling `B` and fill concrete numbers into section 1 | owner task                                                                  |
+| 2   | Create billing alerts at the VPS provider and Cloudflare             | owner task                                                                  |
+| 3   | Enable usage alerts in Resend, RevenueCat and Sentry                 | owner task                                                                  |
+| 4   | Set up host disk and connection monitoring                           | owner task                                                                  |
+| 5   | Name the person who receives and acts on alerts                      | owner task                                                                  |
+| 6   | Implement `cost.guard` and the e-mail and presign caps per section 3 | done: `cost.guard` (ADR-0081); presign cap in place (group U + daily quota) |
