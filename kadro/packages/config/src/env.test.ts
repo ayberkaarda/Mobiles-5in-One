@@ -62,6 +62,9 @@ describe('parseWorkerEnv', () => {
     expect(parseWorkerEnv(validWorker)).toEqual({
       ...validWorker,
       PUSH_HOURLY_CAP: 5_000,
+      EMAIL_DAILY_CAP: 2_000,
+      EMAIL_MONTHLY_CAP: 45_000,
+      PUSH_DAILY_CAP: 50_000,
       REVENUECAT_API_BASE_URL: 'https://api.revenuecat.com',
     });
   });
@@ -198,6 +201,17 @@ describe('parseWorkerEnv', () => {
       expect(error.issues.map((issue) => issue.key)).toEqual(['PUSH_HOURLY_CAP']);
     }
     expect(parseWorkerEnv({ ...validWorker, PUSH_HOURLY_CAP: '250' }).PUSH_HOURLY_CAP).toBe(250);
+  });
+
+  it('bounds the usage thresholds of cost.guard and accepts 0 as disabled', () => {
+    for (const key of ['EMAIL_DAILY_CAP', 'EMAIL_MONTHLY_CAP', 'PUSH_DAILY_CAP'] as const) {
+      for (const value of ['-1', '1.5', 'many', '1000000000']) {
+        const error = captureError(() => parseWorkerEnv({ ...validWorker, [key]: value }));
+        expect(error.issues.map((issue) => issue.key)).toEqual([key]);
+      }
+      expect(parseWorkerEnv({ ...validWorker, [key]: '0' })[key]).toBe(0);
+      expect(parseWorkerEnv({ ...validWorker, [key]: '120' })[key]).toBe(120);
+    }
   });
 
   it('drops keys that are not part of the schema', () => {
