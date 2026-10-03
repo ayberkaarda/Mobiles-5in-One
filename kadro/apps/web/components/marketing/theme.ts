@@ -75,6 +75,8 @@ export const MARKETING_TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ['onInverse', 'inverse'],
   ['onPrimary', 'primary'],
   ['onAccent', 'accent'],
+  ['onWarning', 'warning'],
+  ['onDanger', 'danger'],
   ['onPitch', 'pitch'],
   ['onPitchMarker', 'pitchMarker'],
 ];

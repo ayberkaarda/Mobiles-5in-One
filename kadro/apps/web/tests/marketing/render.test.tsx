@@ -224,7 +224,10 @@ describe('marketing pages', () => {
   it('home page: one h1, ordered headings, download section and no inline script', () => {
     const html = render(<HomePage />);
     expect(count(html, /<h1\b/g)).toBe(1);
-    expect(html).toContain('Kadron eksik kalmasın.');
+    const h1 = /<h1\b[^>]*>([\s\S]*?)<\/h1>/.exec(html)?.[1] ?? '';
+    const lines = [...h1.matchAll(/<span\b[^>]*>([^<]*)<\/span>/g)].map((match) => match[1]);
+    expect(lines).toEqual(['Kadroyu kur,', 'eksiği kapat,', 'ücreti böl.']);
+    expect(h1.replace(/<[^>]+>/g, '')).toBe('Kadroyu kur, eksiği kapat, ücreti böl.');
     expect(html).toContain('id="indir"');
     expect(html).toContain('href="#indir"');
     expect(html).toContain('href="/ozellikler"');

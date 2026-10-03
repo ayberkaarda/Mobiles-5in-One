@@ -53,7 +53,7 @@ const TOKENS_FILE = join(BRAND_DIR, 'theme', 'tokens.json');
 const THEME_CSS_FILE = join(BRAND_DIR, 'theme', 'theme.css');
 const PUBLIC_DIR = fileURLToPath(new URL('../../public/', import.meta.url));
 const MARKETING_DIR = fileURLToPath(new URL('../../components/marketing/', import.meta.url));
-const STYLESHEETS = ['marketing.module.css', 'primitives.module.css'] as const;
+const STYLESHEETS = ['marketing.module.css', 'primitives.module.css', 'pages.module.css'] as const;
 
 type Scheme = 'light' | 'dark';
 
@@ -253,6 +253,7 @@ describe('marketing theme (brand tokens v3, both schemes, WCAG 1.4.3 and 1.4.11)
         ['.navLink', '.headerCta', '.footerLink', '.skipLink', '.inlineLink', '.brand'],
       ],
       ['primitives.module.css', ['.button', '.textButton', '.themeOption']],
+      ['pages.module.css', ['.link']],
     ] as const;
     for (const [sheet, selectors] of rules) {
       const css = readCss(join(MARKETING_DIR, sheet));
