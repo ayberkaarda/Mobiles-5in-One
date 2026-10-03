@@ -45,11 +45,7 @@ export const API_CACHE_HEADERS: readonly HeaderEntry[] = [
 export type CspVariant = 'nonce' | 'deny-all';
 
 export type SurfaceName =
- feat/admin-web
-  'api' | 'token-page' | 'email-link-page' | 'marketing' | 'seo' | 'admin' | 'app';
-
-  'api' | 'token-page' | 'email-link-page' | 'invite-page' | 'marketing' | 'seo' | 'app';
- main
+  'api' | 'token-page' | 'email-link-page' | 'invite-page' | 'marketing' | 'seo' | 'admin' | 'app';
 
 /** One row of the surface table: which paths it covers and which headers they get. */
 export interface Surface {
@@ -147,7 +143,6 @@ export const SURFACES: readonly Surface[] = [
     cacheControl: null,
   },
   {
- feat/admin-web
     // `(admin)` staff panel (ADR-0068): never indexed, never cached, no `Referer` with ids.
     name: 'admin',
     paths: ['/admin/**'],
@@ -158,11 +153,7 @@ export const SURFACES: readonly Surface[] = [
     cacheControl: NO_STORE_VALUE,
   },
   {
-    // ADR-0021 group 1: `(app)` pages, `/mac/[inviteCode]`, the 404 page and every
-    // path not listed above.
-
-    // ADR-0021 group 1: `(app)` pages, `/admin/**`, the 404 page and every path not listed above.
- main
+    // ADR-0021 group 1: `(app)` pages, the 404 page and every path not listed above.
     name: 'app',
     paths: [],
     probe: '/headers-check-missing-page',
