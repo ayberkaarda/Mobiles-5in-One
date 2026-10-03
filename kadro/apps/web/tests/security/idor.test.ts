@@ -1345,6 +1345,84 @@ const IDOR_ROWS: readonly IdorRow[] = [
     expected: { status: 403, code: 'csrf_failed' },
     victimIntact: expectAccountIntact,
   },
+  {
+    resource: 'staff TOTP',
+    route: 'POST /api/v1/admin/totp/enroll',
+    attempt: "A starts TOTP enrollment for B's account by id",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('POST /api/v1/admin/totp/enroll', {
+        headers: bearer(a.mobile.accessToken),
+        json: { password: a.password, userId: b.id },
+      }),
+    expected: { status: 400, code: 'validation_failed' },
+    victimIntact: expectTotpUntouched,
+  },
+  {
+    resource: 'staff TOTP',
+    route: 'POST /api/v1/admin/totp/enroll',
+    attempt: "A (no staff role) presents B's password",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('POST /api/v1/admin/totp/enroll', {
+        headers: bearer(a.mobile.accessToken),
+        json: { password: b.password },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectTotpUntouched,
+  },
+  {
+    resource: 'staff TOTP',
+    route: 'POST /api/v1/admin/totp/confirm',
+    attempt: "A confirms a code against B's account by id",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('POST /api/v1/admin/totp/confirm', {
+        headers: bearer(a.mobile.accessToken),
+        json: { totpCode: '123456', userId: b.id },
+      }),
+    expected: { status: 400, code: 'validation_failed' },
+    victimIntact: expectTotpUntouched,
+  },
+  {
+    resource: 'staff TOTP',
+    route: 'POST /api/v1/admin/totp/confirm',
+    attempt: 'A (no staff role) confirms a code',
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a }, request) =>
+      request('POST /api/v1/admin/totp/confirm', {
+        headers: bearer(a.mobile.accessToken),
+        json: { totpCode: '123456' },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectTotpUntouched,
+  },
+  {
+    resource: 'step-up window',
+    route: 'POST /api/v1/admin/step-up',
+    attempt: "A opens a step-up on B's session by id",
+    owner: ({ b }) => sessionOwner(b.web.session),
+    send: ({ a, b }, request) =>
+      request('POST /api/v1/admin/step-up', {
+        headers: bearer(a.mobile.accessToken),
+        json: { totpCode: '123456', sessionId: b.id },
+      }),
+    expected: { status: 400, code: 'validation_failed' },
+    victimIntact: expectTotpUntouched,
+  },
+  {
+    resource: 'step-up window',
+    route: 'POST /api/v1/admin/step-up',
+    attempt: "cross-site step-up with B's cookies and A's CSRF token",
+    owner: ({ b }) => sessionOwner(b.web.session),
+    send: ({ a, b }, request) =>
+      request('POST /api/v1/admin/step-up', {
+        headers: crossSite(b.web, a.web.csrf),
+        json: { totpCode: '123456' },
+      }),
+    expected: { status: 403, code: 'csrf_failed' },
+    victimIntact: expectTotpUntouched,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1437,6 +1515,24 @@ async function expectVictimPushTokenIntact(current: World): Promise<void> {
 }
 
 /** Neither account is deactivated or has a pending deletion; B's sessions all work. */
+/** No TOTP secret, pending enrollment or step-up window appeared on either account. */
+async function expectTotpUntouched(current: World): Promise<void> {
+  const db = auth.database.client.db;
+  for (const user of [current.a, current.b]) {
+    const [row] = await db.select().from(users).where(eq(users.id, user.id));
+    expect(row?.totpSecretEnc).toBeNull();
+    expect(row?.totpPendingSecretEnc).toBeNull();
+    expect(row?.totpLastUsedStep).toBeNull();
+    const sessions = await db
+      .select({ stepUpUntil: refreshTokens.stepUpUntil })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, user.id));
+    expect(sessions.every((session) => session.stepUpUntil === null)).toBe(true);
+  }
+  await expectProfileUnchanged(current.b);
+  await expectAllSessionsLive(current.b);
+}
+
 async function expectAccountIntact(current: World): Promise<void> {
   const db = auth.database.client.db;
   for (const user of [current.a, current.b]) {
