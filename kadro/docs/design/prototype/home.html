@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kadro: halı saha maçını kur, eksiği kapat</title>
+    <link
+      rel="preload"
+      href="fonts/archivo-latin-wdth-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+  <body>
+    <!--
+      Design prototype of the home page (docs/design/direction.md §4.4). Static HTML, no network
+      requests. Icons: Phosphor Icons regular, MIT License, Copyright (c) 2023 Phosphor Icons.
+      All teams, venues and calls are sample data.
+    -->
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="wordmark" href="#" aria-label="Kadro ana sayfa">
+          <span>KADR</span
+          ><svg class="wordmark-o" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="3.4" />
+            <circle cx="12" cy="12" r="3.2" fill="#FF6B1A" />
+          </svg>
+        </a>
+        <nav class="site-nav" aria-label="Ana menü">
+          <a href="#" aria-current="page">Ana sayfa</a>
+          <a href="#">Özellikler</a>
+          <a href="#">Blog</a>
+        </nav>
+        <a class="btn btn-secondary header-cta" href="#indir">Uygulamayı indir</a>
+      </div>
+    </header>
+
+    <main>
+      <!-- 1. Hero: copy left, squad sheet right -->
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <h1 class="t-hero hero-title">Kadroyu kur, eksiği kapat, ücreti böl.</h1>
+            <p class="t-lead hero-lead">
+              Halı saha maçının takımı, katılımı ve saha ücreti tek ekranda. Eksik kalırsa
+              mahalleden oyuncu çağır.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-accent" href="#indir">Uygulamayı indir</a>
+              <a class="btn-text" href="#ozellikler">Özellikleri gör</a>
+            </div>
+          </div>
+
+          <figure class="sheet" aria-labelledby="sheet-caption">
+            <figcaption id="sheet-caption" class="visually-hidden">
+              Örnek kadro: Moda Akşam FK, Perşembe 21:00, 14 kişilik kadroda 13 oyuncu geliyor,
+              kaleci eksik.
+            </figcaption>
+            <div class="sheet-head">
+              <p class="sheet-count">
+                <span class="num-xl">13<span class="sheet-count-of">/14</span></span>
+                <span class="t-caption t-muted">gelen oyuncu</span>
+              </p>
+              <div class="sheet-match">
+                <p class="sheet-team">
+                  <span class="chip chip-sample">ÖRNEK</span>
+                  <span class="t-title3">Moda Akşam FK</span>
+                </p>
+                <p class="sheet-when">
+                  <span class="num sheet-day">Perşembe</span>
+                  <span class="num sheet-time">21:00</span>
+                </p>
+                <p class="t-caption t-muted">Kadıköy Örnek Halı Saha A, 7v7</p>
+              </div>
+            </div>
+
+            <svg
+              class="pitch"
+              viewBox="0 0 520 336"
+              role="img"
+              aria-label="7v7 diziliş: A takımı 1 ile 7, B takımı 8 ile 13 numara, 14 numaralı kaleci yeri boş"
+            >
+              <rect x="0" y="0" width="520" height="336" rx="4" fill="#0E5B36" />
+              <g class="chalk" fill="none" stroke="#F5F6F1" stroke-width="2">
+                <rect x="20" y="20" width="480" height="296" pathLength="1" />
+                <line x1="260" y1="20" x2="260" y2="316" pathLength="1" />
+                <circle cx="260" cy="168" r="40" pathLength="1" />
+                <rect x="20" y="78" width="60" height="180" pathLength="1" />
+                <rect x="20" y="123" width="22" height="90" pathLength="1" />
+                <rect x="440" y="78" width="60" height="180" pathLength="1" />
+                <rect x="478" y="123" width="22" height="90" pathLength="1" />
+              </g>
+              <circle cx="260" cy="168" r="3" fill="#F5F6F1" />
+              <g class="markers">
+                <g class="marker">
+                  <circle cx="44" cy="168" r="18" />
+                  <text x="44" y="174">1</text>
+                </g>
+                <g class="marker">
+                  <circle cx="110" cy="88" r="18" />
+                  <text x="110" y="94">2</text>
+                </g>
+                <g class="marker">
+                  <circle cx="110" cy="168" r="18" />
+                  <text x="110" y="174">3</text>
+                </g>
+                <g class="marker">
+                  <circle cx="110" cy="248" r="18" />
+                  <text x="110" y="254">4</text>
+                </g>
+                <g class="marker">
+                  <circle cx="180" cy="118" r="18" />
+                  <text x="180" y="124">5</text>
+                </g>
+                <g class="marker">
+                  <circle cx="180" cy="218" r="18" />
+                  <text x="180" y="224">6</text>
+                </g>
+                <g class="marker">
+                  <circle cx="228" cy="168" r="18" />
+                  <text x="228" y="174">7</text>
+                </g>
+                <g class="marker">
+                  <circle cx="292" cy="168" r="18" />
+                  <text x="292" y="174">8</text>
+                </g>
+                <g class="marker">
+                  <circle cx="340" cy="118" r="18" />
+                  <text x="340" y="124">9</text>
+                </g>
+                <g class="marker">
+                  <circle cx="340" cy="218" r="18" />
+                  <text x="340" y="224">10</text>
+                </g>
+                <g class="marker">
+                  <circle cx="410" cy="88" r="18" />
+                  <text x="410" y="94">11</text>
+                </g>
+                <g class="marker">
+                  <circle cx="410" cy="168" r="18" />
+                  <text x="410" y="174">12</text>
+                </g>
+                <g class="marker">
+                  <circle cx="410" cy="248" r="18" />
+                  <text x="410" y="254">13</text>
+                </g>
+                <g class="marker marker-empty">
+                  <circle cx="476" cy="168" r="18" />
+                  <text x="476" y="174">14</text>
+                  <rect x="446" y="194" width="60" height="32" fill="#0E5B36" stroke="none" />
+                  <text class="marker-label" x="476" y="207">EKSİK</text>
+                  <text class="marker-label" x="476" y="221">KALECİ</text>
+                </g>
+              </g>
+            </svg>
+
+            <div class="roster">
+              <ol class="roster-side" aria-label="A takımı">
+                <li><b>1</b>Emre Kaya<i>KL</i></li>
+                <li><b>2</b>Burak Şahin<i>DF</i></li>
+                <li><b>3</b>Can Yıldız<i>DF</i></li>
+                <li><b>4</b>Mert Aydın<i>DF</i></li>
+                <li><b>5</b>Onur Demir<i>OS</i></li>
+                <li><b>6</b>Kerem Çelik<i>OS</i></li>
+                <li><b>7</b>Barış Öztürk<i>FV</i></li>
+              </ol>
+              <ol class="roster-side" aria-label="B takımı">
+                <li><b>8</b>Selim Arslan<i>FV</i></li>
+                <li><b>9</b>Tolga Koç<i>OS</i></li>
+                <li><b>10</b>Deniz Güneş<i>OS</i></li>
+                <li><b>11</b>Umut Polat<i>DF</i></li>
+                <li><b>12</b>Arda Kurt<i>DF</i></li>
+                <li><b>13</b>Efe Doğan<i>DF</i></li>
+                <li class="roster-empty"><b>14</b><span>Kaleci aranıyor</span><i>KL</i></li>
+              </ol>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 2. Match week: a timeline keyed to clock times -->
+      <section class="week" aria-labelledby="week-title">
+        <div class="wrap week-grid">
+          <div class="week-intro">
+            <h2 id="week-title" class="t-title1">Maç haftası Kadro'da böyle geçer</h2>
+            <p class="t-muted">Örnek takımın Perşembe maçı, ilandan ücrete kadar.</p>
+          </div>
+          <ol class="log">
+            <li class="log-row">
+              <p class="log-when">
+                <span class="t-label t-muted">Pazartesi</span><span class="num">20:14</span>
+              </p>
+              <div class="log-what">
+                <h3 class="t-title3">Maç ilanı açıldı</h3>
+                <p class="t-muted">
+                  Kaptan Perşembe 21:00 maçını kurar, davet bağlantısını takım grubuna atar.
+                </p>
+              </div>
+              <p class="log-data num">0/14</p>
+            </li>
+            <li class="log-row">
+              <p class="log-when">
+                <span class="t-label t-muted">Salı</span><span class="num">09:30</span>
+              </p>
+              <div class="log-what">
+                <h3 class="t-title3">Kadro doluyor</h3>
+                <p class="t-muted">
+                  Oyuncular geliyorum, belki ya da gelmiyorum der. Sayı kendiliğinden güncellenir.
+                </p>
+              </div>
+              <p class="log-data num">11/14</p>
+            </li>
+            <li class="log-row">
+              <p class="log-when">
+                <span class="t-label t-muted">Çarşamba</span><span class="num">18:40</span>
+              </p>
+              <div class="log-what">
+                <h3 class="t-title3">Eksik kapandı</h3>
+                <p class="t-muted">
+                  Kaleci eksikti. Kadıköy'deki Eksik Var ilanına başvuran oyuncuyu kaptan kabul
+                  etti.
+                </p>
+              </div>
+              <p class="log-data num">14/14</p>
+            </li>
+            <li class="log-row log-row-match">
+              <p class="log-when">
+                <span class="t-label t-muted">Perşembe</span><span class="num">21:00</span>
+              </p>
+              <div class="log-what">
+                <h3 class="t-title3">Maç</h3>
+                <p class="t-muted">Diziliş hazır: iki taraf, mevkiye göre dengelendi.</p>
+              </div>
+              <p class="log-data num">7v7</p>
+            </li>
+            <li class="log-row">
+              <p class="log-when">
+                <span class="t-label t-muted">Cuma</span><span class="num">10:05</span>
+              </p>
+              <div class="log-what">
+                <h3 class="t-title3">Ücret bölündü</h3>
+                <p class="t-muted">
+                  2.800 ₺ saha ücreti 14 oyuncuya bölündü. Kimin ödediği listede işaretli.
+                </p>
+              </div>
+              <p class="log-data num">14 × 200 ₺</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 3. One feature row: device-framed app screen and a definition list -->
+      <section id="ozellikler" class="features" aria-labelledby="features-title">
+        <div class="wrap features-grid">
+          <figure class="device">
+            <img
+              src="screens/match-detail.png"
+              width="390"
+              height="844"
+              alt="Kadro uygulamasında maç ekranı: 13/14 gelen, katılım seçimi ve kişi başı ücret"
+            />
+          </figure>
+          <div class="features-copy">
+            <h2 id="features-title" class="t-title1">Düdüğe kadar her iş tek yerde</h2>
+            <dl class="facts">
+              <div class="fact">
+                <dt class="t-title3">Katılım</dt>
+                <dd class="fact-num num">13/14</dd>
+                <dd class="fact-text t-muted">
+                  Geliyorum, belki, gelmiyorum. Kontenjan dolunca yeni gelenler yedek listesine
+                  sırayla girer.
+                </dd>
+              </div>
+              <div class="fact">
+                <dt class="t-title3">Diziliş</dt>
+                <dd class="fact-num num">7v7</dd>
+                <dd class="fact-text t-muted">
+                  Gelen oyuncuları mevkiye göre iki tarafa dağıt, sonra elle düzelt.
+                </dd>
+              </div>
+              <div class="fact">
+                <dt class="t-title3">Saha ücreti</dt>
+                <dd class="fact-num num">2.800 ₺</dd>
+                <dd class="fact-text t-muted">
+                  Toplam ücret gelen oyuncu sayısına bölünür. Kimin ödediğini işaretlersin; para
+                  uygulamada el değiştirmez.
+                </dd>
+              </div>
+              <div class="fact">
+                <dt class="t-title3">Eksik Var</dt>
+                <dd class="fact-num num"><span class="num-empty">2</span> eksik</dd>
+                <dd class="fact-text t-muted">
+                  Kadro eksikse ilçendeki oyunculara ilan aç. Başvuranı sen kabul edersin.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Open calls as scoreboard rows, venues as a plain link list -->
+      <section class="board" aria-labelledby="board-title">
+        <div class="wrap">
+          <div class="board-head">
+            <h2 id="board-title" class="t-title1">Bu hafta eksik olan maçlar</h2>
+            <p class="board-place">
+              <span class="t-title3">Kadıköy, İstanbul</span>
+              <a href="#">Kadıköy ilanlarının tümü</a>
+            </p>
+          </div>
+          <ol class="calls">
+            <li class="call">
+              <p class="call-count">
+                <span class="num-empty call-num">2</span>
+                <span class="t-caption t-muted">eksik, 7v7</span>
+              </p>
+              <p class="call-when">
+                <span class="t-label t-muted">Pazar 4 Ekim</span>
+                <span class="num call-time">20:00</span>
+              </p>
+              <p class="call-team">
+                <a class="t-title3" href="#">[ÖRNEK] Moda Akşam FK</a>
+                <span class="t-muted">Kadıköy Örnek Halı Saha A</span>
+              </p>
+              <p class="call-tags">
+                <span class="chip">Kaleci</span><span class="chip">Düzenli</span>
+              </p>
+              <p class="call-until t-caption t-muted">İlan bitişi<br />Pazar 17:00</p>
+            </li>
+            <li class="call">
+              <p class="call-count">
+                <span class="num-empty call-num">1</span>
+                <span class="t-caption t-muted">eksik, 6v6</span>
+              </p>
+              <p class="call-when">
+                <span class="t-label t-muted">Pazartesi 5 Ekim</span>
+                <span class="num call-time">21:30</span>
+              </p>
+              <p class="call-team">
+                <a class="t-title3" href="#">[ÖRNEK] Yeldeğirmeni Pazartesi</a>
+                <span class="t-muted">Kadıköy Örnek Halı Saha B</span>
+              </p>
+              <p class="call-tags">
+                <span class="chip">Defans</span><span class="chip">Keyfine</span>
+              </p>
+              <p class="call-until t-caption t-muted">İlan bitişi<br />Pazartesi 20:30</p>
+            </li>
+            <li class="call">
+              <p class="call-count">
+                <span class="num-empty call-num">3</span>
+                <span class="t-caption t-muted">eksik, 8v8</span>
+              </p>
+              <p class="call-when">
+                <span class="t-label t-muted">Çarşamba 7 Ekim</span>
+                <span class="num call-time">22:00</span>
+              </p>
+              <p class="call-team">
+                <a class="t-title3" href="#">[ÖRNEK] Göztepe Gece Maçı</a>
+                <span class="t-muted">Kadıköy Örnek Halı Saha A</span>
+              </p>
+              <p class="call-tags">
+                <span class="chip">Forvet</span><span class="chip">Rekabetçi</span>
+              </p>
+              <p class="call-until t-caption t-muted">İlan bitişi<br />Çarşamba 19:00</p>
+            </li>
+          </ol>
+
+          <div class="venues">
+            <h3 class="t-title3">Kadıköy'deki sahalar</h3>
+            <ul class="venue-list">
+              <li>
+                <a href="#">[ÖRNEK] Kadıköy Örnek Halı Saha A</a>
+                <span class="venue-price">2.500-3.500 ₺</span>
+                <span class="t-caption t-muted">Açık saha</span>
+              </li>
+              <li>
+                <a href="#">[ÖRNEK] Kadıköy Örnek Halı Saha B</a>
+                <span class="venue-price">2.200-3.000 ₺</span>
+                <span class="t-caption t-muted">Kapalı saha</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Who it is for: plain three-column text, hairline above -->
+      <section class="who" aria-labelledby="who-title">
+        <div class="wrap who-grid">
+          <h2 id="who-title" class="t-title1">Kim için</h2>
+          <p class="t-prose who-def">
+            Kadro, halı saha maçı organize eden takımlar için bir mobil uygulamadır. Kaptan maçı
+            kurar, oyuncular katılımını bildirir; kadro eksik kalırsa ilçedeki serbest oyunculara
+            Eksik Var ilanı açılır. Saha ücreti gelen oyunculara bölünür ve kimin ödediği
+            işaretlenir. Uygulama içinde para transferi yapılmaz.
+          </p>
+          <ul class="who-list">
+            <li>
+              <h3 class="t-title3">Kaptan</h3>
+              <p class="t-muted">
+                Maçı kurar, kontenjanı ve ücreti girer, dizilişi belirler, ilanı açar ve başvuruları
+                karara bağlar.
+              </p>
+            </li>
+            <li>
+              <h3 class="t-title3">Oyuncu</h3>
+              <p class="t-muted">
+                Davet bağlantısıyla takıma katılır, her maç için yanıt verir, payını ve maçın
+                oyuncusu oylamasını görür.
+              </p>
+            </li>
+            <li>
+              <h3 class="t-title3">Serbest oyuncu</h3>
+              <p class="t-muted">
+                İlçesindeki eksik ilanlarını mevki ve seviyeye göre süzer, uygun maça başvurur.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 6. Download band -->
+      <section id="indir" class="download" aria-labelledby="download-title">
+        <div class="wrap download-row">
+          <h2 id="download-title" class="t-title1">İlk maçı bu akşam kur</h2>
+          <div class="stores">
+            <a class="btn btn-secondary" href="#">App Store</a>
+            <a class="btn btn-secondary" href="#">Google Play</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div class="footer-brand">
+          <p class="wordmark wordmark-sm" aria-label="Kadro">
+            <span>KADR</span
+            ><svg class="wordmark-o" viewBox="0 0 24 24" aria-hidden="true">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3.4"
+              />
+              <circle cx="12" cy="12" r="3.2" fill="#FF6B1A" />
+            </svg>
+          </p>
+          <p class="t-muted">Kadron eksik kalmasın.</p>
+        </div>
+        <nav class="footer-group" aria-label="Ürün">
+          <p class="t-label">Ürün</p>
+          <a href="#">Ana sayfa</a>
+          <a href="#">Özellikler</a>
+          <a href="#">Blog</a>
+          <a href="#">Sık sorulan sorular</a>
+        </nav>
+        <nav class="footer-group" aria-label="Hesap ve yasal">
+          <p class="t-label">Hesap ve yasal</p>
+          <a href="#">Hesabımı sil</a>
+          <a href="#">Gizlilik (örnek)</a>
+          <a href="#">KVKK aydınlatma (örnek)</a>
+          <a href="#">İletişim</a>
+        </nav>
+        <p class="footer-note t-caption t-muted">
+          Kadro bir portfolyo projesidir. Bu sayfadaki takımlar, sahalar ve ilanlar örnek veridir.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

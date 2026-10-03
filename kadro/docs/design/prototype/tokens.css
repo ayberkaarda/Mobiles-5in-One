@@ -1,0 +1,130 @@
+/* Custom properties derived one to one from ../tokens.json (version 2.0.0). */
+
+:root {
+  --c-background: #f5f6f1;
+  --c-surface: #ffffff;
+  --c-surface-sunken: #ebeee6;
+  --c-surface-raised: #ffffff;
+  --c-border: #d3d9d0;
+  --c-border-strong: #6f7d75;
+  --c-text: #0f1a14;
+  --c-text-muted: #4e5e55;
+  --c-primary: #1b7f4b;
+  --c-on-primary: #ffffff;
+  --c-primary-text: #17704a;
+  --c-pitch: #0e5b36;
+  --c-pitch-line: #f5f6f1;
+  --c-on-pitch: #ffffff;
+  --c-accent: #e85d16;
+  --c-on-accent: #0f1a14;
+  --c-accent-text: #0f1a14;
+  --c-warning: #f2c230;
+  --c-on-warning: #0f1a14;
+  --c-danger: #d7263d;
+  --c-on-danger: #ffffff;
+  --c-danger-text: #c41e34;
+  --c-link: #17704a;
+  --c-focus-ring: #17704a;
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --elevation-2: 0 8px 24px rgba(15, 26, 20, 0.12);
+  --dur-press: 120ms;
+  --dur-state: 200ms;
+  --dur-enter: 320ms;
+  --dur-draw: 480ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --width-display: 75%;
+  --width-body: 100%;
+  --type-caption: 500 13px / 18px;
+  --type-footnote: 400 13px / 18px;
+  --type-label: 600 14px / 20px;
+  --type-body: 400 16px / 24px;
+  --type-body-strong: 600 16px / 24px;
+  --type-prose: 400 18px / 30px;
+  --type-lead: 400 20px / 30px;
+  --type-title3: 600 20px / 28px;
+  --type-title2: 700 28px / 34px;
+  --type-title1: 700 40px / 44px;
+  --type-display: 800 56px / 58px;
+  --type-hero: 800 72px / 72px;
+  --type-numeral: 700 40px / 44px;
+  --type-numeral-xl: 800 112px / 112px;
+  --type-score: 700 40px / 44px;
+  --type-bib: 800 28px / 32px;
+  --max-width: 1200px;
+  --gutter: 24px;
+  --page-gutter: 24px;
+  --nav-height: 64px;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --page-gutter: 20px;
+    --type-hero: 800 44px / 46px;
+    --type-display: 800 40px / 42px;
+    --type-title1: 700 32px / 36px;
+    --type-title2: 700 24px / 30px;
+    --type-lead: 400 18px / 28px;
+    --type-prose: 400 17px / 28px;
+    --type-numeral: 700 32px / 36px;
+    --type-numeral-xl: 800 72px / 72px;
+  }
+}
+
+.theme-dark {
+  --c-background: #0c1611;
+  --c-surface: #142019;
+  --c-surface-sunken: #0c1611;
+  --c-surface-raised: #1b2a21;
+  --c-border: #2a3a30;
+  --c-border-strong: #5e6e65;
+  --c-text: #f5f6f1;
+  --c-text-muted: #a6b3aa;
+  --c-primary: #1b7f4b;
+  --c-on-primary: #f5f6f1;
+  --c-primary-text: #3dbf78;
+  --c-pitch: #0e5b36;
+  --c-pitch-line: #f5f6f1;
+  --c-on-pitch: #ffffff;
+  --c-accent: #ff6b1a;
+  --c-on-accent: #0f1a14;
+  --c-accent-text: #ff7a33;
+  --c-warning: #f2c230;
+  --c-on-warning: #0f1a14;
+  --c-danger: #d7263d;
+  --c-on-danger: #f5f6f1;
+  --c-danger-text: #ff5c6e;
+  --c-link: #3dbf78;
+  --c-focus-ring: #f5f6f1;
+  --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --type-caption: 500 12px / 16px;
+  --type-footnote: 400 13px / 18px;
+  --type-label: 600 14px / 20px;
+  --type-body: 400 16px / 24px;
+  --type-body-strong: 600 16px / 24px;
+  --type-title3: 600 20px / 26px;
+  --type-title2: 700 24px / 28px;
+  --type-title1: 700 32px / 36px;
+  --type-display: 800 40px / 42px;
+  --type-score: 700 40px / 44px;
+  --type-bib: 800 28px / 32px;
+  --type-numeral-xl: 800 64px / 64px;
+}
