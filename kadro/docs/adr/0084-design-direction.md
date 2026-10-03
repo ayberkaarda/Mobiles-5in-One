@@ -86,3 +86,34 @@ packages still have to move the readers.
   fails otherwise.
 - The package now has a typecheck (`tsc` over `theme/tokens.ts`) and ESLint in its scripts, using
   the workspace TypeScript and ESLint; no dependency or lockfile change.
+
+## Shipped (2026-10-03)
+
+- The web pages and the mobile app both ship the light and the dark scheme from the v3 tokens.
+  Screenshots of both schemes are in `docs/screenshots/`.
+- The OG cards are light brand cards (chalk ground, ink wordmark, squad sheet), not night cards;
+  `og-image.tsx` uses the 234 × 64 wordmark box named in the Consequences.
+- The staff admin panel stays light in both settings; it has no dark scheme.
+- The mobile tab bar icons are still the old set.
+- Lighthouse (simulated slow 4G, median of three) gives performance 96 to 98 and accessibility 100
+  on the home, features, blog and FAQ pages in both schemes. LCP is a lab estimate of 2.5 to
+  2.7 s on some pages, above the 2.5 s target; with applied devtools throttling it is 1.8 to 2.0 s.
+  The LCP element is the lead paragraph, so fonts and images are not the cause.
+
+## Open items
+
+Known gaps against `docs/design/direction.md`, none of them blocking:
+
+- Match detail: the RSVP answer is three separate buttons, not a three-segment control.
+- Prices are written with the symbol first ("₺1.400"); the direction uses the Turkish order
+  ("1.400 ₺").
+- Meta rows still use middle dots as separators.
+- Settings: Görünüm is a segmented control, the direction describes a radio list.
+- Venue list: facilities are one text chip, not four small icons.
+- Icons: the planned Phosphor set is a new dependency and has not been added.
+- The splash colour in `app.config.ts` has not been moved to the v3 palette.
+- `expo-system-ui` is not installed; prebuild warns about `userInterfaceStyle`, and a flash on a
+  dark launch is possible.
+- District page copy: the title reads "Açık ilanlar" and should be reviewed.
+- The web header stacks into three rows on a phone width (about 165 px).
+- LCP: the lab estimate above 2.5 s needs less shared framework script or fewer CSS chunks.
