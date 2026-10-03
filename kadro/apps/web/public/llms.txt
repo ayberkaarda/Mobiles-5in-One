@@ -23,9 +23,9 @@ Kadro Pro ücretli katmandır; fiyatlar uygulama mağazalarında belirlenir.
 
 ## Sayfalar
 - Özellikler: /ozellikler
-- Sıkça sorulan sorular: /sss
-- Sahalar: /sahalar
-- Eksik Var: /eksik-var
 - Blog: /blog
+- Saha sayfaları: /saha/{slug}
+- Eksik Var ilçe sayfaları: /eksik-var/{il}/{ilce}
+- İletişim: /iletisim
 - Gizlilik: /gizlilik
 - KVKK aydınlatma: /kvkk-aydinlatma

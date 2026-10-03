@@ -44,9 +44,8 @@ Notes:
   pages, indexable district pages and verified non-sample venues. It never lists `noindex` pages.
 - `/robots.txt` allows `/` and disallows `/api/`, `/admin/`, `/mac/`, `/giris`, `/sifremi-unuttum`,
   `/sifre-sifirla`, `/e-posta-dogrula` and `/hesap-silme`, and names the sitemap of `WEB_ORIGIN`.
-- `public/llms.txt` currently lists the paths `/sss`, `/sahalar` and `/eksik-var`. None of them has
-  a page on `main`, so they answer 404. This is an open item, see
-  [seo-and-geo.md](seo-and-geo.md).
+- `public/llms.txt` and `llms-full.txt` list only routes that exist: `/ozellikler`, `/blog`,
+  `/saha/{slug}`, `/eksik-var/{il}/{ilce}`, `/iletisim`, `/gizlilik` and `/kvkk-aydinlatma`.
 
 ## Account pages (`(app)`)
 

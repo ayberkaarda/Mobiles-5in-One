@@ -60,10 +60,10 @@ product, its audience and its MVP features, and contain the sentence "Kadro bir 
 projesidir." as the fact sheet requires. They invent no user counts, ratings or prices; Kadro Pro
 is described as a paid tier whose prices the stores set.
 
-Open item: `llms.txt` lists the paths `/sss`, `/sahalar` and `/eksik-var` under "Sayfalar". None of
-them exists as a page on `main` (the surface table reserves `/sss` and `/sahalar/**`, the district
-pages live at `/eksik-var/<il>/<ilce>`), so those three lines point at 404s until the pages exist
-or the lines change. Nothing in the code or tests checks the llms files against the route list.
+The "Sayfalar" lists of both llms files name only routes that exist (`/ozellikler`, `/blog`,
+`/saha/{slug}`, `/eksik-var/{il}/{ilce}`, `/iletisim`, `/gizlilik`, `/kvkk-aydinlatma`). The
+surface table still reserves `/sss` and `/sahalar/**`, but they are not listed. Nothing in the code
+or tests checks the llms files against the route list.
 
 ## Programmatic pages
 
