@@ -437,7 +437,7 @@ Preferences: `system` (default), `light`, `dark`. Labels in Turkish: Sistem, Aç
   with one value. On light it is a night object on chalk (turf against chalk 7.53:1); on dark its
   edge is the chalk touchline (16.98:1), because turf against night is only 2.26:1. The empty
   slot stays a dashed chalk outline; the orange ball spot is decoration only.
-- The OG card images: a raster cannot follow the reader's scheme, so they stay the night card.
+- The OG card images are fixed light-scheme rasters (a raster cannot follow the reader's scheme): chalk ground, ink wordmark and the squad sheet with its always-dark pitch.
 - The device frame (ink) and the app screenshots inside it (dark-scheme captures).
 
 **Everything else adapts by role**, never by hard-coded colour: the header and footer wordmark
