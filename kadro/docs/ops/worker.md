@@ -10,20 +10,23 @@ dead letters, logging, metrics), graceful shutdown, the health signal and the ha
 `account.hard_delete`, `opencall.expire` and `maintenance.sweep` are implemented. The
 `venue.import` handler (Phase 5, ADR-0067) reads an admin's stored CSV and records the result on
 its `venue_imports` row; an import whose last attempt fails is marked `failed` (`internal_error`).
+`cost.guard` (Phase 6, ADR-0081) checks e-mail and push usage against the configured thresholds
+and pauses deferrable pushes for the rest of the UTC day once a threshold is reached.
 
 ## Queues
 
-| Queue                 | Kind              | Concurrency | Retries                    | Dead letter                |
-| --------------------- | ----------------- | ----------- | -------------------------- | -------------------------- |
-| `email.send`          | on demand         | 4           | 5, exponential from 30 s   | `email.send.dead`          |
-| `push.send`           | on demand         | 4           | 3, exponential from 60 s   | `push.send.dead`           |
-| `push.receipts`       | delayed (+15 min) | 1           | 3, fixed 300 s             | `push.receipts.dead`       |
-| `match.reminder`      | delayed           | 1           | 2, 60 s                    | `match.reminder.dead`      |
-| `upload.process`      | on demand         | 2           | 2, 30 s                    | `upload.process.dead`      |
-| `account.hard_delete` | delayed (7 days)  | 1           | 10, exponential from 300 s | `account.hard_delete.dead` |
-| `opencall.expire`     | cron `5 * * * *`  | 1           | none (next run covers)     | `opencall.expire.dead`     |
-| `maintenance.sweep`   | cron `35 * * * *` | 1           | none (next run covers)     | `maintenance.sweep.dead`   |
-| `venue.import`        | admin (Phase 5)   | 1           | 2, 60 s                    | `venue.import.dead`        |
+| Queue                 | Kind                      | Concurrency | Retries                    | Dead letter                |
+| --------------------- | ------------------------- | ----------- | -------------------------- | -------------------------- |
+| `email.send`          | on demand                 | 4           | 5, exponential from 30 s   | `email.send.dead`          |
+| `push.send`           | on demand                 | 4           | 3, exponential from 60 s   | `push.send.dead`           |
+| `push.receipts`       | delayed (+15 min)         | 1           | 3, fixed 300 s             | `push.receipts.dead`       |
+| `match.reminder`      | delayed                   | 1           | 2, 60 s                    | `match.reminder.dead`      |
+| `upload.process`      | on demand                 | 2           | 2, 30 s                    | `upload.process.dead`      |
+| `account.hard_delete` | delayed (7 days)          | 1           | 10, exponential from 300 s | `account.hard_delete.dead` |
+| `opencall.expire`     | cron `5 * * * *`          | 1           | none (next run covers)     | `opencall.expire.dead`     |
+| `maintenance.sweep`   | cron `35 * * * *`         | 1           | none (next run covers)     | `maintenance.sweep.dead`   |
+| `venue.import`        | admin (Phase 5)           | 1           | 2, 60 s                    | `venue.import.dead`        |
+| `cost.guard`          | cron `*/15 * * * *` (UTC) | 1           | none (next run covers)     | `cost.guard.dead`          |
 
 The definitions live in `apps/worker/src/queues.ts`. Cron expressions run in `Europe/Istanbul`.
 Every source queue uses the pg-boss `exclusive` policy with `singletonKey = idempotencyKey`: while
@@ -134,19 +137,21 @@ qualifies. After creating the queues the worker calls
 `packages/config` validates the worker environment at boot (`loadWorkerEnv`) and exits with the
 list of missing or invalid keys, without printing values.
 
-| Key                                             | Purpose                                                                      |
-| ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| `NODE_ENV`, `APP_ENV`, `BUILD_SHA`, `LOG_LEVEL` | Runtime identity and log level                                               |
-| `DATABASE_URL`                                  | PostgreSQL; the login must be a member of `kadro_worker`                     |
-| `WEB_ORIGIN`                                    | Origin used to build email links; non-loopback `https://` outside local      |
-| `EMAIL_TRANSPORT`                               | `log` (local only) or `resend`; default `log` (ADR-0029)                     |
-| `RESEND_API_KEY`, `EMAIL_FROM`                  | Required for `resend`; `EMAIL_FROM` defaults to `Kadro <bildirim@kadro.app>` |
-| `PUSH_TRANSPORT`                                | `log` (local only) or `expo`; default `log` (ADR-0031)                       |
-| `EXPO_ACCESS_TOKEN`                             | Required for `expo` (enhanced push security)                                 |
-| `PUSH_HOURLY_CAP`                               | Global push sends per hour, 1..100 000, default 5 000                        |
-| `R2_ENDPOINT`                                   | S3-compatible endpoint (R2); non-loopback `https://` outside local           |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`      | Worker key: read/delete incoming, read/write/delete media                    |
-| `R2_INCOMING_BUCKET`, `R2_MEDIA_BUCKET`         | Private raw uploads and published media; must differ                         |
+| Key                                             | Purpose                                                                                       |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NODE_ENV`, `APP_ENV`, `BUILD_SHA`, `LOG_LEVEL` | Runtime identity and log level                                                                |
+| `DATABASE_URL`                                  | PostgreSQL; the login must be a member of `kadro_worker`                                      |
+| `WEB_ORIGIN`                                    | Origin used to build email links; non-loopback `https://` outside local                       |
+| `EMAIL_TRANSPORT`                               | `log` (local only) or `resend`; default `log` (ADR-0029)                                      |
+| `RESEND_API_KEY`, `EMAIL_FROM`                  | Required for `resend`; `EMAIL_FROM` defaults to `Kadro <bildirim@kadro.app>`                  |
+| `PUSH_TRANSPORT`                                | `log` (local only) or `expo`; default `log` (ADR-0031)                                        |
+| `EXPO_ACCESS_TOKEN`                             | Required for `expo` (enhanced push security)                                                  |
+| `PUSH_HOURLY_CAP`                               | Global push sends per hour, 1..100 000, default 5 000                                         |
+| `EMAIL_DAILY_CAP`, `EMAIL_MONTHLY_CAP`          | `cost.guard` e-mail thresholds per UTC day / rolling 30 days; default 2 000 / 45 000; `0` off |
+| `PUSH_DAILY_CAP`                                | `cost.guard` push threshold per UTC day; default 50 000; `0` off                              |
+| `R2_ENDPOINT`                                   | S3-compatible endpoint (R2); non-loopback `https://` outside local                            |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`      | Worker key: read/delete incoming, read/write/delete media                                     |
+| `R2_INCOMING_BUCKET`, `R2_MEDIA_BUCKET`         | Private raw uploads and published media; must differ                                          |
 
 `MEDIA_PUBLIC_BASE_URL` belongs to the web app, which builds public URLs; the worker only writes
 object keys. It must be `https://` in every environment, because the API contract requires https
@@ -236,9 +241,14 @@ operations and can fail chosen requests), and removes the container afterwards.
 - Metrics (structured log lines with `metric`): `job_completed{queue,outcome}`,
   `job_failed{queue}`, `job_dead_lettered{queue,reason}`, `email_delivery_failed{kind,reason}`,
   `email_stale_dropped{kind}`, `push_capped{type}`, `push_ticket_error{code}`,
-  `push_receipt_error{code}`.
-- Alerts in preview and production: any `job_dead_lettered`, any `push_capped`, and a queue whose
-  oldest queued job is older than 15 minutes.
+  `push_receipt_error{code}`, `cost_threshold{kind,period,level}` (once per UTC day and level),
+  `cost_capped{kind,type}`, `cost_guard_failed{reason}`.
+- Alerts in preview and production: any `job_dead_lettered`, any `push_capped`, any
+  `cost_threshold` or `cost_guard_failed`, and a queue whose oldest queued job is older than 15
+  minutes.
+- Send gates of `cost.guard` (read-only): `select key, window_start from rate_limit_buckets where
+key like 'cost:gate:%'`. A row for today's UTC date means deferrable sends of that kind are
+  paused until the next UTC midnight.
 - Health: the worker writes `<tmpdir>/kadro-worker/health.json`; `ready` only after the queues and
   handlers are set up, refreshed by a database probe every 30 s. The container `HEALTHCHECK` runs
   `node dist/healthcheck.js`, which fails when the status is not `ready` or older than 90 s.

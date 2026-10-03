@@ -30,8 +30,9 @@ is responsible for reading them.
 
 ## 2. Application kill-switches
 
-Spec item 22 defines these. Status in code at the time of writing: the push hourly cap exists
-(ADR-0031, counted as `push_capped{type}`); the rest are design only.
+Spec item 22 defines these. Status in code: the push hourly cap exists (ADR-0031, counted as
+`push_capped{type}`); `cost.guard` exists with the scope of ADR-0081 (daily push threshold, daily
+and rolling 30-day e-mail thresholds, deferrable pushes paused); the presign cap is not built.
 
 | Switch                | Limit                              | Behaviour above the limit                              |
 | --------------------- | ---------------------------------- | ------------------------------------------------------ |
@@ -40,7 +41,11 @@ Spec item 22 defines these. Status in code at the time of writing: the push hour
 | Open-call push radius | Cap on the radius used for fan-out | Radius clamped; no broadcast feature exists yet (0031) |
 | E-mail daily cap      | `cost.guard` (section 3)           | Non-critical mail paused; critical mail still sent     |
 
-## 3. Design note: `cost.guard` (not implemented here)
+## 3. Design note: `cost.guard`
+
+Implemented in Phase 6 with a narrower scope; ADR-0081 records what was built, what differs from
+this note (no new tables, one global push threshold instead of per-type caps, no audited override
+yet) and what stays an owner task.
 
 Purpose: replace the single hourly push counter with daily per-type caps and add an e-mail cap, so a
 bug or abuse burst cannot turn into a bill, without ever blocking security-critical messages.
@@ -77,11 +82,11 @@ pause on read errors; the 80 % alert fires once per day.
 
 ## 4. Owner checklist
 
-| #   | Task                                                                 | Status     |
-| --- | -------------------------------------------------------------------- | ---------- |
-| 1   | Confirm monthly ceiling `B` and fill concrete numbers into section 1 | owner task |
-| 2   | Create billing alerts at the VPS provider and Cloudflare             | owner task |
-| 3   | Enable usage alerts in Resend, RevenueCat and Sentry                 | owner task |
-| 4   | Set up host disk and connection monitoring                           | owner task |
-| 5   | Name the person who receives and acts on alerts                      | owner task |
-| 6   | Implement `cost.guard` and the e-mail and presign caps per section 3 | open       |
+| #   | Task                                                                 | Status                                                 |
+| --- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1   | Confirm monthly ceiling `B` and fill concrete numbers into section 1 | owner task                                             |
+| 2   | Create billing alerts at the VPS provider and Cloudflare             | owner task                                             |
+| 3   | Enable usage alerts in Resend, RevenueCat and Sentry                 | owner task                                             |
+| 4   | Set up host disk and connection monitoring                           | owner task                                             |
+| 5   | Name the person who receives and acts on alerts                      | owner task                                             |
+| 6   | Implement `cost.guard` and the e-mail and presign caps per section 3 | partly done: `cost.guard` (ADR-0081); presign cap open |
