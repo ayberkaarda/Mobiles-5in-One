@@ -27,6 +27,7 @@ import {
   type SchemaSpec,
   toOpenApiPath,
 } from './endpoints.js';
+import { pushNotificationDataSchema } from './jobs.js';
 import {
   lineupAssignmentSchema,
   matchDetailSchema,
@@ -148,6 +149,8 @@ const SHARED_RESPONSE_SCHEMAS: readonly (readonly [string, z.ZodType])[] = [
   ['AdminUser', adminUserSchema],
   ['AuditLogEntry', auditLogEntrySchema],
   ['VenueImport', venueImportSchema],
+  // Not an HTTP body: the `data` of a push notification, documented next to the API (ADR-0079).
+  ['PushNotificationData', pushNotificationDataSchema],
 ];
 
 type Registry = z.core.$ZodRegistry<{ id: string }>;

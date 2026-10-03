@@ -112,7 +112,11 @@ export const emailSendJobSchema = z
   });
 export type EmailSendJob = z.infer<typeof emailSendJobSchema>;
 
-/** `push.send`: one notification to all devices of one user; `refId` is the deep-link target. */
+/**
+ * `push.send`: one notification to all devices of one user; `refId` is the deep-link target. For
+ * an application type it is the application id; the handler adds the call's match id to `data`
+ * from the application row at send time (ADR-0079), so the job carries one id.
+ */
 export const pushSendJobSchema = z.strictObject({
   type: notificationTypeSchema,
   userId: idSchema,
@@ -120,6 +124,39 @@ export const pushSendJobSchema = z.strictObject({
   idempotencyKey: idempotencyKeySchema,
 });
 export type PushSendJob = z.infer<typeof pushSendJobSchema>;
+
+/** Notification types whose `data` references a match (ADR-0031). */
+export const MATCH_NOTIFICATION_TYPES = [
+  'match.reminder_24h',
+  'match.reminder_2h',
+  'match.updated',
+  'rsvp.changed',
+  'rsvp.promoted',
+  'lineup.slot_free',
+] as const satisfies readonly NotificationType[];
+
+/** Notification types whose `data` references an open-call application (ADR-0031, ADR-0079). */
+export const APPLICATION_NOTIFICATION_TYPES = [
+  'application.received',
+  'application.decided',
+] as const satisfies readonly NotificationType[];
+
+/**
+ * The `data` of a push notification, the only part of a notification the app reads for routing
+ * (ADR-0031). It carries ids only: the app loads the object through the API, where authorization
+ * applies. An application notification also carries the call's match id (ADR-0079): the captain's
+ * tap opens the staff view of that match's call, the applicant's tap the match itself.
+ */
+export const pushNotificationDataSchema = z.union([
+  z.strictObject({ type: z.enum(MATCH_NOTIFICATION_TYPES), matchId: idSchema }),
+  z.strictObject({
+    type: z.enum(APPLICATION_NOTIFICATION_TYPES),
+    applicationId: idSchema,
+    matchId: idSchema,
+  }),
+  z.strictObject({ type: z.literal('team.member_joined'), teamId: idSchema }),
+]);
+export type PushNotificationData = z.infer<typeof pushNotificationDataSchema>;
 
 /** Expo push ticket ids (UUID-like strings) and the device row each ticket belongs to. */
 export const pushReceiptsJobSchema = z.strictObject({

@@ -1,4 +1,9 @@
-import { NOTIFICATION_TYPES, type PushSendJob, pushSendJobSchema } from '@kadro/contracts';
+import {
+  NOTIFICATION_TYPES,
+  type PushSendJob,
+  pushNotificationDataSchema,
+  pushSendJobSchema,
+} from '@kadro/contracts';
 import {
   jobReceipts,
   lockPushResend,
@@ -302,6 +307,41 @@ describe('push.send (ADR-0031)', () => {
     }
     const bodies = sendRequests().map((request) => JSON.stringify(request.body));
     expect(bodies.join('\n')).not.toContain('Gizli');
+    for (const request of sendRequests()) {
+      for (const message of request.body as { data: unknown }[]) {
+        expect(pushNotificationDataSchema.safeParse(message.data).success).toBe(true);
+      }
+    }
+  });
+
+  it("adds the call's match id to application notifications (ADR-0079)", async () => {
+    const { captainId, matchId } = await scene();
+    const accepted = await fixtures.user();
+    const pending = await fixtures.user();
+    await fixtures.pushToken(captainId);
+    await fixtures.pushToken(accepted.id);
+    const callId = await fixtures.openCall(matchId, new Date(Date.now() + HOUR_MS));
+    const acceptedId = await fixtures.application(callId, accepted.id, 'accepted');
+    const pendingId = await fixtures.application(callId, pending.id, 'pending');
+
+    const received = await sendPush({
+      type: 'application.received',
+      userId: captainId,
+      refId: pendingId,
+    });
+    expect(await outcomeOf(received)).toEqual({ outcome: 'sent' });
+    const decided = await sendPush({
+      type: 'application.decided',
+      userId: accepted.id,
+      refId: acceptedId,
+    });
+    expect(await outcomeOf(decided)).toEqual({ outcome: 'sent' });
+
+    const data = sendRequests().map((request) => (request.body as { data: unknown }[])[0]?.data);
+    expect(data).toEqual([
+      { type: 'application.received', applicationId: pendingId, matchId },
+      { type: 'application.decided', applicationId: acceptedId, matchId },
+    ]);
   });
 
   it('completes without sending when the user has no device or the notification is stale', async () => {

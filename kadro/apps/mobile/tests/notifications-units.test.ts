@@ -3,7 +3,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { NOTIFICATION_TYPES as CONTRACT_TYPES } from '../../../packages/contracts/src/jobs';
+import {
+  NOTIFICATION_TYPES as CONTRACT_TYPES,
+  pushNotificationDataSchema,
+} from '../../../packages/contracts/src/jobs';
 import {
   dismissPrompt,
   PUSH_PROMPT_STORAGE_KEY,
@@ -56,11 +59,14 @@ describe('notification payload', () => {
       type: 'team.member_joined',
       teamId: TEAM_ID,
     });
-    expect(parseNotificationData({ type: 'application.decided', applicationId: APP_ID })).toEqual({
-      kind: 'application',
-      type: 'application.decided',
-      applicationId: APP_ID,
-    });
+    for (const type of ['application.received', 'application.decided'] as const) {
+      expect(parseNotificationData({ type, applicationId: APP_ID, matchId: MATCH_ID })).toEqual({
+        kind: 'application',
+        type,
+        applicationId: APP_ID,
+        matchId: MATCH_ID,
+      });
+    }
   });
 
   it('rejects anything the worker does not send', () => {
@@ -73,8 +79,27 @@ describe('notification payload', () => {
       { type: 'match.updated', matchId: 'not-an-id' },
       { type: 'match.updated', matchId: '0192a0b0-0000-4000-8000-0000000000a1' },
       { type: 'team.member_joined', teamId: 42 },
+      { type: 'application.decided', applicationId: APP_ID },
+      { type: 'application.received', applicationId: APP_ID, matchId: 'not-an-id' },
+      { type: 'application.received', matchId: MATCH_ID },
     ]) {
       expect(parseNotificationData(data), JSON.stringify(data)).toBeNull();
+    }
+  });
+
+  it('accepts every payload shape of the contracts', () => {
+    const payloads = [
+      { type: 'match.updated', matchId: MATCH_ID },
+      { type: 'team.member_joined', teamId: TEAM_ID },
+      { type: 'application.received', applicationId: APP_ID, matchId: MATCH_ID },
+      { type: 'application.decided', applicationId: APP_ID, matchId: MATCH_ID },
+      { type: 'application.decided', applicationId: APP_ID },
+      { type: 'rsvp.changed', applicationId: APP_ID },
+    ];
+    for (const data of payloads) {
+      expect(parseNotificationData(data) !== null, JSON.stringify(data)).toBe(
+        pushNotificationDataSchema.safeParse(data).success,
+      );
     }
   });
 });
@@ -100,25 +125,43 @@ describe('notificationHref', () => {
     expect(await notificationHref(target, noMatch)).toBe(MATCHES_HOME);
   });
 
-  it('opens the team, and the tabs for applications', async () => {
+  it('opens the team', async () => {
     expect(
       await notificationHref(
         { kind: 'team', type: 'team.member_joined', teamId: TEAM_ID },
         noMatch,
       ),
     ).toBe(`/takim/${TEAM_ID}`);
-    expect(
-      await notificationHref(
-        { kind: 'application', type: 'application.received', applicationId: APP_ID },
-        noMatch,
-      ),
-    ).toBe('/maclar');
-    expect(
-      await notificationHref(
-        { kind: 'application', type: 'application.decided', applicationId: APP_ID },
-        noMatch,
-      ),
-    ).toBe('/eksik-var');
+  });
+
+  it("opens the staff view of the call's match for a received application", async () => {
+    const target = {
+      kind: 'application',
+      type: 'application.received',
+      applicationId: APP_ID,
+      matchId: MATCH_ID,
+    } as const;
+    expect(await notificationHref(target, noMatch)).toBe(`/ilan/mac/${MATCH_ID}`);
+  });
+
+  it('opens the match of a decided application, else the Eksik Var tab', async () => {
+    const target = {
+      kind: 'application',
+      type: 'application.decided',
+      applicationId: APP_ID,
+      matchId: MATCH_ID,
+    } as const;
+    const asked: string[] = [];
+    const href = await notificationHref(target, async (id) => {
+      asked.push(id);
+      return TEAM_ID;
+    });
+    expect(asked).toEqual([MATCH_ID]);
+    expect(href).toBe(`/takim/${TEAM_ID}/mac/${MATCH_ID}`);
+    const refused = async (): Promise<string> => {
+      throw new Error('not found');
+    };
+    expect(await notificationHref(target, refused)).toBe('/eksik-var');
   });
 });
 

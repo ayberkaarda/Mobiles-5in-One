@@ -133,7 +133,7 @@ function createPushDelivery(dependencies: PushHandlerDependencies) {
     }
 
     const content = renderPush(job.type, resolution.input);
-    const data = { type: job.type, [PUSH_REF_KEY[job.type]]: job.refId };
+    const data = { type: job.type, [PUSH_REF_KEY[job.type]]: job.refId, ...resolution.data };
     const okTickets: { ticketId: string; pushTokenId: string }[] = [];
     const unregistered: string[] = [];
     let rateExceeded = false;

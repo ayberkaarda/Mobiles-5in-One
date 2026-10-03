@@ -3,13 +3,16 @@ import { z } from 'zod';
 
 import { accepts, uuidv4, uuidv7 } from './fixtures.test-helper.js';
 import {
+  APPLICATION_NOTIFICATION_TYPES,
   deadLetterQueue,
   EMAIL_JOB_KINDS,
   foldTr,
   JOB_PAYLOAD_SCHEMAS,
   JOB_QUEUES,
   LIMITS,
+  MATCH_NOTIFICATION_TYPES,
   NOTIFICATION_TYPES,
+  pushNotificationDataSchema,
   suggestLineup,
 } from './index.js';
 
@@ -126,6 +129,27 @@ describe('job contracts', () => {
         idempotencyKey: 'push:1',
       }),
     ).toBe(false);
+  });
+
+  it('gives every notification type exactly one data shape (ADR-0031, ADR-0079)', () => {
+    expect(
+      [...MATCH_NOTIFICATION_TYPES, ...APPLICATION_NOTIFICATION_TYPES, 'team.member_joined'].sort(),
+    ).toEqual([...NOTIFICATION_TYPES].sort());
+    const matchId = uuidv7();
+    const applicationId = uuidv7();
+    const at = (data: Record<string, unknown>) => accepts(pushNotificationDataSchema, data);
+    expect(at({ type: 'match.reminder_2h', matchId })).toBe(true);
+    expect(at({ type: 'team.member_joined', teamId: matchId })).toBe(true);
+    for (const type of APPLICATION_NOTIFICATION_TYPES) {
+      expect(at({ type, applicationId, matchId }), type).toBe(true);
+      expect(at({ type, applicationId }), type).toBe(false);
+      expect(at({ type, matchId }), type).toBe(false);
+      expect(at({ type, applicationId, matchId: uuidv4() }), type).toBe(false);
+    }
+    expect(at({ type: 'rsvp.changed', applicationId })).toBe(false);
+    expect(at({ type: 'team.member_joined', matchId })).toBe(false);
+    expect(at({ type: 'rsvp.changed', matchId, name: 'Ayşe' })).toBe(false);
+    expect(at({ type: 'opencall.nearby', matchId })).toBe(false);
   });
 
   it('bounds receipt batches to one Expo request', () => {

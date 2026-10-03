@@ -22,7 +22,15 @@ import { type PushTemplateInput } from './templates.js';
  */
 
 export type Resolution =
-  | { readonly deliver: true; readonly input: PushTemplateInput }
+  | {
+      readonly deliver: true;
+      readonly input: PushTemplateInput;
+      /**
+       * Ids added to the notification `data` next to the type's reference: the call's match id of
+       * an application notification (ADR-0079). Read from the same row as the access check.
+       */
+      readonly data?: { readonly matchId: string };
+    }
   | { readonly deliver: false; readonly reason: string };
 
 const ACTIVE_MATCH: readonly MatchStatus[] = ['open', 'locked'];
@@ -141,6 +149,7 @@ async function resolveApplicationNotification(db: Database, job: PushSendJob): P
       applicantId: openCallApplications.userId,
       applicationStatus: openCallApplications.status,
       openCallId: openCalls.id,
+      matchId: matches.id,
       teamId: matches.teamId,
       startsAt: matches.startsAt,
       teamName: teams.name,
@@ -154,6 +163,7 @@ async function resolveApplicationNotification(db: Database, job: PushSendJob): P
     return { deliver: false, reason: 'target_missing' };
   }
   const base = { teamName: row.teamName, startsAt: row.startsAt };
+  const data = { matchId: row.matchId };
 
   if (job.type === 'application.decided') {
     if (row.applicantId !== job.userId) {
@@ -162,7 +172,7 @@ async function resolveApplicationNotification(db: Database, job: PushSendJob): P
     if (row.applicationStatus !== 'accepted' && row.applicationStatus !== 'rejected') {
       return { deliver: false, reason: 'not_decided' };
     }
-    return { deliver: true, input: { ...base, variant: row.applicationStatus } };
+    return { deliver: true, input: { ...base, variant: row.applicationStatus }, data };
   }
 
   // application.received: captain and co-captains of the call's team, summarising pending ones.
@@ -182,7 +192,7 @@ async function resolveApplicationNotification(db: Database, job: PushSendJob): P
   const pendingCount = pending?.value ?? 0;
   return pendingCount === 0
     ? { deliver: false, reason: 'nothing_pending' }
-    : { deliver: true, input: { ...base, count: pendingCount } };
+    : { deliver: true, input: { ...base, count: pendingCount }, data };
 }
 
 async function resolveTeamNotification(db: Database, job: PushSendJob): Promise<Resolution> {
