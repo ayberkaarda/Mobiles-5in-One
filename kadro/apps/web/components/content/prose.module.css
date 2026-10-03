@@ -1,0 +1,195 @@
+/* Long-form content (blog articles, legal pages). Colors come from the shell's --m-* properties. */
+
+.prose {
+  max-width: 68ch;
+  font-size: 18px;
+  line-height: 30px;
+  overflow-wrap: anywhere;
+}
+
+.prose h2 {
+  margin: 48px 0 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  scroll-margin-top: 24px;
+}
+
+.prose h3 {
+  margin: 32px 0 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 700;
+  scroll-margin-top: 24px;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote,
+.prose .tableScroll {
+  margin: 16px 0 0;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 24px;
+}
+
+.prose li + li {
+  margin-top: 8px;
+}
+
+.prose blockquote {
+  padding: 12px 16px;
+  border-left: 4px solid var(--m-primary);
+  background-color: var(--m-surface);
+  font-weight: 600;
+}
+
+.link {
+  color: var(--m-link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.link:focus-visible,
+.tableScroll:focus-visible {
+  outline: 3px solid var(--m-text);
+  outline-offset: 2px;
+}
+
+.code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background-color: var(--m-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tableScroll table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  background-color: var(--m-surface);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.tableScroll th,
+.tableScroll td {
+  padding: 8px 12px;
+  border: 1px solid var(--m-textMuted);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tableScroll th {
+  font-weight: 700;
+}
+
+/* Article and legal page furniture */
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--m-textMuted);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.sampleNotice {
+  max-width: 68ch;
+  margin: 24px 0 0;
+  padding: 16px;
+  border: 2px solid var(--m-text);
+  border-radius: 8px;
+  background-color: var(--m-surface);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.sampleNotice strong {
+  display: block;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+}
+
+.articleList {
+  display: grid;
+  gap: 16px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.articleCard {
+  padding: 20px;
+  border-radius: 12px;
+  background-color: var(--m-surface);
+}
+
+.articleCard h2,
+.articleCard h3 {
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 700;
+}
+
+.articleCard p {
+  margin: 8px 0 0;
+}
+
+.related {
+  max-width: 68ch;
+  margin: 48px 0 0;
+}
+
+.related h2 {
+  margin: 0;
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 30px;
+}
+
+.related ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.crumbs li + li::before {
+  content: '/';
+  margin-right: 8px;
+  color: var(--m-textMuted);
+}
+
+.articleBody {
+  padding-bottom: 64px;
+}

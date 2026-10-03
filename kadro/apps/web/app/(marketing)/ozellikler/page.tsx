@@ -9,6 +9,7 @@ import {
 import styles from '../../../components/marketing/marketing.module.css';
 import { pageMetadata } from '../../../components/marketing/metadata';
 import { DOWNLOAD_ANCHOR } from '../../../components/marketing/site';
+import { SiteJsonLd } from '../../../components/seo/site-json-ld';
 
 export const metadata: Metadata = pageMetadata({
   title: FEATURES_META.title,
@@ -20,6 +21,7 @@ export const metadata: Metadata = pageMetadata({
 export default function FeaturesPage() {
   return (
     <article>
+      <SiteJsonLd />
       <header className={styles.sectionInner}>
         <div className={styles.pageHeader}>
           <h1 className={styles.pageTitle}>{FEATURES_META.title}</h1>

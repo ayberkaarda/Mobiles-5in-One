@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: monorepoRoot,
   },
+  // The blog and legal content files are read from disk at run time (ADR-0080); include them in
+  // the standalone output of every route that loads them.
+  outputFileTracingIncludes: {
+    '/blog': ['./content/blog/**/*'],
+    '/blog/[slug]': ['./content/blog/**/*'],
+    '/gizlilik': ['./content/legal/**/*'],
+    '/kvkk-aydinlatma': ['./content/legal/**/*'],
+    '/sitemap.xml': ['./content/blog/**/*'],
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
