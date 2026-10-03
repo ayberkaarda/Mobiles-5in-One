@@ -129,13 +129,6 @@ export default function createConfig(): ExpoConfig {
       'expo-localization',
       'expo-notifications',
       'expo-apple-authentication',
-      [
-        'expo-location',
-        {
-          locationWhenInUsePermission:
-            'Kadro konumunu yakınındaki sahaları ve eksik oyuncu ilanlarını göstermek için kullanır.',
-        },
-      ],
     ],
     experiments: {
       typedRoutes: true,

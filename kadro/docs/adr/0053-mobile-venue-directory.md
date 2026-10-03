@@ -44,8 +44,8 @@ Facts of that API that shape the client:
 - Rating rule (ADR-0038): an average is shown only from 3 reviews on; below that the row says how
   many reviews exist and that a rating needs 3. The threshold is one constant
   (`RATING_MIN_REVIEWS`) used by every screen and interpolated into the copy.
-- Map view: not built, list only. `react-native-maps` is a dependency, but its config plugin and
-  Google Maps API key are not set up (deps work package note, same as ADR-0052), and a map cannot
+- Map view: not built, list only. `react-native-maps` was a dependency until it was removed as unused; no
+  Google Maps API key or config plugin was ever set up (same as ADR-0052), and a map cannot
   be tested without a device. No new dependency was added.
 
 ### Detail

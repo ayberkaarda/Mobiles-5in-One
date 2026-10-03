@@ -22,7 +22,7 @@
 
 ## 2. What the code does not do (and the label must say so)
 
-- **Device location is not read.** `apps/mobile/package.json` lists `expo-location` and `apps/mobile/app.config.ts` registers its plugin with a when-in-use permission string, but no file under `apps/mobile/src` or `apps/mobile/app` imports `expo-location` or requests the permission. Venue coordinates are venue data (typed into the venue form, `apps/mobile/src/venues/form.ts`), not user data. To verify on a built binary: the plugin adds the iOS usage string and the Android location permissions to the manifest, which store reviewers may question. Recommended before any real build: remove the plugin (owner decision, not done here) so "Location: not collected" is also true of the manifest.
+- **Device location is not read.** `apps/mobile/package.json` has no `expo-location` or `react-native-maps` dependency and `apps/mobile/app.config.ts` registers no location plugin (removed; it was never imported), so the app requests no location permission. Venue coordinates are venue data (typed into the venue form, `apps/mobile/src/venues/form.ts`), not user data. To verify on a built binary: no location permission appears in the manifest or Info.plist.
 - **No contacts, photos or camera access.** There is no `expo-contacts` or `expo-image-picker` in `apps/mobile/package.json`; `apps/mobile/src/profile/avatar-upload.ts` states the app has no picker yet, so the avatar upload control is not shown. The QR code is rendered, not scanned (`apps/mobile/src/teams/InviteQr.tsx`; no scanner dependency). To verify: no camera permission appears in the built manifest.
 - **Purchases exist in the app but are unverified.** `react-native-purchases` is in `apps/mobile/package.json` and a Kadro Pro paywall with purchase and restore is wired in (`apps/mobile/app/kadro-pro.tsx`, `apps/mobile/src/billing/`, ADR-0077) behind a billing port. Without a platform SDK key (`EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` or `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`) the port is a closed stub that configures nothing and the paywall says purchases are unavailable. No RevenueCat account, store product or key exists, so no purchase or restore has run against a real store or the RevenueCat service; the flows are covered only by tests with fake ports (`apps/mobile/tests/billing-units.test.ts`, `apps/mobile/tests/billing-screens.test.tsx`). Entitlement state still reaches the server only through the webhook and reconciliation.
 - **No analytics, advertising or crash-reporting SDK.** No such dependency in the `package.json` of `apps/mobile`, `apps/web` or `apps/worker`. ADR-0074 (Sentry with scrubbing) is a reserved number with no record and there is no Sentry code; if it is implemented, add Diagnostics rows.
@@ -73,7 +73,7 @@ The marketing and SEO pages are server-rendered; the code carries no analytics o
 
 ## 6. Open items to verify before any real submission
 
-1. Remove or justify the `expo-location` plugin (section 2).
+1. Confirm on a built binary that no location permission is present (section 2).
 2. Final wording of Apple's Device ID and Coarse Location rows against the current label guide.
 3. Whether Pro is part of the shipped build (Purchases and Financial info rows); the paywall has to be exercised against real store products and a RevenueCat account first.
 4. Built-manifest permission list (location, camera) on a real build.
