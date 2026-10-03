@@ -1,0 +1,84 @@
+/* Team invite landing (direction section 4.4): one centred ticket card, store badges below. */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--k-space-12) 0 var(--k-space-16);
+}
+
+.ticket {
+  width: 100%;
+  max-width: 480px;
+  padding: var(--k-space-8) var(--k-space-6);
+  border: 1px solid var(--k-color-border-strong);
+  border-radius: var(--k-radius-lg);
+  background-color: var(--k-color-surface-raised);
+  box-shadow: var(--k-elevation-1);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--k-color-text-muted);
+  font-size: var(--k-type-label-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: var(--k-type-label-weight);
+}
+
+.teamName {
+  margin: var(--k-space-2) 0 0;
+  font-size: var(--k-type-display-size);
+  line-height: var(--k-type-display-line-height);
+  font-weight: var(--k-type-display-weight);
+  font-stretch: var(--k-type-display-stretch);
+  letter-spacing: var(--k-type-display-tracking);
+  overflow-wrap: anywhere;
+}
+
+.district {
+  margin: var(--k-space-2) 0 0;
+  color: var(--k-color-text-muted);
+}
+
+.squad {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--k-space-4);
+  margin: var(--k-space-6) 0 0;
+  padding: var(--k-space-4) 0;
+  border-top: 1px solid var(--k-color-border);
+  border-bottom: 1px solid var(--k-color-border);
+}
+
+.actions {
+  margin: var(--k-space-6) 0 0;
+}
+
+.actions a {
+  width: 100%;
+}
+
+.caption {
+  margin: var(--k-space-4) 0 0;
+  color: var(--k-color-text-muted);
+  font-size: var(--k-type-caption-size);
+  line-height: var(--k-type-caption-line-height);
+}
+
+.stores {
+  width: 100%;
+  max-width: 480px;
+  margin: var(--k-space-8) 0 0;
+}
+
+.storesTitle {
+  margin: 0;
+  font-size: var(--k-type-title3-size);
+  line-height: var(--k-type-title3-line-height);
+  font-weight: var(--k-type-title3-weight);
+}
+
+.storesText {
+  margin: var(--k-space-2) 0 var(--k-space-4);
+  color: var(--k-color-text-muted);
+}
