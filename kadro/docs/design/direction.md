@@ -27,7 +27,8 @@ The brand colour is used as wallpaper and the accent as a dot. For comparison Fo
 | Mobile app | Cards with hairline, buttons with 12 px radius, system-like lists. Lineup is a list of names.                                    | The one screen that could only be Kadro (lineup) looks like a settings list.                                                                   |
 
 What already works and stays: the answer-first paragraphs and SEO structure, the 44 px targets,
-visible focus, the `--m-*` custom-property theming under the nonce CSP, the hairline-only header,
+visible focus, custom-property theming under the nonce CSP (`--m-*` today, `--k-*` from the brand
+theme after W2), the hairline-only header,
 the sample-label discipline, the short imperative tone of the spec ("Kadroyu kur").
 
 ## 2. Concept: the squad sheet under floodlights
@@ -42,9 +43,12 @@ Every surface is built from the three objects of that scene, and nothing else:
 2. **Chalk on turf.** Pitch geometry (touchline, halfway line, centre circle, penalty box) is
    drawn as chalk lines on deep turf, always as a working diagram with real data on it (sides,
    positions, bench), never as a background pattern or a watermark.
-3. **The night surface.** The app is designed dark first (match night), the web is chalk-light
-   with the dark pitch as an object inside it. Green is the pitch and the "geliyorum" state, not a
-   wall colour. Orange is the ball and the one thing that needs an answer right now.
+3. **The night surface.** Both the web and the app ship a light and a dark scheme, follow the
+   system setting by default and let the user pin one (§4.11). The emphasis differs: the app is
+   designed dark first (match night), the web is chalk-light first with the dark pitch as an
+   object inside it. The pitch diagram is night turf in both schemes. Green is the pitch and the
+   "geliyorum" state, not a wall colour. Orange is the ball and the one thing that needs an
+   answer right now.
 
 Why it fits: the product's data is exactly this (a roster, positions on a pitch, counts, a fee
 split, a missing-player call). The squad sheet makes the data the design. It is specific to
@@ -89,48 +93,65 @@ enters the repository.
 ### 4.1 Colour
 
 Hues stay in the family of the spec (green, orange, yellow card, red card, night, chalk) so the
-app icon and the mark stay recognisable; the neutrals are rebuilt in steps, the light-theme
-button orange is one step deeper so it clears 3:1 on chalk, and the **use** of colour changes. All ratios below are WCAG 2 contrast, computed with the formula of
-`packages/brand/scripts/validate-tokens.mjs`.
+app icon and the mark stay recognisable; the neutrals are rebuilt in steps and the **use** of
+colour changes. **Owner decision (2026-10-03): the web and the app both ship a light and a dark
+scheme**, each designed on its own, not as an inversion of the other. Both schemes define the
+same 29 semantic roles; the canonical values are `packages/brand/theme/tokens.json` (v3.0.0,
+mirrored in `tokens.json` next to this file), every value is a palette entry, and every pair below
+is checked in both schemes by `packages/brand/scripts/validate-tokens.mjs` (WCAG 2 contrast: text
+4.5:1, non-text 3:1).
 
-Light theme (web default, app light scheme):
+| Role            | Light     | Dark      | Job                                                                                                     |
+| --------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `background`    | `#F5F6F1` | `#0C1611` | page and screen ground: chalk / night                                                                   |
+| `surface`       | `#FFFFFF` | `#142019` | cards, list groups, sheets                                                                              |
+| `surfaceSunken` | `#EBEEE6` | `#08100C` | wells: download band, input ground, quiet sections                                                      |
+| `surfaceRaised` | `#FFFFFF` | `#1B2A21` | floating layer (light lifts with `level2`, dark with this step)                                         |
+| `fillMuted`     | `#E1E6DC` | `#24352B` | chips at rest, locked controls, skeletons; carries only `text` and `textMuted`                          |
+| `border`        | `#D3D9D0` | `#2A3A30` | hairlines (decorative)                                                                                  |
+| `borderStrong`  | `#6F7D75` | `#6A7A71` | input and control outlines                                                                              |
+| `text`          | `#0F1A14` | `#F5F6F1` | body and headings                                                                                       |
+| `textMuted`     | `#4E5E55` | `#A6B3AA` | meta, captions, inactive tabs                                                                           |
+| `inverse`       | `#0F1A14` | `#F5F6F1` | selected chip, toast; `onInverse` `#F5F6F1` / `#0C1611`                                                 |
+| `primary`       | `#1B7F4B` | `#3DBF78` | primary button, "geliyorum"; `onPrimary` `#FFFFFF` / `#0F1A14`                                          |
+| `primaryText`   | `#17704A` | `#3DBF78` | green as text; `link` has the same values                                                               |
+| `focusRing`     | `#17704A` | `#F5F6F1` | 2 px ring, 2 px offset                                                                                  |
+| `accent`        | `#E35A14` | `#FF6B1A` | the one orange action; `onAccent` `#0F1A14` in both                                                     |
+| `accentText`    | `#0F1A14` | `#FF7A33` | orange text exists on dark only; on light the role is ink                                               |
+| `warning`       | `#F2C230` | `#F2C230` | "belki", `ÖRNEK` tag; a fill only; `onWarning` `#0F1A14`                                                |
+| `danger`        | `#D7263D` | `#FF5C6E` | "gelmiyorum", destructive; `onDanger` `#FFFFFF` / `#0F1A14`                                             |
+| `dangerText`    | `#C41E34` | `#FF5C6E` | error text                                                                                              |
+| `pitch` group   | fixed     | fixed     | `pitch #0E5B36`, `pitchLine #F5F6F1`, `onPitch #FFFFFF`, `pitchMarker #F5F6F1`, `onPitchMarker #0F1A14` |
 
-| Role          | Hex       | Pairs that must hold                                                                                                                 |
-| ------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| background    | `#F5F6F1` | text 16.41, textMuted 6.33, primaryText 5.60, dangerText 5.40                                                                        |
-| surface       | `#FFFFFF` | text 17.82, textMuted 6.87, primary 5.02, dangerText 5.86                                                                            |
-| surfaceSunken | `#EBEEE6` | text 15.20, textMuted 5.86, primaryText 5.19, dangerText 5.00                                                                        |
-| border        | `#D3D9D0` | hairlines only (decorative, no 3:1 requirement)                                                                                      |
-| borderStrong  | `#6F7D75` | input outlines, 3.97 on background, 4.32 on surface (3:1 required)                                                                   |
-| text          | `#0F1A14` |                                                                                                                                      |
-| textMuted     | `#4E5E55` |                                                                                                                                      |
-| primary       | `#1B7F4B` | onPrimary `#FFFFFF` 5.02; as a non-text fill on background 4.62                                                                      |
-| primaryText   | `#17704A` | green as text and links (the fill green is 4.28 on surfaceSunken, so it is not used as text)                                         |
-| pitch         | `#0E5B36` | pitchLine `#F5F6F1` 7.53; onPitch `#FFFFFF` 8.18 (markers, numerals)                                                                 |
-| accent        | `#E85D16` | onAccent `#0F1A14` 5.10; as a button fill on background 3.22; never as text on light surfaces (the logo and app icon keep `#FF6B1A`) |
-| warning       | `#F2C230` | onWarning `#0F1A14` 10.64                                                                                                            |
-| danger        | `#D7263D` | onDanger `#FFFFFF` 4.96                                                                                                              |
-| dangerText    | `#C41E34` | error text on background 5.40, on surface 5.86                                                                                       |
+How the two schemes differ by design:
 
-Dark theme (app default on a dark system scheme; web dark is token-ready, see §7):
+- **Light** keeps the deep green `#1B7F4B` with white labels and a deeper orange `#E35A14` for
+  the accent fill, so the button clears 3:1 on chalk and on the sunken band (3.37 / 3.12) while
+  ink on it stays at 4.87. Hierarchy is three surface steps plus `level2` for floating things.
+- **Dark** switches the primary and danger fills to the bright tints `#3DBF78` and `#FF5C6E` with
+  ink labels (7.57 and 5.95). The deep green fill sits at 2.99:1 against a raised night surface,
+  and a green bright enough to clear it cannot keep a white label at 4.5:1, so the dark fills
+  carry ink; under floodlights the bright fill is also the clearer signal. The focus ring is chalk; depth comes from the `surfaceRaised` step, not shadows; the
+  sunken step goes darker than the ground (`#08100C`).
+- **Fixed (always dark):** the pitch roles are identical in both schemes; see §4.11.
 
-| Role          | Hex       | Pairs that must hold                                                           |
-| ------------- | --------- | ------------------------------------------------------------------------------ |
-| background    | `#0C1611` | text 16.98, textMuted 8.48, primaryText 7.84, accentText 7.10, dangerText 6.16 |
-| surface       | `#142019` | text 15.46, textMuted 7.72, primaryText 7.14                                   |
-| surfaceRaised | `#1B2A21` | text 13.81, textMuted 6.89, primaryText 6.37, accentText 5.78, dangerText 5.01 |
-| border        | `#2A3A30` | hairlines                                                                      |
-| borderStrong  | `#5E6E65` | 3.2 on background                                                              |
-| text          | `#F5F6F1` |                                                                                |
-| textMuted     | `#A6B3AA` |                                                                                |
-| primary       | `#1B7F4B` | onPrimary `#F5F6F1` 4.62; fill on background 3.67 (non-text)                   |
-| primaryText   | `#3DBF78` | green as text and links on dark                                                |
-| pitch         | `#0E5B36` | same diagram colours in both themes                                            |
-| accent        | `#FF6B1A` | onAccent `#0F1A14` 6.26                                                        |
-| accentText    | `#FF7A33` | orange as text on dark only                                                    |
-| warning       | `#F2C230` | as text on background 11.01; onWarning `#0F1A14`                               |
-| danger        | `#D7263D` | onDanger `#F5F6F1` 4.57                                                        |
-| dangerText    | `#FF5C6E` | error text on dark                                                             |
+Measured pairs (selected; the full list is `contrast.pairs` / `contrast.nonTextPairs`):
+
+| Pair                                                       | Light                      | Dark                                |
+| ---------------------------------------------------------- | -------------------------- | ----------------------------------- |
+| text on background / surface / raised                      | 16.41 / 17.82 / 17.82      | 16.98 / 15.46 / 13.81               |
+| textMuted on background / sunken / fillMuted               | 6.33 / 5.86 / 5.42         | 8.48 / 8.86 / 5.96                  |
+| primaryText on background / sunken / raised                | 5.60 / 5.19 / 6.08         | 7.84 / 8.19 / 6.37                  |
+| dangerText on background / sunken / raised                 | 5.40 / 5.00 / 5.86         | 6.16 / 6.43 / 5.01                  |
+| accentText on background / raised                          | 16.41 / 17.82 (ink)        | 7.10 / 5.78                         |
+| onPrimary / onAccent / onDanger / onWarning on their fill  | 5.02 / 4.87 / 4.96 / 10.64 | 7.57 / 6.26 / 5.95 / 10.64          |
+| borderStrong on background / raised (3:1)                  | 3.97 / 4.32                | 4.07 / 3.31                         |
+| primary fill on background / raised (3:1)                  | 4.62 / 5.02                | 7.84 / 6.37                         |
+| accent fill on background / sunken (3:1)                   | 3.37 / 3.12                | 6.47 / 6.76                         |
+| pitchLine / onPitch on pitch; onPitchMarker on pitchMarker | 7.53 / 8.18; 16.41         | same                                |
+| pitch edge (3:1)                                           | turf on background 7.53    | chalk touchline on background 16.98 |
+
+Lowest values: text 4.87 (light) and 5.01 (dark); non-text 3.12 (light) and 3.31 (dark).
 
 Usage rules (the part that changes the look):
 
@@ -140,8 +161,8 @@ Usage rules (the part that changes the look):
   ball spot of the mark, the "Eksik Var" marker and the "Başvur" button on a call. Never as a
   highlight colour for icons or chips.
 - RSVP and status colours are fixed: in = primary, maybe = warning, out = danger, waitlist =
-  textMuted outline, locked/closed = surfaceSunken (light) / surfaceRaised (dark) with the lock
-  icon. No other place uses warning or danger as decoration.
+  textMuted outline, locked/closed = `fillMuted` with the lock icon, in both schemes. State fills
+  always carry their label. No other place uses warning or danger as decoration.
 - Hierarchy on light comes from three surface steps (background, surface, surfaceSunken) and
   1 px `border` lines, not from shadows. On dark, from background, surface and surfaceRaised.
 - No gradients, no glows, no translucent "glass".
@@ -180,24 +201,29 @@ Web scale (px size / line-height / weight / width). Body text column is 68ch max
 | body      | 16 / 24 / 400 / 100       | same                | UI text                                 |
 | label     | 14 / 20 / 600 / 100       | same                | Buttons, chips, table heads             |
 | caption   | 13 / 18 / 500 / 100       | same                | Meta lines, sample notices              |
-| numeralXL | 112 / 100 / 800 / 75 tnum | 72 / 68 / 800 / 75  | The squad count in the hero squad sheet |
+| numeralXL | 112 / 112 / 800 / 75 tnum | 72 / 72 / 800 / 75  | The squad count in the hero squad sheet |
 | numeral   | 40 / 44 / 700 / 75 tnum   | 32 / 36 / 700 / 75  | Counts in rows, dates in the timeline   |
 
 Mobile scale (pt / line-height / weight / width): caption 12/16/500/100, footnote 13/18/400/100,
 label 14/20/600/100, body 16/24/400/100, bodyStrong 16/24/600/100, title3 20/26/600/100,
-title2 24/28/700/75, title1 32/36/700/75, display 40/42/800/75, score 40/44/700/75 tnum,
-bib 28/32/800/75 tnum (marker numerals), numeralXL 64/60/800/75 tnum (the squad count on the
-Maçlar tab card).
+title2 24/28/700/75, title1 32/36/700/75, display 40/42/800/75, numeral 24/28/700/75 tnum
+(kick-off times in rows), score 40/44/700/75 tnum, bib 28/32/800/75 tnum (marker numerals),
+numeralXL 64/64/800/75 tnum (the squad count on the Maçlar tab card).
 
-Files: the web self-hosts two WOFF2 subsets (latin, latin-ext) of the variable font with
-`unicode-range`, as `fonts.css` does today, and keeps preloading only the latin file. The
-`wdth` axis is declared with `font-stretch: 62% 125%` in `@font-face` and selected with
-`font-stretch: 75%` (not `font-variation-settings`, so fallbacks degrade). React Native cannot
-select variable axes, so mobile and the OG renderer load static instances cut with fontTools
+Files (shipped in `packages/brand/fonts/archivo/`, ADR-0084): the web self-hosts two WOFF2
+subsets of the variable font with `unicode-range` and preloads only the latin file. The subsets
+keep only the axis ranges the system uses (`wdth` 75-100, `wght` 400-800), declared with
+`font-stretch: 75% 100%` and `font-weight: 400 800` in `@font-face` and selected with
+`font-stretch: 75%` (not `font-variation-settings`, so fallbacks degrade). The latin file also
+carries Ğ ğ İ Ş ş and ₺, so a Turkish page needs one file: latin 55 KB, latin-ext 51 KB, 106 KB
+together (target under 110 KB; today four files). React Native cannot select variable axes, so
+mobile and the OG renderer load five static instances cut with fontTools
 (`fonttools varLib.instancer`): `Archivo-Regular`, `-Medium`, `-SemiBold` (wdth 100) and
-`ArchivoNarrow-Bold`, `-ExtraBold` (wdth 75). The brand package ships the variable file, the five
-instances and `OFL.txt`; Sora and Inter are removed. Font payload target on the web: both
-subsets together under 110 KB (today four files).
+`ArchivoCondensed-Bold`, `-ExtraBold` (wdth 75). The narrow instances are named Condensed, as
+the font's own STAT table names wdth 75, because Archivo Narrow is a separate family. The brand
+package ships the unmodified variable file (`Archivo-Variable.ttf`), the two subsets, the five
+instances and `OFL.txt`. Sora and Inter stay in the package only until the apps have migrated
+(ADR-0084), then they are removed.
 
 ### 4.3 Spacing, radius, elevation
 
@@ -207,10 +233,12 @@ subsets together under 110 KB (today four files).
 - Radius is tied to the element class, one scale: chips and tags 4, buttons and inputs 8,
   cards and list groups 12, sheets, modals and device frames 20, player markers and avatars
   full. Nothing else.
-- Elevation: light theme has no shadows except `level2` for floating things (bottom sheet,
+- Elevation: the light scheme has no shadows except `level2` for floating things (bottom sheet,
   sticky CTA on the invite page, the device frame): `0 8px 24px rgba(15, 26, 20, 0.12)`. The
-  sticky header uses a 1 px `border` line, not a shadow. Dark theme replaces shadows with the
-  `surfaceRaised` step plus a 1 px `border`.
+  sticky header uses a 1 px `border` line, not a shadow. The dark scheme replaces shadows with the
+  `surfaceRaised` step plus a 1 px `border`; sheets keep a soft `level2`
+  (`0 8px 24px rgba(0, 0, 0, 0.5)`) so they separate from the scrim. Overlays per scheme:
+  `pressed` (8 % ink on light, 10 % chalk on dark) and `scrim` (48 % ink / 64 % black).
 
 ### 4.4 Layout and page compositions (web)
 
@@ -270,12 +298,12 @@ sections. No section is a row of three equal cards.
 - **Match detail**: header with the count and kick-off; RSVP as a 3-segment control
   (Geliyorum, Belki, Gelmiyorum) filled in the state colour of §4.1; waitlist shows a full-width
   notice row "Bekleme listesi: 3. sıradasın" with the position in `numeral`; locked or closed
-  shows the control disabled on `surfaceSunken` with a lock icon and the reason in caption.
+  shows the control disabled on `fillMuted` with a lock icon and the reason in caption.
   Participants as a list with the kit number (`bib`) in a 32 pt circle, name, position chip.
 - **Lineup** (`dizilis`): a portrait pitch SVG (`PitchView`, react-native-svg, viewBox
   300 × 460, `pitch` fill, 2 px `pitchLine` lines, centre circle r 40) with side A in the top
-  half and side B in the bottom; markers are 36 pt circles, `onPitch` fill, `bib` numeral in
-  `text`; an empty slot is a dashed `pitchLine` circle with a plus; the bench is a chip row
+  half and side B in the bottom; markers are 36 pt circles, `pitchMarker` fill, `bib` numeral in
+  `onPitchMarker` (both fixed, so the pitch looks the same in both schemes); an empty slot is a dashed `pitchLine` circle with a plus; the bench is a chip row
   under the pitch. Dragging a chip onto a slot assigns; "Otomatik dengele" is a secondary
   button; the balance summary is four pairs of numerals (KL 1-1, DF 2-2, OS 2-2, FV 2-1), not
   bars.
@@ -287,7 +315,8 @@ sections. No section is a row of three equal cards.
 - **Profil**: name in `title1`, position and level as chips, district; stats as three numerals
   (maç, MVP, takım) in a row without cards; the Pro upsell is one list row, not a banner.
 - **Auth and settings**: forms with the label above the field, 8 px radius inputs, helper and
-  error text below; no cards.
+  error text below; no cards. Ayarlar has a "Görünüm" row group with three choices, Sistem,
+  Açık, Koyu (a radio list, the current one checked), stored on the device (§4.11).
 
 ### 4.6 Iconography
 
@@ -328,12 +357,13 @@ Only `transform` and `opacity` animate. What moves, and nothing else:
 
 ### 4.9 Components
 
-- **Buttons**: primary = `primary` fill, `onPrimary` text; accent = `accent` fill, `onAccent`
+- **Buttons**: primary = `primary` fill, `onPrimary` text (deep green with white on light,
+  bright green with ink on dark); accent = `accent` fill, `onAccent`
   text (one per viewport); secondary = `surface` with 1 px `borderStrong`; text button =
   `primaryText` underline on hover. Height 48 web / 48 pt mobile, radius 8, label weight 600,
   one line, max 3 words, same label for the same intent on a page.
 - **Chips** (position, level, facility, filter): radius 4, 32 pt high, body 14 weight 500,
-  `surfaceSunken` fill, selected = `text` fill with `background` label. State chips use the
+  `fillMuted` fill with `text` label, selected = `inverse` fill with `onInverse` label. State chips use the
   §4.1 state colours as fill with the matching on-colour.
 - **Badges**: the sample tag `ÖRNEK` is a chip with `warning` fill and `onWarning` text, placed
   beside the title it qualifies, never floating on an image. Verified venue = `primaryText`
@@ -342,11 +372,13 @@ Only `transform` and `opacity` animate. What moves, and nothing else:
   of what is missing, one button that creates it ("Henüz maç yok. İlk maçı aç.").
 - **Error states**: direct sentence, what to do next, one retry button; never "Oops".
 - **Form fields**: label above, 48 pt input, radius 8, `borderStrong` outline, 2 px
-  `primaryText` focus ring with 2 px offset, helper text in caption, error text in `dangerText`
+  `focusRing` ring with 2 px offset (green on light, chalk on dark), helper text in caption, error text in `dangerText`
   below the field; no placeholder-as-label.
 - **Rows**: 56 pt min, hairline `border` between rows only, chevron only when the row opens a
   screen.
-- **Device frame**: CSS component, 20 px radius inner, 44 outer, frame colour `text`.
+- **Device frame**: CSS component, 20 px radius inner, 44 outer, frame colour ink `#0F1A14` in
+  both schemes (the screenshots inside are dark-scheme captures); on dark a 1 px `borderStrong`
+  outline marks its edge.
 
 ### 4.10 Copy tone
 
@@ -366,6 +398,54 @@ Three rewrites:
 The answer-first paragraphs required by the SEO rules keep their 40-60 words; they sit under the
 H1 as `lead` on inner pages, and on the home page the lead is the short version while the
 40-60 word definition moves to the "Kim için" section.
+
+### 4.11 Theming: light and dark
+
+Preferences: `system` (default), `light`, `dark`. Labels in Turkish: Sistem, Açık, Koyu.
+
+**Web** (marketing, SEO pages, invite page, e-mail link pages):
+
+- Colours come only from `@kadro/brand/theme.css` (`--k-color-*`). Light values sit on `:root`
+  and `[data-theme='light']`, dark values on `[data-theme='dark']`, and the dark values repeat in
+  `@media (prefers-color-scheme: dark)` for `:root:not([data-theme])` and `[data-theme='system']`.
+  Every block sets `color-scheme`.
+- The root layout reads the `kadro-theme` cookie on the server and renders
+  `<html data-theme="…">` (`system` when there is no cookie). Every HTML surface already renders
+  per request for the CSP nonce (ADR-0055), so this costs nothing and needs no inline script:
+  the first paint is right, with no flash, under the existing nonce policy. If CSS support for the
+  media query is missing, the page stays light.
+- The toggle in the footer is a three-option form (Sistem / Açık / Koyu) that posts to a
+  same-origin route handler; the handler validates the value, sets the cookie (`Path=/`,
+  `SameSite=Lax`, `Secure`, 365 days) and redirects back with 303. A bundled client component
+  may set `data-theme` at once before the round trip (progressive enhancement, no new script
+  source). No preference is stored server side.
+- `<meta name="color-scheme" content="light dark">` and two `theme-color` entries with `media`
+  (`#F5F6F1` light, `#0C1611` dark).
+
+**Mobile:**
+
+- `ThemeProvider` resolves the stored preference (AsyncStorage key `kadro.colorScheme`) against
+  `useColorScheme()`; `system` follows the device and reacts to changes, `light` and `dark` pin
+  it. Colours come from `colors.light` / `colors.dark` of `@kadro/brand/tokens`; navigation
+  chrome, the status bar style and the splash background (`#F5F6F1` / `#0C1611`) follow the
+  resolved scheme. The setting lives in Ayarlar (§4.5).
+
+**Always dark, in both schemes:**
+
+- The pitch diagram everywhere it appears (web hero squad sheet, article formation figure, app
+  `PitchView`): `pitch`, `pitchLine`, `onPitch`, `pitchMarker`, `onPitchMarker` are fixed roles
+  with one value. On light it is a night object on chalk (turf against chalk 7.53:1); on dark its
+  edge is the chalk touchline (16.98:1), because turf against night is only 2.26:1. The empty
+  slot stays a dashed chalk outline; the orange ball spot is decoration only.
+- The OG card images: a raster cannot follow the reader's scheme, so they stay the night card.
+- The device frame (ink) and the app screenshots inside it (dark-scheme captures).
+
+**Everything else adapts by role**, never by hard-coded colour: the header and footer wordmark
+is inline SVG filled with `--k-color-text` (the ball spot stays orange), so it follows a
+pinned scheme too; the files `kadro-wordmark.svg` (ink) and `kadro-wordmark-light.svg` (chalk)
+are for places that cannot read CSS (OG card, store art, documents). Store badges use the official
+artwork with its outline on dark, and the app icon is unchanged. The admin panel and e-mail
+templates keep the light scheme for now; they pick up the tokens only.
 
 ## 5. Anti-patterns for implementers
 
@@ -387,19 +467,28 @@ Each of these is a review blocker.
 9. No `label: value` bullet lists for facts; facts are definition grids or rows with numerals.
 10. No accordion for the FAQ; no sidebars on articles; no footer link farm beyond the two groups.
 11. No new hue; no orange as text on light surfaces; no green as a background.
-12. No `h-screen`; no literal colours in CSS modules (only `--m-*` properties); no inline `style`
+12. No `h-screen`; no literal colours in CSS modules (only `--k-*` properties of the brand theme); no inline `style`
     beyond the shell's variable block; no external font or icon host (CSP `self` only).
 13. No change to routes, nav labels, `testID`s, i18n keys, legal copy or the answer-first rule.
 
 ## 6. Token handoff
 
-`kadro/docs/design/tokens.json` is the exact replacement for `packages/brand/tokens.json`,
-same top-level keys (`color.palette`, `color.theme.light|dark`, `typography`, `spacing`,
-`radius`, `contrast`) plus the new `elevation`, `motion`, `state` and `typography.fontWidth`
-blocks. `validate-tokens.mjs` needs three edits, listed in §7 W1. The web mirror
-(`components/marketing/theme.ts`) and the mobile theme read the same roles; `theme.ts` on mobile
-derives `border`, `pressed` and `skeleton` from the new `border` and `text` roles instead of
-alpha blends of `textMuted`.
+Delivered by W1 (ADR-0084). `packages/brand/theme/tokens.json` (v3.0.0) is the source of truth
+and `tokens.json` next to this file mirrors it. It keeps the keys of the first handoff
+(`color.palette`, `color.theme.light|dark`, `typography`, `spacing`, `radius`, `elevation`,
+`motion`, `state`, `contrast`) and adds `color.fixedRoles`, `color.overlay`, `theming`,
+`typography.nativeFamily` and `typography.fontFiles`; contrast pairs carry
+`scheme: light | dark | both`. Consumers do not read the JSON directly:
+
+- the web imports `@kadro/brand/theme.css` (`--k-color-*` and the rest, both schemes);
+- the app imports `@kadro/brand/tokens` (`colors.light`, `colors.dark`, `typeScale` on the
+  static instances, `overlays`, `elevation`, `theming`); the mobile theme takes `border`,
+  `pressed` (`overlays.pressed`), `skeleton` (`fillMuted`) and the error text
+  (`dangerText`) from roles instead of alpha blends of `textMuted`.
+
+The v1 `packages/brand/tokens.json` and the Sora and Inter files stay frozen until W2, W3 and
+W6 have moved their readers; the package README lists every v1 name still in use. The files in
+`prototype/` keep the v2 values they were built with (`tokens.css` says so) and are not updated.
 
 ## 7. Work breakdown and ownership
 
@@ -408,30 +497,31 @@ Sequence: W1 first (everything depends on the tokens and fonts); W2 and W3 in pa
 last. One owner per file; the lead owns `packages/brand/**` and `docs/adr/**` per the workspace
 rules, so W1 is the lead or a worker writing files for the lead to commit.
 
-| Work package                    | Owns (exclusive)                                                                                                                                                                                                                        | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1 Brand                        | `packages/brand/**`, `docs/adr/0084-design-direction.md`                                                                                                                                                                                | Replace `tokens.json` with the handoff file; add `fonts/archivo/` (variable TTF, five static instances, `OFL.txt`); remove `fonts/sora`, `fonts/inter`; redraw `kadro-wordmark*.svg` with the letters in Archivo wdth 75 weight 800 as outlines, keeping the O as the centre circle with the orange spot; app icon and mark unchanged. Update `validate-tokens.mjs`: palette spec names, radius list `4/8/12/20`, asset list, plus a 3:1 check for the `nonTextPairs` block. Update `README.md`. ADR records the direction and the font licence. |
-| W2 Web shell                    | `apps/web/components/marketing/**`, `apps/web/public/fonts/**`, `apps/web/public/screens/**`, `apps/web/tests/marketing/**`                                                                                                             | `fonts.css`/`fonts.ts` for the two Archivo subsets with `font-stretch`; `theme.ts` with the new light roles; `marketing.module.css` rebuilt on the §4 scale; new `squad-sheet.tsx`, `pitch-diagram.tsx`, `device-frame.tsx`, `timeline.tsx`, `fact-grid.tsx`, `chip.tsx`; `content.ts` copy per §4.10; `store-badges.tsx` restyled; tests updated for the new token values and the new pairs.                                                                                                                                                    |
-| W3 Mobile theme and kit         | `apps/mobile/src/theme/**`, `apps/mobile/src/ui/**`, `apps/mobile/app/(tabs)/_layout.tsx`, `apps/mobile/assets/fonts/**`                                                                                                                | Load the static instances with `expo-font`; add `fontWidth` handling (family name per width); extend `ThemeColors` with `surfaceSunken`/`surfaceRaised`, `borderStrong`, `primaryText`, `pitch`, `pitchLine`, `onPitch`, `accentText`, `dangerText`; new `Chip`, `Numeral`, `SegmentedControl`, `PitchView`, `PlayerMarker`, `NoticeRow`; `Button`, `Card`, `ListItem`, `TextField`, `EmptyState`, `Skeleton` restyled; `TabIcon` on Phosphor (add `phosphor-react-native` and `react-native-svg` is already present).                           |
-| W4a Web home and features       | `apps/web/app/(marketing)/page.tsx`, `ozellikler/page.tsx`                                                                                                                                                                              | Compositions of §4.4 with W2 components.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| W4b Web content pages           | `apps/web/app/(marketing)/blog/**`, `sss/**`, `gizlilik/**`, `kvkk-aydinlatma/**`, `iletisim/**`, `app/not-found.tsx`, `app/(marketing)/error.tsx`, `apps/web/components/content/**`                                                    | Blog list and article layout, FAQ two-column, legal typography, error pages. MDX content unchanged except a figure directive in the 7v7 article.                                                                                                                                                                                                                                                                                                                                                                                                 |
-| W4c Web SEO and invite          | `apps/web/app/(seo)/**`, `apps/web/app/(marketing)/mac/**`, `apps/web/components/seo/**`                                                                                                                                                | Venue fact grid, district scoreboard rows, invite ticket card.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| W5a Mobile matches              | `apps/mobile/app/(tabs)/maclar/**`, `apps/mobile/app/takim/[id]/mac/**`, `apps/mobile/src/matches/**`                                                                                                                                   | Match card, match detail with the RSVP control, lineup with `PitchView`, payments as a numeral list.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| W5b Mobile teams, calls, venues | `apps/mobile/app/(tabs)/takimlar/**`, `(tabs)/eksik-var/**`, `(tabs)/sahalar/**`, `app/takim/**` (except `mac/**`), `app/ilan/**`, `app/saha/**`, `app/mac/**`, `src/teams/**`, `src/calls/**`, `src/venues/**`                         | Rows, chips, invite preview, call detail with the single accent button.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| W5c Mobile profile, auth, pro   | `apps/mobile/app/(tabs)/profil/**`, `app/profil/**`, `app/ayarlar/**`, `app/(auth)/**`, `app/index.tsx`, `app/kadro-pro.tsx`, `app/e-posta-dogrula.tsx`, `app/sifre-sifirla.tsx`, `src/profile/**`, `src/settings/**`, `src/billing/**` | Forms, stats numerals, settings rows, paywall as a plan list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| W6 OG cards and screenshots     | `apps/web/components/marketing/og-image.tsx`, `apps/web/assets/og-fonts/**`, `apps/web/app/og/**`, `docs/screenshots/**`, `apps/mobile/.maestro/screenshots/**`                                                                         | OG card with the squad sheet and the Archivo instances; the screenshot run of §8.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Work package                    | Owns (exclusive)                                                                                                                                                                                                                                                               | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W1 Brand                        | `packages/brand/**`, `docs/adr/0084-design-direction.md`, `docs/design/direction.md`, `docs/design/tokens.json`                                                                                                                                                                | Done: `theme/tokens.json` with both schemes, `theme/theme.css` and `theme/tokens.ts` built from it; `fonts/archivo/` (variable TTF, two WOFF2 subsets, five static instances, `OFL.txt`); wordmarks redrawn in Archivo wdth 75 weight 800 with the O as the centre circle and the orange spot; app icon and mark unchanged; validator checks both schemes (text 4.5, non-text 3.0), the Turkish cmap, features, axes, the web budget and the built files; README contract; ADR-0084. v1 `tokens.json`, `fonts/sora`, `fonts/inter` stay until the readers move.                                                                                                                                                                                                    |
+| W2 Web shell                    | `apps/web/components/marketing/**`, `apps/web/public/fonts/**`, `apps/web/public/screens/**`, `apps/web/tests/marketing/**`, `apps/web/app/layout.tsx`, `apps/web/app/tema/route.ts`, `apps/web/lib/client/theme.ts`, `apps/web/components/auth/**`, `apps/web/tests/pages/**` | Import `@kadro/brand/theme.css`; replace `MARKETING_THEME` / `THEME` mirrors and the `--m-*` / `--k-<role>` style blocks with `--k-color-*`; root layout renders `data-theme` from the `kadro-theme` cookie, `color-scheme` meta and two `theme-color` entries; the Sistem / Açık / Koyu footer form and its POST handler (§4.11); `fonts.css`/`fonts.ts` for the two Archivo subsets with `font-stretch`; `marketing.module.css` rebuilt on the §4 scale; inline wordmark on `--k-color-text`; new `squad-sheet.tsx`, `pitch-diagram.tsx` (fixed pitch roles), `device-frame.tsx`, `timeline.tsx`, `fact-grid.tsx`, `chip.tsx`; `content.ts` copy per §4.10; `store-badges.tsx` restyled for both schemes; tests read `theme/tokens.json` and check both schemes. |
+| W3 Mobile theme and kit         | `apps/mobile/src/theme/**`, `apps/mobile/src/ui/**`, `apps/mobile/app/(tabs)/_layout.tsx`, `apps/mobile/assets/fonts/**`, `apps/mobile/tests/theme.test.tsx`                                                                                                                   | Read `colors`, `typeScale`, `spacing`, `radius`, `elevation`, `overlays` from `@kadro/brand/tokens`; load the five static instances with `expo-font` (`nativeFontFiles`); `ThemeColors` = the 29 roles plus `pressed`; `ThemeProvider` with the stored preference (`system` / `light` / `dark`, AsyncStorage `kadro.colorScheme`) over `useColorScheme()` and a `useColorPreference()` hook for Ayarlar; navigation, status bar and splash follow the resolved scheme; new `Chip`, `Numeral`, `SegmentedControl`, `PitchView` (fixed pitch roles), `PlayerMarker`, `NoticeRow`; `Button`, `Card`, `ListItem`, `TextField`, `EmptyState`, `Skeleton` restyled; `TabIcon` on Phosphor (add `phosphor-react-native`; `react-native-svg` is already present).          |
+| W4a Web home and features       | `apps/web/app/(marketing)/page.tsx`, `ozellikler/page.tsx`                                                                                                                                                                                                                     | Compositions of §4.4 with W2 components.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| W4b Web content pages           | `apps/web/app/(marketing)/blog/**`, `sss/**`, `gizlilik/**`, `kvkk-aydinlatma/**`, `iletisim/**`, `app/not-found.tsx`, `app/(marketing)/error.tsx`, `apps/web/components/content/**`                                                                                           | Blog list and article layout, FAQ two-column, legal typography, error pages. MDX content unchanged except a figure directive in the 7v7 article.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| W4c Web SEO and invite          | `apps/web/app/(seo)/**`, `apps/web/app/(marketing)/mac/**`, `apps/web/components/seo/**`                                                                                                                                                                                       | Venue fact grid, district scoreboard rows, invite ticket card.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| W5a Mobile matches              | `apps/mobile/app/(tabs)/maclar/**`, `apps/mobile/app/takim/[id]/mac/**`, `apps/mobile/src/matches/**`                                                                                                                                                                          | Match card, match detail with the RSVP control, lineup with `PitchView`, payments as a numeral list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| W5b Mobile teams, calls, venues | `apps/mobile/app/(tabs)/takimlar/**`, `(tabs)/eksik-var/**`, `(tabs)/sahalar/**`, `app/takim/**` (except `mac/**`), `app/ilan/**`, `app/saha/**`, `app/mac/**`, `src/teams/**`, `src/calls/**`, `src/venues/**`                                                                | Rows, chips, invite preview, call detail with the single accent button.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| W5c Mobile profile, auth, pro   | `apps/mobile/app/(tabs)/profil/**`, `app/profil/**`, `app/ayarlar/**`, `app/(auth)/**`, `app/index.tsx`, `app/kadro-pro.tsx`, `app/e-posta-dogrula.tsx`, `app/sifre-sifirla.tsx`, `src/profile/**`, `src/settings/**`, `src/billing/**`                                        | Forms, stats numerals, settings rows with the Görünüm choice (Sistem / Açık / Koyu, via W3's hook), paywall as a plan list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| W6 OG cards and screenshots     | `apps/web/components/marketing/og-image.tsx`, `apps/web/assets/og-fonts/**`, `apps/web/app/og/**`, `docs/screenshots/**`, `apps/mobile/.maestro/screenshots/**`                                                                                                                | OG card with the squad sheet and the Archivo instances; the screenshot run of §8.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
-Unchanged: `apps/web/app/api/**`, `lib/server/**`, security headers and CSP, `packages/db`,
+Unchanged: `apps/web/app/api/**`, `lib/server/**` (the theme handler of W2 lives at `app/tema/route.ts`), security headers and CSP, `packages/db`,
 `packages/contracts`, worker, admin pages (they inherit tokens only), `content/blog/*.mdx`
 prose, `content/legal/*`, `robots`, `sitemap`, JSON-LD, Maestro flows and `testID`s.
 
 Acceptance checks (all must pass before a work package reports done):
 
-1. `pnpm --filter @kadro/brand test`: every pair in `contrast.pairs` ≥ 4.5, every pair in
-   `nonTextPairs` ≥ 3.0, assets present, fonts contain the Turkish glyph set (W1 adds a cmap
-   check for U+011E, U+011F, U+0130, U+0131, U+015E, U+015F, U+00C7, U+00E7, U+00D6, U+00F6,
-   U+00DC, U+00FC, U+20BA).
-2. `apps/web/tests/marketing`: theme values equal the token file; text pairs 4.5, non-text 3.0;
+1. `pnpm --filter @kadro/brand test`: every pair in `contrast.pairs` ≥ 4.5 and every pair in
+   `nonTextPairs` ≥ 3.0 in both schemes, assets present, fonts contain the Turkish glyph set
+   (cmap check for U+011E, U+011F, U+0130, U+0131, U+015E, U+015F, U+00C7, U+00E7, U+00D6,
+   U+00F6, U+00DC, U+00FC, U+20BA), built files up to date.
+2. `apps/web/tests/marketing`: theme values equal the token file in both schemes; text pairs 4.5,
+   non-text 3.0; `data-theme` rendered from the cookie (`light`, `dark`, `system` and none);
    header and footer links resolve; answer-first word counts hold; title and description length
    limits hold.
 3. Lighthouse CI (ADR-0059) on `/`, `/ozellikler`, one article, one venue, one district page:
@@ -442,7 +532,8 @@ Acceptance checks (all must pass before a work package reports done):
    `script` sources; the SVG diagrams use presentation attributes only.
 5. Font payload: `public/fonts` total ≤ 110 KB; only the latin subset is preloaded.
 6. Axe suite (Playwright e2e) green; focus visible on every interactive element in both schemes.
-7. Mobile: `pnpm --filter mobile test` green with unchanged `testID`s; Maestro flows green on
+7. Mobile: `pnpm --filter mobile test` green with unchanged `testID`s, the theme test covering
+   both schemes and the three preferences; Maestro flows green on
    the iOS simulator; `expo-doctor` clean; reduce-motion path exercised in the `PitchView` test.
 8. Review against §5: a reviewer (second opinion, read-only) lists any violated item by number.
 
@@ -459,6 +550,7 @@ Doğan, 14 empty); open call "2 eksik oyuncu, 7v7, Kaleci, Düzenli, 4 Ekim Paza
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | Web desktop | home fold, home full page, özellikler, blog index, 7v7 article (with the formation figure), saha, eksik-var Kadıköy, sss, mac invite, 404                                      | 1440 × 900 at 1x, full-page variants for home and özellikler         |
 | Web mobile  | home, article, saha, eksik-var, invite                                                                                                                                         | 390 × 844 at 2x                                                      |
+| Web dark    | home fold, article, eksik-var, invite (cookie `kadro-theme=dark`)                                                                                                              | 1440 × 900 at 1x and 390 × 844 at 2x                                 |
 | App dark    | Maçlar tab with the match card, match detail (RSVP in), match detail (waitlist), lineup with 13 markers and one empty, Eksik Var list, call detail, Sahalar, Profil, Kadro Pro | iOS simulator, 6.1" class, dark scheme, 2x, Maestro `takeScreenshot` |
 | App light   | Maçlar tab, lineup, Eksik Var list                                                                                                                                             | same device, light scheme                                            |
 | OG          | home card, one article card, one venue card                                                                                                                                    | 1200 × 630 from `/og/*`                                              |
