@@ -12,21 +12,25 @@ dead letters, logging, metrics), graceful shutdown, the health signal and the ha
 its `venue_imports` row; an import whose last attempt fails is marked `failed` (`internal_error`).
 `cost.guard` (Phase 6, ADR-0081) checks e-mail and push usage against the configured thresholds
 and pauses deferrable pushes for the rest of the UTC day once a threshold is reached.
+ADR-0082 adds the RevenueCat subscriber deletion of `account.hard_delete` with its follow-up queue
+`revenuecat.subscriber_delete`, and the weekly backup artifact check `backup.verify`.
 
 ## Queues
 
-| Queue                 | Kind                      | Concurrency | Retries                    | Dead letter                |
-| --------------------- | ------------------------- | ----------- | -------------------------- | -------------------------- |
-| `email.send`          | on demand                 | 4           | 5, exponential from 30 s   | `email.send.dead`          |
-| `push.send`           | on demand                 | 4           | 3, exponential from 60 s   | `push.send.dead`           |
-| `push.receipts`       | delayed (+15 min)         | 1           | 3, fixed 300 s             | `push.receipts.dead`       |
-| `match.reminder`      | delayed                   | 1           | 2, 60 s                    | `match.reminder.dead`      |
-| `upload.process`      | on demand                 | 2           | 2, 30 s                    | `upload.process.dead`      |
-| `account.hard_delete` | delayed (7 days)          | 1           | 10, exponential from 300 s | `account.hard_delete.dead` |
-| `opencall.expire`     | cron `5 * * * *`          | 1           | none (next run covers)     | `opencall.expire.dead`     |
-| `maintenance.sweep`   | cron `35 * * * *`         | 1           | none (next run covers)     | `maintenance.sweep.dead`   |
-| `venue.import`        | admin (Phase 5)           | 1           | 2, 60 s                    | `venue.import.dead`        |
-| `cost.guard`          | cron `*/15 * * * *` (UTC) | 1           | none (next run covers)     | `cost.guard.dead`          |
+| Queue                          | Kind                                            | Concurrency | Retries                    | Dead letter                         |
+| ------------------------------ | ----------------------------------------------- | ----------- | -------------------------- | ----------------------------------- |
+| `email.send`                   | on demand                                       | 4           | 5, exponential from 30 s   | `email.send.dead`                   |
+| `push.send`                    | on demand                                       | 4           | 3, exponential from 60 s   | `push.send.dead`                    |
+| `push.receipts`                | delayed (+15 min)                               | 1           | 3, fixed 300 s             | `push.receipts.dead`                |
+| `match.reminder`               | delayed                                         | 1           | 2, 60 s                    | `match.reminder.dead`               |
+| `upload.process`               | on demand                                       | 2           | 2, 30 s                    | `upload.process.dead`               |
+| `account.hard_delete`          | delayed (7 days)                                | 1           | 10, exponential from 300 s | `account.hard_delete.dead`          |
+| `opencall.expire`              | cron `5 * * * *`                                | 1           | none (next run covers)     | `opencall.expire.dead`              |
+| `maintenance.sweep`            | cron `35 * * * *`                               | 1           | none (next run covers)     | `maintenance.sweep.dead`            |
+| `venue.import`                 | admin (Phase 5)                                 | 1           | 2, 60 s                    | `venue.import.dead`                 |
+| `cost.guard`                   | cron `*/15 * * * *` (UTC)                       | 1           | none (next run covers)     | `cost.guard.dead`                   |
+| `revenuecat.subscriber_delete` | after a failed RevenueCat call in a hard delete | 1           | 8, exponential from 300 s  | `revenuecat.subscriber_delete.dead` |
+| `backup.verify`                | cron `20 6 * * 1` (UTC)                         | 1           | 3, exponential from 600 s  | `backup.verify.dead`                |
 
 The definitions live in `apps/worker/src/queues.ts`. Cron expressions run in `Europe/Istanbul`.
 Every source queue uses the pg-boss `exclusive` policy with `singletonKey = idempotencyKey`: while
@@ -103,10 +107,40 @@ order) → matches with an RSVP of the user (id order).
    of MVP votes moved to a new tombstone user (`Silinmiş oyuncu`, no personal fields); reviews and
    open-call applications deleted, `venues.created_by` cleared; the user row deleted (cascades:
    tokens, push tokens, subscriptions, uploads); request `completed_at` set (`external_pending`
-   records `revenuecat` only when a subscription existed); audit `account.deleted` with
+   per step 5); audit `account.deleted` with
    `{ teamsDeleted, teamsTransferred, objectsDeleted }` and no actor.
 4. The `deletion_completed` email is sent before the commit with a 10 s timeout; a failure is
    counted as `email_delivery_failed{kind=deletion_completed}` and never blocks the deletion.
+5. RevenueCat (ADR-0082), after the object-storage deletes and before the database effects, under
+   the request lock: `DELETE /v1/subscribers/{userId}` with up to 3 attempts (backoff from 1 s) on
+   429, 5xx, timeout or network errors; 404 means already deleted. Success → `external_pending`
+   empty. Failure → never blocks the deletion: `external_pending = {revenuecat}`, a
+   `revenuecat.subscriber_delete` job (key `rc-delete:<deletionRequestId>`) is enqueued in the same
+   transaction and `revenuecat_delete_failed{stage=hard_delete,reason,status,attempts}` is counted.
+   Without `REVENUECAT_API_KEY` nothing is called and `external_pending` records `revenuecat` only
+   when a subscription existed. The `account deleted` log line carries `revenueCat`
+   (`deleted`, `not_found`, `failed_deferred`, `skipped_unconfigured`).
+
+### `revenuecat.subscriber_delete` (ADR-0082)
+
+Payload `{ deletionRequestId, appUserId }`: the deleted account's id is the RevenueCat app user id
+and is kept only in this job until the subscriber is gone. One call per run; a failure counts
+`revenuecat_delete_failed{stage=follow_up}` and retries with backoff, then dead-letters. It runs only
+for a completed request that still lists `revenuecat` and whose account row no longer exists
+(`skipped_missing`, `skipped_not_completed`, `skipped_done`, `skipped_account_exists` otherwise).
+Success (`deleted` or `not_found`) removes `revenuecat` from `external_pending`.
+
+### `backup.verify` (ADR-0082)
+
+The daily encrypted dump is produced on the database host, outside the application
+(`docs/release/backup-restore-drill.md`). The worker only checks its artifacts: it lists
+`BACKUP_BUCKET` with a read-only key, takes the newest `<BACKUP_PREFIX>YYYYMMDD.dump.age` object
+and reports `ok`, `stale` (older than `BACKUP_MAX_AGE_HOURS`) or `failed` (`no_backup`,
+`too_small` below `BACKUP_MIN_BYTES`, `not_encrypted` without an `age` header, `missing`). It never
+decrypts or restores; restorability is proven only by the restore drill. The outcome is the job
+output; `ok` logs `backup check ok` with `backup_verified`, the others log at `error` with
+`backup_check_failed{status,reason}`. A storage error is counted as `storage_error` and retried.
+Without `BACKUP_BUCKET` the job completes as `skipped_unconfigured` (warn).
 
 The `kadro_worker` grants of migration 0010 cover every statement; no further migration is needed.
 
@@ -137,21 +171,25 @@ qualifies. After creating the queues the worker calls
 `packages/config` validates the worker environment at boot (`loadWorkerEnv`) and exits with the
 list of missing or invalid keys, without printing values.
 
-| Key                                             | Purpose                                                                                       |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `NODE_ENV`, `APP_ENV`, `BUILD_SHA`, `LOG_LEVEL` | Runtime identity and log level                                                                |
-| `DATABASE_URL`                                  | PostgreSQL; the login must be a member of `kadro_worker`                                      |
-| `WEB_ORIGIN`                                    | Origin used to build email links; non-loopback `https://` outside local                       |
-| `EMAIL_TRANSPORT`                               | `log` (local only) or `resend`; default `log` (ADR-0029)                                      |
-| `RESEND_API_KEY`, `EMAIL_FROM`                  | Required for `resend`; `EMAIL_FROM` defaults to `Kadro <bildirim@kadro.app>`                  |
-| `PUSH_TRANSPORT`                                | `log` (local only) or `expo`; default `log` (ADR-0031)                                        |
-| `EXPO_ACCESS_TOKEN`                             | Required for `expo` (enhanced push security)                                                  |
-| `PUSH_HOURLY_CAP`                               | Global push sends per hour, 1..100 000, default 5 000                                         |
-| `EMAIL_DAILY_CAP`, `EMAIL_MONTHLY_CAP`          | `cost.guard` e-mail thresholds per UTC day / rolling 30 days; default 2 000 / 45 000; `0` off |
-| `PUSH_DAILY_CAP`                                | `cost.guard` push threshold per UTC day; default 50 000; `0` off                              |
-| `R2_ENDPOINT`                                   | S3-compatible endpoint (R2); non-loopback `https://` outside local                            |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`      | Worker key: read/delete incoming, read/write/delete media                                     |
-| `R2_INCOMING_BUCKET`, `R2_MEDIA_BUCKET`         | Private raw uploads and published media; must differ                                          |
+| Key                                                | Purpose                                                                                       |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NODE_ENV`, `APP_ENV`, `BUILD_SHA`, `LOG_LEVEL`    | Runtime identity and log level                                                                |
+| `DATABASE_URL`                                     | PostgreSQL; the login must be a member of `kadro_worker`                                      |
+| `WEB_ORIGIN`                                       | Origin used to build email links; non-loopback `https://` outside local                       |
+| `EMAIL_TRANSPORT`                                  | `log` (local only) or `resend`; default `log` (ADR-0029)                                      |
+| `RESEND_API_KEY`, `EMAIL_FROM`                     | Required for `resend`; `EMAIL_FROM` defaults to `Kadro <bildirim@kadro.app>`                  |
+| `PUSH_TRANSPORT`                                   | `log` (local only) or `expo`; default `log` (ADR-0031)                                        |
+| `EXPO_ACCESS_TOKEN`                                | Required for `expo` (enhanced push security)                                                  |
+| `PUSH_HOURLY_CAP`                                  | Global push sends per hour, 1..100 000, default 5 000                                         |
+| `EMAIL_DAILY_CAP`, `EMAIL_MONTHLY_CAP`             | `cost.guard` e-mail thresholds per UTC day / rolling 30 days; default 2 000 / 45 000; `0` off |
+| `PUSH_DAILY_CAP`                                   | `cost.guard` push threshold per UTC day; default 50 000; `0` off                              |
+| `R2_ENDPOINT`                                      | S3-compatible endpoint (R2); non-loopback `https://` outside local                            |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`         | Worker key: read/delete incoming, read/write/delete media                                     |
+| `R2_INCOMING_BUCKET`, `R2_MEDIA_BUCKET`            | Private raw uploads and published media; must differ                                          |
+| `REVENUECAT_API_KEY`, `REVENUECAT_API_BASE_URL`    | Optional; reconciliation and subscriber deletion (ADR-0063, ADR-0082); unset skips both       |
+| `BACKUP_BUCKET`, `BACKUP_PREFIX`                   | Optional `backup.verify` target; unset skips the check; prefix default `kadro-`               |
+| `BACKUP_ACCESS_KEY_ID`, `BACKUP_SECRET_ACCESS_KEY` | Read-only key for the backup bucket on `R2_ENDPOINT`; required with `BACKUP_BUCKET`           |
+| `BACKUP_MAX_AGE_HOURS`, `BACKUP_MIN_BYTES`         | `stale` threshold (1..720, default 30) and minimum dump size (default 1 024)                  |
 
 `MEDIA_PUBLIC_BASE_URL` belongs to the web app, which builds public URLs; the worker only writes
 object keys. It must be `https://` in every environment, because the API contract requires https
@@ -242,9 +280,12 @@ operations and can fail chosen requests), and removes the container afterwards.
   `job_failed{queue}`, `job_dead_lettered{queue,reason}`, `email_delivery_failed{kind,reason}`,
   `email_stale_dropped{kind}`, `push_capped{type}`, `push_ticket_error{code}`,
   `push_receipt_error{code}`, `cost_threshold{kind,period,level}` (once per UTC day and level),
-  `cost_capped{kind,type}`, `cost_guard_failed{reason}`.
+  `cost_capped{kind,type}`, `cost_guard_failed{reason}`,
+  `revenuecat_delete_failed{stage,reason,status,attempts}`, `backup_verified{status}`,
+  `backup_check_failed{status,reason}`.
 - Alerts in preview and production: any `job_dead_lettered`, any `push_capped`, any
-  `cost_threshold` or `cost_guard_failed`, and a queue whose oldest queued job is older than 15
+  `cost_threshold` or `cost_guard_failed`, any `backup_check_failed`, no `backup_verified` line for
+  8 days (weekly schedule), and a queue whose oldest queued job is older than 15
   minutes.
 - Send gates of `cost.guard` (read-only): `select key, window_start from rate_limit_buckets where
 key like 'cost:gate:%'`. A row for today's UTC date means deferrable sends of that kind are
@@ -276,6 +317,16 @@ order by name, state;
 - **Overdue deletion.** No action needed: `maintenance.sweep` re-queues deletion requests whose
   grace period ended more than one hour ago. A dead-lettered `account.hard_delete` is a priority
   incident (personal data kept beyond the promised period).
+- **RevenueCat cleanup owed.** Read-only:
+  `select id, completed_at from deletion_requests where 'revenuecat' = any(external_pending)`.
+  A row with a queued or retrying `revenuecat.subscriber_delete` job settles itself. A dead letter
+  in `revenuecat.subscriber_delete.dead` (key rejected, long outage): fix the key or wait for the
+  provider, then redrive it. Rows from before ADR-0082 or written without a key have no job and no
+  user id left; they can only be closed by hand at RevenueCat.
+- **Backup check failed or stale.** Check the dump job on the database host and the bucket
+  listing first; `failed_not_encrypted` means a plaintext dump reached the bucket and is a security
+  incident (remove it, rotate as needed). Re-run the check by sending `backup.verify` with any new
+  key once fixed.
 - **Stopping.** `SIGTERM` stops fetching and waits up to 30 s for running jobs; a job still running
   at the deadline is handed back for retry and runs again on the next instance (idempotent). The
   container stop grace period is 40 s.
