@@ -1,6 +1,6 @@
 # ADR-0047: Mobile client architecture: API client, session, query cache and test setup
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §4 (mobile), §6 items 10, 12, 13, §8; ADR-0014, ADR-0019, ADR-0039;

@@ -81,3 +81,16 @@ public data only: what the API already returns to a caller without credentials.
 - Demonstration data is visible and labelled but never indexed or described as a place.
 - Adding `revalidateTag` calls to open-call publish/close and venue updates would shorten the
   window in which a closed call is still listed.
+
+## Update (2026-10-03)
+
+Two statements above are outdated on `main`; the decision itself is unchanged.
+
+- `/robots.txt` exists: `apps/web/app/robots.ts` allows `/`, disallows `/api/`, `/admin/`, `/mac/` and
+  the account pages, and names the sitemap at the configured `WEB_ORIGIN`.
+- `revalidateTag` is called: `apps/web/lib/server/seo/invalidate.ts` expires the district tags of a
+  call and the sitemap tag after an open call is published or closed, a match is updated or
+  deleted, and an application is decided (`app/api/v1/matches/[id]/open-call/route.ts`,
+  `app/api/v1/matches/[id]/route.ts`, `app/api/v1/open-calls/[id]/applications/[appId]/route.ts`).
+  Venue writes, including admin verification (ADR-0067), do not revalidate and still wait for the
+  five-minute window.

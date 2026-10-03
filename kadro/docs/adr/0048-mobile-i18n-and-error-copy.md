@@ -1,6 +1,6 @@
 # ADR-0048: Mobile translations and error copy
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §2 (tone of voice), §6 item 13, §8 (i18n); ADR-0013, ADR-0047

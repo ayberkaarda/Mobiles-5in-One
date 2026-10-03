@@ -1,6 +1,6 @@
 # ADR-0077: Mobile paywall, purchase flows and Pro gating
 
-- Status: Proposed
+- Status: Accepted (not verified against real stores)
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §3 item 10, §6 item 17; ADR-0013, ADR-0047, ADR-0048, ADR-0054, ADR-0063,
@@ -73,3 +73,10 @@ no store product and no key yet, so nothing here can be exercised against a stor
   that reaches the real store fails loudly.
 - Downgrade handling (locking all but the oldest team after a lapse) is a worker job and is not
   part of this change.
+
+## Update (2026-10-03)
+
+The consequence that calls `me.entitlements` optional is outdated: ADR-0079 made the member
+required in `meResponseSchema` (`packages/contracts/src/users.ts`) and in the OpenAPI `Me` schema,
+and `isPro` in `apps/mobile/src/billing/hooks.ts` reads `me.entitlements.pro` without a fallback
+for a missing member. The decision of this record is unchanged.

@@ -1,6 +1,6 @@
 # ADR-0051: Mobile matches: screens, RSVP, lineup, payments and MVP vote
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §3 stories 3–5 and 9, §5 (matches endpoints), §8 (i18n); ADR-0004,

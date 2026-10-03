@@ -1,6 +1,6 @@
 # ADR-0053: Mobile venue directory (Saha Rehberi): list, detail, reviews and suggestions
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §0 rule 6, §3 story 7, §5 (venue endpoints), §6 item 16, §8 (i18n);

@@ -1,6 +1,6 @@
 # ADR-0067: Admin moderation actions and the venue import job
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §3 story 7, §6 item 18; authorization matrix §3.8 (footnote 27), §4.5,

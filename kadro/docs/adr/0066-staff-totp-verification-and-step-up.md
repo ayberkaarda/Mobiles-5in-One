@@ -1,6 +1,6 @@
 # ADR-0066: Staff TOTP verification, enrollment and step-up
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §6 item 18; authorization matrix §3.8 (footnotes 4, 5, 26, 27);

@@ -1,6 +1,6 @@
 # ADR-0063: RevenueCat webhook, reconciliation and entitlement contract
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §3 item 10, §6 items 17 and 21; authorization matrix §3.7 (footnote 25),

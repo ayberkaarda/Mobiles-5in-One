@@ -71,15 +71,26 @@ CI=true pnpm build
 CI=true pnpm test
 ```
 
-## Runbooks in this directory
+Two more workflows exist: the `lighthouse` job in `kadro-ci.yml` (`Lighthouse (informational)`,
+[ADR-0059](../adr/0059-web-quality-gates.md)) is not part of `Kadro CI gate` and is not a required
+check, and `.github/workflows/kadro-mobile-e2e.yml` (`Maestro on Android emulator`,
+[ADR-0076](../adr/0076-mobile-maestro-e2e.md)) runs only on manual dispatch.
 
-| Document            | Scope                                                | Delivered in |
-| ------------------- | ---------------------------------------------------- | ------------ |
-| `README.md`         | This overview                                        | Phase 0      |
-| `worker.md`         | Worker queues, configuration, local run, recovery    | Phase 2      |
-| `backup-restore.md` | `pg_dump` + `age` + R2, restore drill                | Phase 6      |
-| `cost-alerts.md`    | Spend thresholds and application kill-switches       | Phase 6      |
-| `deploy.md`         | VPS provisioning, Caddy, compose deploy and rollback | Phase 6      |
+## Runbooks and operations documents
+
+| Document                                                                       | Scope                                                                                               | Status                                                     |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `README.md`                                                                    | This overview                                                                                       | Written                                                    |
+| [`worker.md`](worker.md)                                                       | Worker queues, configuration, local run, recovery                                                   | Written                                                    |
+| [`../release/backup-restore-drill.md`](../release/backup-restore-drill.md)     | `pg_dump` restore drill (`ops/restore-drill.sh`) and the draft production restore with `age` and R2 | Drill script written; production backup path not built     |
+| [`../release/cost-alerts.md`](../release/cost-alerts.md)                       | Spend thresholds per service and the `cost.guard` design                                            | Proposals only; nothing configured, `cost.guard` not built |
+| [`../release/history-purge-runbook.md`](../release/history-purge-runbook.md)   | Release-time checklist for a leaked secret in Git history                                           | Document only; not executed                                |
+| [`../security/history-purge-runbook.md`](../security/history-purge-runbook.md) | Rotation table and rewrite procedure for a committed `.env`                                         | Document only; not executed                                |
+| `deploy.md`                                                                    | VPS provisioning, Caddy, compose deploy and rollback                                                | Not written (ADR-0002 describes the model)                 |
+
+The restore drill script lives at `ops/restore-drill.sh` (repository path `kadro/ops/`); run it with
+`bash ops/restore-drill.sh` from `kadro/`. A history rewrite or a force-push needs the owner's
+explicit approval whichever of the two purge documents is followed.
 
 Log retention: 30 days for application logs on the host (`docker` `local` log driver rotation),
 configured in the production compose file.
