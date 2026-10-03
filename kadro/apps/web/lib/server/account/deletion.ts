@@ -12,6 +12,7 @@ import {
 } from '@kadro/db';
 import { and, asc, eq, gt, inArray, isNull, ne } from 'drizzle-orm';
 
+import { verifyFreshStaffTotp } from '../admin/step-up';
 import { recordAudit } from '../audit';
 import { revokeAllSessions } from '../auth/sessions';
 import { ApiError } from '../errors';
@@ -20,7 +21,7 @@ import { teamStaffIds } from '../matches/context';
 import { promoteWaitlist } from '../matches/rsvp';
 import { actorIdOf } from '../teams/context';
 import { type AccountRequest } from './push-tokens';
-import { verifyReauthProof, verifyStaffTotp } from './reauth';
+import { verifyReauthProof } from './reauth';
 
 /**
  * `DELETE me` (security checklist item 21, ADR-0032 §1, authorization matrix §3.2 footnotes 4
@@ -237,7 +238,6 @@ export async function requestAccountDeletion(
       passwordHash: users.passwordHash,
       appleSub: users.appleSub,
       googleSub: users.googleSub,
-      totpSecretEnc: users.totpSecretEnc,
     })
     .from(users)
     .where(eq(users.id, actorId))
@@ -247,7 +247,9 @@ export async function requestAccountDeletion(
   }
   const reauthenticated = await verifyReauthProof(runtime, account, body);
   const freshTotp =
-    reauthenticated && account.role !== 'user' && verifyStaffTotp(account, body.totpCode);
+    reauthenticated &&
+    account.role !== 'user' &&
+    (await verifyFreshStaffTotp({ ctx, runtime }, actorId, body.totpCode, 'accountDeletion'));
   await ctx.authorize('me.delete', { reauthenticated, freshTotp });
 
   return runtime.db.transaction(async (tx) => {
