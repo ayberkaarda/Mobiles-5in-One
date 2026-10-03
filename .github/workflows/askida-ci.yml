@@ -113,6 +113,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    # Real environment variables win over .env and over phpunit.xml <env> entries, so every
+    # value the tests depend on is set here. The tests use real Redis as the queue connection
+    # (tests/Feature/InfrastructureTest.php); cache and session stay on array like phpunit.xml.
     env:
       APP_ENV: testing
       DB_CONNECTION: pgsql
@@ -121,8 +133,12 @@ jobs:
       DB_DATABASE: askida_test
       DB_USERNAME: askida
       DB_PASSWORD: askida_ci_only
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_DB: "1"
       CACHE_STORE: array
-      QUEUE_CONNECTION: sync
+      QUEUE_CONNECTION: redis
       SESSION_DRIVER: array
       MAIL_MAILER: array
       PAYMENT_PROVIDER: fake
@@ -158,6 +174,40 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --no-interaction
+
+      # Fails early with a clear message when a service container is not reachable (max 30 s),
+      # instead of surfacing later as a test error. Plain bash TCP probes, no extra client needed.
+      - name: Wait for PostgreSQL and Redis
+        run: |
+          wait_for() {
+            name="$1"; host="$2"; port="$3"; probe="$4"
+            for _ in $(seq 1 30); do
+              if exec 3<>"/dev/tcp/${host}/${port}" 2>/dev/null; then
+                if [ -z "$probe" ]; then
+                  exec 3>&- 3<&-
+                  echo "$name reachable at ${host}:${port}"
+                  return 0
+                fi
+                printf '%s\r\n' "$probe" >&3
+                reply=""
+                read -r -t 2 reply <&3 || true
+                exec 3>&- 3<&-
+                case "$reply" in
+                  +PONG*)
+                    echo "$name reachable at ${host}:${port}"
+                    return 0
+                    ;;
+                esac
+              fi
+              sleep 1
+            done
+            echo "$name NOT reachable at ${host}:${port} after 30 s"
+            return 1
+          }
+          status=0
+          wait_for PostgreSQL "$DB_HOST" "$DB_PORT" "" || status=1
+          wait_for Redis "$REDIS_HOST" "$REDIS_PORT" "PING" || status=1
+          exit "$status"
 
       - name: Code style (Pint)
         run: vendor/bin/pint --test
