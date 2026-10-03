@@ -8,7 +8,7 @@ only pick up token changes. Routes, navigation labels, copy of the legal pages, 
 
 ## 1. Audit: why the current result reads as a generic template
 
-Measured on `docs/screenshots/web/web-01-home.png` (k-means over the pixels, 1440 px wide):
+Measured on the previous home page screenshot (since replaced; k-means over the pixels, 1440 px wide):
 Pitch Green covers 36.5 % of the fold, the chalk background 60.4 %, the orange accent 0.4 %.
 The brand colour is used as wallpaper and the accent as a dot. For comparison FotMob's home is
 92 % near-white with under 1 % accent, and a two-colour award site (FC Porto Memorial) is 62 / 34.
