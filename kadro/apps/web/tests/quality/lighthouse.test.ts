@@ -131,10 +131,11 @@ describe.skipIf(!ENABLED)('Lighthouse CI (production build)', { timeout: 900_000
     rmSync(outputDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   });
 
-  it('home, features, venue and district reach 0.9 in every category (median of 3)', async () => {
+  it('home, features, blog index, venue and district reach 0.9 in every category (median of 3)', async () => {
     const urls = [
       '/',
       '/ozellikler',
+      '/blog',
       `/saha/${slugs.verified}`,
       `/eksik-var/${slugs.il}/${slugs.district}`,
     ].map((path) => `${base}${path}`);

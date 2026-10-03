@@ -19,6 +19,8 @@ vi.mock('../../components/marketing/fonts', () => ({
   PRELOADED_FONTS: ['/fonts/test.woff2'],
 }));
 
+vi.mock('../../components/seo/site-json-ld', () => ({ SiteJsonLd: () => null }));
+
 const { MarketingShell, MAIN_ID } = await import('../../components/marketing/marketing-shell');
 const { StoreBadges } = await import('../../components/marketing/store-badges');
 const { STORE_ENTRIES } = await import('../../components/marketing/site');
