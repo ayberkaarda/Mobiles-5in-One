@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "worker:dev": "turbo run dev --filter=@kadro/worker",
     "mobile:start": "pnpm --filter @kadro/mobile start",
+    "security:placeholders": "node scripts/security/placeholder-grep.ts",
     "db:up": "docker compose up -d postgres"
   },
   "devDependencies": {

@@ -176,6 +176,11 @@ jobs:
       - name: Scan working tree
         run: node scripts/security/secret-grep.ts
 
+      # Same runner, same dependency-free script style: no work marker, filler text or template
+      # prefix in the source of apps/ and packages/ (phase gate "no placeholder tokens").
+      - name: Placeholder grep
+        run: node scripts/security/placeholder-grep.ts
+
   # The only security check to mark as required on main. "changes" must succeed and report
   # kadro=true or kadro=false. true: gitleaks, audit and secret-grep must all succeed. false: all
   # three must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
