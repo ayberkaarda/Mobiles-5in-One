@@ -8,10 +8,6 @@ class DonorHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return EmptyState(
-      icon: Icons.bakery_dining_outlined,
-      title: l10n.donorEmptyTitle,
-      body: l10n.donorEmptyBody,
-    );
+    return EmptyState(title: l10n.donorEmptyTitle, body: l10n.donorEmptyBody);
   }
 }

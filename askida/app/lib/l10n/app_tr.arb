@@ -43,5 +43,111 @@
   "recipientEmptyBody": "Yakındaki dükkânlarda askıda bekleyen ekmek, çorba ya da defter burada listelenir. Hesap açman ya da soru yanıtlaman gerekmez.",
   "@recipientEmptyBody": {
     "description": "Recipient home empty-state body."
+  },
+  "sampleLabel": "ÖRNEK",
+  "@sampleLabel": {
+    "description": "Label on sample data (literal uppercase, never transformed)."
+  },
+  "recipientCounterLead": "Bugün",
+  "@recipientCounterLead": {
+    "description": "Rail counter on the recipient home: words before the number."
+  },
+  "recipientCounterTail": "çorba askıda",
+  "@recipientCounterTail": {
+    "description": "Rail counter on the recipient home: words after the number. Counts items, never people."
+  },
+  "modeSwitcherLabel": "Kullanım biçimi",
+  "@modeSwitcherLabel": {
+    "description": "Accessibility label of the three-segment mode switcher."
+  },
+  "codeValidUntil": "{time}'{suffix} kadar",
+  "@codeValidUntil": {
+    "description": "Absolute expiry time of a code, e.g. 09:41'e kadar. The suffix is the Turkish dative ending for the time as read aloud.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "09:41"
+      },
+      "suffix": {
+        "type": "String",
+        "example": "e"
+      }
+    }
+  },
+  "codeValidFor": "{minutes} dakika geçerli",
+  "@codeValidFor": {
+    "description": "Validity window of a code.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "codeShowToMerchant": "Kodu esnafa göster",
+  "@codeShowToMerchant": {
+    "description": "Secondary button under the code tag; opens full-brightness mode."
+  },
+  "codeLabel": "Kod {code}",
+  "@codeLabel": {
+    "description": "Accessibility label of the one-time code.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "shopVerified": "Doğrulanmış",
+  "@shopVerified": {
+    "description": "Verified shop line on the shop card."
+  },
+  "shopAvailableCaption": "askıda",
+  "@shopAvailableCaption": {
+    "description": "Caption under the count of items on the rail of a shop."
+  },
+  "shopNoneAvailable": "Şu an askıda bir şey yok",
+  "@shopNoneAvailable": {
+    "description": "Accessibility label when a shop has nothing on the rail."
+  },
+  "shopDistanceMeters": "{meters} m",
+  "@shopDistanceMeters": {
+    "description": "Distance to a shop under one kilometre.",
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "shopDistanceKm": "{km} km",
+  "@shopDistanceKm": {
+    "description": "Distance to a shop in kilometres, already formatted with the decimal comma.",
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryEkmek": "Ekmek",
+  "@categoryEkmek": {
+    "description": "Item category."
+  },
+  "categoryCorba": "Çorba",
+  "@categoryCorba": {
+    "description": "Item category."
+  },
+  "categoryYemek": "Yemek",
+  "@categoryYemek": {
+    "description": "Item category."
+  },
+  "categoryKirtasiye": "Kırtasiye",
+  "@categoryKirtasiye": {
+    "description": "Item category."
+  },
+  "categoryBebek": "Bebek ürünleri",
+  "@categoryBebek": {
+    "description": "Item category."
+  },
+  "categoryDiger": "Diğer",
+  "@categoryDiger": {
+    "description": "Item category."
   }
 }
