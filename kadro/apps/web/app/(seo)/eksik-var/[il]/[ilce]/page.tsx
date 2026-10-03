@@ -3,9 +3,13 @@ import type { Metadata, Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import styles from '../../../../../components/marketing/marketing.module.css';
+import { EksikSlot } from '../../../../../components/marketing/eksik-slot';
 import { pageMetadata } from '../../../../../components/marketing/metadata';
+import { ButtonLink } from '../../../../../components/marketing/button';
+import { Section } from '../../../../../components/marketing/section';
 import { DOWNLOAD_ANCHOR } from '../../../../../components/marketing/site';
+import { typeClassName } from '../../../../../components/marketing/typography';
+import { cx } from '../../../../../components/marketing/class-names';
 import {
   districtDescription,
   districtIntro,
@@ -18,6 +22,8 @@ import {
   SAMPLE_NOTICE,
   venuePath,
 } from '../../../../../components/seo/format';
+import { Breadcrumb } from '../../../../../components/seo/breadcrumb';
+import styles from '../../../../../components/seo/seo.module.css';
 import { JsonLd } from '../../../../../components/seo/json-ld';
 import { districtStructuredData } from '../../../../../lib/server/seo/structured-data';
 import { districtListing } from '../../../../../lib/server/seo/data';
@@ -63,93 +69,92 @@ export default async function DistrictCallsPage({ params }: DistrictPageProps) {
   return (
     <article>
       <JsonLd data={districtStructuredData(loadWebEnv().WEB_ORIGIN, path, title)} />
-      <header className={styles.sectionInner}>
-        <div className={styles.pageHeader}>
-          <nav aria-label="Konum">
-            <ol className={styles.featureList}>
-              <li>
-                <Link href="/" className={styles.inlineLink}>
-                  Ana sayfa
-                </Link>
-              </li>
-              <li aria-current="page">{title}</li>
-            </ol>
-          </nav>
-          <h1 className={styles.pageTitle}>{title}</h1>
-          <p className={styles.pageLead}>{districtIntro(district)}</p>
-        </div>
-      </header>
-      <section aria-labelledby="ilanlar" className={styles.sectionInner}>
-        <h2 id="ilanlar" className={styles.sectionTitle}>
+      <Section density="dense">
+        <header className={styles.head}>
+          <Breadcrumb current={title} />
+          <h1 className={cx(typeClassName('display'), styles.title)}>{title}</h1>
+          <p className={cx(typeClassName('lead'), styles.lead)}>{districtIntro(district)}</p>
+        </header>
+      </Section>
+      <Section labelledBy="ilanlar" density="dense" ruled>
+        <h2 id="ilanlar" className={cx(typeClassName('title1'), styles.sectionTitle)}>
           Açık ilanlar
         </h2>
         {calls.length === 0 ? (
-          <p className={styles.cardText}>
-            Şu an {district.ilce} için açık eksik oyuncu ilanı yok. Yeni ilanları uygulamada anında
-            görürsün.
+          <p className={cx(typeClassName('body'), styles.empty)}>
+            <EksikSlot size={48} />
+            <span>
+              Şu an {district.ilce} için açık eksik oyuncu ilanı yok. Yeni ilanları uygulamada
+              anında görürsün.
+            </span>
           </p>
         ) : (
-          <ul className={styles.cardGrid}>
+          <ul className={styles.rows}>
             {calls.map((call) => (
-              <li key={call.id} className={styles.card}>
-                <h3 className={styles.cardTitle}>
-                  {`${call.missingCount} eksik oyuncu · ${formatLabel(call.format)}`}
-                </h3>
-                <ul className={styles.featureList}>
-                  <li>
-                    Maç: <time dateTime={call.startsAt}>{formatMatchTime(call.startsAt)}</time>
-                  </li>
-                  <li>Mevki: {positionLabel(call.position)}</li>
-                  <li>Seviye: {LEVEL_LABELS[call.level]}</li>
-                  <li>Takım: {call.teamName}</li>
-                  <li>
+              <li key={call.id} className={styles.row}>
+                <EksikSlot
+                  number={call.missingCount}
+                  label="EKSİK"
+                  title={`${call.missingCount} eksik oyuncu`}
+                  size={64}
+                />
+                <div className={styles.rowMain}>
+                  <h3 className={cx(typeClassName('title3'), styles.rowTitle)}>
+                    {`${call.missingCount} eksik oyuncu · ${formatLabel(call.format)}`}
+                  </h3>
+                  <p className={cx(typeClassName('body'), styles.rowMeta)}>
+                    <time dateTime={call.startsAt}>{formatMatchTime(call.startsAt)}</time>
+                  </p>
+                  <p className={cx(typeClassName('body'), styles.rowMeta)}>
+                    Takım: {call.teamName}
+                  </p>
+                  <p className={cx(typeClassName('body'), styles.rowMeta)}>
                     Saha:{' '}
                     {call.venue === null ? (
                       district.ilce
                     ) : (
-                      <Link
-                        href={venuePath(call.venue.slug) as Route}
-                        className={styles.inlineLink}
-                      >
+                      <Link href={venuePath(call.venue.slug) as Route} className={styles.rowLink}>
                         {call.venue.name}
                       </Link>
                     )}
-                  </li>
-                  <li>
+                  </p>
+                </div>
+                <div className={styles.rowSide}>
+                  <ul className={styles.chips}>
+                    <li className={styles.chip}>{`Mevki: ${positionLabel(call.position)}`}</li>
+                    <li className={styles.chip}>{`Seviye: ${LEVEL_LABELS[call.level]}`}</li>
+                  </ul>
+                  <p className={styles.rowCaption}>
                     Son başvuru:{' '}
                     <time dateTime={call.expiresAt}>{formatMatchTime(call.expiresAt)}</time>
-                  </li>
-                </ul>
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
         )}
-        <div className={styles.statusActions}>
-          <a href={`/#${DOWNLOAD_ANCHOR}`} className={styles.buttonSolid}>
+        <div className={styles.cta}>
+          <ButtonLink href={`/#${DOWNLOAD_ANCHOR}`} variant="accent">
             Başvurmak için uygulamayı indir
-          </a>
+          </ButtonLink>
         </div>
-      </section>
+      </Section>
       {venues.length === 0 ? null : (
-        <section aria-labelledby="sahalar" className={styles.section}>
-          <div className={styles.sectionInner}>
-            <h2 id="sahalar" className={styles.sectionTitle}>
-              {district.ilce} halı sahaları
-            </h2>
-            <ul className={styles.featureList}>
-              {venues.map((venue) => (
-                <li key={venue.slug}>
-                  <Link href={venuePath(venue.slug) as Route} className={styles.inlineLink}>
-                    {venue.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {venues.some((venue) => venue.isSample) ? (
-              <p className={styles.notice}>[ÖRNEK] işaretli kayıtlar: {SAMPLE_NOTICE}</p>
-            ) : null}
-          </div>
-        </section>
+        <Section labelledBy="sahalar" density="dense" ruled>
+          <h2 id="sahalar" className={cx(typeClassName('title1'), styles.sectionTitle)}>
+            {district.ilce} halı sahaları
+          </h2>
+          <ul className={styles.links}>
+            {venues.map((venue) => (
+              <li key={venue.slug}>
+                <Link href={venuePath(venue.slug) as Route}>{venue.name}</Link>
+              </li>
+            ))}
+          </ul>
+          {venues.some((venue) => venue.isSample) ? (
+            <p className={styles.notice}>[ÖRNEK] işaretli kayıtlar: {SAMPLE_NOTICE}</p>
+          ) : null}
+        </Section>
       )}
     </article>
   );
