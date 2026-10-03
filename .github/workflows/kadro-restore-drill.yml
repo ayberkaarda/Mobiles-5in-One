@@ -1,0 +1,65 @@
+name: Kadro restore drill
+
+# Weekly backup restore drill (security checklist item 20,
+# kadro/docs/release/backup-restore-drill.md). kadro/ops/restore-drill.sh starts two scratch
+# PostGIS 16 containers itself (postgis/postgis:16-3.5-alpine, the image of docker-compose.yml):
+# it seeds the first, takes `pg_dump -Fc`, restores into a brand-new server and compares row counts,
+# the postgis extension and a spatial query. A `services:` container would sit unused, so the job
+# pre-pulls the image and lets the script own both containers.
+#
+# Scope: this proves the restore mechanics on every run. It does not download the latest
+# production dump: that needs the `kadro-backups` bucket, a read-only key and the offline `age`
+# identity, which do not exist yet (owner tasks in the drill document). The script output is kept
+# as an artifact for 30 days. Actions are pinned to full commit SHAs.
+
+on:
+  schedule:
+    - cron: "40 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kadro-restore-drill-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: kadro
+
+jobs:
+  drill:
+    name: Restore drill (PostGIS 16)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Pull PostGIS image
+        run: docker pull --quiet postgis/postgis:16-3.5-alpine
+
+      - name: Run restore drill
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            echo "run: ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT}, commit ${GITHUB_SHA}"
+            echo "started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            docker --version
+          } | tee restore-drill-output.txt
+          bash ops/restore-drill.sh 2>&1 | tee -a restore-drill-output.txt
+          echo "finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a restore-drill-output.txt
+          grep -q '^RESULT: restore drill passed$' restore-drill-output.txt
+
+      - name: Upload drill output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: restore-drill-output
+          path: kadro/restore-drill-output.txt
+          retention-days: 30
+          if-no-files-found: error

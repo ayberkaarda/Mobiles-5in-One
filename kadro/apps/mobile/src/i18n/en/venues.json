@@ -23,7 +23,7 @@
   "rating": {
     "none": "No reviews yet",
     "few": "{{number}} reviews (a rating is shown from {{min}} reviews)",
-    "average": "{{average}} / 5 · {{number}} reviews"
+    "average": "{{average}} / 5 ({{number}} reviews)"
   },
   "facts": {
     "district": "District",

@@ -133,7 +133,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -155,6 +155,25 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+      # Fails when the lockfile holds duplicate versions that a dedupe would merge.
+      - name: pnpm dedupe check
+        run: pnpm dedupe --check
+
+      # Expo SDK alignment of the mobile dependencies. It reads the app config, which needs the
+      # workspace config package built and the public environment names; the values are local.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build config package
+        run: pnpm --filter @kadro/config build
+
+      - name: expo-doctor
+        working-directory: kadro/apps/mobile
+        env:
+          EXPO_PUBLIC_APP_ENV: local
+          EXPO_PUBLIC_API_URL: http://localhost:3000
+        run: npx --yes expo-doctor@1.20.4
+
   secret-grep:
     name: Secret grep
     needs: changes
@@ -175,6 +194,11 @@ jobs:
       # Node.js 22.18+ runs the TypeScript file directly; the script has no dependencies.
       - name: Scan working tree
         run: node scripts/security/secret-grep.ts
+
+      # Same runner, same dependency-free script style: no work marker, filler text or template
+      # prefix in the source of apps/ and packages/ (phase gate "no placeholder tokens").
+      - name: Placeholder grep
+        run: node scripts/security/placeholder-grep.ts
 
   # The only security check to mark as required on main. "changes" must succeed and report
   # kadro=true or kadro=false. true: gitleaks, audit and secret-grep must all succeed. false: all

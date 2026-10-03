@@ -2,16 +2,17 @@ import { type Theme as NavigationTheme } from 'expo-router';
 
 import { type Theme } from './theme';
 
-/** Navigator chrome (headers, tab bar, screen background) in brand colors and fonts. */
+/**
+ * Navigator chrome (headers, tab bar, screen background) for the resolved scheme. Fonts are the
+ * static Archivo instances, so the weight stays `normal` (the family already carries it).
+ */
 export function navigationTheme(theme: Theme): NavigationTheme {
   const { colors, typography } = theme;
-  const body = typography.body.fontFamily;
   return {
     dark: theme.scheme === 'dark',
     colors: {
-      // Active tab tint: Pitch Green on the light bar; on the dark bar it would fall below 4.5:1,
-      // so the light text color marks the active tab there.
-      primary: theme.scheme === 'dark' ? colors.text : colors.primary,
+      // Active tab tint: green as text on light (`primaryText`), chalk text on dark.
+      primary: theme.scheme === 'dark' ? colors.text : colors.primaryText,
       background: colors.background,
       card: colors.surface,
       text: colors.text,
@@ -19,10 +20,15 @@ export function navigationTheme(theme: Theme): NavigationTheme {
       notification: colors.accent,
     },
     fonts: {
-      regular: { fontFamily: body, fontWeight: '400' },
-      medium: { fontFamily: body, fontWeight: '500' },
-      bold: { fontFamily: body, fontWeight: '600' },
-      heavy: { fontFamily: typography.title1.fontFamily, fontWeight: '700' },
+      regular: { fontFamily: typography.body.fontFamily, fontWeight: 'normal' },
+      medium: { fontFamily: typography.caption.fontFamily, fontWeight: 'normal' },
+      bold: { fontFamily: typography.bodyStrong.fontFamily, fontWeight: 'normal' },
+      heavy: { fontFamily: typography.title2.fontFamily, fontWeight: 'normal' },
     },
   };
+}
+
+/** Status bar content for the resolved scheme: light glyphs on the dark scheme. */
+export function statusBarStyle(theme: Theme): 'light' | 'dark' {
+  return theme.scheme === 'dark' ? 'light' : 'dark';
 }

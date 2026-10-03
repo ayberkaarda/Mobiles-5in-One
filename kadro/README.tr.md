@@ -24,6 +24,88 @@ projesi için örnek metindir, öyle etiketlenmiştir; hukuki incelemeden geçmi
 `cost.guard`), `apps/web` ise `/api/v1` altında REST API'yi, herkese açık web sayfalarını ve
 `/admin` altında ekip panelini sunar.
 
+## Ekran görüntüleri
+
+Ekran görüntüleri `[ÖRNEK]` etiketli örnek veriyi gösterir: web sayfaları yerel bir yığından, mobil ekranlar bir Android emülatöründen alınmıştır. Gerçek cihazlar, gerçek sahalar ve yayında bir site gösterilmez. Tüm setler ve çekim yöntemi [`docs/screenshots/README.md`](docs/screenshots/README.md) (mobil) ve [`docs/screenshots/web-README.md`](docs/screenshots/web-README.md) (web) dosyalarındadır.
+
+### Web (sistemin açık veya koyu ayarını izler)
+
+<table>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-01-home-dark.png">
+        <img src="docs/screenshots/web/web-01-home-light.png" alt="Kadro web: Ana sayfa" width="480">
+      </picture><br>
+      <sub>Ana sayfa</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-02-features-dark.png">
+        <img src="docs/screenshots/web/web-02-features-light.png" alt="Kadro web: Özellikler sayfası" width="480">
+      </picture><br>
+      <sub>Özellikler sayfası</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-04-blog-article-dark.png">
+        <img src="docs/screenshots/web/web-04-blog-article-light.png" alt="Kadro web: Blog yazısı" width="480">
+      </picture><br>
+      <sub>Blog yazısı</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web/web-05-venue-dark.png">
+        <img src="docs/screenshots/web/web-05-venue-light.png" alt="Kadro web: Saha sayfası" width="480">
+      </picture><br>
+      <sub>Saha sayfası</sub>
+    </td>
+  </tr>
+</table>
+
+### Mobil (üst sıra açık, alt sıra koyu)
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro uygulaması: Diziliş, açık" width="220"><br>
+      <sub>Diziliş</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/03-matches-light.png" alt="Kadro uygulaması: Maçlar, açık" width="220"><br>
+      <sub>Maçlar</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/09-open-calls-light.png" alt="Kadro uygulaması: Eksik Var ilanları, açık" width="220"><br>
+      <sub>Eksik Var ilanları</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/07-team-light.png" alt="Kadro uygulaması: Takım, açık" width="220"><br>
+      <sub>Takım</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/mobile/18-match-lineup-dark.png" alt="Kadro uygulaması: Diziliş, koyu" width="220"><br>
+      <sub>Diziliş</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/03-matches-dark.png" alt="Kadro uygulaması: Maçlar, koyu" width="220"><br>
+      <sub>Maçlar</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/09-open-calls-dark.png" alt="Kadro uygulaması: Eksik Var ilanları, koyu" width="220"><br>
+      <sub>Eksik Var ilanları</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/mobile/07-team-dark.png" alt="Kadro uygulaması: Takım, koyu" width="220"><br>
+      <sub>Takım</sub>
+    </td>
+  </tr>
+</table>
+
 ## MVP özellikleri
 
 "Uygulandı", kodun, API sözleşmesinin ve otomatik testlerin `main` üzerinde bulunduğu anlamına gelir.

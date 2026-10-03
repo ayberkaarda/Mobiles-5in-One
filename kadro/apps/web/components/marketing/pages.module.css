@@ -1,0 +1,303 @@
+/*
+ * Page compositions of the home page and /ozellikler (direction §4.4): 12-column grid, 1200 px,
+ * 24 px gutters, left-aligned text, no section repeating the layout of the one before. Colours only
+ * from the `--k-color-*` roles of `@kadro/brand/theme.css`, sizes from the other `--k-*`
+ * properties. One column under 900 px; nothing is wider than the viewport at 320 px.
+ */
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--k-space-12) var(--k-layout-gutter);
+}
+
+/* Home 1: hero, copy 7 columns, squad sheet 5. */
+
+.heroCopy {
+  min-width: 0;
+}
+
+.heroTitle {
+  max-width: 13ch;
+}
+
+.heroLine {
+  display: block;
+}
+
+.heroLead {
+  max-width: 34ch;
+  margin-top: var(--k-space-6);
+  color: var(--k-color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--k-space-3) var(--k-space-6);
+  margin-top: var(--k-space-8);
+}
+
+/* Home 2: the match week, intro left (sticky on wide screens), timeline right. */
+
+.weekIntro {
+  min-width: 0;
+}
+
+.weekIntro h2 {
+  max-width: 12ch;
+}
+
+.intro {
+  max-width: 40ch;
+  margin: var(--k-space-4) 0 0;
+  color: var(--k-color-text-muted);
+}
+
+/* Home 3 and /ozellikler: feature rows, a device frame beside the text. */
+
+.sectionHead {
+  max-width: 18ch;
+  margin-bottom: var(--k-space-12);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-space-20);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--k-space-10) var(--k-layout-gutter);
+  align-items: center;
+}
+
+.rowMedia {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.rowCopy {
+  min-width: 0;
+}
+
+.rowTitle {
+  margin: 0;
+}
+
+.rowText {
+  max-width: 52ch;
+  margin: var(--k-space-3) 0 var(--k-space-6);
+  color: var(--k-color-text-muted);
+}
+
+.rowWide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-space-6);
+  padding-top: var(--k-space-10);
+  border-top: 1px solid var(--k-color-border);
+}
+
+.rowWideHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--k-space-3) var(--k-layout-gutter);
+}
+
+.rowWideHead .rowText {
+  margin: 0;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--k-color-link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Home 4: who it is for, plain three-column text, hairline above. */
+
+.whoDefinition {
+  margin: 0;
+}
+
+.whoList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--k-space-6) var(--k-layout-gutter);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.whoItem {
+  padding-top: var(--k-space-4);
+  border-top: 2px solid var(--k-color-text);
+}
+
+.whoText {
+  margin: var(--k-space-2) 0 0;
+  color: var(--k-color-text-muted);
+}
+
+/* Home 5: the download band on the sunken well. */
+
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-space-6);
+}
+
+.downloadText {
+  max-width: 52ch;
+  margin: var(--k-space-3) 0 0;
+  color: var(--k-color-text-muted);
+}
+
+/* /ozellikler: page header, groups, the closing two-column text block. */
+
+.pageLead {
+  margin-top: var(--k-space-5);
+}
+
+.groupTitle {
+  margin: 0 0 var(--k-space-8);
+}
+
+.closing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--k-space-12) var(--k-layout-gutter);
+}
+
+.closingText {
+  max-width: 52ch;
+  margin: var(--k-space-3) 0 0;
+  color: var(--k-color-text-muted);
+}
+
+.closingList {
+  margin: var(--k-space-4) 0 0;
+  padding-left: var(--k-space-5);
+}
+
+.closingList li + li {
+  margin-top: var(--k-space-2);
+}
+
+.note {
+  max-width: 52ch;
+  margin: var(--k-space-6) 0 0;
+  color: var(--k-color-text-muted);
+  font-size: var(--k-type-caption-size);
+  line-height: var(--k-type-caption-line-height);
+}
+
+.cta {
+  margin-top: var(--k-space-12);
+}
+
+/* Wide screens: the 12-column compositions. */
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .heroCopy {
+    grid-column: 1 / span 7;
+    align-self: center;
+  }
+
+  .heroSheet {
+    grid-column: 8 / span 5;
+  }
+
+  .weekIntro {
+    position: sticky;
+    top: var(--k-space-8);
+    grid-column: 1 / span 4;
+    align-self: start;
+  }
+
+  .weekLog {
+    grid-column: 6 / span 7;
+  }
+
+  .row {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .rowMedia {
+    grid-column: 1 / span 5;
+  }
+
+  .rowCopy {
+    grid-column: 7 / span 6;
+  }
+
+  .rowReverse .rowMedia {
+    grid-column: 8 / span 5;
+    grid-row: 1;
+  }
+
+  .rowReverse .rowCopy {
+    grid-column: 1 / span 6;
+    grid-row: 1;
+  }
+
+  .rowWideHead {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .rowWideHead > :first-child {
+    grid-column: 1 / span 4;
+  }
+
+  .rowWideHead > :nth-child(2) {
+    grid-column: 5 / span 8;
+  }
+
+  .whoTitle {
+    grid-column: 1 / span 4;
+  }
+
+  .whoDefinition,
+  .whoList {
+    grid-column: 5 / span 8;
+  }
+
+  .whoList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .closing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--k-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link {
+    transition: none;
+  }
+}

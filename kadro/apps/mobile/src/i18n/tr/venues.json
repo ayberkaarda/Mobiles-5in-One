@@ -23,7 +23,7 @@
   "rating": {
     "none": "Henüz yorum yok",
     "few": "{{number}} yorum (puan en az {{min}} yorumla gösterilir)",
-    "average": "{{average}} / 5 · {{number}} yorum"
+    "average": "{{average}} / 5 ({{number}} yorum)"
   },
   "facts": {
     "district": "İlçe",

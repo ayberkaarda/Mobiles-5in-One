@@ -1,25 +1,32 @@
 {
   "name": "@kadro/brand",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Kadro brand tokens, logo SVGs and font files.",
+  "description": "Kadro brand tokens for the light and dark schemes, theme CSS, typed tokens for React Native, logo SVGs and font files.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./tokens.json",
   "exports": {
     "./tokens.json": "./tokens.json",
+    "./theme/tokens.json": "./theme/tokens.json",
+    "./theme.css": "./theme/theme.css",
+    "./tokens": {
+      "types": "./theme/tokens.ts",
+      "default": "./theme/tokens.ts"
+    },
     "./logo/*": "./logo/*",
     "./fonts/*": "./fonts/*"
   },
   "files": [
     "tokens.json",
+    "theme",
     "logo",
     "fonts"
   ],
   "scripts": {
-    "build": "node scripts/validate-tokens.mjs",
-    "lint": "node scripts/validate-tokens.mjs",
-    "typecheck": "node scripts/validate-tokens.mjs",
-    "test": "node scripts/validate-tokens.mjs"
+    "build": "node scripts/build-tokens.mjs && node scripts/validate-tokens.mjs",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node scripts/build-tokens.mjs --check && node scripts/validate-tokens.mjs"
   }
 }

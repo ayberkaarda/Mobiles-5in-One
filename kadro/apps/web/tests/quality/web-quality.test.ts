@@ -244,12 +244,8 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
   });
 
   describe('self-hosted fonts', () => {
-    const FILES = [
-      'inter-latin-wght-normal.woff2',
-      'inter-latin-ext-wght-normal.woff2',
-      'sora-latin-wght-normal.woff2',
-      'sora-latin-ext-wght-normal.woff2',
-    ];
+    // Archivo, the brand family of ADR-0084: one variable file per subset.
+    const FILES = ['archivo-latin-wdth-wght.woff2', 'archivo-latin-ext-wdth-wght.woff2'];
 
     it('serves every font file from the same origin as WOFF2', async () => {
       for (const file of FILES) {
@@ -268,8 +264,8 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
       for (const sheet of sheets) {
         css += await (await fetch(new URL(sheet ?? '', base))).text();
       }
-      const faces = css.match(/@font-face\{[^}]*\}/g) ?? [];
-      expect(faces).toHaveLength(4);
+      const faces = [...new Set(css.match(/@font-face\{[^}]*\}/g) ?? [])];
+      expect(faces).toHaveLength(2);
       for (const face of faces) {
         expect(face).toContain('font-display:swap');
         expect(face).toMatch(/url\(\/?fonts\/|url\(\/fonts\//);
@@ -278,16 +274,16 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
       }
       expect(css).not.toMatch(/fonts\.(googleapis|gstatic)\.com|fontsource\.org|cdn\./);
       // The latin-ext faces carry the Turkish letters; they must be declared.
-      expect(css).toContain('inter-latin-ext-wght-normal.woff2');
-      expect(css).toContain('sora-latin-ext-wght-normal.woff2');
+      expect(css).toContain('archivo-latin-ext-wdth-wght.woff2');
     });
 
-    it('preloads the latin faces with crossorigin and allows fonts from self only', async () => {
+    it('preloads the latin face with crossorigin and allows fonts from self only', async () => {
       const { response, html } = await get('/');
       const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].map(
         (m) => m[0],
       );
-      expect(preloads).toHaveLength(2);
+      expect(preloads).toHaveLength(1);
+      expect(preloads[0]).toContain('/fonts/archivo-latin-wdth-wght.woff2');
       for (const tag of preloads) {
         expect(tag).toContain('type="font/woff2"');
         expect(tag).toContain('crossorigin');
@@ -297,7 +293,7 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
     });
 
     it('ships the license text next to the fonts', () => {
-      for (const file of ['inter-OFL.txt', 'sora-OFL.txt']) {
+      for (const file of ['archivo-OFL.txt']) {
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed file names in the package
         expect(readFileSync(join(FONT_DIR, file), 'utf8')).toContain('SIL OPEN FONT LICENSE');
       }

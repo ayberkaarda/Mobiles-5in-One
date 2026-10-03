@@ -173,7 +173,11 @@
     "autoBalance": "Auto-balance by position",
     "save": "Save lineup",
     "sideEmpty": "No players on this side.",
-    "readOnly": "The captain and co-captains set the lineup."
+    "readOnly": "The captain and co-captains set the lineup.",
+    "keeperMissing": "Keeper missing",
+    "missing": "missing",
+    "pitchLabel": "Lineup: side A {{a}} players, side B {{b}} players, {{missing}} missing",
+    "pitchLabelOpen": "Lineup: side A {{a}} players, side B {{b}} players"
   },
   "payments": {
     "title": "Payments",

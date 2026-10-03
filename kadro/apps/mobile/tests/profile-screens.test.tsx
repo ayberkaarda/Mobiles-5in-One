@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
 import { type QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
+import { StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -28,6 +29,7 @@ import WelcomeScreen from '../app/index';
 import { authStore } from '../src/auth-store/store';
 import { NO_DELETION_NOTICE } from '../src/settings/deletion';
 import { pushStore } from '../src/settings/instance';
+import { darkTheme, lightTheme } from '../src/theme';
 import { deletionNotice } from '../src/settings/notice';
 import { type LegalLink } from '../src/settings/legal';
 import { type PushPermission, type PushPort } from '../src/settings/push';
@@ -464,6 +466,22 @@ describe('edit profile', () => {
 });
 
 describe('settings', () => {
+  it.each([
+    ['light', lightTheme],
+    ['dark', darkTheme],
+  ] as const)(
+    'shows the shared link-coloured back control in the %s scheme',
+    async (scheme, theme) => {
+      await renderWithProviders(<SettingsScreen />, { i18n: createTestI18n(), scheme });
+      const back = screen.getByTestId('back');
+      expect(back.props.accessibilityLabel).toBe('Geri');
+      expect(StyleSheet.flatten(screen.getByText('‹ Geri').props.style).color).toBe(
+        theme.colors.link,
+      );
+      expect(theme.colors.link).not.toBe(theme.colors.textMuted);
+    },
+  );
+
   it('switches the language at once and remembers it on the device', async () => {
     const i18n = createTestI18n();
     await renderWithProviders(<SettingsScreen />, { i18n });

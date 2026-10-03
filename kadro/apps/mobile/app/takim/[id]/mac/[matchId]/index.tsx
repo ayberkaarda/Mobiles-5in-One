@@ -6,11 +6,12 @@ import { View } from 'react-native';
 import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
 import { OpenCallEntry } from '../../../../../src/calls/components';
-import { formatDateTime } from '../../../../../src/i18n/format';
+import { formatDateTime, formatLira } from '../../../../../src/i18n/format';
 import {
   ChoiceGroup,
   MATCHES_HOME,
   Fact,
+  kickoffTime,
   MatchScreen,
   matchHref,
   RoleError,
@@ -24,7 +25,6 @@ import {
   type RsvpStatus,
 } from '../../../../../src/matches/contracts';
 import { matchesApi } from '../../../../../src/matches/instance';
-import { formatMinor } from '../../../../../src/matches/money';
 import {
   myRsvpStatus,
   useDeleteMatch,
@@ -54,7 +54,15 @@ import {
   Section,
 } from '../../../../../src/teams/components';
 import { useTheme } from '../../../../../src/theme';
-import { Button, Card, ListItem, Text } from '../../../../../src/ui';
+import {
+  Button,
+  Card,
+  KitNumber,
+  ListItem,
+  Numeral,
+  SegmentedControl,
+  Text,
+} from '../../../../../src/ui';
 
 const RSVP_ORDER: readonly RsvpChoice[] = ['in', 'maybe', 'out'];
 const GROUP_ORDER: readonly RsvpStatus[] = ['in', 'waitlist', 'maybe', 'out'];
@@ -177,6 +185,35 @@ export default function MatchDetailScreen() {
       testID="match-screen"
     >
       <CachedNotice visible={query.isError} />
+      {/* Squad sheet header: kick-off and the confirmed count in kit figures. The facts card
+          below says the same in words, so this block is hidden from screen readers. */}
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID="match-hero"
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          paddingHorizontal: theme.layout.gutter,
+          marginBottom: theme.spacing['4'],
+        }}
+      >
+        <View>
+          <Text variant="label" tone={match.status === 'open' ? 'primary' : 'muted'}>
+            {t(`status.${match.status}`)}
+          </Text>
+          <Numeral value={kickoffTime(match.startsAt, i18n.language)} variant="score" />
+        </View>
+        {member === null ? null : (
+          <View style={{ alignItems: 'flex-end' }}>
+            <Numeral value={`${member.counts.in}/${member.slots}`} variant="score" />
+            <Text variant="caption" tone="muted">
+              {t('detail.squad')}
+            </Text>
+          </View>
+        )}
+      </View>
       <Section>
         <Card>
           <View style={{ gap: theme.spacing['2'] }}>
@@ -206,7 +243,7 @@ export default function MatchDetailScreen() {
                 ) : null}
                 <Fact
                   label={t('detail.fee')}
-                  value={formatMinor(member.feeTotalMinor, i18n.language)}
+                  value={formatLira(member.feeTotalMinor, i18n.language)}
                   testID="match-fee"
                 />
               </>
@@ -214,13 +251,13 @@ export default function MatchDetailScreen() {
             {match.sharePerPlayerMinor === null ? null : (
               <Fact
                 label={t('detail.share')}
-                value={formatMinor(match.sharePerPlayerMinor, i18n.language)}
+                value={formatLira(match.sharePerPlayerMinor, i18n.language)}
               />
             )}
             {match.myShareMinor === null ? null : (
               <Fact
                 label={t('detail.myShare')}
-                value={formatMinor(match.myShareMinor, i18n.language)}
+                value={formatLira(match.myShareMinor, i18n.language)}
                 testID="match-my-share"
               />
             )}
@@ -255,11 +292,12 @@ export default function MatchDetailScreen() {
                 <Notice testID="rsvp-locked">{t('rsvp.lockedNotice')}</Notice>
               </View>
             ) : null}
-            <ChoiceGroup
+            <SegmentedControl<RsvpChoice>
               label={t('rsvp.title')}
               options={RSVP_ORDER.map((value) => ({
                 value,
                 label: t(`rsvp.choice.${value}`),
+                tone: value,
                 disabled: !choices.includes(value),
               }))}
               selected={myStatus === 'waitlist' ? 'in' : (myStatus as RsvpChoice | null)}
@@ -309,7 +347,7 @@ export default function MatchDetailScreen() {
                       onConfirm={castVote}
                       busy={vote.isPending}
                       disabled={disabled || votee === null}
-                      variant="accent"
+                      variant="primary"
                       testID="mvp-submit"
                     />
                   </View>
@@ -402,7 +440,7 @@ export default function MatchDetailScreen() {
                 onConfirm={() => setStatus('played')}
                 busy={update.isPending && update.variables?.status === 'played'}
                 disabled={disabled}
-                variant="accent"
+                variant="primary"
                 testID="match-to-played"
               />
             ) : null}
@@ -455,16 +493,19 @@ export default function MatchDetailScreen() {
                     number: group.length,
                   })}
                 </Text>
-                {group.map((row) => (
+                {group.map((row, index) => (
                   <ListItem
                     key={row.id}
+                    // Confirmed players carry the kit number of the lineup screen.
+                    leading={status === 'in' ? <KitNumber number={index + 1} /> : undefined}
+                    divider
                     title={
                       row.id === myUserId ? t('participants.you', { name: row.name }) : row.name
                     }
                     subtitle={
                       [positionLabel(row.position), sideLabel(row.side)]
                         .filter((part): part is string => part !== null)
-                        .join(' · ') || undefined
+                        .join(', ') || undefined
                     }
                     testID={`participant-${row.id}`}
                   />

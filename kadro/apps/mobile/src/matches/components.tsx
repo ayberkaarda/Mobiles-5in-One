@@ -1,10 +1,10 @@
-import { useRouter } from 'expo-router';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
+import { BackLink as SharedBackLink } from '../navigation/BackLink';
 import { useTheme } from '../theme';
 import { ErrorState, Screen, Text } from '../ui';
 
@@ -20,29 +20,19 @@ export function matchHref(teamId: string, matchId: string, screen?: string): str
   return screen === undefined ? base : `${base}/${screen}`;
 }
 
+/** Kick-off time alone ("21:00") in the device time zone; empty for an unreadable date. */
+export function kickoffTime(iso: string, language: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
 /** Back control of the pushed match screens: the previous screen, else `fallback`. */
-function BackLink({ fallback }: { readonly fallback: string }) {
+function MatchBackLink({ fallback }: { readonly fallback: string }) {
   const { t } = useTranslation('matches');
-  const theme = useTheme();
-  const router = useRouter();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('nav.back')}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback))}
-      testID="back"
-      style={{
-        minHeight: theme.minTouchTarget,
-        justifyContent: 'center',
-        alignSelf: 'flex-start',
-        paddingHorizontal: theme.spacing['4'],
-      }}
-    >
-      <Text tone="link" variant="label">
-        {`‹ ${t('nav.back')}`}
-      </Text>
-    </Pressable>
-  );
+  return <SharedBackLink label={t('nav.back')} fallback={fallback} />;
 }
 
 /** Page frame of a pushed match screen: back control, heading, scrolling content. */
@@ -66,7 +56,7 @@ export function MatchScreen({
   const theme = useTheme();
   return (
     <Screen scroll={scroll} testID={testID}>
-      <BackLink fallback={back} />
+      <MatchBackLink fallback={back} />
       {title === undefined ? null : (
         <Text
           variant="title1"
@@ -111,9 +101,15 @@ export interface ChoiceOption<T extends string> {
 }
 
 /**
- * A single choice among a few options (RSVP, format, venue kind, lineup side): each option is a
- * radio button of at least 44 pt, the selected one is announced as checked. Tapping is the only
- * interaction; there is no drag and drop.
+ * Look of the chosen option: `choice` (form answers) fills it with `primary`; `filter` (list
+ * filters, design direction §4.5 chips) uses `inverse` with `onInverse`.
+ */
+export type ChoiceGroupVariant = 'choice' | 'filter';
+
+/**
+ * A single choice among a few options (format, venue kind, lineup side, list filters): each option
+ * is a radio button of at least 44 pt, the selected one is announced as checked. Tapping is the
+ * only interaction; there is no drag and drop.
  */
 export function ChoiceGroup<T extends string>({
   label,
@@ -121,6 +117,7 @@ export function ChoiceGroup<T extends string>({
   selected,
   onSelect,
   disabled = false,
+  variant = 'choice',
   testID,
 }: {
   /** Spoken name of the group. */
@@ -129,9 +126,12 @@ export function ChoiceGroup<T extends string>({
   readonly selected: T | null;
   readonly onSelect: (value: T) => void;
   readonly disabled?: boolean;
+  readonly variant?: ChoiceGroupVariant;
   readonly testID?: string;
 }) {
   const theme = useTheme();
+  const chosenFill = variant === 'filter' ? theme.colors.inverse : theme.colors.primary;
+  const chosenInk = variant === 'filter' ? theme.colors.onInverse : theme.colors.onPrimary;
   return (
     <View
       accessibilityRole="radiogroup"
@@ -142,6 +142,18 @@ export function ChoiceGroup<T extends string>({
       {options.map((option) => {
         const checked = option.value === selected;
         const inactive = disabled || option.disabled === true;
+        // Rest: surface with the 3:1 outline; chosen: the variant fill; unavailable: muted fill.
+        const fill = checked
+          ? chosenFill
+          : inactive
+            ? theme.colors.fillMuted
+            : theme.colors.surface;
+        const edge = checked
+          ? chosenFill
+          : inactive
+            ? theme.colors.fillMuted
+            : theme.colors.borderStrong;
+        const ink = checked ? chosenInk : inactive ? theme.colors.textMuted : theme.colors.text;
         return (
           <Pressable
             key={option.value}
@@ -151,23 +163,19 @@ export function ChoiceGroup<T extends string>({
             disabled={inactive}
             onPress={() => onSelect(option.value)}
             testID={testID && `${testID}-${option.value}`}
-            style={{
+            style={({ pressed }) => ({
               minHeight: theme.minTouchTarget,
               minWidth: theme.minTouchTarget,
               justifyContent: 'center',
               alignItems: 'center',
               paddingHorizontal: theme.spacing['4'],
-              borderRadius: theme.radius.md,
+              borderRadius: theme.radius.sm,
               borderWidth: 1,
-              borderColor: checked ? theme.colors.primary : theme.colors.border,
-              backgroundColor: checked ? theme.colors.primary : theme.colors.surface,
-              opacity: inactive && !checked ? 0.5 : 1,
-            }}
+              borderColor: edge,
+              backgroundColor: pressed && !checked ? theme.colors.pressed : fill,
+            })}
           >
-            <Text
-              variant="label"
-              style={{ color: checked ? theme.colors.onPrimary : theme.colors.text }}
-            >
+            <Text variant="label" style={{ color: ink }}>
               {option.label}
             </Text>
           </Pressable>
@@ -177,7 +185,7 @@ export function ChoiceGroup<T extends string>({
   );
 }
 
-/** A label and its value on one line, read as one element ("Ücret: ₺1.500"). */
+/** A label and its value on one line, read as one element ("Ücret: 1.500 ₺"). */
 export function Fact({
   label,
   value,

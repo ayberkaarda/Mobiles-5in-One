@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { BLOG_INTRO, BLOG_META } from '../../../components/content/copy';
-import { DocumentMeta } from '../../../components/content/parts';
+import { ArticleDate, DocumentMeta } from '../../../components/content/parts';
 import styles from '../../../components/content/prose.module.css';
 import marketing from '../../../components/marketing/marketing.module.css';
 import { pageMetadata } from '../../../components/marketing/metadata';
@@ -32,14 +32,15 @@ export default function BlogIndexPage() {
       <div className={marketing.sectionInner}>
         <ul className={styles.articleList}>
           {articles.map((article) => (
-            <li key={article.slug} className={styles.articleCard}>
-              <h2>
-                <Link href={`/blog/${article.slug}`} className={styles.link}>
-                  {article.title}
-                </Link>
-              </h2>
-              <p>{article.description}</p>
-              <DocumentMeta document={article} showReadingTime />
+            <li key={article.slug} className={styles.articleRow}>
+              <ArticleDate date={article.publishedAt} />
+              <div>
+                <h2>
+                  <Link href={`/blog/${article.slug}`}>{article.title}</Link>
+                </h2>
+                <p>{article.description}</p>
+                <DocumentMeta document={article} showReadingTime />
+              </div>
             </li>
           ))}
         </ul>

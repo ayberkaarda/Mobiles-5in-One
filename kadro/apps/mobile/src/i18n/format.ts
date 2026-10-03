@@ -16,23 +16,40 @@ export function formatDateTime(iso: string, language: string): string {
   }).format(date);
 }
 
-/** Amount in kuruş (minor units) as Turkish lira without decimals, e.g. `₺1.500`. */
-export function formatLira(minor: number, language: string): string {
+/** Lira sign, written after the amount ("1.500 ₺", design direction §4.10). */
+export const LIRA_SIGN = '₺';
+
+/** No-break space between the amount and the sign, so a price never wraps apart. */
+const NBSP = '\u00A0';
+
+/**
+ * Amount in kuruş as a plain number in the reader's language: whole lira without decimals
+ * (`1.500`), otherwise with two (`333,34`), so a per-player share is shown to the kuruş.
+ */
+function formatAmount(minor: number, language: string): string {
+  const whole = minor % 100 === 0;
   return new Intl.NumberFormat(language, {
-    style: 'currency',
-    currency: 'TRY',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
   }).format(minor / 100);
 }
 
-/** `₺1.200–₺1.800`, a single price, or `null` when the venue lists none. */
+/**
+ * The one price formatter of the app: amount in kuruş as Turkish lira, amount first and the sign
+ * after it (`1.500 ₺`, `333,34 ₺`). Store prices on the paywall come preformatted from the store.
+ */
+export function formatLira(minor: number, language: string): string {
+  return `${formatAmount(minor, language)}${NBSP}${LIRA_SIGN}`;
+}
+
+/** `1.200–1.800 ₺` (one sign for the range), a single price, or `null` when the venue lists none. */
 export function formatPriceRange(
   minMinor: number | null,
   maxMinor: number | null,
   language: string,
 ): string | null {
   if (minMinor !== null && maxMinor !== null && minMinor !== maxMinor) {
-    return `${formatLira(minMinor, language)}–${formatLira(maxMinor, language)}`;
+    return `${formatAmount(minMinor, language)}–${formatLira(maxMinor, language)}`;
   }
   const single = minMinor ?? maxMinor;
   return single === null ? null : formatLira(single, language);
