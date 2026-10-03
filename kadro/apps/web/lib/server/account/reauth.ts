@@ -1,5 +1,5 @@
 import { verifyPassword } from '@kadro/auth';
-import { type DeleteAccountRequest } from '@kadro/contracts';
+import { type ReauthProofFields } from '@kadro/contracts';
 import { type User } from '@kadro/db';
 import { decodeJwt } from 'jose';
 
@@ -8,7 +8,8 @@ import { ApiError } from '../errors';
 import { type ServerRuntime } from '../runtime';
 
 /**
- * Re-authentication proof of `DELETE me` (authorization matrix footnotes 4 and 5, ADR-0032).
+ * Re-authentication proof of `DELETE me` and `POST admin/totp/enroll` (authorization matrix
+ * footnotes 4 and 5, ADR-0032, ADR-0064).
  *
  * - `password`: verified with Argon2id against the account's hash; a social-only account is
  *   verified against the dummy hash (same work) and fails.
@@ -16,10 +17,8 @@ import { type ServerRuntime } from '../runtime';
  *   nonce), then it must name the subject linked to this account and be issued at most
  *   {@link REAUTH_TOKEN_MAX_AGE_SECONDS} ago. Each token is accepted once: its keyed hash is
  *   recorded for longer than any token could stay fresh.
- * - Staff accounts (`moderator`, `admin`) must also present a fresh TOTP code. TOTP secrets are
- *   enrolled through `POST admin/totp/enroll`, which does not exist yet, so no account holds a
- *   verifiable secret: {@link verifyStaffTotp} fails closed and staff deletion answers 401
- *   `step_up_required` until enrollment ships with its secret key.
+ * - Staff accounts (`moderator`, `admin`) must also present a fresh TOTP code for `DELETE me`;
+ *   that check lives with the other TOTP flows (`admin/step-up.ts`, `verifyFreshStaffTotp`).
  *
  * Nothing about the proof (password, token, code) is logged or stored in clear.
  */
@@ -59,7 +58,7 @@ async function spendIdentityToken(runtime: ServerRuntime, token: string): Promis
 export async function verifyReauthProof(
   runtime: ServerRuntime,
   account: ReauthAccount,
-  body: DeleteAccountRequest,
+  body: ReauthProofFields,
 ): Promise<boolean> {
   if (body.password !== undefined) {
     return verifyPassword(account.passwordHash, body.password);
@@ -85,15 +84,4 @@ export async function verifyReauthProof(
     return false;
   }
   return spendIdentityToken(runtime, body.identityToken);
-}
-
-/**
- * Fresh TOTP code of a staff account (footnote 5). Fails closed while no TOTP secret can be
- * enrolled or decrypted (see the module comment); a code alone never passes.
- */
-export function verifyStaffTotp(
-  _account: Pick<User, 'totpSecretEnc'>,
-  _code: string | undefined,
-): boolean {
-  return false;
 }
