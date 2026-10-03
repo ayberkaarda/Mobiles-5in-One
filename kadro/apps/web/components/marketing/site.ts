@@ -41,6 +41,7 @@ export const FOOTER_GROUPS: readonly FooterGroup[] = [
       { href: '/', label: 'Ana sayfa' },
       { href: '/ozellikler', label: 'Özellikler' },
       { href: '/blog', label: 'Blog' },
+      { href: '/sss', label: 'Sık sorulan sorular' },
     ],
   },
   {

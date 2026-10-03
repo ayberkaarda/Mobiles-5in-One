@@ -23,6 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Marketing pages (ADR-0056).
     { url: url('/'), changeFrequency: 'weekly', priority: 1 },
     { url: url('/ozellikler'), changeFrequency: 'monthly', priority: 0.8 },
+    // FAQ page (ADR-0083).
+    { url: url('/sss'), changeFrequency: 'monthly', priority: 0.6 },
     // Blog and legal pages (ADR-0080): dates come from the content front matter.
     {
       url: url('/blog'),
