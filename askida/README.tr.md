@@ -34,28 +34,50 @@ Askıda, Türkiye'deki "askıda ekmek" geleneğinden doğan bir iyilik ağı. Ba
 - Reklam
 - Kurumsal bağışçı fatura portalı (v2'de düşünülüyor)
 
-## Planlanan teknoloji yığını
+## Teknoloji yığını
 
-| Katman | Teknoloji |
-|---|---|
-| Mobil uygulama | Flutter (iOS ve Android), Riverpod, go_router, drift |
-| Backend API | Laravel (PHP 8.3+), Sanctum |
-| Yönetim paneli | Filament 3 |
-| Veritabanı | PostgreSQL + PostGIS |
-| Kuyruk ve önbellek | Redis, Horizon |
-| Nesne depolama | S3 uyumlu (Cloudflare R2) |
-| Ödeme | iyzico pazaryeri ödemeleri (Checkout Form ve alt üye işyeri) |
-| Web | Laravel Blade, sunucu tarafı render |
-| Cihaz doğrulama | Play Integrity (Android) ve DeviceCheck (iOS), platform channel ile |
+| Katman             | Teknoloji                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Mobil uygulama     | Flutter 3.47.6 ve Dart 3.13.5 (iOS ve Android), Riverpod 3.4.3, go_router 18.0.2; drift sonraki bir fazda eklenecek |
+| Backend API        | PHP 8.3.35 üzerinde Laravel 13.34.0 (yalnızca Docker'da), Sanctum 4.3.3                                             |
+| Yönetim paneli     | Filament 3.3.55                                                                                                     |
+| Veritabanı         | PostgreSQL 16.9 + PostGIS 3.5.2                                                                                     |
+| Kuyruk ve önbellek | Redis 7.4.11, Horizon 5.50.0                                                                                        |
+| Nesne depolama     | S3 uyumlu (Cloudflare R2)                                                                                           |
+| Ödeme              | iyzico pazaryeri ödemeleri (Checkout Form ve alt üye işyeri)                                                        |
+| Web                | Laravel Blade, sunucu tarafı render                                                                                 |
+| Cihaz doğrulama    | Play Integrity (Android) ve DeviceCheck (iOS), platform channel ile                                                 |
 
-## Planlanan mimari
+## Mimari
 
 İki ana kökü olan bir monorepo: Flutter istemcisi için `app/`, Laravel backend için `server/`; yanında `brand/` ve `docs/`. Flutter uygulaması tek kod tabanında bağışçı, esnaf ve alan modlarını barındırır. Backend, `/api/v1` altında sürümlü bir JSON API sunar, Blade web sitesini render eder ve Filament yönetim panelini barındırır. Para, TRY cinsinden kuruş (tam sayı) olarak tutulur; platform parayı elinde tutmaz, ödeme bağışçıdan ödeme sağlayıcı üzerinden esnafa akar. Alan kişinin anonimliği temel bir ilkedir: hesap yok, kimliği bağışçıya ya da esnafa gösterilmez, kesin konumu saklanmaz.
 
 ## Durum
 
-Bu klasörde şu an yalnızca tasarım/spec dokümanı var; kaynak kod henüz yazılmadı.
+Phase 0 (temel) birleşti: Laravel sunucusu Docker'da çalışıyor (sağlık rotası, Filament yönetim
+paneli, Horizon, Sanctum), Flutter uygulaması tasarım sistemiyle bir iskelet; marka paketi,
+ADR-0001 ile ADR-0006, güvenlik matrisi taslakları ve bir CI iş akışı hazır. Henüz API uç noktası
+ve ödeme yok, mod kabuğu dışında ekran da yok. iOS projesi derlenmedi (macOS gerekir). Çözümlenen
+sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında
+kayıtlı.
 
 ## Kurulum
 
-Henüz kod yok, bu yüzden kurulacak ya da çalıştırılacak bir şey de yok. Ürün ve teknik tanım bu klasörde `04-askida-flutter.md` dosyasında duruyor. Geliştirme başlayınca bu README güncellenecek.
+Ürün ve teknik tanım bu klasörde `04-askida-flutter.md` dosyasında duruyor. Katkı kuralları ve tüm
+komutlar [`CONTRIBUTING.md`](CONTRIBUTING.md) dosyasında.
+
+Sunucu (Docker gerekir; PHP yalnızca konteynerlerin içinde çalışır), bu klasörden:
+
+```sh
+docker compose up -d --wait
+docker compose exec server php artisan test
+```
+
+Uygulama (Flutter SDK gerekir), `app/` içinden:
+
+```sh
+flutter pub get
+flutter analyze
+flutter test
+dart format --set-exit-if-changed .
+```
