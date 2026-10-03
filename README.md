@@ -7,17 +7,17 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Projects
 
-| Folder                    | Product                                                                                                               | Stack                                                                          | Status                                                     | Progress |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------- | -------- |
-| [`kadro`](kadro/)         | Match organizer for amateur pitch football: build the squad, fill missing players, split the pitch fee                | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | In development (Phases 0 to 5 merged, Phase 6 in progress) | ~95%     |
-| [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Design document only, no code                              | 0%       |
-| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code                              | 0%       |
-| [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                              | 0%       |
-| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code                              | 0%       |
+| Folder                    | Product                                                                                                               | Stack                                                                          | Status                                                                | Progress |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------- | -------- |
+| [`kadro`](kadro/)         | Match organizer for amateur pitch football: build the squad, fill missing players, split the pitch fee                | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Feature complete for the portfolio build (Phase 6 proofs partly open) | ~99%     |
+| [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Foundation merged (Phase 0); no product features yet                  | ~14%     |
+| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code                                         | 0%       |
+| [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                                         | 0%       |
+| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code                                         | 0%       |
 
 ## Gallery
 
-One card per project. Only Kadro has an application; the other cards are placeholders for products that are still in the design stage.
+One card per project. Only Kadro has an application. The Askıda card shows its brand system and foundation; that app does not exist yet. The other cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
@@ -26,8 +26,8 @@ One card per project. Only Kadro has an application; the other cards are placeho
       <sub><b>Kadro</b>: in development</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askida card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Askida</b>: in design stage, no app yet</sub>
+      <img src="docs/readme/askida.png" alt="Askıda: brand system and foundation, no app screens yet" width="100%"><br>
+      <sub><b>Askıda</b>: brand system and foundation, no app screens yet</sub>
     </td>
   </tr>
   <tr>
@@ -51,30 +51,42 @@ One card per project. Only Kadro has an application; the other cards are placeho
 
 ## Status
 
-Only Kadro has code. Its repository foundation, Phase 1 (data model, authentication and the
-security core) and Phase 2 (domain API and worker jobs) are complete. All work packages of Phases 3
-to 5 (mobile app, SEO pages, subscriptions and the admin area) are merged. Phase 6 (hardening and
-release readiness) is in progress: the attack suite, restore drill and runbooks, cost guard, store
-listing copy and privacy label drafts are merged; the final verification matrix, the SEO and GEO
-checklist, a dependency audit report and the mobile static scan are open. Merged does not mean
-verified in the real world: mobile end-to-end flows have not run on a device, purchases have not run
-against real store accounts, and legal and store texts are samples. The redesign (ADR-0084: light and dark schemes, Archivo type, a squad-sheet look on the web and in the app) is merged into this work and does not change the phase count. See
+Kadro is feature complete for the portfolio build. Its repository foundation, Phase 1 (data model,
+authentication and the security core) and Phase 2 (domain API and worker jobs) are complete, all
+work packages of Phases 3 to 5 (mobile app, SEO pages, subscriptions and the admin area) are
+merged, and all Phase 6 deliverables (hardening and release readiness) are merged: attack suite,
+ZAP and MobSF scans, dependency audit report, restore drill, cost document and cost guard,
+history-purge runbook, ASO, store listing copy, privacy labels, the final 23-item verification
+matrix and the SEO and GEO checklist. Phase 6 is still not complete by its own definition of done:
+10 of the 23 matrix items are partial, the Lighthouse lab LCP is 2.5 to 2.7 s on three pages, and
+the new CI steps have not run in GitHub Actions yet. The missing proof needs systems that do not
+exist yet (EAS builds, a hosted origin, a Sentry account, provider accounts, backup storage, iOS).
+Merged does not mean verified in the real world: purchases have not run against real store
+accounts, and legal and store texts are samples. The redesign (ADR-0084: light and dark schemes,
+Archivo type, a squad-sheet look on the web and in the app) is merged; the mobile Maestro flows
+pass 11 of 11 on an emulator, but no physical device run exists. See
 [`kadro/README.md`](kadro/README.md) for the detailed breakdown.
 
-Askida, Cetele, Inecek Var and Patika currently consist of a single specification document each.
+Askıda has a foundation and no product features: the Laravel server runs in Docker (health route,
+Filament admin panel, Horizon, Sanctum), the Flutter app is a skeleton with a design system, and the
+brand package, six ADRs, security matrix drafts and a CI workflow are in place. It has no
+endpoints, no payments and no screens beyond a mode shell; iOS has never been built. See
+[`askida/README.md`](askida/README.md).
+
+Cetele, Inecek Var and Patika currently consist of a single specification document each.
 No application code exists for them yet.
 
 ### Progress
 
-Last updated: 2026-10-03 (after the Phase 6 documentation and cost guard merge). The figures are estimates, refreshed whenever a batch of work merges.
+Last updated: 2026-10-04 (after the Kadro redesign and the Askıda foundation merges). The figures are estimates, refreshed whenever a batch of work merges.
 
-| Project     | Progress | Basis                                                                                                                                                                                                                                         |
-| ----------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kadro`     | ~95%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 7 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 7/11) / 7 = 94.8%. The redesign does not change the phase count, so the figure stays. |
-| `askida`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
-| `cetele`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
-| `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
-| `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
+| Project     | Progress | Basis                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `kadro`     | ~99%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 11 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 11/11) / 7 = 100%, shown as ~99% because Phase 6 is not complete by its own definition of done (10 of 23 matrix items partial, Lighthouse lab LCP above target on three pages, new CI steps not yet run in GitHub Actions). |
+| `askida`    | ~14%     | Phase 0 (foundation) merged: 1 of 7 phases, weighted equally. Phase 1 (Laravel core, authentication, security baseline) is in progress on branches and not counted. No endpoints, no payments and no screens beyond a mode shell yet; iOS never built.                                                                                                                               |
+| `cetele`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                     |
+| `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                     |
+| `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                     |
 
 Progress means merged into `main`; work that is only on a branch or in an open pull request is not
 counted. The figure reaches 100% only after Phase 6 (hardening and release readiness) is complete.
@@ -82,11 +94,12 @@ counted. The figure reaches 100% only after Phase 6 (hardening and release readi
 ## Repository layout
 
 ```
-.github/workflows/   CI for Kadro (lint, typecheck, build; security scans)
+.github/workflows/   CI for Kadro (lint, typecheck, build; security scans, mobile end-to-end,
+                     restore drill) and for Askıda
 .gitleaks.toml       secret-scanning configuration
 lefthook.yml         git hook configuration
 kadro/               Kadro monorepo (pnpm workspaces + Turborepo)
-askida/              design document
+askida/              Askıda: Laravel server (Docker), Flutter app, brand package, ADRs, spec
 cetele/              design document
 inecekvar/           design document
 patika/              design document
@@ -95,12 +108,15 @@ patika/              design document
 ## Documentation per project
 
 - Kadro: [`kadro/README.md`](kadro/README.md) ([Türkçe](kadro/README.tr.md))
-- Askida, Cetele, Inecek Var, Patika: no README yet; the specification document in each folder is
-  the only documentation.
+- Askıda: [`askida/README.md`](askida/README.md) ([Türkçe](askida/README.tr.md)); also
+  [`askida/CONTRIBUTING.md`](askida/CONTRIBUTING.md) and the ADRs in `askida/docs/adr/`
+- Cetele: [`cetele/README.md`](cetele/README.md) ([Türkçe](cetele/README.tr.md))
+- Inecek Var: [`inecekvar/README.md`](inecekvar/README.md) ([Türkçe](inecekvar/README.tr.md))
+- Patika: [`patika/README.md`](patika/README.md) ([Türkçe](patika/README.tr.md))
 
 ## Development
 
-Kadro is the only buildable project. Work from inside `kadro/`:
+Kadro and Askıda are buildable; the other three projects have no code. Kadro: work from inside `kadro/`:
 
 ```sh
 cd kadro
@@ -113,6 +129,24 @@ pnpm test
 
 Database-backed tests need a running Docker daemon. Requirements, environment setup and all other
 commands are described in [`kadro/README.md`](kadro/README.md).
+
+Askıda server (needs Docker; no host PHP), from inside `askida/`:
+
+```sh
+cd askida
+docker compose up -d --wait
+docker compose exec server php artisan test
+```
+
+Askıda app (needs the Flutter SDK), from inside `askida/app/`:
+
+```sh
+cd askida/app
+flutter pub get
+flutter analyze
+flutter test
+dart format --set-exit-if-changed .
+```
 
 The repository uses Conventional Commits, checked by commitlint through the hooks in
 `lefthook.yml`. Hooks are installed explicitly with `pnpm --dir kadro exec lefthook install`.
