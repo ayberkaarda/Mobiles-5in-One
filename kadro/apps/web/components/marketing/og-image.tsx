@@ -40,8 +40,8 @@ export const OG_WORDMARK_FILE = '../../packages/brand/logo/kadro-wordmark-light.
  */
 export const OG_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 
-/** Wordmark view box is 4229 x 890 (`packages/brand/logo`). */
-const WORDMARK_WIDTH = 304;
+/** Wordmark view box is 3152 x 861 (3.66:1, `packages/brand/logo`); the box keeps that ratio. */
+const WORDMARK_WIDTH = 234;
 const WORDMARK_HEIGHT = 64;
 
 /**
