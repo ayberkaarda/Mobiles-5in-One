@@ -4,6 +4,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 
+import invite from '../../../../components/content/invite.module.css';
+import { buttonClassName } from '../../../../components/marketing/button';
+import { KitNumeral } from '../../../../components/marketing/kit-numeral';
 import styles from '../../../../components/marketing/marketing.module.css';
 import { StoreBadges } from '../../../../components/marketing/store-badges';
 import { configuredStoreEntries } from '../../../../lib/server/app-links';
@@ -46,10 +49,6 @@ export async function generateMetadata({ params }: InvitePageProps): Promise<Met
   return metadata;
 }
 
-function memberLabel(count: number): string {
-  return `${count.toLocaleString('tr-TR')} oyuncu`;
-}
-
 /**
  * Team invite landing (product spec §7 `/mac/[inviteCode]`). The page only describes the invite:
  * joining needs the app, a verified account and an explicit tap (ADR-0034, ADR-0045 decision 7).
@@ -78,61 +77,46 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const { team } = landing;
   return (
     <article>
-      <header className={styles.sectionInner}>
-        <div className={styles.pageHeader}>
-          <p className={styles.eyebrow}>{INVITE_TITLE}</p>
-          <h1 className={styles.pageTitle}>{team.name}</h1>
-          <p className={styles.pageLead}>
+      <div className={`${styles.sectionInner} ${invite.stage}`}>
+        <div className={invite.ticket}>
+          <p className={invite.eyebrow}>{INVITE_TITLE}</p>
+          <h1 className={invite.teamName}>{team.name}</h1>
+          {team.district === null ? null : (
+            <p className={invite.district}>{`Bölge: ${team.district.ilce}, ${team.district.il}`}</p>
+          )}
+          <div className={invite.squad}>
+            <KitNumeral value={team.memberCount.toLocaleString('tr-TR')} label="oyuncu" />
+          </div>
+          <p className={invite.caption}>
             Bu bağlantıyla Kadro&apos;da {team.name} takımına katılabilirsin. Daveti uygulamada
             açtığında takımı görür, katılmak isteyip istemediğine sen karar verirsin; bu sayfa
             hiçbir işlem yapmaz.
           </p>
+          <section className={invite.actions} aria-labelledby="davet-uygulama">
+            <h2 id="davet-uygulama" className={invite.storesTitle}>
+              Uygulamada aç
+            </h2>
+            <p className={invite.storesText}>
+              Kadro telefonunda yüklüyse bu düğme daveti doğrudan uygulamada açar. Katılmak için
+              e-posta adresi doğrulanmış bir hesapla giriş yapman gerekir.
+            </p>
+            <a
+              href={appDeepLink({ kind: 'teamInvite', code: landing.code })}
+              className={buttonClassName('accent')}
+            >
+              Daveti uygulamada aç
+            </a>
+          </section>
         </div>
-      </header>
-      <div className={styles.sectionInner}>
-        <ul className={styles.cardGrid}>
-          <li className={styles.card}>
-            <section aria-labelledby="davet-takim">
-              <h2 id="davet-takim" className={styles.cardTitle}>
-                Takım
-              </h2>
-              <ul className={styles.featureList}>
-                {team.district === null ? null : (
-                  <li>{`Bölge: ${team.district.ilce}, ${team.district.il}`}</li>
-                )}
-                <li>{`Kadro: ${memberLabel(team.memberCount)}`}</li>
-              </ul>
-            </section>
-          </li>
-          <li className={styles.card}>
-            <section aria-labelledby="davet-uygulama">
-              <h2 id="davet-uygulama" className={styles.cardTitle}>
-                Uygulamada aç
-              </h2>
-              <p className={styles.cardText}>
-                Kadro telefonunda yüklüyse bu düğme daveti doğrudan uygulamada açar. Katılmak için
-                e-posta adresi doğrulanmış bir hesapla giriş yapman gerekir.
-              </p>
-              <div className={styles.statusActions}>
-                <a
-                  href={appDeepLink({ kind: 'teamInvite', code: landing.code })}
-                  className={styles.buttonSolid}
-                >
-                  Daveti uygulamada aç
-                </a>
-              </div>
-            </section>
-          </li>
-        </ul>
-      </div>
-      <div className={styles.section}>
-        <div className={styles.sectionInner}>
-          <h2 className={styles.sectionTitle}>Uygulama yüklü değil mi?</h2>
-          <p className={styles.cardText}>
+        <section className={invite.stores} aria-labelledby="davet-indir">
+          <h2 id="davet-indir" className={invite.storesTitle}>
+            Uygulama yüklü değil mi?
+          </h2>
+          <p className={invite.storesText}>
             Kadro&apos;yu indir, giriş yap ve bu davet bağlantısını yeniden aç.
           </p>
           <StoreBadges entries={stores} />
-        </div>
+        </section>
       </div>
     </article>
   );

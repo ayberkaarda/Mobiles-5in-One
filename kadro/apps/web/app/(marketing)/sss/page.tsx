@@ -44,41 +44,53 @@ export default function FaqPage() {
         </div>
       </header>
       <div className={`${marketing.sectionInner} ${styles.articleBody}`}>
-        <div className={styles.prose}>
-          {FAQ_ENTRIES.map((entry) => (
-            <section key={entry.id} aria-labelledby={entry.id}>
-              <h2 id={entry.id}>{entry.question}</h2>
-              <p>{entry.answer}</p>
-            </section>
-          ))}
-          <h2 id="ilgili-sayfalar">İlgili sayfalar</h2>
-          <ul>
-            <li>
-              <Link href="/ozellikler" className={styles.link}>
-                Özellikler
-              </Link>
-            </li>
-            <li>
-              <Link href="/blog" className={styles.link}>
-                Blog
-              </Link>
-            </li>
-            <li>
-              <Link href="/hesap-silme" className={styles.link}>
-                Hesabımı sil
-              </Link>
-            </li>
-            <li>
-              <Link href="/gizlilik" className={styles.link}>
-                Gizlilik (örnek)
-              </Link>
-            </li>
-            <li>
-              <Link href="/kvkk-aydinlatma" className={styles.link}>
-                KVKK aydınlatma (örnek)
-              </Link>
-            </li>
-          </ul>
+        <div className={styles.faqLayout}>
+          <nav className={styles.faqIndexWrap} aria-label="Sorular">
+            <p className={styles.faqIndexTitle}>Sorular</p>
+            <ul className={styles.faqIndex}>
+              {FAQ_ENTRIES.map((entry) => (
+                <li key={entry.id}>
+                  <a href={`#${entry.id}`}>{entry.question}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className={styles.prose}>
+            {FAQ_ENTRIES.map((entry) => (
+              <section key={entry.id} aria-labelledby={entry.id}>
+                <h2 id={entry.id}>{entry.question}</h2>
+                <p>{entry.answer}</p>
+              </section>
+            ))}
+            <h2 id="ilgili-sayfalar">İlgili sayfalar</h2>
+            <ul>
+              <li>
+                <Link href="/ozellikler" className={styles.link}>
+                  Özellikler
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className={styles.link}>
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link href="/hesap-silme" className={styles.link}>
+                  Hesabımı sil
+                </Link>
+              </li>
+              <li>
+                <Link href="/gizlilik" className={styles.link}>
+                  Gizlilik (örnek)
+                </Link>
+              </li>
+              <li>
+                <Link href="/kvkk-aydinlatma" className={styles.link}>
+                  KVKK aydınlatma (örnek)
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </article>
