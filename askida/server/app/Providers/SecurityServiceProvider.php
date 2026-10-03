@@ -5,13 +5,16 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Headers, logging and HTTPS glue; filled in Phase 1 by the security work package.
+ * Security glue: debug output, headers, HTTPS and logging defaults.
  */
 class SecurityServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Detailed error pages exist only on a developer machine.
+        if (! $this->app->environment('local')) {
+            config(['app.debug' => false]);
+        }
     }
 
     public function boot(): void

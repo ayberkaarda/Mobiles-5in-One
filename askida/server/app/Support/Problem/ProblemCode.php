@@ -17,6 +17,10 @@ enum ProblemCode: string
     case PayloadTooLarge = 'payload_too_large';
     case UnsupportedMediaType = 'unsupported_media_type';
     case ServerError = 'server_error';
+    case BadRequest = 'bad_request';
+    case MethodNotAllowed = 'method_not_allowed';
+    case HttpsRequired = 'https_required';
+    case ServiceUnavailable = 'service_unavailable';
 
     public function title(): string
     {
@@ -34,6 +38,10 @@ enum ProblemCode: string
             self::PayloadTooLarge => 'The request body is too large.',
             self::UnsupportedMediaType => 'The media type is not supported.',
             self::ServerError => 'An unexpected error occurred.',
+            self::BadRequest => 'The request could not be processed.',
+            self::MethodNotAllowed => 'The method is not allowed for this resource.',
+            self::HttpsRequired => 'HTTPS is required.',
+            self::ServiceUnavailable => 'The service is temporarily unavailable.',
         };
     }
 
