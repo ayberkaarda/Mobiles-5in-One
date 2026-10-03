@@ -11,7 +11,7 @@ import { canMarkPayment, isStaff, paymentsWritable } from '../../../../../src/ma
 import { useMatchScreen } from '../../../../../src/matches/use-match';
 import { CachedNotice, Notice, ResourceState, Section } from '../../../../../src/teams/components';
 import { useTheme } from '../../../../../src/theme';
-import { Button, Card, Text } from '../../../../../src/ui';
+import { Badge, Button, Card, Text } from '../../../../../src/ui';
 
 /**
  * Who has paid their share (product spec story 5; no money moves in the app). Team members see
@@ -141,14 +141,16 @@ export default function PaymentsScreen() {
                   <Text variant="label" style={{ flexShrink: 1 }}>
                     {name}
                   </Text>
-                  <Text tabular>{share === null ? '' : formatMinor(share, i18n.language)}</Text>
+                  <Text variant="bodyStrong" tabular>
+                    {share === null ? '' : formatMinor(share, i18n.language)}
+                  </Text>
                 </View>
-                <Text
-                  tone={row.paid ? 'default' : 'muted'}
-                  style={{ marginTop: theme.spacing['1'] }}
-                >
-                  {row.paid ? t('payments.paid') : t('payments.unpaid')}
-                </Text>
+                <View style={{ marginTop: theme.spacing['2'] }}>
+                  <Badge
+                    label={row.paid ? t('payments.paid') : t('payments.unpaid')}
+                    tone={row.paid ? 'positive' : 'neutral'}
+                  />
+                </View>
                 {markable ? (
                   <Button
                     label={row.paid ? t('payments.markUnpaid') : t('payments.markPaid')}

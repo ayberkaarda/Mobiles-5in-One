@@ -20,6 +20,15 @@ export function matchHref(teamId: string, matchId: string, screen?: string): str
   return screen === undefined ? base : `${base}/${screen}`;
 }
 
+/** Kick-off time alone ("21:00") in the device time zone; empty for an unreadable date. */
+export function kickoffTime(iso: string, language: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
 /** Back control of the pushed match screens: the previous screen, else `fallback`. */
 function BackLink({ fallback }: { readonly fallback: string }) {
   const { t } = useTranslation('matches');
@@ -142,6 +151,22 @@ export function ChoiceGroup<T extends string>({
       {options.map((option) => {
         const checked = option.value === selected;
         const inactive = disabled || option.disabled === true;
+        // Rest: surface with the 3:1 outline; chosen: green fill; unavailable: muted fill.
+        const fill = checked
+          ? theme.colors.primary
+          : inactive
+            ? theme.colors.fillMuted
+            : theme.colors.surface;
+        const edge = checked
+          ? theme.colors.primary
+          : inactive
+            ? theme.colors.fillMuted
+            : theme.colors.borderStrong;
+        const ink = checked
+          ? theme.colors.onPrimary
+          : inactive
+            ? theme.colors.textMuted
+            : theme.colors.text;
         return (
           <Pressable
             key={option.value}
@@ -151,23 +176,19 @@ export function ChoiceGroup<T extends string>({
             disabled={inactive}
             onPress={() => onSelect(option.value)}
             testID={testID && `${testID}-${option.value}`}
-            style={{
+            style={({ pressed }) => ({
               minHeight: theme.minTouchTarget,
               minWidth: theme.minTouchTarget,
               justifyContent: 'center',
               alignItems: 'center',
               paddingHorizontal: theme.spacing['4'],
-              borderRadius: theme.radius.md,
+              borderRadius: theme.radius.sm,
               borderWidth: 1,
-              borderColor: checked ? theme.colors.primary : theme.colors.border,
-              backgroundColor: checked ? theme.colors.primary : theme.colors.surface,
-              opacity: inactive && !checked ? 0.5 : 1,
-            }}
+              borderColor: edge,
+              backgroundColor: pressed && !checked ? theme.colors.pressed : fill,
+            })}
           >
-            <Text
-              variant="label"
-              style={{ color: checked ? theme.colors.onPrimary : theme.colors.text }}
-            >
+            <Text variant="label" style={{ color: ink }}>
               {option.label}
             </Text>
           </Pressable>

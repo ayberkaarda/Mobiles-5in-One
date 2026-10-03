@@ -11,6 +11,7 @@ import {
   ChoiceGroup,
   MATCHES_HOME,
   Fact,
+  kickoffTime,
   MatchScreen,
   matchHref,
   RoleError,
@@ -54,7 +55,7 @@ import {
   Section,
 } from '../../../../../src/teams/components';
 import { useTheme } from '../../../../../src/theme';
-import { Button, Card, ListItem, Text } from '../../../../../src/ui';
+import { Button, Card, KitNumber, ListItem, Numeral, Text } from '../../../../../src/ui';
 
 const RSVP_ORDER: readonly RsvpChoice[] = ['in', 'maybe', 'out'];
 const GROUP_ORDER: readonly RsvpStatus[] = ['in', 'waitlist', 'maybe', 'out'];
@@ -177,6 +178,35 @@ export default function MatchDetailScreen() {
       testID="match-screen"
     >
       <CachedNotice visible={query.isError} />
+      {/* Squad sheet header: kick-off and the confirmed count in kit figures. The facts card
+          below says the same in words, so this block is hidden from screen readers. */}
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID="match-hero"
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          paddingHorizontal: theme.layout.gutter,
+          marginBottom: theme.spacing['4'],
+        }}
+      >
+        <View>
+          <Text variant="label" tone={match.status === 'open' ? 'primary' : 'muted'}>
+            {t(`status.${match.status}`)}
+          </Text>
+          <Numeral value={kickoffTime(match.startsAt, i18n.language)} variant="score" />
+        </View>
+        {member === null ? null : (
+          <View style={{ alignItems: 'flex-end' }}>
+            <Numeral value={`${member.counts.in}/${member.slots}`} variant="score" />
+            <Text variant="caption" tone="muted">
+              {t('detail.squad')}
+            </Text>
+          </View>
+        )}
+      </View>
       <Section>
         <Card>
           <View style={{ gap: theme.spacing['2'] }}>
@@ -455,9 +485,12 @@ export default function MatchDetailScreen() {
                     number: group.length,
                   })}
                 </Text>
-                {group.map((row) => (
+                {group.map((row, index) => (
                   <ListItem
                     key={row.id}
+                    // Confirmed players carry the kit number of the lineup screen.
+                    leading={status === 'in' ? <KitNumber number={index + 1} /> : undefined}
+                    divider
                     title={
                       row.id === myUserId ? t('participants.you', { name: row.name }) : row.name
                     }

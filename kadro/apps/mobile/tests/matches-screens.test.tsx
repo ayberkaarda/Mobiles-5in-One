@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -440,6 +440,12 @@ describe('match detail states', () => {
     expect(await screen.findByLabelText('Saha: Moda Sahası')).toBeTruthy();
     expect(screen.getByLabelText('Toplam ücret: ₺1.500')).toBeTruthy();
     expect(screen.getByLabelText('Gelen: 2/14')).toBeTruthy();
+    // The kit-figure header repeats the facts, so screen readers skip it.
+    const hidden = { includeHiddenElements: true };
+    expect(screen.queryByTestId('match-hero')).toBeNull();
+    const hero = screen.getByTestId('match-hero', hidden);
+    expect(hero.props.accessibilityElementsHidden).toBe(true);
+    expect(within(hero).getByText('2/14', hidden)).toBeTruthy();
   });
 
   it('shows the error with its reference and loads again on retry', async () => {
