@@ -211,12 +211,14 @@ export function ConfirmAction({
           setAsking(false);
           onConfirm();
         }}
+        testID={testID && `${testID}-yes`}
         style={{ marginTop: theme.spacing['3'] }}
       />
       <Button
         label={cancelLabel}
         variant="secondary"
         onPress={() => setAsking(false)}
+        testID={testID && `${testID}-no`}
         style={{ marginTop: theme.spacing['2'] }}
       />
     </Card>
