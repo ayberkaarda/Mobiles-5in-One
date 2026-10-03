@@ -38,13 +38,13 @@ value is compiled into the app.
 | `REDIS_PORT`                          | Redis port                                                                           | `6379` inside compose                      | no                   |
 | `QUEUE_CONNECTION`                    | Queue driver, `redis` (Horizon)                                                      | `redis`                                    | no                   |
 | `CACHE_STORE`                         | Cache driver                                                                         | `redis`                                    | no                   |
-| `SESSION_DRIVER`                      | Web and admin session driver                                                         | per `.env.example`                         | no                   |
+| `SESSION_DRIVER`                      | Web and admin session driver                                                         | `redis`                                    | no                   |
 | `SESSION_SECURE_COOKIE`               | Send session cookie only over HTTPS; `true` outside local                            | `false`                                    | no                   |
 | `SESSION_SAME_SITE`                   | Cookie SameSite policy (admin guard is `strict`)                                     | `lax`                                      | no                   |
-| `FILESYSTEM_DISK`                     | Default disk                                                                         | per `.env.example`                         | no                   |
+| `FILESYSTEM_DISK`                     | Default disk                                                                         | `local`                                    | no                   |
 | `AWS_ACCESS_KEY_ID`                   | S3-compatible storage access key (MinIO locally, R2 in production)                   | MinIO local user word                      | yes                  |
 | `AWS_SECRET_ACCESS_KEY`               | S3-compatible storage secret                                                         | MinIO local dummy word                     | yes                  |
-| `AWS_DEFAULT_REGION`                  | Storage region                                                                       | per `.env.example`                         | no                   |
+| `AWS_DEFAULT_REGION`                  | Storage region                                                                       | `us-east-1`                                | no                   |
 | `AWS_BUCKET_PRIVATE`                  | Private bucket: shop documents, backups                                              | `askida-private`                           | no                   |
 | `AWS_BUCKET_PUBLIC`                   | Public bucket: shop photos                                                           | `askida-public`                            | no                   |
 | `AWS_ENDPOINT`                        | Storage endpoint URL                                                                 | MinIO service URL                          | no                   |
@@ -55,7 +55,7 @@ value is compiled into the app.
 | `MAIL_FROM_ADDRESS`                   | Sender address                                                                       | a local example address                    | no                   |
 | `HOOK_CODE_PEPPER`                    | Pepper for `HMAC-SHA256` of redemption codes; changing it invalidates all open codes | empty or a documented local dummy word     | yes                  |
 | `PAYMENT_PROVIDER`                    | Payment adapter: `iyzico` or `fake`; `fake` is rejected outside local and test       | `fake`                                     | no                   |
-| `IYZICO_BASE_URL`                     | iyzico API base URL (sandbox or live)                                                | empty                                      | no                   |
+| `IYZICO_BASE_URL`                     | iyzico API base URL (sandbox or live)                                                | iyzico sandbox URL from `.env.example`     | no                   |
 | `IYZICO_API_KEY`                      | iyzico API key                                                                       | empty                                      | yes                  |
 | `IYZICO_SECRET_KEY`                   | iyzico secret key; also used for provider signatures                                 | empty                                      | yes                  |
 | `PLAY_INTEGRITY_PROJECT`              | Google Cloud project number for Play Integrity verdict decoding                      | empty                                      | no                   |
