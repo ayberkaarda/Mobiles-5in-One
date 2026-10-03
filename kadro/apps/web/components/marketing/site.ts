@@ -14,7 +14,6 @@ export const SITE_TAGLINE = 'Kadron eksik kalmasın.';
 export const SITE_DESCRIPTION =
   'Kadro ile halı saha maçını organize et, eksik oyuncuyu mahallenden bul, saha ücretini takip et.';
 export const SITE_LOCALE = 'tr_TR';
-export const LEGAL_NAME = 'Kadro Teknoloji';
 export const PORTFOLIO_NOTE = 'Kadro bir portfolyo projesidir.';
 
 export interface SiteLink {

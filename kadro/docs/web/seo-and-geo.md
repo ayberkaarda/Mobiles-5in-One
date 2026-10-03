@@ -103,9 +103,8 @@ environment, and its demonstration data must never read as real. The mechanisms 
 | llms files              | Both contain "Kadro bir portfolyo projesidir."                                                                                                                                                                                                |
 | Structured data         | No claim that needs a real operator: no organization address, contact, legal name or founding year.                                                                                                                                           |
 
-Open item: the footer line is `© Kadro Teknoloji. Kadro bir portfolyo projesidir.`
-(`LEGAL_NAME` in `components/marketing/site.ts`). The fact sheet says that no company name is
-published, so this constant should be reviewed.
+The footer line is `© Kadro. Kadro bir portfolyo projesidir.` (`SITE_NAME` and `PORTFOLIO_NOTE`
+in `components/marketing/site.ts`). No company name is published, as the fact sheet requires.
 
 The legal texts quote repository paths in code spans; that is part of their review trail and is
 replaced at a real launch (ADR-0080, `../legal/review-checklist.md`).
