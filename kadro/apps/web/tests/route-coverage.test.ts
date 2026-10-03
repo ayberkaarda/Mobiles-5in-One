@@ -286,9 +286,9 @@ describe('team routes charge the registry rate-limit group', () => {
   }
 });
 
-// Upload, push-token and account deletion routes (matrix §3.2, §3.7, §8): each handler is
-// registered with the registry's path, method, schemas and rate-limit group.
-describe('upload, push-token, deletion and webhook routes match their registry entries', () => {
+// Upload, push-token, account deletion, webhook and admin routes (matrix §3.2, §3.7, §3.8, §8):
+// each handler is registered with the registry's path, method, schemas and rate-limit group.
+describe('upload, push-token, deletion, webhook and admin routes match their registry entries', () => {
   const ids = [
     'presignUpload',
     'completeUpload',
@@ -296,6 +296,22 @@ describe('upload, push-token, deletion and webhook routes match their registry e
     'registerPushToken',
     'deleteMe',
     'receiveRevenueCatWebhook',
+    // Admin API (matrix §3.8, ADR-0064).
+    'adminStepUp',
+    'adminTotpEnroll',
+    'adminTotpConfirm',
+    'listAdminVenues',
+    'updateAdminVenue',
+    'importVenues',
+    'getVenueImport',
+    'listAdminReviews',
+    'deleteAdminReview',
+    'listAdminOpenCalls',
+    'removeAdminOpenCall',
+    'listAdminUsers',
+    'setUserRole',
+    'setUserDeactivated',
+    'listAuditLogs',
   ] as const;
 
   for (const id of ids) {
