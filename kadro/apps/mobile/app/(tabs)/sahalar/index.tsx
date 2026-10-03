@@ -11,8 +11,8 @@ import { districtsQuery } from '../../../src/calls/queries';
 import { MATCH_LIMITS } from '../../../src/matches/form';
 import { ListQueryView, QueryBoundary } from '../../../src/query';
 import { useTheme } from '../../../src/theme';
-import { Button, ListItem, Screen, TextField } from '../../../src/ui';
-import { ratingText, venueSubtitle } from '../../../src/venues/components';
+import { Button, Chip, Screen, TextField } from '../../../src/ui';
+import { VenueRow } from '../../../src/venues/components';
 import { venueSearchIssue } from '../../../src/venues/form';
 import { venuesApi } from '../../../src/venues/instance';
 import { NEW_VENUE_HREF, venueHref } from '../../../src/venues/links';
@@ -29,7 +29,7 @@ const SEARCH_PARAMS = { min: MATCH_LIMITS.searchMin, max: MATCH_LIMITS.searchMax
  */
 export default function VenuesTab() {
   const { t: tc } = useTranslation('common');
-  const { t, i18n } = useTranslation('venues');
+  const { t } = useTranslation('venues');
   const theme = useTheme();
   const router = useRouter();
   const [filters, setFilters] = useState<VenueFilters>(NO_VENUE_FILTERS);
@@ -77,25 +77,43 @@ export default function VenuesTab() {
           autoCorrect={false}
           testID="venue-search"
         />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing['2'] }}>
-          <Button label={t('list.search')} onPress={runSearch} testID="venue-search-submit" />
+        <View style={{ flexDirection: 'row', gap: theme.spacing['2'] }}>
           <Button
-            label={
-              filters.district === null
-                ? t('list.districtShow')
-                : (districtLabel(districts.data?.items, filters.district) ?? t('list.districtSet'))
-            }
-            variant="secondary"
-            accessibilityHint={t('list.districtHint')}
-            onPress={() => setShowDistrict((value) => !value)}
-            testID="venue-district-toggle"
+            label={t('list.search')}
+            onPress={runSearch}
+            testID="venue-search-submit"
+            style={{ flex: 1 }}
           />
           <Button
             label={t('list.add')}
             variant="secondary"
             onPress={() => router.push(NEW_VENUE_HREF)}
             testID="venue-add"
+            style={{ flex: 1 }}
           />
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: theme.spacing['2'],
+            marginTop: theme.spacing['3'],
+          }}
+        >
+          <Chip
+            label={
+              filters.district === null
+                ? t('list.districtShow')
+                : (districtLabel(districts.data?.items, filters.district) ?? t('list.districtSet'))
+            }
+            selected={showDistrict || filters.district !== null}
+            accessibilityHint={t('list.districtHint')}
+            onPress={() => setShowDistrict((value) => !value)}
+            testID="venue-district-toggle"
+          />
+          {filtered ? (
+            <Chip label={t('list.reset')} onPress={reset} testID="venue-filters-reset" />
+          ) : null}
         </View>
         {showDistrict ? (
           <View style={{ marginTop: theme.spacing['3'] }}>
@@ -108,15 +126,6 @@ export default function VenuesTab() {
             />
           </View>
         ) : null}
-        {filtered ? (
-          <Button
-            label={t('list.reset')}
-            variant="secondary"
-            onPress={reset}
-            testID="venue-filters-reset"
-            style={{ marginTop: theme.spacing['3'] }}
-          />
-        ) : null}
       </View>
       <QueryBoundary>
         <ListQueryView
@@ -125,24 +134,10 @@ export default function VenuesTab() {
           items={venues}
           keyExtractor={(venue) => venue.id}
           renderItem={(venue) => (
-            <ListItem
-              title={venue.name}
-              subtitle={[
-                venue.isSample ? t('badge.sample') : null,
-                venue.verified ? null : t('badge.unverified'),
-                venueSubtitle(
-                  t,
-                  venue,
-                  districtLabel(districts.data?.items, venue.districtId),
-                  i18n.language,
-                ),
-              ]
-                .filter((part): part is string => part !== null && part !== '')
-                .join(' · ')}
-              meta={ratingText(t, venue.rating, i18n.language)}
-              accessibilityHint={t('list.openHint')}
+            <VenueRow
+              venue={venue}
+              district={districtLabel(districts.data?.items, venue.districtId)}
               onPress={() => router.push(venueHref(venue.slug))}
-              testID={`venue-${venue.id}`}
             />
           )}
           empty={
