@@ -16,6 +16,12 @@
       "import": "./dist/mobile.js",
       "require": "./dist/mobile.js",
       "default": "./dist/mobile.js"
+    },
+    "./scrub": {
+      "types": "./dist/scrub.d.ts",
+      "import": "./dist/scrub.js",
+      "require": "./dist/scrub.js",
+      "default": "./dist/scrub.js"
     }
   },
   "files": [
