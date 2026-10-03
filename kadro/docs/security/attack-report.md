@@ -2,7 +2,7 @@
 
 |               |                                                                                                                                                                                                                 |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status        | **Phase 6.** Automated attack suite plus an OWASP ZAP baseline scan against the production build. No real vulnerability found; no production code was changed.                                                   |
+| Status        | **Phase 6.** Automated attack suite plus an OWASP ZAP baseline scan against the production build. No vulnerability found in the categories exercised (see §4 for categories not covered); no production code was changed.                                                   |
 | Companions    | `docs/security/threat-model.md` (STRIDE rows and `Verify` columns), `docs/security/authorization-matrix.md`, `docs/security/verification-matrix.md`                                                              |
 | Method        | Adversarial automated tests driving the shipped Route Handlers against a real PostgreSQL 16 + PostGIS database (disposable Docker container), and a passive/active ZAP baseline against the `next start` build.  |
 | Scope         | Owned here: `apps/web/tests/attack/**`, this report, `docs/handoffs/attack-*.md`. Non-test source, other packages, the mobile app, workflows and manifests were not touched.                                     |
@@ -84,7 +84,7 @@ Result (real): **FAIL-NEW 0 · WARN-NEW 9 · INFO 0 · PASS 58**, process exit 0
 
 ## 3. Findings and severity
 
-**No real vulnerability was found.** All 22 attack cases pass (the controls hold) and ZAP reports 0
+**No vulnerability was found in the exercised categories.** All 22 attack cases pass and ZAP reports 0
 failures. The 9 ZAP warnings are informational, by-design (double-submit CSRF), or artifacts of the
 no-database scan environment; none require a production code change. Because nothing failed, there are
 **no** `docs/handoffs/attack-*.md` entries.
@@ -103,6 +103,12 @@ Optional hardening suggestions (not defects, not actioned here): set `Cross-Orig
 | ZAP full API scan (OpenAPI) | **not run** | The spec's `docs/api/openapi.json` API scan belongs on a CI preview URL with a live database; out of scope for this local run.                                              |
 | Dependency audit (`pnpm audit`) | **not run** | Separate Phase 6 workstream; not part of this attack-suite task.                                                                                                       |
 | `expo-updates` code-signing verification | **not run** | Mobile release concern; belongs with the MobSF / release step.                                                                                                     |
+| Authenticated cross-user / cross-team BOLA sweep | **not covered by this suite** | Not added to `tests/attack`. The existing `tests/security/idor.test.ts` remains the only cross-tenant evidence; this report makes no claim beyond it. |
+| Mass assignment on strict schemas | **not covered by this suite** | Not added; existing field-rule tests elsewhere are the only evidence. |
+| CSRF on cookie-auth mutations (missing / mismatched header, cross-origin `Origin` / `Sec-Fetch-Site`) | **not covered by this suite** | Not added. ZAP's passive CSRF warnings were triaged in §2.1 only. |
+| Open redirect / host-header / forwarded-header spoofing on email-link pages, invite landing, deep links | **not covered by this suite** | Not added. Only the rate-limit `x-forwarded-for` spoofing case in §1 was exercised. |
+| Admin privilege escalation (non-staff, no step-up, expired step-up, self-demotion race) | **not covered by this suite** | Not added. The anonymous sweep only shows admin routes reject unauthenticated callers. |
+| TOTP replay / throttle abuse (step-up, confirm, destructive actions) | **not covered by this suite** | Not added; existing `tests/admin/step-up.test.ts` is the only evidence. |
 
 ---
 
