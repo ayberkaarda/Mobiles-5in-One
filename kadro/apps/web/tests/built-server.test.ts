@@ -102,7 +102,12 @@ function code(relative: string): string {
 
 describe('render mode per surface (ADR-0021, ADR-0055)', () => {
   it('the root layout leaves the render mode to the surfaces', () => {
-    expect(code('../app/layout.tsx')).not.toMatch(/connection\(|headers\(|cookies\(|dynamic\s*=/);
+    const layout = code('../app/layout.tsx');
+    expect(layout).not.toMatch(/connection\(|headers\(|dynamic\s*=/);
+    // ADR-0084: it reads the colour-scheme cookie, and nothing else, for `<html data-theme>`.
+    // Every surface renders per request itself, which the next test enforces.
+    expect(layout.match(/cookies\(/g) ?? []).toHaveLength(1);
+    expect(layout).toContain('.get(THEME_COOKIE)');
   });
 
   it('every surface layout and every page outside a route group renders per request itself', () => {
