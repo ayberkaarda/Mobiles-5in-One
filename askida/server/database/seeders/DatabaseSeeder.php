@@ -12,11 +12,17 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * The domain tables and their sample seeders (is_sample = true, names
-     * prefixed with [ÖRNEK]) arrive together with the domain migrations.
+     * Sample data (is_sample = true, names prefixed with [ÖRNEK]) is written only in the
+     * local and testing environments; elsewhere this seeder writes nothing.
      */
     public function run(): void
     {
-        //
+        if (app()->environment(SampleDataSeeder::ALLOWED_ENVIRONMENTS)) {
+            $this->call(SampleDataSeeder::class);
+
+            return;
+        }
+
+        $this->command->warn('Sample data skipped outside the local and testing environments.');
     }
 }
