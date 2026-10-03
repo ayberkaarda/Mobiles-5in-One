@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kadro uygulama ekranları</title>
+    <link
+      rel="preload"
+      href="fonts/archivo-latin-wdth-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <!--
+      Design prototype of three app screens in the dark scheme (docs/design/direction.md §4.5).
+      Static HTML, no network requests. Icons: Phosphor Icons regular, MIT License,
+      Copyright (c) 2023 Phosphor Icons. All teams, venues, players and calls are sample data.
+      Add ?screen=match, ?screen=lineup or ?screen=calls to show one phone at 1x.
+    -->
+    <main class="stage">
+      <!-- Screen 1: match detail -->
+      <figure class="phone-wrap" data-screen="match">
+        <div class="phone">
+          <div class="screen theme-dark">
+            <div class="statusbar"><span>20:42</span></div>
+            <div class="navbar">
+              <a class="nav-back" href="#">
+                <svg class="icon" viewBox="0 0 256 256" aria-hidden="true">
+                  <path
+                    d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"
+                  />
+                </svg>
+                Maçlar
+              </a>
+              <button class="nav-icon" type="button" aria-label="Maçı paylaş">
+                <svg class="icon" viewBox="0 0 256 256" aria-hidden="true">
+                  <path
+                    d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Zm0-128a24,24,0,1,1-24,24A24,24,0,0,1,176,32ZM64,152a24,24,0,1,1,24-24A24,24,0,0,1,64,152Zm112,72a24,24,0,1,1,24-24A24,24,0,0,1,176,224Z"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div class="scroll">
+              <p class="team-line">
+                <span class="chip chip-sample">ÖRNEK</span>
+                <span class="m-title3">Moda Akşam FK</span>
+                <span class="status-open">Açık</span>
+              </p>
+
+              <div class="match-head">
+                <p class="kickoff">
+                  <span class="m-label muted">Perşembe 8 Ekim</span>
+                  <span class="num-score">21:00</span>
+                </p>
+                <p class="squad">
+                  <span class="m-numxl">13<span class="muted">/14</span></span>
+                  <span class="m-caption muted">gelen</span>
+                </p>
+              </div>
+
+              <p class="venue-line">
+                <svg class="icon icon-sm" viewBox="0 0 256 256" aria-hidden="true">
+                  <path
+                    d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"
+                  />
+                </svg>
+                <span>Kadıköy Örnek Halı Saha A</span>
+                <span class="chip">7v7</span>
+              </p>
+
+              <section class="group">
+                <h2 class="m-label">Katılımın</h2>
+                <div class="segmented" role="radiogroup" aria-label="Katılımın">
+                  <button type="button" role="radio" aria-checked="true" data-state="in">
+                    <svg class="icon icon-sm" viewBox="0 0 256 256" aria-hidden="true">
+                      <path
+                        d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"
+                      />
+                    </svg>
+                    Geliyorum
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" data-state="maybe">
+                    Belki
+                  </button>
+                  <button type="button" role="radio" aria-checked="false" data-state="out">
+                    Gelmiyorum
+                  </button>
+                </div>
+              </section>
+
+              <section class="group fee">
+                <h2 class="m-label">Saha ücreti</h2>
+                <div class="fee-row">
+                  <p>
+                    <span class="fee-num">2.800 ₺</span><span class="m-caption muted">toplam</span>
+                  </p>
+                  <p class="fee-op muted" aria-hidden="true">÷</p>
+                  <p><span class="fee-num">13</span><span class="m-caption muted">gelen</span></p>
+                  <p class="fee-op muted" aria-hidden="true">=</p>
+                  <p>
+                    <span class="fee-num fee-share">215,38 ₺</span
+                    ><span class="m-caption muted">kişi başı</span>
+                  </p>
+                </div>
+                <p class="m-footnote muted">
+                  14. oyuncu gelince kişi başı 200 ₺. Para uygulamada el değiştirmez.
+                </p>
+              </section>
+
+              <section class="group">
+                <h2 class="m-label group-title">Gelenler (13)</h2>
+                <ul class="rows">
+                  <li>
+                    <span class="bib">1</span><span class="row-name">Emre Kaya</span
+                    ><span class="chip">Kaleci</span>
+                  </li>
+                  <li>
+                    <span class="bib">2</span
+                    ><span class="row-name">Burak Şahin <span class="muted">(sen)</span></span
+                    ><span class="chip">Defans</span>
+                  </li>
+                  <li>
+                    <span class="bib">3</span><span class="row-name">Can Yıldız</span
+                    ><span class="chip">Defans</span>
+                  </li>
+                  <li>
+                    <span class="bib">4</span><span class="row-name">Mert Aydın</span
+                    ><span class="chip">Defans</span>
+                  </li>
+                  <li>
+                    <span class="bib">5</span><span class="row-name">Onur Demir</span
+                    ><span class="chip">Orta saha</span>
+                  </li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </div>
+        <figcaption>Maç ayrıntısı</figcaption>
+      </figure>
+
+      <!-- Screen 2: lineup -->
+      <figure class="phone-wrap" data-screen="lineup">
+        <div class="phone">
+          <div class="screen theme-dark">
+            <div class="statusbar"><span>20:42</span></div>
+            <div class="navbar">
+              <a class="nav-back" href="#">
+                <svg class="icon" viewBox="0 0 256 256" aria-hidden="true">
+                  <path
+                    d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"
+                  />
+                </svg>
+                Maç
+              </a>
+              <p class="nav-title">Kadro dizilişi</p>
+              <span class="nav-spacer"></span>
+            </div>
+
+            <div class="lineup">
+              <p class="sides">
+                <span><span class="m-label">A takımı</span> <span class="side-num">7/7</span></span>
+                <span><span class="m-label">B takımı</span> <span class="side-num">6/7</span></span>
+              </p>
+
+              <svg
+                class="pitch-v"
+                viewBox="0 0 300 460"
+                role="img"
+                aria-label="Diziliş: A takımı üst yarıda 1 ile 7, B takımı alt yarıda 8 ile 13; kaleci yeri boş"
+              >
+                <rect class="turf" x="0" y="0" width="300" height="460" rx="4" />
+                <g class="lines" fill="none" stroke-width="2">
+                  <rect x="10" y="10" width="280" height="440" />
+                  <line x1="10" y1="230" x2="290" y2="230" />
+                  <circle cx="150" cy="230" r="40" />
+                  <rect x="60" y="10" width="180" height="60" />
+                  <rect x="105" y="10" width="90" height="22" />
+                  <rect x="60" y="390" width="180" height="60" />
+                  <rect x="105" y="428" width="90" height="22" />
+                </g>
+                <circle class="spot" cx="150" cy="230" r="3" />
+                <g class="pm">
+                  <circle cx="150" cy="34" r="18" />
+                  <text class="bibt" x="150" y="40">1</text>
+                  <text class="name" x="150" y="60">E. Kaya</text>
+                </g>
+                <g class="pm">
+                  <circle cx="66" cy="96" r="18" />
+                  <text class="bibt" x="66" y="102">2</text>
+                  <text class="name" x="66" y="122">B. Şahin</text>
+                </g>
+                <g class="pm">
+                  <circle cx="150" cy="96" r="18" />
+                  <text class="bibt" x="150" y="102">3</text>
+                  <text class="name" x="150" y="122">C. Yıldız</text>
+                </g>
+                <g class="pm">
+                  <circle cx="234" cy="96" r="18" />
+                  <text class="bibt" x="234" y="102">4</text>
+                  <text class="name" x="234" y="122">M. Aydın</text>
+                </g>
+                <g class="pm">
+                  <circle cx="96" cy="146" r="18" />
+                  <text class="bibt" x="96" y="152">5</text>
+                  <text class="name" x="96" y="172">O. Demir</text>
+                </g>
+                <g class="pm">
+                  <circle cx="204" cy="146" r="18" />
+                  <text class="bibt" x="204" y="152">6</text>
+                  <text class="name" x="204" y="172">K. Çelik</text>
+                </g>
+                <g class="pm">
+                  <circle cx="150" cy="186" r="18" />
+                  <text class="bibt" x="150" y="192">7</text>
+                  <text class="name" x="150" y="212">B. Öztürk</text>
+                </g>
+                <g class="pm">
+                  <circle cx="150" cy="274" r="18" />
+                  <text class="bibt" x="150" y="280">8</text>
+                  <text class="name" x="150" y="300">S. Arslan</text>
+                </g>
+                <g class="pm">
+                  <circle cx="96" cy="314" r="18" />
+                  <text class="bibt" x="96" y="320">9</text>
+                  <text class="name" x="96" y="340">T. Koç</text>
+                </g>
+                <g class="pm">
+                  <circle cx="204" cy="314" r="18" />
+                  <text class="bibt" x="204" y="320">10</text>
+                  <text class="name" x="204" y="340">D. Güneş</text>
+                </g>
+                <g class="pm">
+                  <circle cx="66" cy="364" r="18" />
+                  <text class="bibt" x="66" y="370">11</text>
+                  <text class="name" x="66" y="390">U. Polat</text>
+                </g>
+                <g class="pm">
+                  <circle cx="150" cy="364" r="18" />
+                  <text class="bibt" x="150" y="370">12</text>
+                  <text class="name" x="150" y="390">A. Kurt</text>
+                </g>
+                <g class="pm">
+                  <circle cx="234" cy="364" r="18" />
+                  <text class="bibt" x="234" y="370">13</text>
+                  <text class="name" x="234" y="390">E. Doğan</text>
+                </g>
+                <g class="pm pm-empty">
+                  <circle cx="150" cy="426" r="18" />
+                  <path
+                    transform="translate(140 416) scale(0.078125)"
+                    d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"
+                  />
+                  <text class="name name-start" x="174" y="430">Kaleci eksik</text>
+                </g>
+              </svg>
+
+              <div class="balance">
+                <p><span class="m-caption muted">KL</span><span class="pair">1-0</span></p>
+                <p><span class="m-caption muted">DF</span><span class="pair">3-3</span></p>
+                <p><span class="m-caption muted">OS</span><span class="pair">2-2</span></p>
+                <p><span class="m-caption muted">FV</span><span class="pair">1-1</span></p>
+              </div>
+
+              <div class="bench">
+                <span class="m-label">Yedek</span>
+                <span class="chip chip-dashed">Boş. Oyuncuyu buraya sürükle.</span>
+              </div>
+
+              <div class="lineup-actions">
+                <button class="btn btn-secondary m-btn" type="button">Otomatik dağıt</button>
+                <button class="btn btn-primary m-btn" type="button">Dizilişi kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Kadro dizilişi</figcaption>
+      </figure>
+
+      <!-- Screen 3: Eksik Var list with the call detail sheet -->
+      <figure class="phone-wrap" data-screen="calls">
+        <div class="phone">
+          <div class="screen theme-dark">
+            <div class="statusbar"><span>20:42</span></div>
+            <div class="calls-top">
+              <h2 class="m-title1">Eksik Var</h2>
+              <div class="chip-row" role="group" aria-label="İlçe">
+                <button class="chip chip-selected" type="button" aria-pressed="true">
+                  <svg class="icon icon-chip" viewBox="0 0 256 256" aria-hidden="true">
+                    <path
+                      d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"
+                    />
+                  </svg>
+                  Kadıköy
+                </button>
+                <button class="chip" type="button" aria-pressed="false">Üsküdar</button>
+                <button class="chip" type="button" aria-pressed="false">Ataşehir</button>
+                <button class="chip" type="button" aria-pressed="false">Maltepe</button>
+              </div>
+            </div>
+
+            <ol class="call-cards">
+              <li class="call-card is-open">
+                <p class="cc-count">
+                  <span class="cc-num">2</span><span class="m-caption muted">eksik</span>
+                </p>
+                <div class="cc-body">
+                  <p class="cc-when">
+                    <span class="m-label muted">Pazar 4 Ekim</span
+                    ><span class="cc-time">20:00</span>
+                  </p>
+                  <p class="cc-team">[ÖRNEK] Moda Akşam FK</p>
+                  <p class="cc-tags">
+                    <span class="chip">Kaleci</span><span class="chip">Düzenli</span
+                    ><span class="chip">7v7</span>
+                  </p>
+                </div>
+              </li>
+              <li class="call-card">
+                <p class="cc-count">
+                  <span class="cc-num">1</span><span class="m-caption muted">eksik</span>
+                </p>
+                <div class="cc-body">
+                  <p class="cc-when">
+                    <span class="m-label muted">Pazartesi 5 Ekim</span
+                    ><span class="cc-time">21:30</span>
+                  </p>
+                  <p class="cc-team">[ÖRNEK] Yeldeğirmeni Pazartesi</p>
+                  <p class="cc-tags">
+                    <span class="chip">Defans</span><span class="chip">Keyfine</span
+                    ><span class="chip">6v6</span>
+                  </p>
+                </div>
+              </li>
+            </ol>
+
+            <div class="scrim" aria-hidden="true"></div>
+
+            <section class="sheet-m" aria-labelledby="call-title">
+              <span class="grabber" aria-hidden="true"></span>
+              <div class="sheet-title">
+                <p class="cc-count">
+                  <span class="cc-num">2</span><span class="m-caption muted">eksik</span>
+                </p>
+                <div>
+                  <h3 id="call-title" class="m-title3">[ÖRNEK] Moda Akşam FK</h3>
+                  <p class="muted">Kadıköy Örnek Halı Saha A</p>
+                </div>
+              </div>
+              <dl class="call-facts">
+                <div>
+                  <dt class="m-caption muted">Maç</dt>
+                  <dd><span class="fact-strong">20:00</span> Pazar 4 Ekim</dd>
+                </div>
+                <div>
+                  <dt class="m-caption muted">Format</dt>
+                  <dd><span class="fact-strong">7v7</span></dd>
+                </div>
+                <div>
+                  <dt class="m-caption muted">Mevki</dt>
+                  <dd>Kaleci</dd>
+                </div>
+                <div>
+                  <dt class="m-caption muted">Seviye</dt>
+                  <dd>Düzenli</dd>
+                </div>
+                <div class="span-2">
+                  <dt class="m-caption muted">İlan bitişi</dt>
+                  <dd>Pazar 4 Ekim, 17:00</dd>
+                </div>
+              </dl>
+              <label class="field">
+                <span class="m-label">Kaptana not (isteğe bağlı)</span>
+                <span class="input">Kaleyi severek oynarım, 20:00'de oradayım.</span>
+              </label>
+              <button class="btn btn-accent m-btn apply" type="button">Başvur</button>
+            </section>
+          </div>
+        </div>
+        <figcaption>Eksik Var ilanı</figcaption>
+      </figure>
+    </main>
+
+    <script>
+      // Small state toggles only: the RSVP segment and the district chips.
+      document.querySelectorAll('.segmented').forEach((group) => {
+        group.addEventListener('click', (event) => {
+          const target = event.target.closest('button');
+          if (!target) return;
+          group
+            .querySelectorAll('button')
+            .forEach((b) => b.setAttribute('aria-checked', String(b === target)));
+        });
+      });
+      document.querySelectorAll('.chip-row').forEach((row) => {
+        row.addEventListener('click', (event) => {
+          const target = event.target.closest('button');
+          if (!target) return;
+          row.querySelectorAll('button').forEach((b) => {
+            const on = b === target;
+            b.setAttribute('aria-pressed', String(on));
+            b.classList.toggle('chip-selected', on);
+          });
+        });
+      });
+      const only = new URLSearchParams(location.search).get('screen');
+      if (only) document.body.dataset.only = only;
+      document.querySelectorAll('.phone-wrap').forEach((w) => {
+        if (only && w.dataset.screen !== only) w.hidden = true;
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,289 @@
+/*
+ * Shared base of the design prototype: Archivo (SIL Open Font License 1.1, see fonts/OFL.txt),
+ * reset, type roles and the small component kit (buttons, chips, icons, markers).
+ * Every colour, size, radius and duration comes from tokens.css.
+ */
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url('fonts/archivo-latin-ext-wdth-normal.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url('fonts/archivo-latin-wdth-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --font: 'Archivo', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-background);
+  color: var(--c-text);
+  font: var(--type-body) var(--font);
+  font-stretch: var(--width-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul,
+figure {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--c-link);
+  text-underline-offset: 3px;
+}
+
+img,
+svg {
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Type roles. Display and numerals use the 75 % width, everything read uses 100 %. */
+.t-hero,
+.t-display,
+.t-title1,
+.t-title2 {
+  font-stretch: var(--width-display);
+  letter-spacing: -0.01em;
+}
+
+.t-hero {
+  font: var(--type-hero) var(--font);
+  font-stretch: var(--width-display);
+}
+
+.t-display {
+  font: var(--type-display) var(--font);
+  font-stretch: var(--width-display);
+}
+
+.t-title1 {
+  font: var(--type-title1) var(--font);
+  font-stretch: var(--width-display);
+}
+
+.t-title2 {
+  font: var(--type-title2) var(--font);
+  font-stretch: var(--width-display);
+}
+
+.t-title3 {
+  font: var(--type-title3) var(--font);
+}
+
+.t-lead {
+  font: var(--type-lead) var(--font);
+}
+
+.t-prose {
+  font: var(--type-prose) var(--font);
+}
+
+.t-label {
+  font: var(--type-label) var(--font);
+}
+
+.t-caption {
+  font: var(--type-caption) var(--font);
+}
+
+.t-muted {
+  color: var(--c-text-muted);
+}
+
+.num,
+.num-xl,
+.num-bib,
+.num-score {
+  font-stretch: var(--width-display);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.num {
+  font: var(--type-numeral) var(--font);
+  font-stretch: var(--width-display);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.num-xl {
+  font: var(--type-numeral-xl) var(--font);
+  font-stretch: var(--width-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.02em;
+}
+
+.num-score {
+  font: var(--type-score) var(--font);
+  font-stretch: var(--width-display);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.num-bib {
+  font: var(--type-bib) var(--font);
+  font-stretch: var(--width-display);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The eksik glyph: a kit number with no body, only its outline. */
+.num-empty {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--c-text);
+}
+
+/* Icons: Phosphor regular, 24 by default, 20 in rows and chips. */
+.icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  fill: currentColor;
+}
+
+.icon-sm {
+  width: 20px;
+  height: 20px;
+}
+
+/* Buttons: 48 high, radius 8, label weight 600, one line. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: var(--type-label) var(--font);
+  font-size: 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-standard);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-accent {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  color: var(--c-on-primary);
+}
+
+.btn-secondary {
+  background: var(--c-surface);
+  border-color: var(--c-border-strong);
+  color: var(--c-text);
+}
+
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  color: var(--c-primary-text);
+  font: var(--type-label) var(--font);
+  font-size: 16px;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+/* Chips: radius 4, 32 high. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  background: var(--c-surface-sunken);
+  color: var(--c-text);
+  font: 500 14px / 20px var(--font);
+  white-space: nowrap;
+}
+
+.chip-selected {
+  background: var(--c-text);
+  color: var(--c-background);
+}
+
+.chip-sample {
+  min-height: 24px;
+  padding: 0 6px;
+  background: var(--c-warning);
+  color: var(--c-on-warning);
+  font: 700 12px / 16px var(--font);
+  letter-spacing: 0.04em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
