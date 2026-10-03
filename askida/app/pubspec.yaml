@@ -23,3 +23,19 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  # Static Bricolage Grotesque instances, byte-identical copies of
+  # ../brand/fonts/bricolage-grotesque (checked by test/design/brand_sync_test.dart).
+  fonts:
+    - family: BricolageText
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-Text-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/BricolageGrotesque-Text-SemiBold.ttf
+          weight: 600
+    - family: BricolageDisplay
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-Display-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BricolageGrotesque-Display-Bold.ttf
+          weight: 700
