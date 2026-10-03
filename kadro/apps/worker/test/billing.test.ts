@@ -60,6 +60,10 @@ class FakeRevenueCat implements RevenueCatClient {
     }
     return Promise.resolve(answer ?? null);
   }
+
+  deleteSubscriber(): Promise<'deleted'> {
+    return Promise.reject(new Error('not used by the billing tests'));
+  }
 }
 
 let database: TestDatabase;

@@ -32,7 +32,7 @@ import { inject } from 'vitest';
 
 import { type Clock } from '../src/clock.js';
 import { type CostCaps } from '../src/cost/guard.js';
-import { FakeS3, TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET } from './fake-s3.js';
+import { FakeS3, TEST_BACKUP_BUCKET, TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET } from './fake-s3.js';
 import { createLogger } from '../src/logger.js';
 import { type MetricLabels, type MetricName, type Metrics } from '../src/metrics.js';
 import { type QueueOverrides } from '../src/queues.js';
@@ -313,6 +313,8 @@ export interface TestWorkerOptions {
   readonly costCaps?: Partial<CostCaps>;
   readonly shutdownTimeoutMs?: number;
   readonly schedule?: boolean;
+  /** Extra environment keys (optional settings such as `BACKUP_*`). */
+  readonly env?: Partial<WorkerRuntimeOptions['env']>;
   readonly extra?: Partial<WorkerRuntimeOptions>;
 }
 
@@ -346,6 +348,7 @@ export async function startTestWorker(
       R2_SECRET_ACCESS_KEY: 'A'.repeat(32),
       R2_INCOMING_BUCKET: TEST_INCOMING_BUCKET,
       R2_MEDIA_BUCKET: TEST_MEDIA_BUCKET,
+      ...options.env,
     },
     logger: logs.logger,
     metrics,
@@ -560,4 +563,4 @@ export class Fixtures {
 
 export { newId };
 
-export { FakeS3, TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET };
+export { FakeS3, TEST_BACKUP_BUCKET, TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET };

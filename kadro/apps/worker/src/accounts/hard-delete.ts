@@ -25,6 +25,14 @@ import { EmailDeliveryError, type EmailTransport } from '@kadro/emails';
 import { and, asc, count, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { type PgBoss } from 'pg-boss';
 
+import { type RevenueCatClient } from '../billing/revenuecat-client.js';
+import {
+  DEFAULT_SUBSCRIBER_DELETE_RETRY,
+  type SubscriberDeleteResult,
+  type SubscriberDeleteRetry,
+  deleteSubscriberWithRetry,
+  failureLabels,
+} from '../billing/subscriber-delete.js';
 import { type Clock, SECOND_MS } from '../clock.js';
 import { enqueue } from '../enqueue.js';
 import { insertReceipt } from '../idempotency.js';
@@ -56,6 +64,23 @@ export interface HardDeleteDependencies {
   readonly metrics: Metrics;
   /** Lock wait bound of the deletion transaction; defaults to {@link LOCK_TIMEOUT_MS}. */
   readonly lockTimeoutMs?: number;
+  /**
+   * RevenueCat subscriber deletion (ADR-0082). Absent or `client: null` when `REVENUECAT_API_KEY`
+   * is not configured: the step is skipped and only recorded in `external_pending`.
+   */
+  readonly revenueCat?: {
+    readonly client: RevenueCatClient | null;
+    readonly retry?: SubscriberDeleteRetry;
+  };
+}
+
+/** What happened to the RevenueCat subscriber; logged with the deletion, never personal data. */
+export type RevenueCatCleanup =
+  'deleted' | 'not_found' | 'failed_deferred' | 'skipped_unconfigured';
+
+/** Idempotency key of the follow-up deletion job (ADR-0082). */
+export function subscriberDeleteIdempotencyKey(deletionRequestId: string): string {
+  return `rc-delete:${deletionRequestId}`;
 }
 
 export interface HardDeleteSummary {
@@ -356,6 +381,8 @@ async function repointHistory(tx: Transaction, userId: string, now: Date): Promi
 export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
   const { db, boss, storage, buckets, emailTransport, webOrigin, clock, metrics } = dependencies;
   const lockTimeoutMs = dependencies.lockTimeoutMs ?? LOCK_TIMEOUT_MS;
+  const revenueCatClient = dependencies.revenueCat?.client ?? null;
+  const revenueCatRetry = dependencies.revenueCat?.retry ?? DEFAULT_SUBSCRIBER_DELETE_RETRY;
 
   return async (job: AccountHardDeleteJob, context: JobContext): Promise<string> => {
     const precheck = await eligibility(db, job.deletionRequestId, clock.now(), false);
@@ -395,6 +422,19 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
         objectsDeleted += await deletePrefix(storage, buckets.incoming, badge.incoming);
       }
 
+      // ADR-0032 step 2, ADR-0082: the RevenueCat subscriber, still under the request lock (a
+      // sign-in that cancels the deletion waits for it). Bounded retries; a failure never blocks
+      // the deletion and is handed to `revenuecat.subscriber_delete` below. 404 counts as done.
+      const subscriberResult: SubscriberDeleteResult | null =
+        revenueCatClient === null
+          ? null
+          : await deleteSubscriberWithRetry(
+              revenueCatClient,
+              userId,
+              revenueCatRetry,
+              context.signal,
+            );
+
       const teamsResult = await settleTeams(tx, userId, now, captained);
       await leaveMatches(tx, boss, userId, now);
       const tombstone = await repointHistory(tx, userId, now);
@@ -409,13 +449,36 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
         .set({ createdBy: null, updatedAt: now })
         .where(eq(venues.createdBy, userId));
 
-      // RevenueCat is reconciled by the Phase 5 job; record that a cleanup is owed.
-      const [subscription] = await tx
-        .select({ value: count() })
-        .from(subscriptions)
-        .where(eq(subscriptions.userId, userId));
-      const externalPending: ExternalCleanupTarget[] =
-        (subscription?.value ?? 0) > 0 ? ['revenuecat'] : [];
+      // `external_pending` records a RevenueCat cleanup still owed: without an API key when the
+      // account had subscription rows, with a key when the call above did not succeed.
+      let revenueCat: RevenueCatCleanup;
+      let externalPending: ExternalCleanupTarget[];
+      if (subscriberResult === null) {
+        const [subscription] = await tx
+          .select({ value: count() })
+          .from(subscriptions)
+          .where(eq(subscriptions.userId, userId));
+        revenueCat = 'skipped_unconfigured';
+        externalPending = (subscription?.value ?? 0) > 0 ? ['revenuecat'] : [];
+      } else if (subscriberResult.ok) {
+        revenueCat = subscriberResult.outcome;
+        externalPending = [];
+      } else {
+        revenueCat = 'failed_deferred';
+        externalPending = ['revenuecat'];
+        // The account id is the RevenueCat app user id and is gone after the commit; the
+        // follow-up job is the only place that keeps it, until the subscriber is deleted.
+        await enqueue(
+          boss,
+          'revenuecat.subscriber_delete',
+          {
+            deletionRequestId: job.deletionRequestId,
+            appUserId: userId,
+            idempotencyKey: subscriberDeleteIdempotencyKey(job.deletionRequestId),
+          },
+          { tx },
+        );
+      }
 
       // Cascades remove refresh, email and push tokens, subscriptions and uploads; audit actor
       // and deletion request references become NULL.
@@ -455,13 +518,22 @@ export function createHardDeleteHandler(dependencies: HardDeleteDependencies) {
           reason: error instanceof EmailDeliveryError ? error.reason : 'unknown',
         });
       }
-      return { done: true as const, summary, tombstone };
+      return { done: true as const, summary, tombstone, revenueCat, subscriberResult };
     });
 
     if (!result.done) {
       return result.outcome;
     }
-    context.logger.info({ ...result.summary, tombstone: result.tombstone }, 'account deleted');
+    if (result.subscriberResult !== null && !result.subscriberResult.ok) {
+      metrics.increment(
+        'revenuecat_delete_failed',
+        failureLabels(result.subscriberResult, 'hard_delete'),
+      );
+    }
+    context.logger.info(
+      { ...result.summary, tombstone: result.tombstone, revenueCat: result.revenueCat },
+      'account deleted',
+    );
     return 'deleted';
   };
 }

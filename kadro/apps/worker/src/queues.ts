@@ -1,4 +1,5 @@
 import {
+  BACKUP_VERIFY_CRON,
   COST_GUARD_CRON,
   JOB_QUEUES,
   type JobQueue,
@@ -173,6 +174,29 @@ export const QUEUE_DEFINITIONS: Readonly<Record<JobQueue, QueueDefinition>> = {
     expireInSeconds: 120,
     localConcurrency: 1,
     cron: COST_GUARD_CRON,
+    cronTimeZone: 'UTC',
+  },
+  // ADR-0082: follow-up of a hard delete whose RevenueCat call failed; backoff up to ~21 h, then
+  // the dead letter is the operator's signal (the subscriber is still at RevenueCat).
+  'revenuecat.subscriber_delete': {
+    name: 'revenuecat.subscriber_delete',
+    stage: 'active',
+    retryLimit: 8,
+    retryDelaySeconds: 300,
+    retryBackoff: true,
+    expireInSeconds: 60,
+    localConcurrency: 1,
+  },
+  // ADR-0082: weekly check of the newest backup artifact; storage errors retry with backoff.
+  'backup.verify': {
+    name: 'backup.verify',
+    stage: 'active',
+    retryLimit: 3,
+    retryDelaySeconds: 600,
+    retryBackoff: true,
+    expireInSeconds: 300,
+    localConcurrency: 1,
+    cron: BACKUP_VERIFY_CRON,
     cronTimeZone: 'UTC',
   },
 };

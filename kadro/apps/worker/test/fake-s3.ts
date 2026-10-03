@@ -9,7 +9,8 @@ import { type IncomingMessage, type ServerResponse } from 'node:http';
 
 export const TEST_INCOMING_BUCKET = 'kadro-test-incoming';
 export const TEST_MEDIA_BUCKET = 'kadro-test-media';
-export const TEST_BUCKETS = [TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET] as const;
+export const TEST_BACKUP_BUCKET = 'kadro-test-backups';
+export const TEST_BUCKETS = [TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET, TEST_BACKUP_BUCKET] as const;
 
 export interface FakeObject {
   readonly body: Buffer;

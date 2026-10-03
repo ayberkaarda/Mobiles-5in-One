@@ -9,10 +9,11 @@ import { type Clock } from '../clock.js';
 import { subscriptionStoreOf } from './status.js';
 
 /**
- * Read access to RevenueCat subscriber state for the nightly reconciliation (ADR-0063). The
- * reconciliation depends only on {@link RevenueCatClient}; tests pass an in-memory fake, and the
- * REST implementation below is used only when `REVENUECAT_API_KEY` is configured. The API key and
- * response bodies are never logged; errors carry the HTTP status at most.
+ * RevenueCat subscriber access: reads for the nightly reconciliation (ADR-0063) and the subscriber
+ * deletion of an account hard delete (ADR-0082). Jobs depend only on {@link RevenueCatClient};
+ * tests pass an in-memory fake or point the REST implementation at a local fake server, which is
+ * used only when `REVENUECAT_API_KEY` is configured. The API key and response bodies are never
+ * logged; errors carry the HTTP status at most.
  */
 
 export interface SubscriberSubscription {
@@ -30,9 +31,14 @@ export interface SubscriberSnapshot {
   readonly subscriptions: readonly SubscriberSubscription[];
 }
 
+/** `not_found`: RevenueCat did not know the app user id (already deleted); also a success. */
+export type SubscriberDeletion = 'deleted' | 'not_found';
+
 export interface RevenueCatClient {
   /** The subscriber's state, or `null` when RevenueCat does not know the app user id. */
   getSubscriber(userId: string, signal?: AbortSignal): Promise<SubscriberSnapshot | null>;
+  /** Deletes the subscriber and its purchase history at RevenueCat; idempotent. */
+  deleteSubscriber(userId: string, signal?: AbortSignal): Promise<SubscriberDeletion>;
 }
 
 export type RevenueCatErrorReason =
@@ -143,7 +149,7 @@ export function normalizeSubscriber(body: unknown, fallbackNow: Date): Subscribe
 export type RevenueCatFetch = (
   url: string,
   init: {
-    method: 'GET';
+    method: 'GET' | 'DELETE';
     headers: Record<string, string>;
     signal: AbortSignal;
   },
@@ -162,35 +168,54 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 
 export function createRevenueCatRestClient(options: RevenueCatRestClientOptions): RevenueCatClient {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  /** One request; `null` for 404, the response otherwise. Errors are mapped to reasons. */
+  async function request(
+    method: 'GET' | 'DELETE',
+    userId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<Awaited<ReturnType<RevenueCatFetch>> | null> {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const path = `/v1/subscribers/${encodeURIComponent(revenueCatAppUserId(userId))}`;
+    let response: Awaited<ReturnType<RevenueCatFetch>>;
+    try {
+      response = await options.fetch(new URL(path, options.baseUrl).toString(), {
+        method,
+        headers: { Accept: 'application/json', Authorization: `Bearer ${options.apiKey}` },
+        signal: combined,
+      });
+    } catch {
+      throw new RevenueCatApiError(timeout.aborted ? 'timeout' : 'network');
+    }
+    if (response.status === 404) {
+      return null;
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new RevenueCatApiError('unauthorized', response.status);
+    }
+    if (response.status === 429) {
+      throw new RevenueCatApiError('rate_limited', response.status);
+    }
+    if (!response.ok) {
+      throw new RevenueCatApiError('http_status', response.status);
+    }
+    return response;
+  }
+
   return {
     async getSubscriber(userId, signal) {
-      const timeout = AbortSignal.timeout(timeoutMs);
-      const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-      const path = `/v1/subscribers/${encodeURIComponent(revenueCatAppUserId(userId))}`;
-      let response: Awaited<ReturnType<RevenueCatFetch>>;
-      try {
-        response = await options.fetch(new URL(path, options.baseUrl).toString(), {
-          method: 'GET',
-          headers: { Accept: 'application/json', Authorization: `Bearer ${options.apiKey}` },
-          signal: combined,
-        });
-      } catch {
-        throw new RevenueCatApiError(timeout.aborted ? 'timeout' : 'network');
-      }
-      if (response.status === 404) {
+      const response = await request('GET', userId, signal);
+      if (response === null) {
         return null;
-      }
-      if (response.status === 401 || response.status === 403) {
-        throw new RevenueCatApiError('unauthorized', response.status);
-      }
-      if (response.status === 429) {
-        throw new RevenueCatApiError('rate_limited', response.status);
-      }
-      if (!response.ok) {
-        throw new RevenueCatApiError('http_status', response.status);
       }
       const body = await response.json().catch(() => undefined);
       return normalizeSubscriber(body, options.clock.now());
+    },
+    // REST API v1 `DELETE /v1/subscribers/{app_user_id}`; the response body is not needed.
+    async deleteSubscriber(userId, signal) {
+      const response = await request('DELETE', userId, signal);
+      return response === null ? 'not_found' : 'deleted';
     },
   };
 }
