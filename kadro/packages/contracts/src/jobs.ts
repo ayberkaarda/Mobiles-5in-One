@@ -23,6 +23,8 @@ export const JOB_QUEUES = [
   'webhook.revenuecat.process',
   'subscription.reconcile',
   'cost.guard',
+  'revenuecat.subscriber_delete',
+  'backup.verify',
 ] as const;
 export const jobQueueSchema = z.enum(JOB_QUEUES);
 export type JobQueue = z.infer<typeof jobQueueSchema>;
@@ -31,6 +33,7 @@ export type JobQueue = z.infer<typeof jobQueueSchema>;
 export const BILLING_JOB_QUEUES = [
   'webhook.revenuecat.process',
   'subscription.reconcile',
+  'revenuecat.subscriber_delete',
 ] as const satisfies readonly JobQueue[];
 export const billingJobQueueSchema = z.enum(BILLING_JOB_QUEUES);
 export type BillingJobQueue = z.infer<typeof billingJobQueueSchema>;
@@ -199,7 +202,10 @@ export const accountHardDeleteJobSchema = z.strictObject({
 });
 export type AccountHardDeleteJob = z.infer<typeof accountHardDeleteJobSchema>;
 
-/** Scheduled jobs (`opencall.expire`, `maintenance.sweep`, `cost.guard`) carry only their key. */
+/**
+ * Scheduled jobs (`opencall.expire`, `maintenance.sweep`, `cost.guard`, `backup.verify`) carry only
+ * their key.
+ */
 export const scheduledJobSchema = z.strictObject({
   idempotencyKey: idempotencyKeySchema,
 });
@@ -239,10 +245,25 @@ export const subscriptionReconcileJobSchema = z.strictObject({
 });
 export type SubscriptionReconcileJob = z.infer<typeof subscriptionReconcileJobSchema>;
 
+/**
+ * `revenuecat.subscriber_delete` (ADR-0082): follow-up of an account hard delete whose own
+ * RevenueCat subscriber deletion did not succeed. Enqueued in the hard-delete transaction only in
+ * that case; `appUserId` is the deleted account's id, the RevenueCat app user id, needed because
+ * the deletion request no longer references the user. Idempotency key:
+ * `rc-delete:<deletionRequestId>`.
+ */
+export const revenueCatSubscriberDeleteJobSchema = z.strictObject({
+  deletionRequestId: idSchema,
+  appUserId: idSchema,
+  idempotencyKey: idempotencyKeySchema,
+});
+export type RevenueCatSubscriberDeleteJob = z.infer<typeof revenueCatSubscriberDeleteJobSchema>;
+
 /** Payload schema per billing queue; producer and consumer both parse with it. */
 export const BILLING_JOB_PAYLOAD_SCHEMAS = {
   'webhook.revenuecat.process': revenueCatProcessJobSchema,
   'subscription.reconcile': subscriptionReconcileJobSchema,
+  'revenuecat.subscriber_delete': revenueCatSubscriberDeleteJobSchema,
 } as const satisfies Record<BillingJobQueue, z.ZodType>;
 
 export type BillingJobPayload<TQueue extends BillingJobQueue> = z.infer<
@@ -262,6 +283,7 @@ export const JOB_PAYLOAD_SCHEMAS = {
   'venue.import': venueImportJobSchema,
   ...BILLING_JOB_PAYLOAD_SCHEMAS,
   'cost.guard': scheduledJobSchema,
+  'backup.verify': scheduledJobSchema,
 } as const satisfies Record<JobQueue, z.ZodType>;
 
 export type JobPayload<TQueue extends JobQueue> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[TQueue]>;
@@ -271,3 +293,6 @@ export const SUBSCRIPTION_RECONCILE_CRON = '17 3 * * *';
 
 /** Usage guard schedule (cron, UTC): every 15 minutes (ADR-0081). */
 export const COST_GUARD_CRON = '*/15 * * * *';
+
+/** Backup check schedule (cron, UTC): Mondays at 06:20 (ADR-0082). */
+export const BACKUP_VERIFY_CRON = '20 6 * * 1';
