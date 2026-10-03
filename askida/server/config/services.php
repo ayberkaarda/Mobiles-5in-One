@@ -1,18 +1,21 @@
 <?php
 
-return [
+/*
+|--------------------------------------------------------------------------
+| Third party services
+|--------------------------------------------------------------------------
+|
+| Credentials and endpoints of external services. Client ids accept a
+| comma-separated list (for example the iOS, Android and web Google clients).
+|
+*/
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Resend, Postmark, AWS, and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
+$list = static fn (mixed $value): array => array_values(array_filter(
+    array_map('trim', explode(',', is_string($value) ? $value : '')),
+    static fn (string $item): bool => $item !== '',
+));
+
+return [
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
@@ -33,6 +36,46 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    /*
+    | Sign in with Apple: the identity token audience is the app bundle id (or
+    | the Services ID). Apple puts the SHA-256 of the client nonce in the token.
+    */
+    'apple' => [
+        'client_id' => $list(env('APPLE_CLIENT_ID', '')),
+        'issuers' => ['https://appleid.apple.com'],
+        'jwks_url' => 'https://appleid.apple.com/auth/keys',
+        'nonce_hashed' => true,
+    ],
+
+    /*
+    | Google Sign-In: the audience is one of the OAuth client ids of the app.
+    */
+    'google' => [
+        'client_id' => $list(env('GOOGLE_CLIENT_ID', '')),
+        'issuers' => ['https://accounts.google.com', 'accounts.google.com'],
+        'jwks_url' => 'https://www.googleapis.com/oauth2/v3/certs',
+        'nonce_hashed' => false,
+    ],
+
+    /*
+    | Shared settings of the identity token verifier.
+    */
+    'identity_tokens' => [
+        'jwks_cache_seconds' => 3600,
+        'http_timeout_seconds' => 5,
+        'leeway_seconds' => 60,
+    ],
+
+    /*
+    | Breached password check (k-anonymity range API). When disabled or
+    | unreachable the check is skipped and a warning is logged (fail open).
+    */
+    'breached_passwords' => [
+        'enabled' => (bool) env('BREACHED_PASSWORD_CHECK', true),
+        'url' => 'https://api.pwnedpasswords.com/range/',
+        'timeout_seconds' => 3,
     ],
 
 ];
