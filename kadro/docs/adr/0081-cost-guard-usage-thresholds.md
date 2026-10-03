@@ -1,6 +1,6 @@
 # ADR-0081: `cost.guard` usage thresholds and send gates
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §6 item 22, Phase 6; `docs/release/cost-alerts.md` §3; ADR-0002,
