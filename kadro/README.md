@@ -7,30 +7,46 @@ split the pitch fee. No money moves inside the app; the captain only tracks who 
 
 ## Status
 
-In development. Phase 0 (foundation) and Phase 1 (data model, authentication, security core) are
-complete. The domain API, the mobile app, the SEO pages, subscriptions and the admin area are
-planned and not yet implemented.
+Portfolio project, in development. Phases 0 to 5 are merged to `main`; Phase 6 (hardening and
+release readiness) is mostly merged. The domain API, the mobile app, the marketing and SEO pages,
+the Kadro Pro subscription and the staff admin panel all exist in code with automated tests.
 
-`apps/mobile` is a scaffold (Expo Router entry screens), `apps/worker` is a runnable skeleton with
-logging, and `apps/web` currently serves the authentication API (`/api/v1/auth/*`, `/api/v1/me`,
-`/api/v1/health`) and a placeholder home page.
+Open items are mainly proof that needs systems this repository does not have: the mobile Maestro
+flows have never run on a device or emulator, the paywall and purchase flows have not been checked
+against real App Store or Google Play accounts, there is no deployed origin (the Caddy edge and the
+`deploy.md` runbook are not written), and the production backup path, error monitoring and cost
+alerts are designed but not configured at providers. The security verification matrix lists 13 of
+23 items as done and 10 as partial, each with the missing proof named. The legal pages are sample
+texts for a portfolio project, labelled as such, not reviewed legal text.
+
+`apps/mobile` is the Expo app (Turkish and English screens), `apps/worker` runs the pg-boss jobs
+(reminders, push, email, uploads, venue import, deletion, billing, `cost.guard`), and `apps/web`
+serves the REST API under `/api/v1`, the public web pages and the staff panel under `/admin`.
 
 ## MVP features
 
-| Feature                                                                           | Status                             |
-| --------------------------------------------------------------------------------- | ---------------------------------- |
-| Email + password registration and login, Apple and Google sign-in, password reset | Implemented (auth API, Phase 1)    |
-| Database schema, migrations and seed data (districts, sample venues)              | Implemented (Phase 1)              |
-| Teams, roles (captain, co-captain, player), invite links                          | Planned (Phase 2)                  |
-| Matches, RSVP with waitlist, lineup with position balancing                       | Planned (Phase 2 API, Phase 3 app) |
-| Fee split and paid/unpaid tracking                                                | Planned (Phase 2 API, Phase 3 app) |
-| Open calls ("Eksik Var"): publish a missing-player call, browse and apply         | Planned (Phase 2 API, Phase 3 app) |
-| Venue directory ("Saha Rehberi") with ratings and reviews                         | Planned (Phase 2 API, Phase 3 app) |
-| Reminders and notifications (push, email) through the worker                      | Planned (Phase 2)                  |
-| MVP vote and basic player stats                                                   | Planned                            |
-| Kadro Pro subscription (RevenueCat), server-enforced entitlements                 | Planned (Phase 5)                  |
-| Account deletion in the app and on the web                                        | Planned                            |
-| Marketing site, venue pages, open-call listings, invite landing pages             | Planned (Phase 4)                  |
+"Implemented" means the code, the API contract and automated tests exist on `main`. Mobile rows
+carry the label "device flows not verified": the screens are covered by unit and component tests,
+but the Maestro flows (`apps/mobile/.maestro/`) have not been run on a device or emulator.
+
+| Feature                                                                                                  | Status                                                                                                     |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Email + password registration and login, Apple and Google sign-in, password reset                        | Implemented (API and mobile screens; provider sign-in not run on devices)                                  |
+| Database schema, migrations and seed data (districts, sample venues)                                     | Implemented                                                                                                |
+| Teams, roles (captain, co-captain, player), invite links                                                 | Implemented (API, mobile; device flows not verified)                                                       |
+| Matches, RSVP with waitlist, lineup with position balancing                                              | Implemented (API, mobile; device flows not verified)                                                       |
+| Fee split and paid/unpaid tracking                                                                       | Implemented (API, mobile; device flows not verified)                                                       |
+| Open calls ("Eksik Var"): publish a missing-player call, browse and apply                                | Implemented (API, mobile, public web listings; device flows not verified)                                  |
+| Venue directory ("Saha Rehberi") with ratings, reviews and venue suggestions                             | Implemented (API, mobile; device flows not verified)                                                       |
+| Reminders and notifications (push, email) through the worker                                             | Implemented (worker jobs; real push and email delivery not verified)                                       |
+| MVP vote and basic player stats                                                                          | Implemented (API, mobile profile and match screens)                                                        |
+| Kadro Pro subscription (RevenueCat), server-enforced entitlements, in-app paywall                        | Implemented, merged but not verified against real stores (webhook and entitlements tested with fixtures)   |
+| Account deletion in the app and on the web (`/hesap-silme`)                                              | Implemented (7-day grace period, tombstone history); email delivery not verified                           |
+| Marketing site, blog, sample-labelled legal pages (KVKK notice, privacy, contact)                        | Implemented (legal text is sample text, not legal advice)                                                  |
+| Programmatic pages: venue pages and "Eksik Var" district pages, sitemap, JSON-LD                         | Implemented (Lighthouse is informational in CI; no real domain yet)                                        |
+| Invite landing page (`/mac/<code>`) and app link files                                                   | Implemented (app link files not verified with signed store builds)                                         |
+| Staff admin panel (`/admin`): venue verification, venue CSV import, roles, bans, audit log, TOTP step-up | Implemented (web only, Playwright-covered; review and open-call removal have API endpoints but no screens) |
+| OpenAPI 3.1 description of every `/api/v1` operation                                                     | Implemented (`docs/api/openapi.json`, built from the endpoint registry)                                    |
 
 Explicit non-goals for the MVP: in-app payments between players, venue booking integration, live
 chat, video, ads, leagues and tournaments, languages other than Turkish and English.
@@ -52,8 +68,8 @@ Exact pinned versions and the reasoning behind them are in
 
 ```
 apps/
-  mobile/      Expo app (scaffold)
-  web/         Next.js: API (/api/v1) and web pages
+  mobile/      Expo app
+  web/         Next.js: API (/api/v1), public pages and the staff panel (/admin)
   worker/      pg-boss job runner
 packages/
   auth/        authorization policy, password hashing, token utilities
@@ -63,9 +79,15 @@ packages/
   db/          Drizzle schema, migrations, seed data
 docs/
   adr/         architecture decision records
+  api/         OpenAPI document built from the endpoint registry
   handoffs/    cross-package hand-off notes
-  ops/         hosting and operations
+  legal/       legal review checklist
+  mobile/      mobile app documents
+  ops/         hosting, operations, runbooks
+  release/     store listing, backup drill, cost alerts
   security/    authorization matrix, threat model, verification matrix
+  seo/         SEO and GEO checklist
+  web/         web app documents, including the admin panel
 ```
 
 ## Requirements
@@ -138,19 +160,29 @@ secrets and audits dependencies. Details:
 - [`docs/adr/README.md`](docs/adr/README.md): index of architecture decision records
 - [`docs/security/`](docs/security/): security documents
 - [`docs/ops/README.md`](docs/ops/README.md): hosting and operations
+- [`docs/ops/admin-recovery.md`](docs/ops/admin-recovery.md): staff lockout and TOTP loss runbook
+- [`docs/api/README.md`](docs/api/README.md): API conventions and the OpenAPI document built from the endpoint registry
+- [`docs/web/admin-panel.md`](docs/web/admin-panel.md): staff admin panel
+- [`docs/mobile/`](docs/mobile/): mobile architecture, screens, billing, deep links
+- [`docs/release/`](docs/release/): store listing, backup drill, cost alerts
+- [`docs/seo/`](docs/seo/): SEO and GEO checklist
 - [`docs/handoffs/`](docs/handoffs/): hand-off notes between packages
-
-No OpenAPI document is committed yet; it is planned together with the domain API.
 
 ## Roadmap
 
 - Phase 0, foundation: done
 - Phase 1, data, auth and security core: done
-- Phase 2, domain API and worker jobs (teams, matches, open calls, venues, uploads, reminders)
-- Phase 3, mobile app
-- Phase 4, web SEO pages and public listings
-- Phase 5, Kadro Pro subscription, webhook and admin area
-- Phase 6, hardening and release readiness
+- Phase 2, domain API and worker jobs (teams, matches, open calls, venues, uploads, reminders): done, merged
+- Phase 3, mobile app: done, merged (device flows not verified)
+- Phase 4, web SEO pages, marketing site and public listings: done, merged
+- Phase 5, Kadro Pro subscription, webhook and admin area: done, merged (store purchases not
+  verified against real stores)
+- Phase 6, hardening and release readiness: mostly merged (security verification matrix, threat
+  model, attack report, SEO and GEO checklist, cost guard, store listing drafts). Open: Maestro
+  runs on a device, store and RevenueCat verification, EAS builds and a signed update channel, a
+  hosted origin with the Caddy edge and `deploy.md`, production backups, error monitoring,
+  provider-side cost alerts, MobSF and ZAP API results, a sitemap submission on a real domain,
+  and a repository-wide placeholder grep gate.
 
 ## License
 

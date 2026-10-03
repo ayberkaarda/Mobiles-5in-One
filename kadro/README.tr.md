@@ -7,30 +7,48 @@ Uygulama içinde para hareketi olmaz; kaptan yalnızca kimin ödediğini takip e
 
 ## Durum
 
-Geliştirme aşamasında. Phase 0 (iskelet) ve Phase 1 (veri modeli, kimlik doğrulama, güvenlik
-çekirdeği) tamamlandı. Domain API, mobil uygulama, SEO sayfaları, abonelik ve yönetim paneli
-planlanıyor; henüz uygulanmadı.
+Portföy projesi, geliştirme aşamasında. Phase 0 ile Phase 5 arası `main`'e birleşti; Phase 6
+(sertleştirme ve yayına hazırlık) büyük ölçüde birleşti. Domain API, mobil uygulama, tanıtım ve SEO
+sayfaları, Kadro Pro aboneliği ve ekip yönetim paneli kodda ve otomatik testlerle mevcut.
 
-`apps/mobile` bir iskelet (Expo Router giriş ekranları), `apps/worker` loglama içeren çalışır bir
-iskelet, `apps/web` ise şu an kimlik doğrulama API'sini (`/api/v1/auth/*`, `/api/v1/me`,
-`/api/v1/health`) ve geçici bir ana sayfayı sunuyor.
+Açık kalanlar çoğunlukla bu deponun sahip olmadığı sistemler gerektiren kanıtlar: mobil Maestro
+akışları bir cihazda ya da emülatörde hiç çalıştırılmadı, paywall ve satın alma akışları gerçek App
+Store veya Google Play hesaplarına karşı denenmedi, yayında bir origin yok (Caddy kenar
+yapılandırması ve `deploy.md` runbook'u yazılmadı), üretim yedekleme yolu, hata izleme ve maliyet
+uyarıları tasarlandı ama sağlayıcılarda yapılandırılmadı. Güvenlik doğrulama matrisi 23 maddenin
+13'ünü tamam, 10'unu kısmi gösterir; eksik kanıt her satırda yazılıdır. Hukuki sayfalar portföy
+projesi için örnek metindir, öyle etiketlenmiştir; hukuki incelemeden geçmiş metin değildir.
+
+`apps/mobile` Expo uygulaması (Türkçe ve İngilizce ekranlar), `apps/worker` pg-boss işlerini
+çalıştırır (hatırlatma, push, e-posta, yükleme, saha içe aktarma, hesap silme, faturalama,
+`cost.guard`), `apps/web` ise `/api/v1` altında REST API'yi, herkese açık web sayfalarını ve
+`/admin` altında ekip panelini sunar.
 
 ## MVP özellikleri
 
-| Özellik                                                                        | Durum                                  |
-| ------------------------------------------------------------------------------ | -------------------------------------- |
-| E-posta + şifre ile kayıt ve giriş, Apple ve Google ile giriş, şifre sıfırlama | Uygulandı (auth API, Phase 1)          |
-| Veritabanı şeması, migration'lar ve seed verisi (ilçeler, örnek sahalar)       | Uygulandı (Phase 1)                    |
-| Takımlar, roller (kaptan, yardımcı kaptan, oyuncu), davet bağlantıları         | Planlı (Phase 2)                       |
-| Maçlar, yedek listeli RSVP, pozisyona göre dengelenen kadro dizilimi           | Planlı (Phase 2 API, Phase 3 uygulama) |
-| Ücret bölüşümü ve ödendi/ödenmedi takibi                                       | Planlı (Phase 2 API, Phase 3 uygulama) |
-| "Eksik Var": eksik oyuncu ilanı yayınlama, göz atma ve başvuru                 | Planlı (Phase 2 API, Phase 3 uygulama) |
-| Puan ve yorumlu saha rehberi ("Saha Rehberi")                                  | Planlı (Phase 2 API, Phase 3 uygulama) |
-| Worker üzerinden hatırlatma ve bildirimler (push, e-posta)                     | Planlı (Phase 2)                       |
-| Maçın oyuncusu (MVP) oylaması ve temel oyuncu istatistikleri                   | Planlı                                 |
-| Kadro Pro aboneliği (RevenueCat), sunucu tarafında doğrulanan yetkiler         | Planlı (Phase 5)                       |
-| Uygulama içinden ve web üzerinden hesap silme                                  | Planlı                                 |
-| Tanıtım sitesi, saha sayfaları, açık ilan listeleri, davet landing sayfaları   | Planlı (Phase 4)                       |
+"Uygulandı", kodun, API sözleşmesinin ve otomatik testlerin `main` üzerinde bulunduğu anlamına gelir.
+Mobil satırlarda "cihaz akışları doğrulanmadı" etiketi vardır: ekranlar birim ve bileşen testleriyle
+kapsanır, ancak Maestro akışları (`apps/mobile/.maestro/`) bir cihazda ya da emülatörde
+çalıştırılmadı.
+
+| Özellik                                                                                                               | Durum                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| E-posta + şifre ile kayıt ve giriş, Apple ve Google ile giriş, şifre sıfırlama                                        | Uygulandı (API ve mobil ekranlar; sağlayıcı girişi cihazlarda denenmedi)                                     |
+| Veritabanı şeması, migration'lar ve seed verisi (ilçeler, örnek sahalar)                                              | Uygulandı                                                                                                    |
+| Takımlar, roller (kaptan, yardımcı kaptan, oyuncu), davet bağlantıları                                                | Uygulandı (API, mobil; cihaz akışları doğrulanmadı)                                                          |
+| Maçlar, yedek listeli RSVP, pozisyona göre dengelenen kadro dizilimi                                                  | Uygulandı (API, mobil; cihaz akışları doğrulanmadı)                                                          |
+| Ücret bölüşümü ve ödendi/ödenmedi takibi                                                                              | Uygulandı (API, mobil; cihaz akışları doğrulanmadı)                                                          |
+| "Eksik Var": eksik oyuncu ilanı yayınlama, göz atma ve başvuru                                                        | Uygulandı (API, mobil, herkese açık web listeleri; cihaz akışları doğrulanmadı)                              |
+| Puan ve yorumlu saha rehberi ("Saha Rehberi"), saha önerileri                                                         | Uygulandı (API, mobil; cihaz akışları doğrulanmadı)                                                          |
+| Worker üzerinden hatırlatma ve bildirimler (push, e-posta)                                                            | Uygulandı (worker işleri; gerçek push ve e-posta teslimi doğrulanmadı)                                       |
+| Maçın oyuncusu (MVP) oylaması ve temel oyuncu istatistikleri                                                          | Uygulandı (API, mobil profil ve maç ekranları)                                                               |
+| Kadro Pro aboneliği (RevenueCat), sunucu tarafında doğrulanan yetkiler, uygulama içi paywall                          | Uygulandı, birleşti ama gerçek mağazalara karşı doğrulanmadı (webhook ve yetkiler fixture'larla test edildi) |
+| Uygulama içinden ve web üzerinden hesap silme (`/hesap-silme`)                                                        | Uygulandı (7 gün bekleme süresi, mezar taşı geçmişi); e-posta teslimi doğrulanmadı                           |
+| Tanıtım sitesi, blog, örnek etiketli hukuki sayfalar (KVKK aydınlatma, gizlilik, iletişim)                            | Uygulandı (hukuki metin örnektir, hukuki tavsiye değildir)                                                   |
+| Programatik sayfalar: saha sayfaları ve "Eksik Var" ilçe sayfaları, sitemap, JSON-LD                                  | Uygulandı (Lighthouse CI'da bilgilendirme amaçlı; henüz gerçek alan adı yok)                                 |
+| Davet landing sayfası (`/mac/<kod>`) ve uygulama bağlantı dosyaları                                                   | Uygulandı (uygulama bağlantı dosyaları imzalı mağaza derlemeleriyle doğrulanmadı)                            |
+| Ekip yönetim paneli (`/admin`): saha doğrulama, saha CSV içe aktarma, roller, yasaklar, denetim günlüğü, TOTP step-up | Uygulandı (yalnızca web, Playwright kapsıyor; yorum ve açık ilan kaldırma için API var, ekran yok)           |
+| Her `/api/v1` işleminin OpenAPI 3.1 açıklaması                                                                        | Uygulandı (`docs/api/openapi.json`, uç nokta kayıt defterinden üretilir)                                     |
 
 MVP kapsamı dışında bilinçli olarak bırakılanlar: oyuncular arası uygulama içi ödeme, saha rezervasyon
 entegrasyonu, canlı sohbet, video, reklam, lig ve turnuvalar, Türkçe ve İngilizce dışındaki diller.
@@ -52,8 +70,8 @@ Sabitlenmiş sürümler ve gerekçeleri
 
 ```
 apps/
-  mobile/      Expo uygulaması (iskelet)
-  web/         Next.js: API (/api/v1) ve web sayfaları
+  mobile/      Expo uygulaması
+  web/         Next.js: API (/api/v1), herkese açık sayfalar ve ekip paneli (/admin)
   worker/      pg-boss iş çalıştırıcısı
 packages/
   auth/        yetkilendirme politikası, şifre hashleme, token araçları
@@ -63,9 +81,15 @@ packages/
   db/          Drizzle şeması, migration'lar, seed verisi
 docs/
   adr/         mimari karar kayıtları
+  api/         uç nokta kayıt defterinden üretilen OpenAPI dokümanı
   handoffs/    paketler arası devir notları
-  ops/         barındırma ve operasyon
+  legal/       hukuki inceleme kontrol listesi
+  mobile/      mobil uygulama dokümanları
+  ops/         barındırma, operasyon, runbook'lar
+  release/     mağaza metinleri, yedek tatbikatı, maliyet uyarıları
   security/    yetkilendirme matrisi, tehdit modeli, doğrulama matrisi
+  seo/         SEO ve GEO kontrol listesi
+  web/         web uygulaması dokümanları, yönetim paneli dahil
 ```
 
 ## Gereksinimler
@@ -138,19 +162,30 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 - [`docs/adr/README.md`](docs/adr/README.md): mimari karar kayıtlarının dizini
 - [`docs/security/`](docs/security/): güvenlik dokümanları
 - [`docs/ops/README.md`](docs/ops/README.md): barındırma ve operasyon
+- [`docs/ops/admin-recovery.md`](docs/ops/admin-recovery.md): ekip hesabı kilitlenmesi ve TOTP kaybı runbook'u (İngilizce)
+- [`docs/api/README.md`](docs/api/README.md): API kuralları ve uç nokta kayıt defterinden üretilen OpenAPI dokümanı
+- [`docs/web/admin-panel.md`](docs/web/admin-panel.md): ekip yönetim paneli
+- [`docs/mobile/`](docs/mobile/): mobil mimari, ekranlar, faturalama, derin bağlantılar
+- [`docs/release/`](docs/release/): mağaza metinleri, yedek tatbikatı, maliyet uyarıları
+- [`docs/seo/`](docs/seo/): SEO ve GEO kontrol listesi
 - [`docs/handoffs/`](docs/handoffs/): paketler arası devir notları
-
-Henüz commit'lenmiş bir OpenAPI dokümanı yok; domain API ile birlikte planlanıyor.
 
 ## Yol haritası
 
 - Phase 0, iskelet: tamam
 - Phase 1, veri, kimlik doğrulama ve güvenlik çekirdeği: tamam
-- Phase 2, domain API ve worker işleri (takımlar, maçlar, açık ilanlar, sahalar, yüklemeler, hatırlatmalar)
-- Phase 3, mobil uygulama
-- Phase 4, web SEO sayfaları ve herkese açık listeler
-- Phase 5, Kadro Pro aboneliği, webhook ve yönetim paneli
-- Phase 6, sertleştirme ve yayına hazırlık
+- Phase 2, domain API ve worker işleri (takımlar, maçlar, açık ilanlar, sahalar, yüklemeler,
+  hatırlatmalar): tamam, birleşti
+- Phase 3, mobil uygulama: tamam, birleşti (cihaz akışları doğrulanmadı)
+- Phase 4, web SEO sayfaları, tanıtım sitesi ve herkese açık listeler: tamam, birleşti
+- Phase 5, Kadro Pro aboneliği, webhook ve yönetim paneli: tamam, birleşti (mağaza satın alımları
+  gerçek mağazalara karşı doğrulanmadı)
+- Phase 6, sertleştirme ve yayına hazırlık: büyük ölçüde birleşti (güvenlik doğrulama matrisi,
+  tehdit modeli, saldırı raporu, SEO ve GEO kontrol listesi, cost guard, mağaza metni taslakları).
+  Açık: cihazda Maestro çalıştırması, mağaza ve RevenueCat doğrulaması, EAS derlemeleri ve imzalı
+  güncelleme kanalı, Caddy kenarı ve `deploy.md` ile yayında bir origin, üretim yedekleri, hata
+  izleme, sağlayıcı tarafında maliyet uyarıları, MobSF ve ZAP API sonuçları, gerçek alan adında
+  sitemap gönderimi ve depo genelinde yer tutucu grep kapısı.
 
 ## Lisans
 
