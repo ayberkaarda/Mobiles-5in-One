@@ -7,7 +7,7 @@
 - One sentence: Kadro organizes a pitch ("halı saha") football match for an amateur team (team, invite, attendance, lineup, fee split) and helps fill a missing player slot ("Eksik Var").
 - Audience: captains and players of Turkish amateur pitch matches. Turkish first; the interface is also available in English.
 - Competitor-neutral: no competitor names, no comparative claims ("best", "number one"), no rating or download claims. Differentiate by what the app does: team, match and missing-player calls in one place.
-- Only implemented features are claimed: teams, invite link and QR, matches, waitlist, lineup, fee split with payment marks, MVP vote, Eksik Var calls and applications, venue directory and reviews, push reminders (needs a push-configured build, to verify), account deletion, Turkish and English interface. Not claimed: live maps, GPS "nearby" search (device location is not read), in-app photo upload, in-app subscription purchase, chat. See `privacy-labels.md` section 2.
+- Only implemented features are claimed: teams, invite link and QR, matches, waitlist, lineup, fee split with payment marks, MVP vote, Eksik Var calls and applications, venue directory and reviews, push reminders (needs a push-configured build, to verify), account deletion, Turkish and English interface. Not claimed: live maps, GPS "nearby" search (device location is not read; the `expo-location` plugin is registered but unused), in-app photo upload, in-app subscription purchase (a paywall exists in the app but is unverified against real stores), chat. See `privacy-labels.md` section 2.
 
 ## 2. Store constraints
 
@@ -72,6 +72,6 @@ Production notes: capture from a real build or simulator with seeded fixtures; s
 
 - App icon (1024 px, no transparency): derived from `packages/brand`, not rendered here.
 - Feature graphic for Google Play (1024x500): not made.
-- Age rating and content questionnaire: no user-to-user chat; user reviews and free-text application messages exist (moderation path to verify).
+- Age rating and content questionnaire: no user-to-user chat; user reviews and free-text application messages exist; moderators can remove reviews and open calls through the admin panel (ADR-0067, ADR-0068), there is no user report queue.
 - Category: Sports.
 - Support URL, privacy URL, marketing URL: SAMPLE placeholders, see the table in the listing files.

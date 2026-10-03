@@ -144,12 +144,13 @@ Count: 232 / 500 (Play release notes limit)
 
 ## Placeholders to replace before any real submission
 
-| Field                              | Value in this repo                                                                                             |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Support URL                        | SAMPLE: `https://kadro.example/iletisim` (no such site exists)                                                 |
-| Marketing URL                      | SAMPLE: `https://kadro.example`                                                                                |
-| Privacy policy URL                 | SAMPLE: `https://kadro.example/gizlilik` (the page is not implemented yet; its text must be labelled a sample) |
-| Account deletion URL (Google Play) | SAMPLE: `https://kadro.example/hesap-silme` (page not implemented yet)                                         |
-| Copyright                          | SAMPLE: owner name to be filled in                                                                             |
-| Developer / seller account         | none: no Apple Developer or Google Play account exists                                                         |
-| Review contact and demo account    | none: to be created with fixtures before a real submission                                                     |
+| Field                                 | Value in this repo                                                                                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Support URL                           | SAMPLE: `https://kadro.example/iletisim` (no such site exists; the web app serves `/iletisim` with a sample notice)                                                                                          |
+| Marketing URL                         | SAMPLE: `https://kadro.example`                                                                                                                                                                              |
+| Privacy policy URL                    | SAMPLE: `https://kadro.example/gizlilik` (the page exists in the web app, `/gizlilik` and `/kvkk-aydinlatma`, with text labelled a sample; the host is a placeholder and no legal review has happened)       |
+| Account deletion URL (Google Play)    | SAMPLE: `https://kadro.example/hesap-silme` (the page exists in the web app as a working deletion form; the host is a placeholder)                                                                           |
+| Kadro Pro sentence in the description | The paywall and the purchases SDK exist in the app (ADR-0077) but there is no RevenueCat account, store product or key, so purchases are unverified against real stores; keep the sentence only if Pro ships |
+| Copyright                             | SAMPLE: owner name to be filled in                                                                                                                                                                           |
+| Developer / seller account            | none: no Apple Developer or Google Play account exists                                                                                                                                                       |
+| Review contact and demo account       | none: to be created with fixtures before a real submission                                                                                                                                                   |
