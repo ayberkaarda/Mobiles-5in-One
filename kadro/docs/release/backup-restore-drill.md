@@ -89,8 +89,13 @@ until the first timed production restore (section 5).
   `restore-drill.yml`). The workflow is not part of this change; it is an owner/Phase 6 follow-up.
 - After every Postgres major or PostGIS minor upgrade, and before launch: run section 2 and the
   section 5 drill.
-- The worker queue `backup.verify` records the result of the latest check; alert if no success was
-  recorded for 48 hours.
+- The worker queue `backup.verify` (ADR-0082) checks the newest artifact in the backup bucket: it
+  exists, is large enough, has an `age` header and is young enough. It does not decrypt or restore.
+  The real default schedule is weekly, Mondays 06:20 UTC (`BACKUP_VERIFY_CRON` = `20 6 * * 1`), so
+  the alert rule is "no `backup_verified` line for 8 days" (`docs/ops/worker.md`), not 48 hours.
+  `BACKUP_VERIFY_CRON` is a constant in `packages/contracts/src/jobs.ts`, not an environment
+  variable: to verify daily, change it there (for example `20 6 * * *`) and redeploy the worker;
+  only then does a 48-hour alert make sense.
 
 ## 5. Owner tasks (need real accounts or servers)
 
