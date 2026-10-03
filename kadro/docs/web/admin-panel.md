@@ -3,7 +3,7 @@
 The panel is the web screen for the admin API: venue verification, the venue CSV import, role and
 ban changes and the audit log. It lives in the `(admin)` route group under `/admin`
 (`apps/web/app/(admin)/`, `apps/web/components/admin/`, `apps/web/lib/admin/`). Decisions:
-ADR-0068 (panel; its status is "Proposed" in the file), ADR-0064 (admin API and TOTP enrollment),
+ADR-0068 (panel; Accepted), ADR-0064 (admin API and TOTP enrollment),
 ADR-0066 (TOTP verification and step-up), ADR-0067 (moderation and venue import). Copy is Turkish.
 The mobile app has no admin screens.
 

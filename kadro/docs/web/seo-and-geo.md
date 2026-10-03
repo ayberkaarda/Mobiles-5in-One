@@ -47,7 +47,7 @@ the surface table, so it carries the nonce CSP like every other response.
 `pageMetadata` (`components/marketing/metadata.ts`) gives every public page a canonical URL
 relative to `metadataBase` (`WEB_ORIGIN`), `hreflang` `tr-TR` and `x-default` pointing at the same
 path (no English pages exist, so no `en` alternate is published), and Open Graph and Twitter card
-fields (`summary`, no image: there is no Open Graph image route). The layouts set no canonical,
+fields (`summary_large_image`; every page carries `og:image` and `twitter:image`: `/og/kadro.png` by default, `/og/blog/<slug>` for an article; ADR-0083). The layouts set no canonical,
 because an inherited canonical would point every page at `/`. Titles are at most 60 characters
 after the `%s · Kadro` template and descriptions at most 155; tests check this. The invite page
 sets no canonical on purpose.
@@ -60,9 +60,9 @@ product, its audience and its MVP features, and contain the sentence "Kadro bir 
 projesidir." as the fact sheet requires. They invent no user counts, ratings or prices; Kadro Pro
 is described as a paid tier whose prices the stores set.
 
-The "Sayfalar" lists of both llms files name only routes that exist (`/ozellikler`, `/blog`,
+The "Sayfalar" lists of both llms files name only routes that exist (`/ozellikler`, `/sss`, `/blog`,
 `/saha/{slug}`, `/eksik-var/{il}/{ilce}`, `/iletisim`, `/gizlilik`, `/kvkk-aydinlatma`). The
-surface table still reserves `/sss` and `/sahalar/**`, but they are not listed. Nothing in the code
+surface table still reserves `/sahalar/**`, which is not listed; `/sss` exists and is listed (ADR-0083). Nothing in the code
 or tests checks the llms files against the route list.
 
 ## Programmatic pages
@@ -77,8 +77,8 @@ or tests checks the llms files against the route list.
 - Internal links: a district page links its venues and the venues of calls, a venue page links its
   district. No navigation entry exists for them; crawlers reach them through the sitemap.
 - Cache freshness and invalidation: see [architecture.md](architecture.md).
-- Not built (ADR-0057): `/sahalar/[il]` directory pages, a map on the venue page, Open Graph
-  images, an `en` alternate.
+- Not built (ADR-0057): `/sahalar/[il]` directory pages, a map on the venue page, an `en`
+  alternate. Open Graph card images exist since ADR-0083.
 
 ## Structured data
 
