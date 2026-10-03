@@ -198,7 +198,7 @@ Each phase ends with stop → report (§11) → wait for `devam`.
 
 **Phase 5 — Webhooks + entitlements (item 17).** RevenueCat webhook + reconciliation + pack entitlement gating; Resend webhook + suppression list; nightly jobs. Gate: webhook and entitlement tests green.
 
-**Phase 6 — Hardening and release readiness (items 2, 19, 20, 22, 23 + matrix).** Attack suite, ZAP, MobSF, `semgrep`/`bandit`, dependency audits, backups + restore drill, cost guards and planner degrade mode, history-purge runbook, ASO doc, store copy (tr/en), privacy mapping, final **23-item verification matrix**. Gate: FINAL REPORT.
+**Phase 6 — Hardening and release readiness (items 2, 16, 19, 20, 22, 23 + matrix).** Attack suite, including the item-16 stored-XSS payload sweep over every rendering surface (item 16 `Verify`; the lint, template and CSP bans from the security baseline stay in place), ZAP, MobSF, `semgrep`/`bandit`, dependency audits, backups + restore drill, cost guards and planner degrade mode, history-purge runbook, ASO doc, store copy (tr/en), privacy mapping, final **23-item verification matrix**. Gate: FINAL REPORT.
 
 ## 11. Report Template (use verbatim at every gate)
 

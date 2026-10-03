@@ -221,7 +221,7 @@ Each phase ends with stop → report (§11) → wait for `devam`.
 
 **Phase 5 — Web SEO/GEO + impact (§7).** Public pages, persona landings, shop/district pages, impact pages, 5 Turkish guides (≥ 600 words), legal pages (KVKK aydınlatma including anonymity statement), sitemap/robots/JSON-LD/hreflang/OG generation, AASA/assetlinks, `llms.txt`, Lighthouse CI. Gate: Lighthouse ≥ 90 on 5 pages; JSON-LD validates.
 
-**Phase 6 — Hardening and release readiness (items 2, 19, 20, 22, 23 + matrix).** Attack suite (races, forgery, farming), ZAP, MobSF, dependency audits, backups + restore drill, cost/fraud guards, history-purge runbook, ASO doc, store copy (tr/en), Data Safety / App Privacy mapping, final **23-item verification matrix**. Gate: final report.
+**Phase 6 — Hardening and release readiness (items 2, 16, 19, 20, 22, 23 + matrix).** Attack suite (races, forgery, farming), including the item-16 stored-XSS payload sweep over every rendering surface (item 16 `Verify`; the lint, template and CSP bans from the security baseline stay in place), ZAP, MobSF, dependency audits, backups + restore drill, cost/fraud guards, history-purge runbook, ASO doc, store copy (tr/en), Data Safety / App Privacy mapping, final **23-item verification matrix**. Gate: final report.
 
 ---
 

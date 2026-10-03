@@ -237,7 +237,7 @@ Each phase ends with stop → report (§11) → wait for `devam`.
 
 **Phase 5 — Destekçi subscription + App Store notifications (item 17).** StoreKit 2 products, paywall (tr copy), transaction verification endpoint, notifications webhook with JWS chain validation, reconciliation job, entitlement gating (quota, badge). Gate: webhook and entitlement tests green; sandbox flow documented.
 
-**Phase 6 — Hardening and release readiness (items 2, 19, 20, 22, 23 + matrix).** Attack suite, ZAP, MobSF/IPA checks, vulnerable-package gate, backups + restore drill, cost alerts + `cost.guard`, history-purge runbook, ASO doc + App Store copy (tr/en), privacy labels mapping, final 23-item verification matrix. Gate: final report.
+**Phase 6 — Hardening and release readiness (items 2, 16, 19, 20, 22, 23 + matrix).** Attack suite, including the item-16 stored-XSS payload sweep over every rendering surface (item 16 `Verify`; the lint, template and CSP bans from the security baseline stay in place), ZAP, MobSF/IPA checks, vulnerable-package gate, backups + restore drill, cost alerts + `cost.guard`, history-purge runbook, ASO doc + App Store copy (tr/en), privacy labels mapping, final 23-item verification matrix. Gate: final report.
 
 ---
 
