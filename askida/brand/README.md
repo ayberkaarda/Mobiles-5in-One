@@ -1,191 +1,163 @@
-# Askıda brand
+# Askıda brand (identity v2)
 
-Single source of truth for the Askıda identity (spec section 2): design tokens, logo files, craft assets (hero hills, askı fişi, shop plates, stamps, textures), icons, bundled fonts and a brand board. The Flutter app (`app/lib/design/theme.dart`) and the Tailwind config for the Blade web are built from `tokens.json`. Those files belong to the app and web owners; this folder only defines the contract.
-
-Check everything with:
+Single source of truth for the Askıda identity: tokens, fonts, logo, graphic devices, icons and a brand board. The Flutter theme (`app/lib/design/theme.dart`) and the web Tailwind/CSS variables are built from `tokens.json` by their owners; this folder defines the contract. Nothing from the earlier craft direction remains.
 
 ```sh
-node askida/brand/scripts/validate-tokens.mjs
+node askida/brand/scripts/validate-tokens.mjs            # exit 0 = valid
+node askida/brand/scripts/validate-tokens.mjs --self-test # also proves a broken copy fails
 ```
 
-The script is Node only (no dependencies). It fails (exit 1) when a core colour drifts from the spec, a scheme colour is not declared in the palette, light and dark role names differ, any listed pair misses WCAG AA (4.5:1 text, 3:1 non-text) in either scheme, a documented "not for text" pair turns out to pass, a type style uses a weight that is not shipped, spacing leaves the 4-pt grid, a font file lacks `çğıİöşüÇĞÖŞÜ₺`, or a logo/PNG file is missing or malformed. It also checks craft roles (same names in both schemes, palette values only), that texture motifs stay within `contrast.textureCeiling` (1.2:1) of their base, and that every logo, craft, texture and icon SVG is well formed with no `<image>`, external `href`/`url()`, script, style block, comment, metadata or editor/generator note. `<text>` is allowed only in the ticket template, ids are unique across all SVGs (safe to inline together), craft colours come from the palette, icons are `currentColor` with a 2 px round stroke, `board.html` has no network URL, and the board PNGs are 1920x1080 without metadata chunks.
+## Concept: rail, not hands
 
-## Contents
+A shop rail with prepaid items on it: anyone takes one down, nobody watches. Three objects build the system: the **rail** (a 2 px horizontal line), the **tag** (a flat rounded rectangle with a punched hole: an item, a count or a code) and the **count** (how many tags hang today). Chrome is ink on limewash (light) or cream on ember-black (dark). The only colour is Ekmek Kabuğu on tags, so colour means "something is hanging here". No people, hands, hearts or giving gestures; the rail serves bread, soup, a notebook and a nappy pack equally.
 
-| Path                                                      | What                                                                                          |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `tokens.json`                                             | palette, light + dark schemes, contrast pairs, type scale, spacing, radius, elevation, motion |
-| `scripts/validate-tokens.mjs`                             | validator described above                                                                     |
-| `fonts/fraunces/Fraunces-{SemiBold,Bold}.ttf`             | display face, weights 600 and 700, with `OFL.txt`                                             |
-| `fonts/nunito-sans/NunitoSans-{Regular,SemiBold}.ttf`     | body face, weights 400 and 600, with `OFL.txt`                                                |
-| `logo/*.svg`                                              | mark, wordmarks, app icon, Android adaptive layers, favicon                                   |
-| `logo/png/*-1024.png`                                     | 1024 px renders of the app icon and the adaptive layers (input for launcher-icon tools)       |
-| `craft/*-{light,dark}.svg`                                | hero hills, askı fişi, shop plates, stamps, paper and wood textures (one file per scheme)     |
-| `icons/*.svg`                                             | 12 first-need icons, 24 px grid, 2 px round stroke, `currentColor`                            |
-| `board/board.html`, `board/askida-board-{light,dark}.png` | brand board built from the real assets, rendered at 1920x1080                                 |
+## Colour roles (same names in both schemes)
 
-## Colour
+| Role                        | Light                              | Dark                  | Use                                                                   |
+| --------------------------- | ---------------------------------- | --------------------- | --------------------------------------------------------------------- |
+| `background`                | `#F4F0E8` Kireç                    | `#171411` Köz         | page and screen ground                                                |
+| `surface`                   | `#FBF8F3` Un Beyazı                | `#211D18`             | cards, rows, sheets                                                   |
+| `surfaceRaised`             | `#FFFFFF`                          | `#2B2621`             | menus, dialogs, the code tag                                          |
+| `surfaceSunken`             | `#EAE4D9`                          | `#100E0B`             | inputs, wells, counter band                                           |
+| `text`                      | `#2B2B2B` Kömür                    | `#F3EEE6`             | body, headings, rails                                                 |
+| `textMuted`                 | `#5F574E`                          | `#B3A99C`             | meta, captions, inactive segments                                     |
+| `border`                    | `#E0D8CB`                          | `#352E27`             | hairlines, card edges (decorative)                                    |
+| `borderStrong`              | `#827767`                          | `#8C8176`             | input and control outlines (3:1)                                      |
+| `primary` / `onPrimary`     | `#2B2B2B` / `#FBF8F3`              | `#F3EEE6` / `#171411` | primary (ink) button, selected segment, QR ink                        |
+| `primaryText`               | `#2B2B2B`                          | `#F3EEE6`             | links (always underlined), text buttons                               |
+| `secondary` / `onSecondary` | `#E4DAC9` Kum / `#2B2B2B`          | `#352E27` / `#F3EEE6` | quiet fill: secondary button, chips, segment track                    |
+| `accent` / `onAccent`       | `#C8763A` Ekmek Kabuğu / `#1C1814` | `#C8763A` / `#171411` | tags, count badge, app icon, rail counter; never text, never a button |
+| `accentText`                | `#99521F`                          | `#E6A26C`             | the only brand-coloured text ("12 askıda")                            |
+| `info`                      | `#25607F`                          | `#6FB0D4`             | informational text and icons                                          |
+| `success`                   | `#4E6B3A` Zeytin                   | `#9CBF7F`             | "Kod onaylandı", verified check                                       |
+| `warning`                   | `#875610`                          | `#E9A23B` Gün Batımı  | warning text; the `ÖRNEK` chip is `secondary` + `warning`             |
+| `danger` / `onDanger`       | `#B23A48` Nar / `#FFFFFF`          | `#E36B78` / `#171411` | destructive fill                                                      |
+| `dangerText`                | `#AD3444`                          | `#F0919B`             | error text                                                            |
+| `focusRing`                 | `#25607F`                          | `#E9A23B`             | 2 px ring, 2 px offset                                                |
+| `overlay`                   | `#2B2B2B99`                        | `#000000B3`           | scrim (8-digit hex, alpha last)                                       |
 
-The seven spec colours are the core palette (`derived: false`). Every other value in `color.palette` is marked `derived: true` and says what it is for. Scheme roles reference palette values only.
+The seven spec colours stay in `color.palette` at their exact values (`derived: false`); every other value is `derived: true` with a `use` note. Deniz (`#2C6E91`) stays in the palette but light `info` uses Deniz Deep, because Deniz is 4.43:1 on the sunken surface.
 
-### Roles (same names in both schemes)
+### Contrast
 
-| Role                        | Light                              | Dark                  | Use                                            |
-| --------------------------- | ---------------------------------- | --------------------- | ---------------------------------------------- |
-| `background`                | `#FBF8F3` Un Beyazı                | `#1C1814` Hearth      | page                                           |
-| `surface`                   | `#FFFDFA`                          | `#25201B`             | cards, sheets                                  |
-| `surfaceRaised`             | `#FFFFFF`                          | `#2F2822`             | menus, dialogs                                 |
-| `surfaceSunken`             | `#F3ECE1`                          | `#171310`             | inputs, wells                                  |
-| `text`                      | `#2B2B2B` Kömür                    | `#F3EBE0`             | body text                                      |
-| `textMuted`                 | `#6B5E52`                          | `#BFB2A3`             | secondary text (still AA on every surface)     |
-| `border`                    | `#E4D8C8`                          | `#3A322A`             | decorative dividers only (no contrast promise) |
-| `borderStrong`              | `#8C7B6B`                          | `#8A7A6B`             | input and control outlines (3:1)               |
-| `primary` / `onPrimary`     | `#C8763A` Ekmek Kabuğu / `#1E1915` | same                  | primary button fill and its label              |
-| `primaryText`               | `#9A5524`                          | `#E3A06A`             | links and brand-coloured text on surfaces      |
-| `secondary` / `onSecondary` | `#4E6B3A` Zeytin / `#FFFFFF`       | same                  | secondary fills                                |
-| `accent` / `onAccent`       | `#E9A23B` Gün Batımı / `#1E1915`   | same                  | highlights, badges, counters                   |
-| `info`                      | `#2C6E91` Deniz                    | `#6FB0D4`             | informational text and icons                   |
-| `danger` / `onDanger`       | `#B23A48` Nar / `#FFFFFF`          | same                  | destructive fills                              |
-| `dangerText`                | `#B23A48`                          | `#F08A95`             | error messages                                 |
-| `success`                   | `#4E6B3A`                          | `#9CBF7F`             | success text and icons                         |
-| `warning`                   | `#8F5B12`                          | `#E9A23B`             | warning text and icons                         |
-| `focusRing`                 | `#2C6E91`                          | `#E9A23B`             | 2 px focus outline                             |
-| `overlay`                   | `#2B2B2B80`                        | `#0E0B09B3`           | modal scrim (8-digit hex, alpha last)          |
-| `paper` / `onPaper`         | `#F2E4CC` / `#2B2B2B`              | `#EADBC2` / `#2B2B2B` | craft material: askı ticket, receipt card      |
-| `wood` / `onWood`           | `#6B4329` / `#FBF8F3`              | `#5A3A24` / `#F3EBE0` | craft material: shop name plate                |
+The validator measures 38 text pairs (every text role on all four surfaces, plus `on*` pairs and text on `secondary`) and 19 non-text pairs per scheme; all pass. Lowest values:
 
-Dark is a warm charcoal-brown (Hearth), not blue-black. The askı ticket keeps its cream `paper` in dark mode on purpose.
+- Light text: `accentText` on `surfaceSunken` 4.63, `success` on `surfaceSunken` 4.76, `warning` on `surfaceSunken` 4.93.
+- Light non-text: `accent` on `background` 3.02, on `surface` 3.25, on `surfaceRaised` 3.44.
+- Dark text: `onAccent` on `accent` 5.34, `textMuted` on `secondary` 5.77, `onDanger` on `danger` 5.80.
+- Dark non-text: `borderStrong` on `surfaceRaised` 3.94, `accent` on `surfaceRaised` 4.36, `borderStrong` on `surface` 4.40.
 
-### Craft roles (`color.craft`, same names in both schemes)
+Documented failures (checked to really fail): `accent` as text on light `background` (3.02); Un Beyazı text on `accent` (3.25); `accent` fill on light `surfaceSunken` (2.72), so in light, accent tags never sit on the sunken surface. `secondary` is a quiet fill with no boundary role and no non-text pair.
 
-| Role                                    | Light                             | Dark                              | Use                                                              |
-| --------------------------------------- | --------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| `hillFar` / `hillMid` / `forest`        | `#EED8C5` / `#DFB08D` / `#688056` | `#5C4635` / `#44332A` / `#2B211A` | hero layers (Ekmek Kabuğu and Zeytin tints; warm browns in dark) |
-| `paperGrain` / `woodGrain`              | `#E6D5B8` / `#754C31`             | `#DECBAE` / `#633F28`             | texture motifs, at most 1.2:1 against `paper` / `wood`           |
-| `paperMuted`                            | `#5C5046`                         | `#574B41`                         | secondary text on paper (AA on paper and on its grain)           |
-| `ticketRule`                            | `#B79F86`                         | `#A08A73`                         | ticket outline and dotted rule (decorative)                      |
-| `woodEdge`                              | `#4E2F1C`                         | `#3E2716`                         | plate inner border and nail heads                                |
-| `hardware`                              | `#8C6A3C`                         | `#B08A57`                         | chains and rings (3:1 on background and surfaces)                |
-| `inkVerified` / `inkToday` / `inkStamp` | `#4E6B3A` / `#9A5524` / `#6B4329` | `#9CBF7F` / `#E3A06A` / `#D9C2A3` | stamp inks (AA on background and surface)                        |
+## Type: Bricolage Grotesque
 
-Craft roles live beside the scheme roles, never shadow them, and are only for the craft components below.
+One family, two optical sizes, width pinned at 100: **Display** (opsz 96, weights 600 and 700) only at 22 and above; **Text** (opsz 14, weights 400 and 600) for everything smaller. Maximum weight 700, no italics. `tnum` + `lnum` only on `numeral`, `numeralXL` and `code`. Prices as `₺45,00`. Uppercase only as the literal code and `ÖRNEK`: no `text-transform: uppercase`, no `toUpperCase()` on Turkish strings; web root `lang="tr"`, Flutter locale `tr_TR`.
 
-### Contrast notes
+| Style        | App   | Web                  | Cut · weight                              |
+| ------------ | ----- | -------------------- | ----------------------------------------- |
+| `hero`       | —     | 64/68 (mobile 40/44) | Display 700, −0.01em                      |
+| `display`    | 40/44 | 48/52                | Display 700, −0.01em                      |
+| `headline`   | 32/36 | 36/40                | Display 700                               |
+| `title1`     | 26/30 | 28/34                | Display 600                               |
+| `title2`     | 22/28 | 22/28                | Display 600                               |
+| `title3`     | 18/24 | 20/28                | Text 600                                  |
+| `bodyLarge`  | 18/28 | 20/30                | Text 400                                  |
+| `body`       | 16/24 | 16/24                | Text 400                                  |
+| `bodyStrong` | 16/24 | 16/24                | Text 600                                  |
+| `label`      | 14/20 | 14/20                | Text 600                                  |
+| `footnote`   | 13/18 | 13/18                | Text 400                                  |
+| `caption`    | 12/16 | 12/16                | Text 600, +0.01em                         |
+| `numeral`    | 28/32 | 32/36                | Display 600, tnum lnum                    |
+| `numeralXL`  | 56/56 | 96/96                | Display 700, tnum lnum, −0.02em           |
+| `code`       | 32/40 | 32/40                | Text 600, tnum lnum, +0.12em, groups of 4 |
 
-Measured by the validator (WCAG 2.x relative luminance). Lowest passing values: light text 4.78 (`info` on `surfaceSunken`), dark text 5.07 (`onPrimary` on `primary`), light non-text 3.25 (`primary` on `background`), dark non-text 3.51 (`borderStrong` on `surfaceRaised`).
+- Flutter: declare `BricolageText` (Text-Regular 400, Text-SemiBold 600) and `BricolageDisplay` (Display-SemiBold 600, Display-Bold 700) in `pubspec.yaml`.
+- Web: self-host `web/text-var.woff2` (`font-weight: 400 700`, preloaded) and the two Display files with `font-display: swap`; fallback `"BricolageText", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`. Measured: 53.6 KB above the fold, 115.9 KB for all three web files. No Google Fonts link, no second family.
 
-Not valid for text (also listed in `color.notValidForText` and checked to really fail):
+## Shape, elevation, motion
 
-- White on Ekmek Kabuğu (3.44) and Kömür on Ekmek Kabuğu (4.12). Primary buttons use `onPrimary` (`#1E1915`, 5.07).
-- Ekmek Kabuğu on Un Beyazı (3.25): logo, icons and large graphics only. Brand-coloured text uses `primaryText`.
-- Gün Batımı on Un Beyazı (2.04): accent fills only on light. Warning text uses `warning`.
-- Zeytin on the dark background (2.93): in dark mode Zeytin is a fill with `onSecondary` text, and success text uses `success`.
-
-Textures (paper grain, wood) go only on headers, hero, ticket and plate components. Body text and forms stay on plain `background` / `surface`.
-
-## Type
-
-| Style        | Family      | Size / line | Weight                                                      |
-| ------------ | ----------- | ----------- | ----------------------------------------------------------- |
-| `display`    | Fraunces    | 40 / 48     | 700                                                         |
-| `headline`   | Fraunces    | 32 / 40     | 700                                                         |
-| `title1`     | Fraunces    | 26 / 32     | 600                                                         |
-| `title2`     | Fraunces    | 22 / 28     | 600                                                         |
-| `title3`     | Fraunces    | 18 / 24     | 600                                                         |
-| `bodyLarge`  | Nunito Sans | 18 / 28     | 400                                                         |
-| `body`       | Nunito Sans | 16 / 24     | 400                                                         |
-| `bodyStrong` | Nunito Sans | 16 / 24     | 600                                                         |
-| `label`      | Nunito Sans | 14 / 20     | 600                                                         |
-| `footnote`   | Nunito Sans | 13 / 18     | 400                                                         |
-| `caption`    | Nunito Sans | 12 / 16     | 600                                                         |
-| `code`       | Nunito Sans | 28 / 36     | 600, letter spacing 3, tabular figures (one-time askı code) |
-
-Rules: Fraunces only for headings and the wordmark, never for body copy, forms or numbers in tables. Only the four shipped weights exist; do not ask for 500 or synthetic bold. Sizes scale with the OS text size setting.
-
-### Font files
-
-Static instances made with the fontTools instancer from the variable fonts in the google/fonts repository (`ofl/fraunces` at commit `4024282d`, `ofl/nunitosans` at commit `8b0a1d0f`), each with its SIL Open Font License 1.1 (`OFL.txt`; neither licence declares a Reserved Font Name). Axis settings: Fraunces `opsz 24, SOFT 50, WONK 0`; Nunito Sans `wdth 100, opsz 12, YTLC 500`. Family names are `Fraunces` and `Nunito Sans`.
-
-No web subsets (WOFF2) are shipped yet: the TTFs are used as they are. Nothing fetches fonts at runtime.
-
-- Flutter: declare both families in `pubspec.yaml` under `flutter: fonts:` with `weight: 600/700` (Fraunces) and `400/600` (Nunito Sans), pointing at these files (copy or reference them from the app owner's asset folder).
-- Web: self-host with `@font-face` (`font-display: swap`) one rule per file; no Google Fonts link.
-
-## Spacing, radius, elevation, motion
-
-- Spacing: 4-pt grid (`0 4 8 12 16 20 24 32 40 48 64`). Radius: `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`, `full`.
-- Elevation: light uses warm brown shadows (`#4A2E1A` with alpha); dark mostly uses `surfaceRaised`, shadows are secondary.
-- Motion: `fast 120`, `base 200`, `slow 320`, `emphasized 480` ms; easing `standard (0.2, 0, 0, 1)`. With reduced motion, no movement, fades at most 120 ms.
-
-## Consuming the tokens
-
-- Flutter (`app/lib/design/theme.dart`, app owner): map each scheme to a `ColorScheme` (`primary`, `onPrimary`, `secondary`, `onSecondary`, `error` = `danger`, `onError` = `onDanger`, `surface`, `onSurface` = `text`, `outline` = `borderStrong`, `outlineVariant` = `border`, `scrim` = `overlay`) and expose the remaining roles (`primaryText`, `textMuted`, `paper`, `wood`, `info`, `success`, `warning`, `dangerText`, `accent`) through a `ThemeExtension`. Build `TextTheme` from `typography.scale`. Light is the default; dark follows the system setting with a manual override.
-- Tailwind (web owner): read `tokens.json` in `tailwind.config` and map `color.scheme.light` / `color.scheme.dark` to CSS custom properties (for example `--color-primary-text`), then point Tailwind colours at the variables so dark mode is a variable swap. `spacing`, `radius` and `typography.scale` map to `theme.extend`.
-- Hex values with 8 digits (`overlay`, elevation colours) carry alpha last (`#RRGGBBAA`). Flutter's `Color` wants alpha first, so convert.
+- Radius: tags and chips 6, buttons and inputs 10, cards and rows 14, sheets and dialogs 20, avatars (merchant only) full.
+- Stroke: rails 2 px `text`; icons 1.75 px at 24, round caps and joins; card edge 1 px `border`; tag holes are evenodd cutouts, never drawn circles.
+- Elevation: flat. Only bottom sheets and dialogs get one shadow (`0 8px 24px`, ink 16 % light / black 50 % dark). No gradients, textures, glows, blur or translucency.
+- Grid: 4 pt (`0 4 8 12 16 24 32 48 64 96`), screen gutter 16, row min height 56, touch target 48; web 12 columns, 1120 max, 24 gutters.
+- Motion: `fast 120`, `base 200`, `enter 320`, `settle 480` ms; easing `(0.22, 1, 0.36, 1)` in and `(0.4, 0, 1, 1)` out; only transform and opacity. A new tag drops onto the rail; the code tag settles once with a ±3° swing about its hole. Reduced motion: durations 0, fades at most 120 ms.
 
 ## Logo
 
-Concept: the tail of the letter "a" is the hook. In the wordmark, the final "a" of "askıda" (Fraunces 600, `opsz 48, SOFT 100`, converted to outlines) keeps its bowl and stem; the stem continues below the baseline at full stem width and curls up into a hook. A cord loops over the hook's bowl and a monoline loaf hangs from it. The mark is the same idea as a monoline single-storey "a": bowl, stem, hook tail, cord loop and loaf. Strokes have round caps; no raster tracing, no external references, no text elements.
+The mark is the rail tag on a 24 grid: rail y 4, x 3→21, stroke 2, round caps; tie (12, 4)→(12, 8); tag x 6→18, y 8→21, radius 3, hole r 1.5 at (12, 11.5) cut out (evenodd). The wordmark is `askıda` in Bricolage Display 600, lowercase, outlined. Horizontal lockup: mark, a gap of one tag width, wordmark, with the mark's height on the x-height and its foot on the baseline; vertical lockup: mark centred above. Clear space one tag width; minimum sizes: mark 20 px, wordmark 80 px wide, horizontal lockup 112 px, favicon 16 px. The mark is ink on UI surfaces (cream on dark); the tag fills `accent` only in the app icon and the rail counter. Never stretch, rotate or recolour outside the palette.
 
-| File                                     | Use                                                                                                                                              |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `askida-mark.svg`                        | symbol alone, Ekmek Kabuğu on transparent (works on light and dark backgrounds)                                                                  |
-| `askida-wordmark-light.svg`              | for light backgrounds: Kömür letters, Ekmek Kabuğu loaf                                                                                          |
-| `askida-wordmark-dark.svg`               | for dark backgrounds: cream letters, Ekmek Kabuğu loaf                                                                                           |
-| `askida-wordmark-mono.svg`               | one colour via `currentColor` (inline SVG, or tint it in Flutter)                                                                                |
-| `askida-app-icon.svg` + `png/…-1024.png` | store icon: Un Beyazı mark on full-bleed Ekmek Kabuğu; stores apply their own corner mask                                                        |
-| `askida-adaptive-foreground.svg` + png   | Android adaptive foreground (108 dp canvas, content inside the 66 dp safe circle); background colour `#C8763A` (`assets.adaptiveIconBackground`) |
-| `askida-adaptive-monochrome.svg` + png   | Android 13+ themed icon layer (alpha only)                                                                                                       |
-| `askida-favicon.svg`                     | browser tab; simplified mark (no loaf scores, no cord loop, heavier stroke) on a rounded Ekmek Kabuğu tile                                       |
+## Graphic devices
 
-Usage rules: keep clear space of at least the loaf height around the mark and wordmark; minimum sizes 24 px for the mark, 96 px wide for the wordmark, 16 px for the favicon. Do not recolour outside the palette, stretch, rotate, add effects, or separate the hook from the "a" in the wordmark. Mark on dark backgrounds stays Ekmek Kabuğu (5.13:1 on `#1C1814`).
-
-## Craft assets
-
-Every craft file exists twice, `-light.svg` and `-dark.svg`, with that scheme's colours baked in. CSS custom properties are not used because flutter_svg and `<img>` cannot see page variables. Pick the file that matches the active scheme. Flat shapes plus 2 px round strokes, like the logo.
-
-| File (`craft/`)               | What and how to use it                                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `askida-hero-hills-*.svg`     | Three layers (far hill, middle hill, forest), 1440x360, horizontally seamless: tile with `background-repeat: repeat-x` or place copies side by side; anchored to the bottom (`xMidYMax slice`). Web hero and app onboarding. Put text on the plain sky above the hills, never on the trees.                                                                                   |
-| `askida-ticket-*.svg`         | Askı fişi: paper card with a hook notch at the top and a torn bottom edge. Template: replace the content of `<text id="askida-ticket-code-light">` (or `-dark`) with the real 8-character code; the sample is `K7M2QX9R`. Text uses Nunito Sans 600 with tabular figures. In Flutter, draw the code as a native `Text` over the card rather than relying on SVG text support. |
-| `askida-plate-*.svg`          | Flat wooden shop plate, 320x92, blank. Overlay the shop name natively in Fraunces 600 with `onWood`.                                                                                                                                                                                                                                                                          |
-| `askida-plate-hanging-*.svg`  | The same plate hanging on two chains from two rings, 320x164; the plate fills the bottom 88 units.                                                                                                                                                                                                                                                                            |
-| `askida-stamp-verified-*.svg` | "Doğrulanmış esnaf" ink stamp (check mark, double border, worn gaps). Only for verified shops.                                                                                                                                                                                                                                                                                |
-| `askida-stamp-today-*.svg`    | "Bugün askıda" pill stamp with the mark.                                                                                                                                                                                                                                                                                                                                      |
-| `askida-stamp-round-*.svg`    | Round stamp: tagline on the top arc, `askida.app` on the bottom arc, mark in the centre.                                                                                                                                                                                                                                                                                      |
-| `askida-texture-paper-*.svg`  | 64x64 paper grain `<pattern>` tile on transparent; lay it over `paper`.                                                                                                                                                                                                                                                                                                       |
-| `askida-texture-wood-*.svg`   | 160x40 wood grain `<pattern>` tile on transparent; lay it over `wood`.                                                                                                                                                                                                                                                                                                        |
-
-Stamp text is converted to outlines (Nunito Sans 600), so it renders the same everywhere. The ink look comes from double borders, a slight rotation and dash gaps in the outer border; no raster filters. Textures go only under headers, the hero, the ticket and the plate, never under body text or forms. Their motif colours are capped at 1.2:1 against the base, and the text roles used on paper and wood still pass AA against the motif colour.
+Only three: the **rail counter** (a rail with N accent tags, N capped at 12, then one `secondary` overflow tag; the app writes `+n` and the sentence "Bugün 14 çorba askıda" with the number in `numeralXL`), the **station rail** (Bırak → Askıda → Al, three tags on one rail; labels rendered by the app or page) and the **tag template** (blank tag; the only SVG allowed to carry `<text>`). Light and dark files have the scheme colours baked in. On light, the rail counter sits on `surface`, never on `surfaceSunken`. Counts are always of items, never of people; no targets, bars or percentages.
 
 ## Icons
 
-`icons/` holds the 12 icons the app needs first: `bread`, `soup`, `notebook`, `shop`, `hook`, `qr`, `code`, `location`, `give` (open hand offering a loaf, no heart), `bell`, `settings`, `close`. They use a 24 px grid, 2 px stroke, round caps and joins and `stroke="currentColor"`, so one file serves both schemes (tint with the text or icon colour). New icons follow the same grid and stroke; Lucide (ISC licence) matches this style if a ready set is needed. Bundle icons with the build; no runtime icon fetching.
+UI icons follow Lucide (ISC) at 24 px, stroke 1.75, `currentColor`. This folder ships the kept UI icons plus the brand pictograms: `rail`, `tag`, `tag-plus` and the six item categories `ekmek corba yemek kirtasiye bebek diger`. Pictograms never show people. Bundle icons with the build; no CDN.
 
-## Brand board
+## Guardrails (enforced where a machine can)
 
-`board/board.html` is a 1920x1080 page built from the real assets: SVGs are inlined, colours come from the tokens as CSS custom properties, fonts load from `../fonts/` by relative path, and nothing is requested from the network. Add `#dark` to the URL for the dark scheme. Render it with a local Chrome:
+1. Draw rails, tags and counts; never people, hands, hearts, faces, loaves alone or giving gestures (validator: file names and SVG ids containing hand, heart or person fail).
+2. `accent` only on tags, the rail counter and the app icon; never a button, band, background or text (validator: accent absent from button, surface and text roles; `notValidForFill` pair checked).
+3. One primary (ink or cream) button per screen; no outlined buttons, no second filled colour.
+4. Uppercase only as the literal code and `ÖRNEK` (validator: no uppercase transform in shipped SVG/HTML/CSS).
+5. Flat surfaces (validator: no gradients, filters, backdrop filters, patterns, masks, `feTurbulence`).
+6. Count items, never people; never "muhtaç", "fakir", "yoksul", "yardıma muhtaç", "ihtiyaç sahibi".
+7. Only the Bricolage Grotesque files listed here (validator: files, cmap incl. U+20BA, `tnum`/`lnum`, `TRK`, web size budget).
+8. Hand-written, palette-only SVG: no `<image>`, external `href`, script, style, comment or metadata; icons `currentColor` at 1.75; tag holes evenodd (validator).
 
-```sh
-chrome --headless=new --allow-file-access-from-files --window-size=1920,1080 --screenshot=askida-board-light.png board/board.html
-chrome --headless=new --allow-file-access-from-files --window-size=1920,1080 --screenshot=askida-board-dark.png "board/board.html#dark"
-```
+## Files
 
-`--allow-file-access-from-files` lets the page load the local font files.
+Every file in this folder; the validator fails if this table and the disk differ.
 
-## Proposal: ornamental wordmark face
-
-Status: proposal only. Nothing from it ships. Adopting it needs an ADR and the owner's approval (design direction: Fraunces stays the display face unless an ADR approves one extra ornamental face, for the wordmark only).
-
-The Western side of the direction could use one ornamental woodtype face for a lockup or campaign wordmark, never for UI text. Two candidates from the google/fonts repository:
-
-| Candidate                       | Path in google/fonts | Licence                                                                               | Why                                                                                                                           |
-| ------------------------------- | -------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Rye (Nicole Fally, Sorkin Type) | `ofl/rye`            | SIL OFL 1.1 with Reserved Font Name "Rye" (a modified or subset copy must be renamed) | Western woodtype poster letters with warm, rounded spurs; at large sizes it reads as craft signage; `latin-ext` subset listed |
-| Sancreek (Vernon Adams)         | `ofl/sancreek`       | SIL OFL 1.1                                                                           | Victorian and Western display face whose plate-like serifs echo the wooden shop plate; `latin-ext` subset listed              |
-
-Before an ADR: confirm `ı İ ğ Ğ ş Ş ç Ç ö Ö ü Ü` in the actual files (the wordmark needs `ı`), check legibility at 24 px, and keep the hook-tail "a" so the logo idea does not change. If adopted, the face would be outlined into a separate lockup SVG; no font file would ship in the app.
-
-## Guardrails (design direction)
-
-Western is used as material and typography only: wood plates, paper tickets, hook hardware, serif headings, hill silhouettes. Never weapons, bullets, wanted posters, sheriff stars, bounty or duel metaphors, and no star ratings anywhere near recipients. Tone stays warm and dignified, never charity-poster sentiment: copy says "Askıya bırak", "Askıdan al".
+| Path                                                                | What                                                                                                                                     |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                                                         | this contract                                                                                                                            |
+| `board/askida-board-dark.png`                                       | board render, dark, 1920x1080                                                                                                            |
+| `board/askida-board-light.png`                                      | board render, light, 1920x1080                                                                                                           |
+| `board/board.html`                                                  | brand board page (local files only; `#dark` for the dark scheme)                                                                         |
+| `devices/askida-rail-counter-dark.svg`                              | rail counter, dark                                                                                                                       |
+| `devices/askida-rail-counter-light.svg`                             | rail counter (12 accent tags + overflow tag), light                                                                                      |
+| `devices/askida-station-rail-dark.svg`                              | station rail, dark                                                                                                                       |
+| `devices/askida-station-rail-light.svg`                             | station rail Bırak → Askıda → Al, light                                                                                                  |
+| `devices/askida-tag-dark.svg`                                       | blank tag template, dark                                                                                                                 |
+| `devices/askida-tag-light.svg`                                      | blank tag template with `<text>` placeholders, light                                                                                     |
+| `fonts/bricolage-grotesque/BricolageGrotesque-Display-Bold.ttf`     | Flutter `BricolageDisplay` 700 (opsz 96)                                                                                                 |
+| `fonts/bricolage-grotesque/BricolageGrotesque-Display-SemiBold.ttf` | Flutter `BricolageDisplay` 600 (opsz 96)                                                                                                 |
+| `fonts/bricolage-grotesque/BricolageGrotesque-Text-Regular.ttf`     | Flutter `BricolageText` 400 (opsz 14)                                                                                                    |
+| `fonts/bricolage-grotesque/BricolageGrotesque-Text-SemiBold.ttf`    | Flutter `BricolageText` 600 (opsz 14)                                                                                                    |
+| `fonts/bricolage-grotesque/BricolageGrotesque[opsz,wdth,wght].ttf`  | unmodified variable source                                                                                                               |
+| `fonts/bricolage-grotesque/OFL.txt`                                 | SIL Open Font License 1.1                                                                                                                |
+| `fonts/bricolage-grotesque/README.md`                               | font provenance (google/fonts commit) and instancing settings                                                                            |
+| `fonts/bricolage-grotesque/web/display-600.woff2`                   | web Display 600, on demand                                                                                                               |
+| `fonts/bricolage-grotesque/web/display-700.woff2`                   | web Display 700, on demand                                                                                                               |
+| `fonts/bricolage-grotesque/web/text-var.woff2`                      | web Text cut, wght 400–700, preloaded                                                                                                    |
+| `icons/bebek.svg`                                                   | category: bebek                                                                                                                          |
+| `icons/bell.svg`                                                    | UI: notifications                                                                                                                        |
+| `icons/close.svg`                                                   | UI: close                                                                                                                                |
+| `icons/code.svg`                                                    | UI: code                                                                                                                                 |
+| `icons/corba.svg`                                                   | category: çorba                                                                                                                          |
+| `icons/diger.svg`                                                   | category: diğer                                                                                                                          |
+| `icons/ekmek.svg`                                                   | category: ekmek                                                                                                                          |
+| `icons/kirtasiye.svg`                                               | category: kırtasiye                                                                                                                      |
+| `icons/location.svg`                                                | UI: location                                                                                                                             |
+| `icons/qr.svg`                                                      | UI: QR                                                                                                                                   |
+| `icons/rail.svg`                                                    | pictogram: rail                                                                                                                          |
+| `icons/settings.svg`                                                | UI: settings                                                                                                                             |
+| `icons/shop.svg`                                                    | UI: shop                                                                                                                                 |
+| `icons/tag-plus.svg`                                                | pictogram: put a tag on the rail (replaces the old open-hand icon)                                                                       |
+| `icons/tag.svg`                                                     | pictogram: tag                                                                                                                           |
+| `icons/yemek.svg`                                                   | category: yemek                                                                                                                          |
+| `logo/askida-adaptive-foreground.svg`                               | Android adaptive foreground, 108 dp canvas, inside the 66 dp circle; background `#C8763A`                                                |
+| `logo/askida-adaptive-monochrome.svg`                               | Android 13 themed layer (alpha only)                                                                                                     |
+| `logo/askida-app-icon.svg`                                          | store icon: Un Beyazı mark on full-bleed Ekmek Kabuğu                                                                                    |
+| `logo/askida-favicon-32.svg`                                        | favicon 32 px: adds the rail                                                                                                             |
+| `logo/askida-favicon.svg`                                           | favicon 16 px: accent tile, tag only, hole kept                                                                                          |
+| `logo/askida-mark.svg`                                              | rail tag mark, ink (`text`); recolour to cream on dark                                                                                   |
+| `logo/askida-wordmark-dark.svg`                                     | wordmark, cream, for dark surfaces                                                                                                       |
+| `logo/askida-wordmark-light.svg`                                    | wordmark `askıda`, ink, for light surfaces                                                                                               |
+| `logo/askida-wordmark-mono.svg`                                     | wordmark in `currentColor`                                                                                                               |
+| `logo/png/askida-adaptive-foreground-1024.png`                      | 1024 px render of the adaptive foreground                                                                                                |
+| `logo/png/askida-adaptive-monochrome-1024.png`                      | 1024 px render of the monochrome layer                                                                                                   |
+| `logo/png/askida-app-icon-1024.png`                                 | 1024 px render of the app icon                                                                                                           |
+| `scripts/validate-tokens.mjs`                                       | validator (Node only); `--self-test` plants defects in a temp copy and expects exit 1                                                    |
+| `tokens.json`                                                       | v2 tokens: palette, light + dark roles, contrast pairs and documented failures, type, spacing, layout, radius, stroke, elevation, motion |

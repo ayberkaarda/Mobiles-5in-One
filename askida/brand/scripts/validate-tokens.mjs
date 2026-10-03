@@ -801,6 +801,31 @@ console.log(
     .join(", ")}; unique ids: ${allIds.size}`,
 );
 
+// ---------- README file table equals the disk ----------
+{
+  const readme = existsSync(join(root, "README.md"))
+    ? readFileSync(join(root, "README.md"), "utf8")
+    : "";
+  const section = readme.split(/^## Files\s*$/m)[1]?.split(/^## /m)[0] ?? "";
+  const listed = [...section.matchAll(/^\|\s*`([^`]+)`\s*\|/gm)]
+    .map((m) => m[1])
+    .sort();
+  const onDisk = walk(root)
+    .map((p) => p.slice(root.length + 1).replaceAll("\\", "/"))
+    .sort();
+  const notListed = onDisk.filter((f) => !listed.includes(f));
+  const notOnDisk = listed.filter((f) => !onDisk.includes(f));
+  if (!section) fail("README.md needs a '## Files' table");
+  if (notListed.length)
+    fail(`README.md Files table lacks: ${notListed.join(", ")}`);
+  if (notOnDisk.length)
+    fail(`README.md lists files that do not exist: ${notOnDisk.join(", ")}`);
+  if (section && !notListed.length && !notOnDisk.length)
+    console.log(
+      `ok   README.md Files table matches the ${onDisk.length} files on disk`,
+    );
+}
+
 // ---------- result ----------
 for (const k of Object.keys(results).sort()) {
   const low = results[k].sort((a, b) => a.r - b.r).slice(0, 3);
@@ -851,6 +876,7 @@ if (selfTest) {
     "external href",
     "hand, heart or person",
     "icons/ file list differs",
+    "README.md Files table lacks",
     "stroke width must be 1.75",
   ];
   const missing = expected.filter((e) => !out.includes(e));
