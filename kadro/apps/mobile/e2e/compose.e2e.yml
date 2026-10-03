@@ -1,0 +1,13 @@
+# Override for the local stack used by the Maestro flows; it never runs on its own:
+#
+#   docker compose -f docker-compose.yml -f apps/mobile/e2e/compose.e2e.yml up -d --build --wait web worker
+#
+# One emulator signs in many times in a few minutes from one address (the seed script and every
+# flow), which the auth limit of five per 15 minutes (security checklist item 5) would refuse.
+# Only the limits change, and only for this local stack; the values stay inside the configuration
+# schema's bounds. Nothing here is a secret.
+services:
+  web:
+    environment:
+      RATE_LIMIT_AUTH_MAX: '100'
+      RATE_LIMIT_AUTH_DELAY_AFTER_FAILURES: '100'

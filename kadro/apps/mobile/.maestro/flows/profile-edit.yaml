@@ -1,0 +1,51 @@
+# Profile edit (ADR-0054): change the display name and the position, save, and see both on the
+# profile tab.
+appId: app.kadro.mobile
+name: profile-edit
+tags:
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_PLAYER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-edit
+    direction: DOWN
+- tapOn:
+    id: profile-edit
+- extendedWaitUntil:
+    visible:
+      id: profile-name
+    timeout: 20000
+- tapOn:
+    id: profile-name
+- eraseText: 80
+- inputText: E2E Oyuncu ${E2E_RUN_ID}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: profile-position-MID
+    direction: DOWN
+- tapOn:
+    id: profile-position-MID
+- scrollUntilVisible:
+    element:
+      id: profile-save
+    direction: DOWN
+- tapOn:
+    id: profile-save
+- extendedWaitUntil:
+    visible:
+      id: profile-screen
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      text: .*E2E Oyuncu ${E2E_RUN_ID}.*
+    timeout: 20000
+- assertVisible:
+    id: profile-position
