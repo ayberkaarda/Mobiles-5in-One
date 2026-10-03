@@ -100,6 +100,8 @@ export function articleStructuredData(
   origin: string,
   article: ContentDocument,
   path: string,
+  /** Path of the article's Open Graph image (ADR-0083); the `image` of the `Article` node. */
+  image?: string,
 ): JsonLdObject {
   const url = absolute(origin, path);
   const node: Record<string, JsonLdValue> = {
@@ -116,6 +118,9 @@ export function articleStructuredData(
     author: { '@id': organizationId(origin) },
     publisher: { '@id': organizationId(origin) },
   };
+  if (image !== undefined) {
+    node.image = absolute(origin, image);
+  }
   if (article.tags.length > 0) {
     node.keywords = article.tags.join(', ');
   }

@@ -1,6 +1,30 @@
 import type { Metadata } from 'next';
 
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH, type OgImage, SITE_OG_IMAGE } from './og';
 import { SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, SITE_TITLE } from './site';
+
+/** The Open Graph `images` entry of a card image (ADR-0083). */
+function openGraphImages(image: OgImage) {
+  return [
+    {
+      url: image.path,
+      width: OG_IMAGE_WIDTH,
+      height: OG_IMAGE_HEIGHT,
+      alt: image.alt,
+      type: 'image/png',
+    },
+  ];
+}
+
+/** Twitter card fields: the large-image card with the same image as Open Graph. */
+function twitterCard(title: string, description: string, image: OgImage): Metadata['twitter'] {
+  return {
+    card: 'summary_large_image',
+    title,
+    description,
+    images: [{ url: image.path, alt: image.alt }],
+  };
+}
 
 /** Product spec §7: titles at most 60 characters, descriptions at most 155. */
 export const TITLE_MAX = 60;
@@ -27,8 +51,9 @@ export function marketingLayoutMetadata(webOrigin: string): Metadata {
       locale: SITE_LOCALE,
       title: SITE_TITLE,
       description: SITE_DESCRIPTION,
+      images: openGraphImages(SITE_OG_IMAGE),
     },
-    twitter: { card: 'summary', title: SITE_TITLE, description: SITE_DESCRIPTION },
+    twitter: twitterCard(SITE_TITLE, SITE_DESCRIPTION, SITE_OG_IMAGE),
     formatDetection: { telephone: false, email: false, address: false },
   };
 }
@@ -39,6 +64,8 @@ export interface PageMetadataInput {
   readonly description: string;
   /** Canonical path of the page, relative to `metadataBase`. */
   readonly path: `/${string}`;
+  /** Card image of the page; the site card when omitted (ADR-0083). */
+  readonly image?: OgImage;
 }
 
 /** The title as rendered in `<title>` (after the template). */
@@ -48,11 +75,13 @@ export function renderedTitle(title: string | null): string {
 
 /**
  * Per-page metadata: title, description, canonical URL, `hreflang` (`tr-TR` and `x-default`;
- * the site has no English pages yet) and the page's Open Graph and Twitter fields. Open Graph is
- * repeated in full because Next.js replaces a parent's `openGraph` object instead of merging it.
+ * the site has no English pages yet) and the page's Open Graph and Twitter fields, including the
+ * card image (`summary_large_image`, ADR-0083). Open Graph is repeated in full because Next.js
+ * replaces a parent's `openGraph` object instead of merging it.
  */
 export function pageMetadata(input: PageMetadataInput): Metadata {
   const fullTitle = renderedTitle(input.title);
+  const image = input.image ?? SITE_OG_IMAGE;
   return {
     title: input.title === null ? { absolute: SITE_TITLE } : input.title,
     description: input.description,
@@ -67,7 +96,8 @@ export function pageMetadata(input: PageMetadataInput): Metadata {
       url: input.path,
       title: fullTitle,
       description: input.description,
+      images: openGraphImages(image),
     },
-    twitter: { card: 'summary', title: fullTitle, description: input.description },
+    twitter: twitterCard(fullTitle, input.description, image),
   };
 }

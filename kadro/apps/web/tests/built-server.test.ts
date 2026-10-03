@@ -165,9 +165,13 @@ describe.skipIf(!BUILT)('production build', () => {
       ),
     ) as { routes: Record<string, unknown>; dynamicRoutes: Record<string, unknown> };
     // The global error page is a client component that Next.js always prerenders; it replaces
-    // the root layout only after a render failure.
-    expect(Object.keys(manifest.routes)).toEqual(['/_global-error']);
-    expect(Object.keys(manifest.dynamicRoutes)).toEqual([]);
+    // the root layout only after a render failure. The card images under `/og/` (ADR-0083) are
+    // PNG route handlers, not pages: they carry no script, so no nonce applies to them.
+    const isCardImage = (route: string) => /^\/og\/(kadro\.png|blog\/[^/]+)$/.test(route);
+    const pages = Object.keys(manifest.routes).filter((route) => !isCardImage(route));
+    expect(pages).toEqual(['/_global-error']);
+    expect(Object.keys(manifest.routes).filter(isCardImage).length).toBeGreaterThan(1);
+    expect(Object.keys(manifest.dynamicRoutes)).toEqual(['/og/blog/[slug]']);
   });
 
   it('puts the CSP nonce on every script of every HTML surface probe', async () => {

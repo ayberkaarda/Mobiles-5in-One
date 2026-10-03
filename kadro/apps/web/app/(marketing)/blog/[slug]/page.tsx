@@ -8,6 +8,7 @@ import { DocumentMeta } from '../../../../components/content/parts';
 import styles from '../../../../components/content/prose.module.css';
 import marketing from '../../../../components/marketing/marketing.module.css';
 import { pageMetadata } from '../../../../components/marketing/metadata';
+import { articleOgImage } from '../../../../components/marketing/og';
 import { JsonLd } from '../../../../components/seo/json-ld';
 import { findDocument, loadCollection } from '../../../../lib/content/documents';
 import { articleStructuredData } from '../../../../lib/server/seo/site-structured-data';
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     title: article.title,
     description: article.description,
     path: `/blog/${article.slug}`,
+    image: articleOgImage(article.slug, article.title),
   });
   return {
     ...metadata,
@@ -57,7 +59,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     .slice(0, RELATED_COUNT);
   return (
     <article>
-      <JsonLd data={articleStructuredData(loadWebEnv().WEB_ORIGIN, article, path)} />
+      <JsonLd
+        data={articleStructuredData(
+          loadWebEnv().WEB_ORIGIN,
+          article,
+          path,
+          articleOgImage(article.slug, article.title).path,
+        )}
+      />
       <header className={marketing.sectionInner}>
         <div className={marketing.pageHeader}>
           <nav aria-label="Konum">
