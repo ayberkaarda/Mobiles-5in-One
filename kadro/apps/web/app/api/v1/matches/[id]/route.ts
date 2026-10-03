@@ -2,6 +2,7 @@ import { ENDPOINTS } from '@kadro/contracts';
 
 import { json, route } from '../../../../../lib/server/http';
 import { deleteMatch, getMatch, updateMatch } from '../../../../../lib/server/matches/matches';
+import { revalidateCallPages } from '../../../../../lib/server/seo/invalidate';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,12 @@ export const PATCH = route({
   query: ENDPOINTS.updateMatch.query,
   body: ENDPOINTS.updateMatch.body,
   limitGroup: ENDPOINTS.updateMatch.rateLimit,
-  handler: async ({ params, body, ctx, runtime }) =>
-    json(await updateMatch({ ctx, runtime }, params.id, body)),
+  handler: async ({ params, body, ctx, runtime }) => {
+    const match = await updateMatch({ ctx, runtime }, params.id, body);
+    // A lock, cancel, reschedule or venue change ends or alters the match's listed call.
+    await revalidateCallPages(runtime, { matchId: params.id });
+    return json(match);
+  },
 });
 
 /** Deletes a draft or cancels an open / locked match (matrix §3.4 `match.delete`, footnote 13). */
@@ -39,5 +44,9 @@ export const DELETE = route({
   query: ENDPOINTS.deleteMatch.query,
   body: ENDPOINTS.deleteMatch.body,
   limitGroup: ENDPOINTS.deleteMatch.rateLimit,
-  handler: async ({ params, ctx, runtime }) => json(await deleteMatch({ ctx, runtime }, params.id)),
+  handler: async ({ params, ctx, runtime }) => {
+    const result = await deleteMatch({ ctx, runtime }, params.id);
+    await revalidateCallPages(runtime, { matchId: params.id });
+    return json(result);
+  },
 });
