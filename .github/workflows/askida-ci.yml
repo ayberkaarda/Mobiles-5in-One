@@ -1,0 +1,330 @@
+name: Askida CI
+
+# Runs on every pull request and every push to main, without a path filter, so the single
+# "Askida CI gate" check always reports and can be the one required status check on main.
+# The "changes" job decides whether the Askida jobs have work to do; when nothing under askida/
+# (or an askida-* workflow, or .gitleaks.toml) changed they are skipped and the gate passes.
+# Same pattern as kadro-ci.yml (kadro/docs/adr/0042-ci-test-job-and-required-check.md).
+# Actions are pinned to full commit SHAs. The workflow lives at the Git repository root.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: askida-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  FLUTTER_VERSION: 3.47.6
+
+jobs:
+  changes:
+    name: Detect Askida changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      askida: ${{ steps.diff.outputs.askida }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Askida
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of askida/ as a deletion inside it. Exit 0 means
+      # no Askida change, 1 a change, anything else is an error and runs every Askida job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base commit; running every Askida job."
+            askida=true
+          else
+            set -- askida/ ':(glob).github/workflows/askida-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) askida=false ;;
+              1) askida=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Askida job."
+                askida=true
+                ;;
+            esac
+          fi
+          echo "askida=$askida" >> "$GITHUB_OUTPUT"
+          echo "Askida jobs run: $askida"
+
+  # Laravel server in askida/server. The PostGIS service container carries the test database.
+  # A skipped test is a failure: PHPUnit/Pest --fail-on-skipped (plus incomplete and risky) makes
+  # the run exit non-zero, and a second check counts <skipped> entries in the JUnit report so a
+  # runner that ignored the flag still cannot pass with skips.
+  server:
+    name: Askida server
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: askida/server
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: askida_test
+          POSTGRES_USER: askida
+          POSTGRES_PASSWORD: askida_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U askida -d askida_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_DATABASE: askida_test
+      DB_USERNAME: askida
+      DB_PASSWORD: askida_ci_only
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      PAYMENT_PROVIDER: fake
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, bcmath, pdo_pgsql, pgsql, redis, pcntl
+          tools: composer:v2
+          coverage: none
+
+      - name: Locate Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: askida-composer-${{ runner.os }}-${{ hashFiles('askida/server/composer.lock') }}
+          restore-keys: askida-composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+
+      - name: Code style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Static analysis (PHPStan)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/junit"
+          php artisan test --fail-on-skipped --fail-on-incomplete --fail-on-risky \
+            --log-junit="$RUNNER_TEMP/junit/server.xml"
+
+      # Independent of the flags above: any skipped or incomplete test case in the report fails.
+      - name: Reject skipped tests
+        run: |
+          report="$RUNNER_TEMP/junit/server.xml"
+          test -s "$report" || { echo "JUnit report missing: $report"; exit 1; }
+          skipped=$(grep -c '<skipped' "$report" || true)
+          echo "Skipped test cases in report: $skipped"
+          if [ "$skipped" -ne 0 ]; then
+            echo "Skipped tests are failures in CI."
+            exit 1
+          fi
+
+  # Flutter app in askida/app. iOS is not built in CI (needs macOS runners and signing);
+  # only the Android dev flavor debug APK is built.
+  app:
+    name: Askida app
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: askida/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format check
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      # flutter test exits non-zero on any failure; this repository keeps no skipped tests, and
+      # the placeholder grep job covers leftover markers.
+      - name: Test
+        run: flutter test
+
+      - name: Build debug APK (dev flavor)
+        run: flutter build apk --debug --flavor dev --dart-define-from-file=env/example.json
+
+  # Leftover-marker grep over the tracked Askida sources, and a secret scan of the full history.
+  # Exclusions are explicit: third-party and generated trees (vendor, build, .dart_tool,
+  # node_modules) and dependency lockfiles. git grep only reads tracked files, so untracked
+  # build output is never scanned anyway; the pathspecs keep that true if something is committed.
+  # Case-sensitive TODO, FIXME, XXX and YOUR_; lorem is matched case-insensitively.
+  placeholder-grep:
+    name: Askida placeholder grep
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Placeholder markers
+        run: |
+          set -- askida/app askida/server \
+            ':(exclude,glob)**/vendor/**' \
+            ':(exclude,glob)**/build/**' \
+            ':(exclude,glob)**/.dart_tool/**' \
+            ':(exclude,glob)**/node_modules/**' \
+            ':(exclude,glob)**/composer.lock' \
+            ':(exclude,glob)**/pubspec.lock' \
+            ':(exclude,glob)**/package-lock.json' \
+            ':(exclude,glob)**/pnpm-lock.yaml' \
+            ':(exclude,glob)**/yarn.lock'
+          found=0
+          if git grep -n -I -E 'TODO|FIXME|XXX|YOUR_' -- "$@"; then found=1; fi
+          if git grep -n -I -i -E 'lorem' -- "$@"; then found=1; fi
+          if [ "$found" -ne 0 ]; then
+            echo "Placeholder markers found under askida/app or askida/server."
+            exit 1
+          fi
+          echo "No placeholder markers found."
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Scans every commit of every ref from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  # The only check to mark as required on main. "changes" must succeed and report askida=true
+  # or askida=false. true: server, app and placeholder-grep must all succeed. false: all three
+  # must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # When a job is added to this workflow, add it to "needs" and to the checks below.
+  gate:
+    name: Askida CI gate
+    needs: [changes, server, app, placeholder-grep]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          ASKIDA_CHANGED: ${{ needs.changes.outputs.askida }}
+          SERVER_RESULT: ${{ needs.server.result }}
+          APP_RESULT: ${{ needs.app.result }}
+          GREP_RESULT: ${{ needs.placeholder-grep.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (askida=${ASKIDA_CHANGED:-<none>})"
+          echo "server: ${SERVER_RESULT:-<none>}"
+          echo "app: ${APP_RESULT:-<none>}"
+          echo "placeholder-grep: ${GREP_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Askida CI failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$ASKIDA_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Askida CI failed: change detection reported no valid askida output."
+              exit 1
+              ;;
+          esac
+          for result in "$SERVER_RESULT" "$APP_RESULT" "$GREP_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Askida CI failed: askida=$ASKIDA_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Askida CI passed (askida=$ASKIDA_CHANGED, all jobs $expected)."
