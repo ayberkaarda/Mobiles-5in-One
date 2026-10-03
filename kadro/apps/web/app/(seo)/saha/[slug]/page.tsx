@@ -177,7 +177,7 @@ export default async function VenuePage({ params }: VenuePageProps) {
                 </span>
                 <div className={styles.reviewBody}>
                   <p className={cx(typeClassName('body'), styles.reviewHead)}>
-                    <strong>{review.authorDisplayName}</strong> · {review.rating}/5 ·{' '}
+                    <strong>{review.authorDisplayName}</strong>, {review.rating}/5,{' '}
                     {REVIEW_DATE.format(new Date(review.createdAt))}
                   </p>
                   {review.text === null ? null : (

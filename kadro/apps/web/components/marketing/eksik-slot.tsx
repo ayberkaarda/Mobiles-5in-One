@@ -8,7 +8,7 @@ import styles from './primitives.module.css';
  * stylesheet (`textMuted` ring and `text` outline on page surfaces, `pitchLine` on the turf).
  *
  * - `number`: optional kit number drawn as an outline inside the ring.
- * - `label`: optional visible caption under the ring, set in capitals (`EKSİK · KALECİ`).
+ * - `label`: optional visible caption under the ring, set in capitals (`EKSİK KALECİ`).
  * - `title`: accessible name of the glyph; without it (and without `label`) the glyph is
  *   decorative (`aria-hidden`).
  * - `size`: diameter in px, default 64 (empty states).
@@ -55,7 +55,8 @@ export function EksikSlot({
             x="32"
             y="41"
             fontSize="26"
-            strokeWidth="1.5"
+            strokeWidth="2.25"
+            strokeLinejoin="round"
             textAnchor="middle"
           >
             {number}

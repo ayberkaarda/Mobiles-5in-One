@@ -52,7 +52,7 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
           <nav aria-label="Ana menü" className={styles.nav}>
             <ul className={styles.navList}>
               {HEADER_LINKS.map((link) => (
-                <li key={link.href}>
+                <li key={link.href} className={link.href === '/' ? styles.navHome : undefined}>
                   <NavLink href={link.href} className={styles.navLink}>
                     {link.label}
                   </NavLink>
@@ -64,7 +64,8 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
             href={`/#${DOWNLOAD_ANCHOR}`}
             className={cx(buttonClassName('secondary'), styles.headerCta)}
           >
-            Uygulamayı indir
+            <span className={styles.ctaLong}>Uygulamayı indir</span>
+            <span className={styles.ctaShort}>İndir</span>
           </a>
         </div>
       </header>
