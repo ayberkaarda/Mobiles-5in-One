@@ -8,7 +8,7 @@ export interface SkeletonBlockProps {
   readonly radius?: number;
 }
 
-/** Static placeholder block; it does not animate, so it needs no reduced-motion handling. */
+/** Static `fillMuted` placeholder block; it does not animate, so no reduced-motion handling. */
 export function SkeletonBlock({ width = '100%', height, radius }: SkeletonBlockProps) {
   const theme = useTheme();
   return (
@@ -16,8 +16,8 @@ export function SkeletonBlock({ width = '100%', height, radius }: SkeletonBlockP
       style={{
         width,
         height,
-        borderRadius: radius ?? theme.radius.sm,
-        backgroundColor: theme.colors.skeleton,
+        borderRadius: radius ?? theme.radius.xs,
+        backgroundColor: theme.colors.fillMuted,
       }}
     />
   );
@@ -48,7 +48,7 @@ export function SkeletonList({ accessibilityLabel, rows = 6, testID }: SkeletonL
         <View
           key={index}
           style={{
-            minHeight: theme.minTouchTarget + theme.spacing['4'],
+            minHeight: theme.layout.rowMinHeight,
             paddingHorizontal: theme.spacing['4'],
             paddingVertical: theme.spacing['3'],
             justifyContent: 'center',
