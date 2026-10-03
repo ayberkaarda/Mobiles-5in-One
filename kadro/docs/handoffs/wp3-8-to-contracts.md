@@ -3,7 +3,8 @@
 - From: mobile deep links and push notifications (`apps/mobile/src/notifications/**`, ADR-0075)
 - To: owner of `packages/contracts` (`jobs.ts`, open-call endpoints) and the worker push templates
   (`apps/worker/src/push/templates.ts`)
-- Status: open
+- Status: resolved with option 1 (ADR-0079): application notifications carry
+  `{ type, applicationId, matchId }`
 
 ## A tapped application notification cannot open its screen
 
