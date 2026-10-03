@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminSessionCookie;
 use App\Http\Middleware\EnforceHttps;
+use App\Http\Middleware\LogRequest;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\Problem\Handler;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend([
             RequestId::class,
+            LogRequest::class,
             SecurityHeaders::class,
         ]);
 
