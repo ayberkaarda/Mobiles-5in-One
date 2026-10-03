@@ -1,5 +1,5 @@
 # Venue directory search (ADR-0053): a name search finds the seeded sample venue, whose page is
-# marked as a sample.
+# marked as a sample and as unverified, without an address.
 appId: app.kadro.mobile
 name: venue-search
 tags:
@@ -35,5 +35,15 @@ tags:
     timeout: 20000
 - assertVisible:
     id: venue-sample-notice
+# The sample venues are unverified: phone and address stay hidden from everyone but the creator
+# (authorization matrix footnote 23, ADR-0053), so the page says so and the facts card, scrolled
+# into view, has no address row.
 - assertVisible:
+    id: venue-unverified-notice
+- scrollUntilVisible:
+    element:
+      id: venue-rating
+    direction: DOWN
+    timeout: 20000
+- assertNotVisible:
     id: venue-address
