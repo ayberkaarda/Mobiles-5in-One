@@ -467,6 +467,187 @@ for (const old of ["fonts/fraunces", "fonts/nunito-sans"]) {
     fail(`${old} is retired in v2 (one family only)`);
 }
 
+// ---------- SVG structure rules (shared) ----------
+const paletteHex = new Set(
+  [...paletteByValue.keys()].filter((v) => HEX6.test(v)),
+);
+const allIds = new Map();
+const svgCount = {};
+const checkSvg = (file, { allowText = false, group = "svg" } = {}) => {
+  svgCount[group] = (svgCount[group] ?? 0) + 1;
+  const p = join(root, file);
+  if (!existsSync(p)) return fail(`missing ${file}`);
+  const s = readFileSync(p, "utf8");
+  if (!s.startsWith("<svg ") || !s.trimEnd().endsWith("</svg>"))
+    return fail(`${file}: must start with <svg and end with </svg>`);
+  if (!/^<svg [^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/.test(s))
+    fail(`${file}: missing svg xmlns`);
+  if (!/^<svg [^>]*viewBox="[-\d. ]+"/.test(s))
+    fail(`${file}: missing viewBox`);
+  for (const bad of [
+    "<image",
+    "<script",
+    "<style",
+    "<!--",
+    "<metadata",
+    "<foreignObject",
+    "<?xml",
+    "@import",
+  ]) {
+    if (s.includes(bad)) fail(`${file}: contains forbidden ${bad}`);
+  }
+  if (/inkscape|sodipodi|illustrator|sketch:|figma|generator/i.test(s))
+    fail(`${file}: editor metadata`);
+  if (/href\s*=\s*"(?!#)/.test(s)) fail(`${file}: external href`);
+  if (/url\((?!#)/.test(s)) fail(`${file}: external url()`);
+  if (/\son[a-z]+\s*=/.test(s)) fail(`${file}: event handler attribute`);
+  if (s.includes("<text") && !allowText)
+    fail(`${file}: <text> is not allowed here`);
+  for (const m of s.matchAll(/#[0-9A-Fa-f]{6}\b/g)) {
+    if (!paletteHex.has(m[0].toUpperCase()))
+      fail(`${file}: colour ${m[0]} is not a palette value`);
+  }
+  for (const [, id] of s.matchAll(/\sid="([^"]+)"/g)) {
+    if (allIds.has(id) && allIds.get(id) !== file)
+      fail(`${file}: id "${id}" also used in ${allIds.get(id)}`);
+    allIds.set(id, file);
+  }
+  const stack = [];
+  const tag = /<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g;
+  let m;
+  let roots = 0;
+  while ((m = tag.exec(s))) {
+    const [, close, name, attrs, selfClose] = m;
+    if ((attrs.match(/"/g) ?? []).length % 2)
+      fail(`${file}: unbalanced quotes in <${name}>`);
+    if (close) {
+      if (stack.pop() !== name) return fail(`${file}: mismatched </${name}>`);
+    } else if (!selfClose) {
+      if (stack.length === 0) roots++;
+      stack.push(name);
+    } else if (stack.length === 0) roots++;
+  }
+  if (stack.length) fail(`${file}: unclosed <${stack.join(">, <")}>`);
+  if (roots !== 1)
+    fail(`${file}: expected exactly one root element, found ${roots}`);
+  return s;
+};
+// Bounding box of absolute-command paths (M L H V A Z), rects and circles, incl. half stroke.
+const bboxOf = (s) => {
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const add = (x, y, pad = 0) => {
+    b.x0 = Math.min(b.x0, x - pad);
+    b.y0 = Math.min(b.y0, y - pad);
+    b.x1 = Math.max(b.x1, x + pad);
+    b.y1 = Math.max(b.y1, y + pad);
+  };
+  for (const [el] of s.matchAll(/<path [^>]*>/g)) {
+    const d = el.match(/\sd="([^"]+)"/)?.[1] ?? "";
+    const sw =
+      el.includes('stroke="') && !el.includes('stroke="none"')
+        ? Number(el.match(/stroke-width="([\d.]+)"/)?.[1] ?? 1) / 2
+        : 0;
+    if (/[a-z]/.test(d.replace(/e-?\d/g, "")))
+      fail("bounding-box check needs absolute path commands");
+    let x = 0;
+    let y = 0;
+    for (const [, cmd, args] of d.matchAll(/([MLHVAZ])([^MLHVAZ]*)/g)) {
+      const n = (args.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+      if (cmd === "M" || cmd === "L") [x, y] = n;
+      else if (cmd === "H") x = n[0];
+      else if (cmd === "V") y = n[0];
+      else if (cmd === "A") [x, y] = n.slice(5, 7);
+      else continue;
+      add(x, y, sw);
+    }
+  }
+  return b;
+};
+
+// ---------- logo (decision section 5) ----------
+const LOGO = [
+  "logo/askida-mark.svg",
+  "logo/askida-wordmark-light.svg",
+  "logo/askida-wordmark-dark.svg",
+  "logo/askida-wordmark-mono.svg",
+  "logo/askida-app-icon.svg",
+  "logo/askida-adaptive-foreground.svg",
+  "logo/askida-adaptive-monochrome.svg",
+  "logo/askida-favicon.svg",
+  "logo/askida-favicon-32.svg",
+];
+const LOGO_PNG = [
+  "logo/png/askida-app-icon-1024.png",
+  "logo/png/askida-adaptive-foreground-1024.png",
+  "logo/png/askida-adaptive-monochrome-1024.png",
+];
+const TAG_BEARING = LOGO.filter((f) => !f.includes("wordmark"));
+for (const f of LOGO) {
+  const s = checkSvg(f, { group: "logo" });
+  if (!s) continue;
+  if (TAG_BEARING.includes(f)) {
+    // The tag hole is a cutout: an evenodd path with two closed subpaths, never a drawn circle.
+    const tagPath = [...s.matchAll(/<path [^>]*>/g)]
+      .map((m) => m[0])
+      .find((p) => p.includes('fill-rule="evenodd"'));
+    if (!tagPath || (tagPath.match(/Z/g) ?? []).length < 2)
+      fail(`${f}: tag hole must be an evenodd cutout`);
+    if (/<circle/.test(s)) fail(`${f}: the hole must not be a drawn circle`);
+  }
+  if (
+    f.includes("wordmark") &&
+    !/<path fill="(#[0-9A-F]{6}|currentColor)" d="/.test(s)
+  )
+    fail(`${f}: wordmark must be outlined paths`);
+}
+for (const f of [
+  "logo/askida-adaptive-foreground.svg",
+  "logo/askida-adaptive-monochrome.svg",
+]) {
+  if (!existsSync(join(root, f))) continue;
+  const s = readFileSync(join(root, f), "utf8");
+  if (/transform=/.test(s))
+    fail(`${f}: no transforms (bounding-box check uses absolute coordinates)`);
+  const b = bboxOf(s);
+  const far = Math.max(
+    ...[
+      [b.x0, b.y0],
+      [b.x1, b.y0],
+      [b.x0, b.y1],
+      [b.x1, b.y1],
+    ].map(([x, y]) => Math.hypot(x - 54, y - 54)),
+  );
+  const rail = b.x1 - b.x0;
+  if (far > 33)
+    fail(
+      `${f}: content box reaches ${far.toFixed(1)} dp from the centre (> 33, outside the safe circle)`,
+    );
+  if (rail > 54) fail(`${f}: rail ${rail.toFixed(1)} dp wide (> 54)`);
+  console.log(
+    `ok   ${f}: box ${b.x0.toFixed(1)},${b.y0.toFixed(1)}..${b.x1.toFixed(1)},${b.y1.toFixed(1)}, corner ${far.toFixed(1)} dp from centre (<= 33), width ${rail.toFixed(1)} dp (<= 54)`,
+  );
+}
+
+// ---------- rasters: signature, size, no metadata chunks ----------
+const checkPng = (f, ew, eh) => {
+  const p = join(root, f);
+  if (!existsSync(p)) return fail(`missing ${f}`);
+  const b = readFileSync(p);
+  if (b.readUInt32BE(0) !== 0x89504e47) return fail(`${f}: not a PNG`);
+  const w = b.readUInt32BE(16);
+  const h = b.readUInt32BE(20);
+  if (w !== ew || h !== eh) fail(`${f}: expected ${ew}x${eh}, got ${w}x${h}`);
+  for (let o = 8; o < b.length;) {
+    const len = b.readUInt32BE(o);
+    const type = b.toString("latin1", o + 4, o + 8);
+    if (["tEXt", "iTXt", "zTXt", "eXIf", "iCCP"].includes(type))
+      fail(`${f}: carries a ${type} metadata chunk`);
+    o += 12 + len;
+  }
+  console.log(`ok   ${f}: ${w}x${h}, no metadata chunks`);
+};
+for (const f of LOGO_PNG) checkPng(f, 1024, 1024);
+
 // ---------- result ----------
 for (const k of Object.keys(results).sort()) {
   const low = results[k].sort((a, b) => a.r - b.r).slice(0, 3);
