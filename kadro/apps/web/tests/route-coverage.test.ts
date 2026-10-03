@@ -298,7 +298,6 @@ describe('upload, push-token, deletion, webhook and admin routes match their reg
     'registerPushToken',
     'deleteMe',
     'receiveRevenueCatWebhook',
- feat/admin-moderation
     // Admin API (matrix §3.8, ADR-0064).
     'adminStepUp',
     'adminTotpEnroll',
@@ -315,9 +314,7 @@ describe('upload, push-token, deletion, webhook and admin routes match their reg
     'setUserRole',
     'setUserDeactivated',
     'listAuditLogs',
-
     'listDistricts',
- main
   ] as const;
 
   for (const id of ids) {
