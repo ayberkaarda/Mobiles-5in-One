@@ -32,7 +32,7 @@ import {
   Section,
 } from '../../src/teams/components';
 import { useTheme } from '../../src/theme';
-import { Button, ErrorState, Text, TextField } from '../../src/ui';
+import { Button, Card, ErrorState, Text, TextField } from '../../src/ui';
 
 function param(value: string | string[] | undefined): string {
   return typeof value === 'string' ? value : '';
@@ -53,14 +53,16 @@ function OwnApplication({
   const withdraw = useSetApplicationStatus(callsApi, callId);
   return (
     <View testID="own-application">
-      <Text accessibilityLiveRegion="polite" testID="own-application-status">
-        {t(`apply.state.${application.status}`)}
-      </Text>
-      {application.message === null ? null : (
-        <Text tone="muted" style={{ marginTop: theme.spacing['2'] }}>
-          {t('apply.yourMessage', { message: application.message })}
+      <Card>
+        <Text variant="bodyStrong" accessibilityLiveRegion="polite" testID="own-application-status">
+          {t(`apply.state.${application.status}`)}
         </Text>
-      )}
+        {application.message === null ? null : (
+          <Text variant="footnote" tone="muted" style={{ marginTop: theme.spacing['2'] }}>
+            {t('apply.yourMessage', { message: application.message })}
+          </Text>
+        )}
+      </Card>
       {canWithdraw(application) ? (
         <View style={{ marginTop: theme.spacing['3'] }}>
           <ConfirmAction

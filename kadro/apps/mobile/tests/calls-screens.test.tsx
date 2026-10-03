@@ -12,6 +12,7 @@ import MatchDetailScreen from '../app/takim/[id]/mac/[matchId]/index';
 import { session } from '../src/api/instance';
 import { type MeResponse, type TeamDetail, type TeamRole } from '../src/api/contracts';
 import { NO_FILTERS } from '../src/calls/calls-api';
+import { CallFacts } from '../src/calls/components';
 import {
   type Application,
   type DistrictPublic,
@@ -315,8 +316,10 @@ describe('Eksik Var tab', () => {
     const client = createTestQueryClient();
     await render(<OpenCallsTab />, client);
     expect(await screen.findByText('Moda Gençlik')).toBeTruthy();
-    expect(screen.getByText('2 eksik')).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/Kadıköy, İstanbul · Kaleci/)).toBeTruthy());
+    // The count is an outlined figure; "2 eksik" is its spoken text.
+    expect(screen.getByLabelText('2 eksik')).toBeTruthy();
+    expect(screen.getByText('Kaleci')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Kadıköy, İstanbul')).toBeTruthy());
     await fireEvent.press(screen.getByTestId(`open-call-${CALL_ID}`));
     expect(routerCalls().at(-1)).toEqual({ method: 'push', href: `/ilan/${CALL_ID}` });
     expect(client.getQueryData(callKeys.call(CALL_ID))).toMatchObject({ teamName: 'Moda Gençlik' });
@@ -895,5 +898,34 @@ describe('match screen entry', () => {
     expect(await screen.findByTestId('match-status')).toBeTruthy();
     await settle();
     expect(screen.queryByRole('button', { name: 'Eksik Var ilanı' })).toBeNull();
+  });
+});
+
+describe('call facts', () => {
+  it.each(['light', 'dark'] as const)(
+    'draws the outlined count with one empty slot per missing player (%s)',
+    async (scheme) => {
+      await renderWithProviders(<CallFacts call={publicCall()} place="Moda Sahası" />, {
+        i18n: i18nWithCatalog(),
+        scheme,
+      });
+      expect(screen.getByTestId('call-missing').props.accessibilityLabel).toBe('Eksik oyuncu: 2');
+      expect(screen.getByLabelText('Yer: Moda Sahası')).toBeTruthy();
+      expect(screen.getByLabelText('Mevki: Kaleci')).toBeTruthy();
+      expect(screen.getAllByTestId(/^missing-slot-/, { includeHiddenElements: true })).toHaveLength(
+        2,
+      );
+    },
+  );
+
+  it('shows only the figure for a count too large to draw', async () => {
+    await renderWithProviders(<CallFacts call={publicCall({ missingCount: 7 })} place={null} />, {
+      i18n: i18nWithCatalog(),
+    });
+    expect(screen.getByTestId('call-missing').props.accessibilityLabel).toBe('Eksik oyuncu: 7');
+    expect(screen.queryAllByTestId(/^missing-slot-/, { includeHiddenElements: true })).toHaveLength(
+      0,
+    );
+    expect(screen.queryByTestId('call-place')).toBeNull();
   });
 });

@@ -5,18 +5,22 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { type CallFilters, NO_FILTERS } from '../../../src/calls/calls-api';
-import { DistrictPicker, levelLabel, positionLabel } from '../../../src/calls/components';
+import {
+  DistrictPicker,
+  levelLabel,
+  OpenCallRow,
+  positionLabel,
+} from '../../../src/calls/components';
 import { type Level, type OpenCallPublic, type Position } from '../../../src/calls/contracts';
 import { districtLabel, LEVEL_OPTIONS, POSITION_OPTIONS } from '../../../src/calls/form';
 import { callsApi } from '../../../src/calls/instance';
 import { callHref } from '../../../src/calls/links';
 import { callKeys, districtsQuery, openCallListQuery } from '../../../src/calls/queries';
-import { formatDateTime } from '../../../src/i18n/format';
 import { districtFromLink } from '../../../src/links/district';
 import { ChoiceGroup } from '../../../src/matches/components';
 import { ListQueryView, QueryBoundary } from '../../../src/query';
 import { useTheme } from '../../../src/theme';
-import { Button, ListItem, Screen, Text } from '../../../src/ui';
+import { Button, Chip, Screen, Text } from '../../../src/ui';
 
 const ANY = 'any';
 
@@ -32,7 +36,7 @@ function activeFilterCount(filters: CallFilters): number {
  */
 export default function OpenCallsTab() {
   const { t: tc } = useTranslation('common');
-  const { t, i18n } = useTranslation('opencalls');
+  const { t } = useTranslation('opencalls');
   const theme = useTheme();
   const router = useRouter();
   const client = useQueryClient();
@@ -70,9 +74,9 @@ export default function OpenCallsTab() {
   return (
     <Screen title={tc('tabs.openCalls')}>
       <View style={{ paddingHorizontal: theme.spacing['4'], paddingBottom: theme.spacing['3'] }}>
-        <Button
+        <Chip
           label={filtered === 0 ? t('filters.show') : t('filters.showCount', { number: filtered })}
-          variant="secondary"
+          selected={showFilters || filtered > 0}
           accessibilityHint={t('filters.hint')}
           onPress={() => setShowFilters((value) => !value)}
           testID="filters-toggle"
@@ -145,21 +149,7 @@ export default function OpenCallsTab() {
           items={calls}
           keyExtractor={(call) => call.id}
           renderItem={(call) => (
-            <ListItem
-              title={call.teamName}
-              subtitle={[
-                formatDateTime(call.startsAt, i18n.language),
-                call.format,
-                place(call),
-                positionLabel(t, call.position),
-              ]
-                .filter((part): part is string => part !== null && part !== '')
-                .join(' · ')}
-              meta={t('list.missing', { number: call.missingCount })}
-              accessibilityHint={t('list.openHint')}
-              onPress={() => open(call)}
-              testID={`open-call-${call.id}`}
-            />
+            <OpenCallRow call={call} place={place(call)} onPress={() => open(call)} />
           )}
           empty={
             filtered === 0
