@@ -912,7 +912,9 @@ describe('payments', () => {
     // Others show the base share; the viewer's row shows the server's exact share.
     expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
     expect(screen.getByLabelText('Ali Kaptan (sen), ₺333,34, Ödemedi')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Zeynep ödedi olarak işaretle' }));
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Zeynep ödedi olarak işaretle' }),
+    );
     await waitFor(() => expect(bodies).toEqual([{ paid: true }]));
     // Pessimistic: nothing changes before the answer.
     expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
