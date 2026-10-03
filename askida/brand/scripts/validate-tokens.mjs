@@ -1,4 +1,5 @@
-// Validates askida/brand: palette, schemes, WCAG contrast, type, spacing, fonts, logo assets.
+// Validates askida/brand: palette, schemes, craft roles, WCAG contrast, texture ceiling,
+// type, spacing, fonts, logo/craft/icon SVGs, rasters and the brand board.
 // Node only, no dependencies. Usage: node askida/brand/scripts/validate-tokens.mjs
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -95,6 +96,25 @@ for (const s of schemeNames) {
   }
 }
 
+// ---------- craft roles: parity, palette membership ----------
+const craft = tokens.color.craft ?? {};
+const craftSets = schemeNames.map((s) =>
+  Object.keys(craft[s] ?? {})
+    .sort()
+    .join(","),
+);
+if (new Set(craftSets).size !== 1)
+  fail("craft role names differ between schemes");
+for (const s of schemeNames) {
+  for (const [r, v] of Object.entries(craft[s] ?? {})) {
+    if (!HEX6.test(v)) fail(`craft.${s}.${r} ${v} has the wrong hex form`);
+    if (!paletteByValue.has(v))
+      fail(`craft.${s}.${r} ${v} is not declared in color.palette`);
+    if (r in (schemes[s] ?? {})) fail(`craft.${s}.${r} shadows a scheme role`);
+  }
+}
+const role = (s, k) => schemes[s]?.[k] ?? craft[s]?.[k];
+
 // ---------- contrast ----------
 const lum = (hex) => {
   const [r, g, b] = [1, 3, 5]
@@ -110,8 +130,8 @@ const lowest = {};
 const check = (kind, min, pairs) => {
   for (const s of schemeNames) {
     for (const [fgRole, bgRole] of pairs) {
-      const fg = schemes[s]?.[fgRole];
-      const bg = schemes[s]?.[bgRole];
+      const fg = role(s, fgRole);
+      const bg = role(s, bgRole);
       if (!fg || !bg) {
         fail(`${kind} pair ${s}: ${fgRole}/${bgRole} uses an unknown role`);
         continue;
@@ -141,6 +161,23 @@ for (const n of tokens.color.notValidForText) {
     console.log(
       `doc  not for text: ${n.foreground} on ${n.background} = ${r.toFixed(2)}`,
     );
+}
+
+// Textures sit under headers, hero, ticket and plate only: the motif must stay
+// within textureCeiling of its base so it never competes with text.
+const ceiling = tokens.contrast.textureCeiling;
+if (!(ceiling > 1 && ceiling <= 1.25))
+  fail("textureCeiling must be in (1, 1.25]");
+for (const s of schemeNames) {
+  for (const [motif, base] of tokens.contrast.texturePairs) {
+    const r = ratio(role(s, motif), role(s, base));
+    if (r > ceiling)
+      fail(`texture ${s} ${motif} on ${base} = ${r.toFixed(2)} (> ${ceiling})`);
+    else
+      console.log(
+        `ok   texture ${s.padEnd(5)} ${motif} on ${base} = ${r.toFixed(2)} (<= ${ceiling})`,
+      );
+  }
 }
 
 // ---------- typography ----------
@@ -252,11 +289,31 @@ for (const f of typo.fonts) {
 }
 
 // ---------- assets ----------
-const { logo, raster, licences } = tokens.assets;
-for (const a of [...logo, ...raster, ...licences])
+const {
+  logo,
+  raster,
+  licences,
+  craft: craftFiles,
+  textures,
+  icons,
+  board,
+} = tokens.assets;
+const textureFiles = textures.map((t) => t.file);
+for (const a of [
+  ...logo,
+  ...raster,
+  ...licences,
+  ...craftFiles,
+  ...textureFiles,
+  ...icons,
+  ...board,
+])
   if (!existsSync(join(root, a))) fail(`missing asset ${a}`);
 
-// SVG: one <svg> root, balanced tags, viewBox, no raster/external/script/text/comments/metadata.
+// SVG: one <svg> root, balanced tags, viewBox, no raster, external reference, script,
+// comment, metadata or generator note. <text> only where a template needs it.
+const TEXT_ALLOWED = /craft\/askida-ticket-(light|dark)\.svg$/;
+const allIds = new Map();
 const checkSvg = (file) => {
   const s = readFileSync(join(root, file), "utf8");
   if (!s.startsWith("<svg ") || !s.trimEnd().endsWith("</svg>"))
@@ -268,14 +325,28 @@ const checkSvg = (file) => {
   for (const bad of [
     "<image",
     "<script",
-    "<text",
     "<!--",
     "<metadata",
-    "href=",
     "<foreignObject",
     "<?xml",
+    "<style",
+    "@import",
   ]) {
     if (s.includes(bad)) fail(`${file}: contains forbidden ${bad}`);
+  }
+  if (/generator|inkscape|sodipodi|illustrator|sketch:|figma/i.test(s))
+    fail(`${file}: carries editor or generator metadata`);
+  if (/href\s*=\s*"(?!#)/.test(s)) fail(`${file}: external href`);
+  if (/url\((?!#)/.test(s)) fail(`${file}: external url()`);
+  if (/\son[a-z]+\s*=/.test(s)) fail(`${file}: event handler attribute`);
+  if (s.includes("<text") && !TEXT_ALLOWED.test(file))
+    fail(`${file}: <text> only allowed in the ticket template`);
+  for (const [, id] of s.matchAll(/\sid="([^"]+)"/g)) {
+    if (allIds.has(id) && allIds.get(id) !== file)
+      fail(
+        `${file}: id "${id}" also used in ${allIds.get(id)} (breaks inline use)`,
+      );
+    allIds.set(id, file);
   }
   const stack = [];
   const tag = /<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g;
@@ -295,11 +366,62 @@ const checkSvg = (file) => {
   if (stack.length) fail(`${file}: unclosed <${stack.join(">, <")}>`);
   if (roots !== 1)
     fail(`${file}: expected exactly one root element, found ${roots}`);
+  return s;
 };
+const hexesIn = (s) =>
+  [...s.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0].toUpperCase());
 for (const f of logo) if (existsSync(join(root, f))) checkSvg(f);
+for (const f of craftFiles) {
+  if (!existsSync(join(root, f))) continue;
+  const s = checkSvg(f);
+  if (!s) continue;
+  for (const h of hexesIn(s))
+    if (!paletteByValue.has(h))
+      fail(`${f}: colour ${h} is not a palette value`);
+}
+for (const t of textures) {
+  if (!existsSync(join(root, t.file))) continue;
+  const s = checkSvg(t.file);
+  if (!s) continue;
+  if (!s.includes("<pattern ")) fail(`${t.file}: must define an SVG <pattern>`);
+  const motif = role(t.scheme, t.motif);
+  const base = role(t.scheme, t.base);
+  for (const h of new Set(hexesIn(s))) {
+    const r = ratio(h, base);
+    if (h !== motif)
+      fail(`${t.file}: colour ${h} is not ${t.motif} (${motif})`);
+    if (r > ceiling)
+      fail(
+        `${t.file}: ${h} on ${t.base} ${base} = ${r.toFixed(2)} (> ${ceiling})`,
+      );
+    else
+      console.log(
+        `ok   ${t.file}: ${h} on ${t.base} ${base} = ${r.toFixed(2)} (<= ${ceiling})`,
+      );
+  }
+}
+for (const f of icons) {
+  if (!existsSync(join(root, f))) continue;
+  const s = checkSvg(f);
+  if (!s) continue;
+  if (!s.includes('viewBox="0 0 24 24"')) fail(`${f}: icons use a 24 grid`);
+  if (hexesIn(s).length) fail(`${f}: icons must use currentColor only`);
+  if (!/stroke-width="2"/.test(s) || !/stroke-linecap="round"/.test(s))
+    fail(`${f}: icons use a 2 px round stroke`);
+}
 
-// PNG: signature, 1024x1024, no text metadata chunks.
-for (const f of raster) {
+// Board page: local files only (no network requests).
+if (existsSync(join(root, "board/board.html"))) {
+  const html = readFileSync(join(root, "board/board.html"), "utf8");
+  const urls = [...html.matchAll(/https?:\/\/[^\s"')%]+/g)]
+    .map((m) => m[0])
+    .filter((u) => u !== "http://www.w3.org/2000/svg");
+  if (urls.length) fail(`board.html requests external resources: ${urls[0]}`);
+}
+
+// PNG: signature, expected size, no text metadata chunks.
+const pngSize = (f) => (f.startsWith("board/") ? [1920, 1080] : [1024, 1024]);
+for (const f of [...raster, ...board.filter((x) => x.endsWith(".png"))]) {
   const p = join(root, f);
   if (!existsSync(p)) continue;
   const b = readFileSync(p);
@@ -307,9 +429,10 @@ for (const f of raster) {
     fail(`${f}: not a PNG`);
     continue;
   }
+  const [ew, eh] = pngSize(f);
   const w = b.readUInt32BE(16);
   const h = b.readUInt32BE(20);
-  if (w !== 1024 || h !== 1024) fail(`${f}: expected 1024x1024, got ${w}x${h}`);
+  if (w !== ew || h !== eh) fail(`${f}: expected ${ew}x${eh}, got ${w}x${h}`);
   for (let o = 8; o < b.length;) {
     const len = b.readUInt32BE(o);
     const type = b.toString("latin1", o + 4, o + 8);
@@ -318,6 +441,9 @@ for (const f of raster) {
     o += 12 + len;
   }
 }
+console.log(
+  `svg checked: ${logo.length} logo, ${craftFiles.length} craft, ${textureFiles.length} texture, ${icons.length} icon; unique ids: ${allIds.size}`,
+);
 
 // ---------- result ----------
 for (const k of Object.keys(lowest).sort())
