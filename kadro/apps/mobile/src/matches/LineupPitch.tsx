@@ -17,7 +17,7 @@ export interface LineupPitchProps {
   readonly sideB: readonly PitchPlayer[];
   /** Players per side (`ceil(slots / 2)`); `null` in the guest view, which has no slot count. */
   readonly capacity: number | null;
-  /** Spoken text of the count line ("A takımı: 7/7 · B takımı: 6/7"). */
+  /** Spoken text of the count line ("A takımı: 7/7, B takımı: 6/7"). */
   readonly countsLabel: string;
   readonly testID?: string;
 }

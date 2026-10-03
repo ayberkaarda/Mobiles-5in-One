@@ -8,9 +8,11 @@ import { Text } from './Text';
  * `sample`: the ÖRNEK tag (`warning` fill, `onWarning` label), beside the title it qualifies.
  * `verified`: no fill, a `primaryText` check and the word ("Doğrulanmış").
  * `neutral`: `fillMuted` with `text`. `inverse`: `inverse` with `onInverse`.
- * `positive` / `negative`: state fills (`primary` / `danger`) with their on-colours.
+ * `positive` / `warning` / `negative`: state fills (`primary` / `warning` / `danger`) with their
+ * on-colours ("Geliyorum" / "Belki" / "Gelmiyorum").
  */
-export type BadgeTone = 'sample' | 'verified' | 'neutral' | 'inverse' | 'positive' | 'negative';
+export type BadgeTone =
+  'sample' | 'verified' | 'neutral' | 'inverse' | 'positive' | 'warning' | 'negative';
 
 export interface BadgeProps {
   readonly label: string;
@@ -23,6 +25,7 @@ const FILL: Readonly<Record<Exclude<BadgeTone, 'verified'>, [ColorRole, ColorRol
   neutral: ['fillMuted', 'text'],
   inverse: ['inverse', 'onInverse'],
   positive: ['primary', 'onPrimary'],
+  warning: ['warning', 'onWarning'],
   negative: ['danger', 'onDanger'],
 };
 

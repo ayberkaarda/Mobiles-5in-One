@@ -143,13 +143,13 @@ describe('LineupPitch', () => {
           sideA={sideA}
           sideB={sideB}
           capacity={3}
-          countsLabel="A takımı: 2/3 · B takımı: 1/3"
+          countsLabel="A takımı: 2/3, B takımı: 1/3"
           testID="lineup"
         />,
         { scheme },
       );
       expect(screen.getByTestId('lineup-counts').props.accessibilityLabel).toBe(
-        'A takımı: 2/3 · B takımı: 1/3',
+        'A takımı: 2/3, B takımı: 1/3',
       );
       expect(screen.getByText('2/3')).toBeTruthy();
       expect(screen.getByText('1/3')).toBeTruthy();
@@ -176,7 +176,7 @@ describe('LineupPitch', () => {
         sideA={sideA}
         sideB={sideB}
         capacity={null}
-        countsLabel="A takımı · B takımı"
+        countsLabel="A takımı, B takımı"
         testID="lineup"
       />,
     );

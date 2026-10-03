@@ -16,6 +16,8 @@ export interface SegmentOption<T extends string> {
   readonly tone?: SegmentTone;
   /** Spoken name when the visible label is not enough. */
   readonly accessibilityLabel?: string;
+  /** This option alone is unavailable (e.g. "Belki" once the match is locked). */
+  readonly disabled?: boolean;
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -38,7 +40,13 @@ const SELECTED: Readonly<Record<SegmentTone, [ColorRole, ColorRole]>> = {
   out: ['danger', 'onDanger'],
 };
 
-function segmentColors(theme: Theme, tone: SegmentTone, checked: boolean, locked: boolean) {
+function segmentColors(
+  theme: Theme,
+  tone: SegmentTone,
+  checked: boolean,
+  locked: boolean,
+  unavailable: boolean,
+) {
   if (locked) {
     // The choice stays readable on the locked ground: `surface` with `text`, others muted.
     return checked
@@ -46,7 +54,10 @@ function segmentColors(theme: Theme, tone: SegmentTone, checked: boolean, locked
       : { background: 'transparent', foreground: theme.colors.textMuted };
   }
   if (!checked) {
-    return { background: 'transparent', foreground: theme.colors.textMuted };
+    return {
+      background: unavailable ? theme.colors.fillMuted : 'transparent',
+      foreground: theme.colors.textMuted,
+    };
   }
   // eslint-disable-next-line security/detect-object-injection -- tone is a typed SegmentTone
   const [fill, on] = SELECTED[tone];
@@ -87,14 +98,21 @@ export function SegmentedControl<T extends string>({
     >
       {options.map((option) => {
         const checked = option.value === selected;
-        const colors = segmentColors(theme, option.tone ?? 'neutral', checked, disabled);
+        const inactive = disabled || option.disabled === true;
+        const colors = segmentColors(
+          theme,
+          option.tone ?? 'neutral',
+          checked,
+          disabled,
+          option.disabled === true,
+        );
         return (
           <Pressable
             key={option.value}
             accessibilityRole="radio"
             accessibilityLabel={option.accessibilityLabel ?? option.label}
-            accessibilityState={{ checked, disabled }}
-            disabled={disabled}
+            accessibilityState={{ checked, disabled: inactive }}
+            disabled={inactive}
             onPress={() => {
               if (!checked) {
                 onSelect(option.value);
@@ -108,7 +126,7 @@ export function SegmentedControl<T extends string>({
                 paddingHorizontal: theme.spacing['2'],
                 borderRadius: theme.radius.sm - 2,
                 backgroundColor:
-                  pressed && !checked && !disabled ? theme.colors.pressed : colors.background,
+                  pressed && !checked && !inactive ? theme.colors.pressed : colors.background,
               },
             ]}
           >

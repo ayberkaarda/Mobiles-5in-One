@@ -3,10 +3,19 @@ import type { ExpoConfig } from 'expo/config';
 // Expo evaluates this file with require(), and `@kadro/config` only exposes an ESM `import`
 // condition, so the built module is referenced by path (turbo builds the package first).
 import { loadMobilePublicEnv } from '../../packages/config/dist/mobile.js';
+// The brand tokens as JSON: a plain data file loads under require() without a transform.
+import brandTokens from '../../packages/brand/theme/tokens.json';
 
 type IntentFilter = NonNullable<NonNullable<ExpoConfig['android']>['intentFilters']>[number];
 
 const APP_SCHEME = 'kadro';
+
+/**
+ * Root view background of the native app before the first React frame: the light `background`
+ * role of the brand tokens (design direction §4.11). A dark launch background needs the
+ * `expo-splash-screen` / `expo-system-ui` config plugins, which the app does not ship yet.
+ */
+export const NATIVE_BACKGROUND_LIGHT: string = brandTokens.color.theme.light.background;
 
 /**
  * Web paths the app opens as universal / app links (ADR-0034 invite links plus the venue, open
@@ -110,7 +119,7 @@ export default function createConfig(): ExpoConfig {
     version: '0.1.0',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
-    backgroundColor: '#F4F6F0',
+    backgroundColor: NATIVE_BACKGROUND_LIGHT,
     ios: {
       bundleIdentifier: 'app.kadro.mobile',
       supportsTablet: false,
