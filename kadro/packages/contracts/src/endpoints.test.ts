@@ -87,9 +87,9 @@ function rowMatches(row: MatrixRow, method: string, path: string): boolean {
  * (the matrix is not owned by the contracts package). Each id leaves this list when its row lands.
  */
 const PENDING_MATRIX_ROWS: readonly EndpointId[] = [
-  'getMyStats',
+  // Public reference data without a policy action: its matrix row is documented in prose
+  // (`none`) and is not a parseable `action` row, so it stays out of the row mapping below.
   'listDistricts',
-  'adminTotpConfirm',
 ];
 
 describe('registry structure', () => {
