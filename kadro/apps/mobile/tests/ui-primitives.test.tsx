@@ -158,6 +158,20 @@ describe('new primitives', () => {
     expect(screen.getByLabelText('Doğrulanmış')).toBeTruthy();
   });
 
+  it.each([
+    ['light', lightTheme],
+    ['dark', darkTheme],
+  ] as const)(
+    'Badge: the warning tone uses the warning roles in the %s scheme',
+    async (scheme, theme) => {
+      await renderWithProviders(<Badge label="Belki" tone="warning" testID="maybe" />, { scheme });
+      expect(flatStyle(screen.getByTestId('maybe').props.style).backgroundColor).toBe(
+        theme.colors.warning,
+      );
+      expect(flatStyle(screen.getByText('Belki').props.style).color).toBe(theme.colors.onWarning);
+    },
+  );
+
   it('Chip: rest and selected fills, pressable with a selected state', async () => {
     const onPress = vi.fn();
     await renderWithProviders(
@@ -233,6 +247,37 @@ describe('new primitives', () => {
     expect(screen.getByTestId('rsvp-out').props.accessibilityState).toMatchObject({
       disabled: true,
     });
+  });
+
+  it('SegmentedControl: a single unavailable option is muted and ignores presses', async () => {
+    const onSelect = vi.fn();
+    await renderWithProviders(
+      <SegmentedControl
+        label="Katılımın"
+        options={[
+          { value: 'in', label: 'Geliyorum', tone: 'in' },
+          { value: 'maybe', label: 'Belki', tone: 'maybe', disabled: true },
+          { value: 'out', label: 'Gelmiyorum', tone: 'out' },
+        ]}
+        selected="in"
+        onSelect={onSelect}
+        testID="rsvp"
+      />,
+    );
+    const maybe = screen.getByTestId('rsvp-maybe');
+    expect(maybe.props.accessibilityState).toEqual({ checked: false, disabled: true });
+    expect(flatStyle(maybe.props.style).backgroundColor).toBe(lightTheme.colors.fillMuted);
+    expect(flatStyle(screen.getByText('Belki').props.style).color).toBe(
+      lightTheme.colors.textMuted,
+    );
+    // The group itself stays enabled: the other options still answer.
+    expect(flatStyle(screen.getByTestId('rsvp').props.style).backgroundColor).toBe(
+      lightTheme.colors.surface,
+    );
+    await fireEvent.press(maybe);
+    expect(onSelect).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('rsvp-out'));
+    expect(onSelect).toHaveBeenCalledWith('out');
   });
 
   it('Numeral: condensed tabular figures; the outlined count keeps its spoken text', async () => {
