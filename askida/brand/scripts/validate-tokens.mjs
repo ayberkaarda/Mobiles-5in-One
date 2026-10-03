@@ -736,6 +736,28 @@ const checkPng = (f, ew, eh) => {
 };
 for (const f of LOGO_PNG) checkPng(f, 1024, 1024);
 
+// ---------- brand board ----------
+const BOARD = "board/board.html";
+if (!existsSync(join(root, BOARD))) fail(`missing ${BOARD}`);
+else {
+  const html = readFileSync(join(root, BOARD), "utf8");
+  const urls = [
+    ...html.matchAll(/(?:https?:)?\/\/[a-z0-9.-]+\.[a-z]{2,}[^\s"')]*/gi),
+  ]
+    .map((m) => m[0])
+    .filter((u) => !u.startsWith("http://www.w3.org/2000/svg"));
+  if (urls.length) fail(`${BOARD} references the network: ${urls[0]}`);
+  if (!html.includes('lang="tr"')) fail(`${BOARD}: root must carry lang="tr"`);
+  if (!/ÇĞİÖŞÜ çğıöşü ₺ 0123456789/.test(html))
+    fail(`${BOARD}: type sample line missing`);
+  for (const f of [ff.web[0].file, ff.web[1].file, ff.web[2].file])
+    if (!html.includes(`../${f}`))
+      fail(`${BOARD}: must load ${f} by relative path`);
+  console.log(`ok   ${BOARD}: no network URL, lang="tr", fonts from ../fonts`);
+}
+for (const sc of schemeNames)
+  checkPng(`board/askida-board-${sc}.png`, 1920, 1080);
+
 // ---------- guardrails (decision section 8) ----------
 const walk = (dir) =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
