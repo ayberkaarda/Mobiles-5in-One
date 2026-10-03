@@ -1,17 +1,3 @@
-/**
- * Amount in kuruş as Turkish lira: whole lira without decimals (`₺1.500`), otherwise with two
- * (`₺233,34`), so a per-player share is shown to the kuruş.
- */
-export function formatMinor(minor: number, language: string): string {
-  const whole = minor % 100 === 0;
-  return new Intl.NumberFormat(language, {
-    style: 'currency',
-    currency: 'TRY',
-    minimumFractionDigits: whole ? 0 : 2,
-    maximumFractionDigits: whole ? 0 : 2,
-  }).format(minor / 100);
-}
-
 export interface PaymentRow {
   readonly userId: string;
   readonly paid: boolean;

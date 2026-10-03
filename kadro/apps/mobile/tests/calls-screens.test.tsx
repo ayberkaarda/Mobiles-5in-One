@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native/p
 import { type QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
+import { StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
@@ -21,6 +22,7 @@ import {
 } from '../src/calls/contracts';
 import { callKeys } from '../src/calls/queries';
 import { type MatchGuestView, type MatchMemberView } from '../src/matches/contracts';
+import { lightTheme } from '../src/theme';
 import { issueTokens, problem } from './support/api';
 import { deferred } from './support/deferred';
 import { __setSearchParams, routerCalls } from './support/expo-router';
@@ -337,6 +339,13 @@ describe('Eksik Var tab', () => {
     expect(await screen.findByText('Moda Gençlik')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Filtrele' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Rekabetçi' }));
+    // A selected filter uses the inverse chip colours, like the "Filtrele" toggle.
+    const chosen = screen.getByRole('radio', { name: 'Rekabetçi' });
+    expect(chosen.props.accessibilityState).toMatchObject({ checked: true });
+    expect(StyleSheet.flatten(chosen.props.style).backgroundColor).toBe(lightTheme.colors.inverse);
+    expect(StyleSheet.flatten(screen.getByText('Rekabetçi').props.style).color).toBe(
+      lightTheme.colors.onInverse,
+    );
     await fireEvent.press(screen.getByRole('radio', { name: 'Kaleci' }));
     await fireEvent.changeText(screen.getByLabelText('İlçe ara'), 'çan');
     await fireEvent.press(await screen.findByRole('radio', { name: 'Çankaya, Ankara' }));

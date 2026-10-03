@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
+import { StyleSheet } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
@@ -26,6 +27,7 @@ import {
 } from '../src/matches/contracts';
 import { matchKeys } from '../src/matches/queries';
 import { queryKeys } from '../src/query/keys';
+import { lightTheme } from '../src/theme';
 import { issueTokens, problem } from './support/api';
 import { deferred } from './support/deferred';
 import { __setSearchParams, routerCalls } from './support/expo-router';
@@ -241,6 +243,30 @@ describe('Maçlar tab', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Yıldızlar FK maçları' }));
     expect(lastRouterCall()).toEqual({ method: 'push', href: `/takim/${TEAM_ID}/mac` });
   });
+
+  it('tags a "Belki" answer with the warning fill', async () => {
+    const summary: MatchSummary = { ...match(), myRsvp: 'maybe' };
+    const {
+      projection: _p,
+      team: _t,
+      sharePerPlayerMinor: _s,
+      myShareMinor: _m,
+      mvp: _v,
+      participants: _r,
+      ...row
+    } = summary as MatchMemberView;
+    mswServer.use(
+      http.get(apiUrl('/api/v1/teams'), () =>
+        HttpResponse.json({ items: [team()], nextCursor: null }),
+      ),
+      http.get(apiUrl(`/api/v1/teams/${TEAM_ID}/matches`), () =>
+        HttpResponse.json({ items: [row], nextCursor: null }),
+      ),
+    );
+    await render(<MatchesTab />);
+    const tag = await screen.findByText('Belki');
+    expect(StyleSheet.flatten(tag.props.style).color).toBe(lightTheme.colors.onWarning);
+  });
 });
 
 describe('team matches', () => {
@@ -438,7 +464,7 @@ describe('match detail states', () => {
     expect(screen.getByTestId('match-loading')).toBeTruthy();
     gate.resolve();
     expect(await screen.findByLabelText('Saha: Moda Sahası')).toBeTruthy();
-    expect(screen.getByLabelText('Toplam ücret: ₺1.500')).toBeTruthy();
+    expect(screen.getByLabelText('Toplam ücret: 1.500\u00A0₺')).toBeTruthy();
     expect(screen.getByLabelText('Gelen: 2/14')).toBeTruthy();
     // The kit-figure header repeats the facts, so screen readers skip it.
     const hidden = { includeHiddenElements: true };
@@ -520,7 +546,7 @@ describe('match detail states', () => {
     );
     openMatch();
     await render(<MatchDetailScreen />);
-    expect(await screen.findByLabelText('Senin payın: ₺500')).toBeTruthy();
+    expect(await screen.findByLabelText('Senin payın: 500\u00A0₺')).toBeTruthy();
     expect(screen.queryByTestId('match-fee')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Ödemeler' })).toBeNull();
     expect(screen.queryByRole('header', { name: 'Maçı yönet' })).toBeNull();
@@ -530,6 +556,31 @@ describe('match detail states', () => {
 });
 
 describe('RSVP', () => {
+  it('answers with one three-segment control in the brand state fills', async () => {
+    serveMe();
+    serveTeam(team('player'));
+    serveMatch(match({ myRsvp: 'maybe', counts: { in: 2, maybe: 1, out: 0, waitlist: 0 } }));
+    openMatch();
+    await render(<MatchDetailScreen />);
+    const group = await screen.findByTestId('rsvp');
+    expect(group.props).toMatchObject({
+      accessibilityRole: 'radiogroup',
+      accessibilityLabel: 'Katılımın',
+    });
+    expect(screen.getAllByRole('radio').map((item) => item.props.accessibilityLabel)).toEqual(
+      expect.arrayContaining(['Geliyorum', 'Belki', 'Gelmiyorum']),
+    );
+    const maybe = screen.getByTestId('rsvp-maybe');
+    expect(maybe.props.accessibilityState).toEqual({ checked: true, disabled: false });
+    expect(StyleSheet.flatten(maybe.props.style).backgroundColor).toBe(lightTheme.colors.warning);
+    expect(StyleSheet.flatten(screen.getByText('Belki').props.style).color).toBe(
+      lightTheme.colors.onWarning,
+    );
+    expect(StyleSheet.flatten(screen.getByTestId('rsvp-in').props.style).backgroundColor).toBe(
+      'transparent',
+    );
+  });
+
   it('shows the choice at once and then the server answer (waitlist)', async () => {
     serveMe();
     serveTeam(team('player'));
@@ -776,7 +827,7 @@ describe('lineup', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByTestId('lineup-counts').props.accessibilityLabel).toBe(
-      'A takımı: 1/7 · B takımı: 1/7',
+      'A takımı: 1/7, B takımı: 1/7',
     );
   });
 
@@ -884,9 +935,9 @@ describe('payments', () => {
     openMatch();
     await render(<PaymentsScreen />);
     const read = () => ({
-      zeynep: screen.getByLabelText('Zeynep, ₺333,33, Ödemedi'),
-      self: screen.getByLabelText('Ali Kaptan (sen), ₺333,34, Ödemedi'),
-      collected: screen.getByLabelText('Toplanan (en az): ₺333,33'),
+      zeynep: screen.getByLabelText('Zeynep, 333,33\u00A0₺, Ödemedi'),
+      self: screen.getByLabelText('Ali Kaptan (sen), 333,34\u00A0₺, Ödemedi'),
+      collected: screen.getByLabelText('Toplanan (en az): 333,33\u00A0₺'),
       uneven: screen.getByTestId('payments-uneven'),
     });
     await screen.findByLabelText('Ödeyen: 1/3');
@@ -925,16 +976,16 @@ describe('payments', () => {
     await render(<PaymentsScreen />);
     expect(await screen.findByLabelText('Ödeyen: 1/3')).toBeTruthy();
     // Others show the base share; the viewer's row shows the server's exact share.
-    expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
-    expect(screen.getByLabelText('Ali Kaptan (sen), ₺333,34, Ödemedi')).toBeTruthy();
+    expect(screen.getByLabelText('Zeynep, 333,33\u00A0₺, Ödemedi')).toBeTruthy();
+    expect(screen.getByLabelText('Ali Kaptan (sen), 333,34\u00A0₺, Ödemedi')).toBeTruthy();
     await fireEvent.press(
       await screen.findByRole('button', { name: 'Zeynep ödedi olarak işaretle' }),
     );
     await waitFor(() => expect(bodies).toEqual([{ paid: true }]));
     // Pessimistic: nothing changes before the answer.
-    expect(screen.getByLabelText('Zeynep, ₺333,33, Ödemedi')).toBeTruthy();
+    expect(screen.getByLabelText('Zeynep, 333,33\u00A0₺, Ödemedi')).toBeTruthy();
     gate.resolve();
-    expect(await screen.findByLabelText('Zeynep, ₺333,33, Ödedi')).toBeTruthy();
+    expect(await screen.findByLabelText('Zeynep, 333,33\u00A0₺, Ödedi')).toBeTruthy();
     expect(screen.getByLabelText('Ödeyen: 2/3')).toBeTruthy();
     // The captain may mark their own share.
     expect(screen.getByRole('button', { name: 'Ali Kaptan ödedi olarak işaretle' })).toBeTruthy();

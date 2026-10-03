@@ -142,7 +142,7 @@ export default function TeamDetailScreen() {
                   ? t('detail.you', { name: member.user.displayName })
                   : member.user.displayName
               }
-              subtitle={[roleName(member.role), position].filter(Boolean).join(' · ')}
+              subtitle={[roleName(member.role), position].filter(Boolean).join(', ')}
               accessibilityHint={manageable ? t('detail.memberHint') : undefined}
               disabled={rosterBusy}
               onPress={

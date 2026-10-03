@@ -140,7 +140,7 @@ export default function LineupScreen() {
           sideA={onSide('A')}
           sideB={onSide('B')}
           capacity={capacity}
-          countsLabel={`${sideTitle('A')} · ${sideTitle('B')}`}
+          countsLabel={`${sideTitle('A')}, ${sideTitle('B')}`}
           testID="lineup"
         />
       )}

@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
 import { OpenCallEntry } from '../../../../../src/calls/components';
-import { formatDateTime } from '../../../../../src/i18n/format';
+import { formatDateTime, formatLira } from '../../../../../src/i18n/format';
 import {
   ChoiceGroup,
   MATCHES_HOME,
@@ -25,7 +25,6 @@ import {
   type RsvpStatus,
 } from '../../../../../src/matches/contracts';
 import { matchesApi } from '../../../../../src/matches/instance';
-import { formatMinor } from '../../../../../src/matches/money';
 import {
   myRsvpStatus,
   useDeleteMatch,
@@ -55,7 +54,15 @@ import {
   Section,
 } from '../../../../../src/teams/components';
 import { useTheme } from '../../../../../src/theme';
-import { Button, Card, KitNumber, ListItem, Numeral, Text } from '../../../../../src/ui';
+import {
+  Button,
+  Card,
+  KitNumber,
+  ListItem,
+  Numeral,
+  SegmentedControl,
+  Text,
+} from '../../../../../src/ui';
 
 const RSVP_ORDER: readonly RsvpChoice[] = ['in', 'maybe', 'out'];
 const GROUP_ORDER: readonly RsvpStatus[] = ['in', 'waitlist', 'maybe', 'out'];
@@ -236,7 +243,7 @@ export default function MatchDetailScreen() {
                 ) : null}
                 <Fact
                   label={t('detail.fee')}
-                  value={formatMinor(member.feeTotalMinor, i18n.language)}
+                  value={formatLira(member.feeTotalMinor, i18n.language)}
                   testID="match-fee"
                 />
               </>
@@ -244,13 +251,13 @@ export default function MatchDetailScreen() {
             {match.sharePerPlayerMinor === null ? null : (
               <Fact
                 label={t('detail.share')}
-                value={formatMinor(match.sharePerPlayerMinor, i18n.language)}
+                value={formatLira(match.sharePerPlayerMinor, i18n.language)}
               />
             )}
             {match.myShareMinor === null ? null : (
               <Fact
                 label={t('detail.myShare')}
-                value={formatMinor(match.myShareMinor, i18n.language)}
+                value={formatLira(match.myShareMinor, i18n.language)}
                 testID="match-my-share"
               />
             )}
@@ -285,11 +292,12 @@ export default function MatchDetailScreen() {
                 <Notice testID="rsvp-locked">{t('rsvp.lockedNotice')}</Notice>
               </View>
             ) : null}
-            <ChoiceGroup
+            <SegmentedControl<RsvpChoice>
               label={t('rsvp.title')}
               options={RSVP_ORDER.map((value) => ({
                 value,
                 label: t(`rsvp.choice.${value}`),
+                tone: value,
                 disabled: !choices.includes(value),
               }))}
               selected={myStatus === 'waitlist' ? 'in' : (myStatus as RsvpChoice | null)}
@@ -497,7 +505,7 @@ export default function MatchDetailScreen() {
                     subtitle={
                       [positionLabel(row.position), sideLabel(row.side)]
                         .filter((part): part is string => part !== null)
-                        .join(' · ') || undefined
+                        .join(', ') || undefined
                     }
                     testID={`participant-${row.id}`}
                   />

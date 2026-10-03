@@ -101,9 +101,15 @@ export interface ChoiceOption<T extends string> {
 }
 
 /**
- * A single choice among a few options (RSVP, format, venue kind, lineup side): each option is a
- * radio button of at least 44 pt, the selected one is announced as checked. Tapping is the only
- * interaction; there is no drag and drop.
+ * Look of the chosen option: `choice` (form answers) fills it with `primary`; `filter` (list
+ * filters, design direction §4.5 chips) uses `inverse` with `onInverse`.
+ */
+export type ChoiceGroupVariant = 'choice' | 'filter';
+
+/**
+ * A single choice among a few options (format, venue kind, lineup side, list filters): each option
+ * is a radio button of at least 44 pt, the selected one is announced as checked. Tapping is the
+ * only interaction; there is no drag and drop.
  */
 export function ChoiceGroup<T extends string>({
   label,
@@ -111,6 +117,7 @@ export function ChoiceGroup<T extends string>({
   selected,
   onSelect,
   disabled = false,
+  variant = 'choice',
   testID,
 }: {
   /** Spoken name of the group. */
@@ -119,9 +126,12 @@ export function ChoiceGroup<T extends string>({
   readonly selected: T | null;
   readonly onSelect: (value: T) => void;
   readonly disabled?: boolean;
+  readonly variant?: ChoiceGroupVariant;
   readonly testID?: string;
 }) {
   const theme = useTheme();
+  const chosenFill = variant === 'filter' ? theme.colors.inverse : theme.colors.primary;
+  const chosenInk = variant === 'filter' ? theme.colors.onInverse : theme.colors.onPrimary;
   return (
     <View
       accessibilityRole="radiogroup"
@@ -132,22 +142,18 @@ export function ChoiceGroup<T extends string>({
       {options.map((option) => {
         const checked = option.value === selected;
         const inactive = disabled || option.disabled === true;
-        // Rest: surface with the 3:1 outline; chosen: green fill; unavailable: muted fill.
+        // Rest: surface with the 3:1 outline; chosen: the variant fill; unavailable: muted fill.
         const fill = checked
-          ? theme.colors.primary
+          ? chosenFill
           : inactive
             ? theme.colors.fillMuted
             : theme.colors.surface;
         const edge = checked
-          ? theme.colors.primary
+          ? chosenFill
           : inactive
             ? theme.colors.fillMuted
             : theme.colors.borderStrong;
-        const ink = checked
-          ? theme.colors.onPrimary
-          : inactive
-            ? theme.colors.textMuted
-            : theme.colors.text;
+        const ink = checked ? chosenInk : inactive ? theme.colors.textMuted : theme.colors.text;
         return (
           <Pressable
             key={option.value}
@@ -179,7 +185,7 @@ export function ChoiceGroup<T extends string>({
   );
 }
 
-/** A label and its value on one line, read as one element ("Ücret: ₺1.500"). */
+/** A label and its value on one line, read as one element ("Ücret: 1.500 ₺"). */
 export function Fact({
   label,
   value,

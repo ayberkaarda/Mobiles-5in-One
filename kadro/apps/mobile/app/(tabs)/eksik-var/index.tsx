@@ -113,6 +113,7 @@ export default function OpenCallsTab() {
                   level: value === ANY ? null : (value as Level),
                 }))
               }
+              variant="filter"
               testID="filter-level"
             />
             <ChoiceGroup
@@ -129,6 +130,7 @@ export default function OpenCallsTab() {
                   position: value === ANY ? null : (value as Position),
                 }))
               }
+              variant="filter"
               testID="filter-position"
             />
             {filtered === 0 ? null : (

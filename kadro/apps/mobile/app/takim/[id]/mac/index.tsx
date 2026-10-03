@@ -69,7 +69,7 @@ export default function TeamMatchesScreen() {
                 match.venue?.name ?? match.venueText,
               ]
                 .filter((part): part is string => part !== null && part !== '')
-                .join(' · ')}
+                .join(', ')}
               meta={t('team.slots', { confirmed: match.counts.in, slots: match.slots })}
               accessibilityHint={t('tab.openHint')}
               onPress={() => router.push(matchHref(teamId, match.id))}

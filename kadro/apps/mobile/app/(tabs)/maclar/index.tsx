@@ -19,10 +19,10 @@ import {
 import { useTheme } from '../../../src/theme';
 import { Badge, type BadgeTone, Button, Numeral, Screen, Text } from '../../../src/ui';
 
-/** RSVP tag of the viewer: the state fill of the brand (maybe and waitlist stay neutral). */
+/** RSVP tag of the viewer: the state fill of the brand (maybe = warning; waitlist neutral). */
 const RSVP_TONE: Readonly<Record<NonNullable<MatchSummary['myRsvp']>, BadgeTone>> = {
   in: 'positive',
-  maybe: 'neutral',
+  maybe: 'warning',
   out: 'negative',
   waitlist: 'neutral',
 };
@@ -65,7 +65,7 @@ function MatchRow({
     match.venue?.name ?? match.venueText,
   ]
     .filter((part): part is string => part !== null && part !== '')
-    .join(' · ');
+    .join(', ');
   const voting = match.status === 'played';
   const count = voting
     ? tm('tab.voting')

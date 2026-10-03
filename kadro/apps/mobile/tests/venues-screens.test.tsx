@@ -287,8 +287,8 @@ describe('Sahalar tab', () => {
     const row = (id: string) => within(screen.getByTestId(`venue-${id}`));
     await waitFor(() => expect(row(VENUE_ID).getByText('Kadıköy, İstanbul')).toBeTruthy());
     expect(row(VENUE_ID).getByText('Açık')).toBeTruthy();
-    expect(row(VENUE_ID).getByText('₺1.200–₺1.800')).toBeTruthy();
-    expect(row(VENUE_ID).getByText('4,3 / 5 · 3 yorum')).toBeTruthy();
+    expect(row(VENUE_ID).getByText('1.200–1.800\u00A0₺')).toBeTruthy();
+    expect(row(VENUE_ID).getByText('4,3 / 5 (3 yorum)')).toBeTruthy();
     expect(screen.getByText('[ÖRNEK] Kadıköy Halı Saha A')).toBeTruthy();
     expect(row(SAMPLE_ID).getByText('[ÖRNEK] Gerçek saha değil')).toBeTruthy();
     expect(row(SAMPLE_ID).getByText('Kadıköy, İstanbul')).toBeTruthy();
@@ -388,9 +388,9 @@ describe('venue detail', () => {
     expect(screen.getByTestId('venue-sample-notice')).toBeTruthy();
     expect(screen.getByTestId('badge-verified')).toBeTruthy();
     expect(screen.queryByTestId('venue-unverified-notice')).toBeNull();
-    expect(screen.getByLabelText('Saatlik ücret: ₺1.200–₺1.800')).toBeTruthy();
+    expect(screen.getByLabelText('Saatlik ücret: 1.200–1.800\u00A0₺')).toBeTruthy();
     expect(screen.getByLabelText('Saha tipi: Açık')).toBeTruthy();
-    expect(screen.getByLabelText('Puan: 4,3 / 5 · 3 yorum')).toBeTruthy();
+    expect(screen.getByLabelText('Puan: 4,3 / 5 (3 yorum)')).toBeTruthy();
     expect(screen.getByLabelText('Var: Aydınlatma')).toBeTruthy();
     expect(screen.getByLabelText('Yok: Otopark')).toBeTruthy();
     expect(screen.getByLabelText('Bilinmiyor: Soyunma odası, Duş')).toBeTruthy();

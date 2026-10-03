@@ -5,7 +5,8 @@ import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
 import { Fact, MatchScreen, matchHref, RoleError } from '../../../../../src/matches/components';
 import { matchesApi } from '../../../../../src/matches/instance';
-import { formatMinor, paymentSummary } from '../../../../../src/matches/money';
+import { formatLira } from '../../../../../src/i18n/format';
+import { paymentSummary } from '../../../../../src/matches/money';
 import { useMarkPayment, useMatchBusy } from '../../../../../src/matches/mutations';
 import { canMarkPayment, isStaff, paymentsWritable } from '../../../../../src/matches/permissions';
 import { useMatchScreen } from '../../../../../src/matches/use-match';
@@ -82,7 +83,7 @@ export default function PaymentsScreen() {
       <Section>
         <Card>
           <View style={{ gap: theme.spacing['2'] }}>
-            <Fact label={t('detail.fee')} value={formatMinor(match.feeTotalMinor, i18n.language)} />
+            <Fact label={t('detail.fee')} value={formatLira(match.feeTotalMinor, i18n.language)} />
             <Fact
               label={t('payments.paidCount')}
               value={t('payments.paidCountValue', { paid: paidCount, total: confirmed.length })}
@@ -90,7 +91,7 @@ export default function PaymentsScreen() {
             />
             <Fact
               label={summary.uneven ? t('payments.collectedAtLeast') : t('payments.collected')}
-              value={formatMinor(summary.collectedMinor, i18n.language)}
+              value={formatLira(summary.collectedMinor, i18n.language)}
               testID="payments-collected"
             />
           </View>
@@ -131,7 +132,7 @@ export default function PaymentsScreen() {
                   accessible
                   accessibilityLabel={[
                     name,
-                    share === null ? null : formatMinor(share, i18n.language),
+                    share === null ? null : formatLira(share, i18n.language),
                     row.paid ? t('payments.paid') : t('payments.unpaid'),
                   ]
                     .filter((part): part is string => part !== null)
@@ -142,7 +143,7 @@ export default function PaymentsScreen() {
                     {name}
                   </Text>
                   <Text variant="bodyStrong" tabular>
-                    {share === null ? '' : formatMinor(share, i18n.language)}
+                    {share === null ? '' : formatLira(share, i18n.language)}
                   </Text>
                 </View>
                 <View style={{ marginTop: theme.spacing['2'] }}>

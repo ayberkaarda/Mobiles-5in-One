@@ -10,7 +10,7 @@ import {
   pickLanguage,
 } from '../src/i18n';
 import { CLIENT_ERROR_KEYS, CLIENT_ERROR_KEYS_RESERVED } from '../src/i18n/error-copy';
-import { formatDateTime, formatPriceRange } from '../src/i18n/format';
+import { formatDateTime, formatLira, formatPriceRange } from '../src/i18n/format';
 import { appResources, readTranslationFiles } from './support/i18n';
 
 interface Tree {
@@ -200,9 +200,15 @@ describe('client-side error keys (CLIENT_ERROR_KEYS)', () => {
 });
 
 describe('formatting', () => {
-  it('formats lira from kuruş and price ranges', () => {
-    expect(formatPriceRange(120_000, 180_000, 'tr')).toBe('₺1.200–₺1.800');
-    expect(formatPriceRange(150_000, null, 'tr')).toBe('₺1.500');
+  it('formats lira from kuruş with the amount first and the sign after it', () => {
+    expect(formatLira(150_000, 'tr')).toBe('1.500\u00A0₺');
+    expect(formatLira(33_334, 'tr')).toBe('333,34\u00A0₺');
+    expect(formatLira(0, 'tr')).toBe('0\u00A0₺');
+    expect(formatLira(150_000, 'en')).toBe('1,500\u00A0₺');
+    expect(formatPriceRange(120_000, 180_000, 'tr')).toBe('1.200–1.800\u00A0₺');
+    expect(formatPriceRange(150_000, null, 'tr')).toBe('1.500\u00A0₺');
+    expect(formatPriceRange(null, 90_000, 'tr')).toBe('900\u00A0₺');
+    expect(formatPriceRange(150_000, 150_000, 'tr')).toBe('1.500\u00A0₺');
     expect(formatPriceRange(null, null, 'tr')).toBeNull();
   });
 

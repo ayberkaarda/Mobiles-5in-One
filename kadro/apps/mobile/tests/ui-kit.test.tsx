@@ -104,9 +104,9 @@ describe('ListItem', () => {
   it('is a single button announcing title, subtitle and meta when pressable', async () => {
     const onPress = vi.fn();
     await renderWithProviders(
-      <ListItem title="Yıldızlar FK" subtitle="Kaptan · 9 oyuncu" meta="21:00" onPress={onPress} />,
+      <ListItem title="Yıldızlar FK" subtitle="Kaptan, 9 oyuncu" meta="21:00" onPress={onPress} />,
     );
-    const row = screen.getByRole('button', { name: 'Yıldızlar FK, Kaptan · 9 oyuncu, 21:00' });
+    const row = screen.getByRole('button', { name: 'Yıldızlar FK, Kaptan, 9 oyuncu, 21:00' });
     expect(flatStyle(row.props.style).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await fireEvent.press(row);
     expect(onPress).toHaveBeenCalledTimes(1);

@@ -30,7 +30,8 @@ import {
 import { draftToAssignments, sideCapacity, suggestLineup } from '../src/matches/lineup';
 import { tabMatches } from '../src/matches/list';
 import { createMatchesApi } from '../src/matches/matches-api';
-import { formatMinor, paymentSummary } from '../src/matches/money';
+import { formatLira } from '../src/i18n/format';
+import { paymentSummary } from '../src/matches/money';
 import { predictable, predictedRsvp, withOwnRsvp, withSides } from '../src/matches/mutations';
 import {
   canCreateMatch,
@@ -279,14 +280,8 @@ describe('fee split', () => {
   });
 
   it('shows whole lira without decimals and a share to the kuruş', () => {
-    expect(formatMinor(150_000, 'tr')).toBe(
-      new Intl.NumberFormat('tr', {
-        style: 'currency',
-        currency: 'TRY',
-        maximumFractionDigits: 0,
-      }).format(1500),
-    );
-    expect(formatMinor(33_334, 'tr')).toContain('333,34');
+    expect(formatLira(150_000, 'tr')).toBe('1.500\u00A0₺');
+    expect(formatLira(33_334, 'tr')).toBe('333,34\u00A0₺');
   });
 });
 

@@ -45,7 +45,7 @@ export function venueSubtitle(
     formatPriceRange(venue.priceMinMinor, venue.priceMaxMinor, language),
   ]
     .filter((part): part is string => part !== null && part !== '')
-    .join(' · ');
+    .join(', ');
 }
 
 /**
