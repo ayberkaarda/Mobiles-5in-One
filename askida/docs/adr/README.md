@@ -17,7 +17,8 @@ documented here, so a gap in the numbering is always explained.
 | [0004](0004-push-and-firebase-policy.md)     | Push notifications and Firebase configuration policy      | Accepted                |
 | [0005](0005-financial-record-retention.md)   | Financial record retention                                | Proposed: open question |
 | [0006](0006-portfolio-delivery-scope.md)     | Portfolio delivery scope and evidence limits              | Accepted                |
-| 0007-0014                                    | Phase 1 decisions (Laravel core, auth, security baseline) | Reserved                |
+| [0007](0007-visual-identity-revision.md)     | Visual identity revision                                  | Accepted                |
+| 0008-0014                                    | Phase 1 decisions (Laravel core, auth, security baseline) | Reserved                |
 | 0015-0024                                    | Phase 2 decisions (domain, anonymity, uploads)            | Reserved                |
 | 0025-0032                                    | Phase 3 decisions (payments, admin)                       | Reserved                |
 | 0033-0042                                    | Phase 4 decisions (Flutter app)                           | Reserved                |
