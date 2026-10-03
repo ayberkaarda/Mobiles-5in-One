@@ -8,6 +8,7 @@
   },
   "list": {
     "missing": "{{number}} missing",
+    "missingUnit": "missing",
     "openHint": "Opens the call's details.",
     "emptyTitle": "No calls for players right now",
     "emptyMessage": "When a team is short of players, its call shows up here.",

@@ -149,7 +149,7 @@ describe('Eksik Var tab', () => {
     );
     await renderWithProviders(<OpenCallsTab />);
     expect(await screen.findByText('Moda Gençlik')).toBeTruthy();
-    expect(screen.getByText('2 eksik')).toBeTruthy();
+    expect(screen.getByLabelText('2 eksik')).toBeTruthy();
   });
 });
 
