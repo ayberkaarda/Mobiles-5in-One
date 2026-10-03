@@ -1,6 +1,6 @@
 # ADR-0079: Required profile entitlements and the match id in application notifications
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: ADR-0031, ADR-0052, ADR-0063, ADR-0065, ADR-0075, ADR-0077; handoff

@@ -1,6 +1,6 @@
 # ADR-0054: Mobile profile, statistics and settings, including account deletion
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §3 items 9 and 11, §5 (`me` endpoints, uploads), §6 items 7 and 21, §8

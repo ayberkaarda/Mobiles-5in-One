@@ -1,6 +1,6 @@
 # ADR-0050: Mobile teams: screens, invites and roster writes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §3 story 2, §5 (teams endpoints), §8 (i18n); ADR-0005, ADR-0008, ADR-0011,

@@ -88,6 +88,7 @@ Decision, Consequences.
 | [0078](0078-braces-advisory-exception.md)                             | Documented exception for the braces advisory GHSA-vfj7-8cjw-p6xm                              | Accepted                                    |
 | [0079](0079-contract-follow-ups-entitlements-and-application-push.md) | Required profile entitlements and the match id in application notifications                   | Accepted                                    |
 | [0080](0080-blog-and-legal-pages.md)                                  | Blog and legal pages: content files rendered to React elements, sample labels on legal text   | Accepted                                    |
+| 0081                                                                  | `cost.guard` usage thresholds and send gates (record on branch `feat/cost-guard`, not merged) | Proposed                                    |
 
 ADRs 0003–0027 record the authorization and domain-integrity decisions behind
 `docs/security/authorization-matrix.md`. Schema consequences for `packages/db`: `matches.locked_at`
@@ -103,7 +104,7 @@ Schema consequences (handoff `docs/handoffs/decisions-to-db-001.md`): `job_recei
 Numbers 0045-0074 were reserved ahead of the parallel Phase 3-5 work so that no two branches
 pick the same number: 0045-0046 for the preparation wave, 0047-0054 for Phase 3, 0055-0062 for
 Phase 4, 0063-0072 for Phase 5, 0073 for the portfolio delivery scope and 0074 for error
-monitoring. Phase 6 records started at 0075 (0075-0080 exist). A row without a link is a number
+monitoring. Phase 6 records started at 0075 (0075-0080 exist on `main`, 0081 is proposed). A row without a link is a number
 that has no record: 0060-0062 and 0069-0072 stayed unused inside their ranges, 0073 and 0074 are
 still waiting for their record. Reserved numbers are not reused for other topics.
 
@@ -111,4 +112,4 @@ The Status column is updated when a decision is implemented and merged to `main`
 the decision is in the code on `main`; where the evidence has a known limit (0076, 0077) the limit
 is written next to the status.
 
-**Next free number: 0081.**
+**Next free number: 0082.** 0081 is taken by the open `cost.guard` change; its row has no link until the record is merged.

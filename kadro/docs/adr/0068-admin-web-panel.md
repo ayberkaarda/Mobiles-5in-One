@@ -1,6 +1,6 @@
 # ADR-0068: Admin web panel
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §3 story 7, §6 items 9, 12, 16 and 18, §8 (Playwright); authorization

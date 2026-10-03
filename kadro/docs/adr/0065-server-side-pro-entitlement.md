@@ -1,6 +1,6 @@
 # ADR-0065: Server-side Pro entitlement and statistics tiers
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §3 items 9 and 10; authorization matrix §3.3 (footnotes 6 and 8), §7;

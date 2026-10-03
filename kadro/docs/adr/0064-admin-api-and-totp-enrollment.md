@@ -1,6 +1,6 @@
 # ADR-0064: Admin API surface, TOTP enrollment and step-up
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §6 item 18; authorization matrix §3.8 (footnotes 4, 26, 27), §4.1, §4.5,

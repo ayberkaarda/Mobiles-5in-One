@@ -1,6 +1,6 @@
 # ADR-0075: Mobile deep links and push notification handling
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §3 story 8, §4 (push), §7 (app linking), §8 (i18n); ADR-0031, ADR-0034,

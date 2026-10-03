@@ -1,6 +1,6 @@
 # ADR-0052: Mobile open calls (Eksik Var): list, apply, publish and decide
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §3 story 6, §5 (open-call endpoints), §8 (i18n); ADR-0003, ADR-0010,

@@ -1,6 +1,6 @@
 # ADR-0076: Mobile end-to-end flows with Maestro on Android
 
-- Status: Proposed
+- Status: Accepted (the flows have not been run on a device yet)
 - Date: 2026-10-03
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §8 (Maestro flows), §11 (Phase 3 gate); ADR-0015, ADR-0034, ADR-0045,

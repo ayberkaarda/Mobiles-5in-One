@@ -1,6 +1,6 @@
 # ADR-0049: Mobile auth flows: screens, email links and provider sign-in
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering (product spec §0.7), reported to Ayberk (owner)
 - Related: product spec §4 (auth), §6 items 5, 11, 13; ADR-0014, ADR-0015, ADR-0019, ADR-0027,

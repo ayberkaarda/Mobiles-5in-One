@@ -1,6 +1,6 @@
 # ADR-0045: Deep-link naming: one path set for web, scheme and app links
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-02
 - Deciders: Engineering, reported to Ayberk (owner)
 - Related: product spec §7 (information architecture, app linking); ADR-0027, ADR-0034,
