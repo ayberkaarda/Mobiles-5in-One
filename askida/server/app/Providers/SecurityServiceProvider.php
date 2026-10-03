@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -19,6 +20,7 @@ class SecurityServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // `<script @nonce>` prints the CSP nonce of the current request (empty when none).
+        Blade::directive('nonce', static fn (): string => '<?php if (\Illuminate\Support\Facades\Vite::cspNonce() !== null): ?>nonce="<?php echo e(\Illuminate\Support\Facades\Vite::cspNonce()); ?>"<?php endif; ?>');
     }
 }
