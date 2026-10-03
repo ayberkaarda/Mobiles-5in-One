@@ -110,8 +110,13 @@ describe('HTML pages', () => {
 });
 
 describe('error pages', () => {
+ feat/admin-web
+  it('unknown paths (404 page) and app paths get the same page headers', () => {
+    for (const pathname of ['/bu-sayfa-yok', '/mac/AbCdEf123']) {
+
   it('unknown paths (404 page) and admin paths get the same page headers', () => {
     for (const pathname of ['/bu-sayfa-yok', '/admin/kullanicilar']) {
+ main
       const response = proxied(pathname);
       expectPageCsp(response.headers);
       expectStaticHeaders(response.headers);
@@ -171,6 +176,12 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       cache: null,
     },
     seo: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+    admin: {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'no-referrer',
+      cache: 'no-store',
+    },
     app: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
   };
 
@@ -182,6 +193,7 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       'invite-page',
       'marketing',
       'seo',
+      'admin',
       'app',
     ]);
     expect(SURFACES.at(-1)?.paths).toEqual([]);
@@ -207,10 +219,18 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['/saha/kadikoy-arena', 'seo'],
       ['/sahalarx', 'app'],
       ['/eksik-var/istanbul/kadikoy', 'seo'],
+ feat/admin-web
+      ['/admin', 'admin'],
+      ['/admin/kullanicilar', 'admin'],
+      ['/admin/sahalar/ice-aktar/x', 'admin'],
+      ['/adminx', 'app'],
+      ['/mac/AbCdEf123', 'app'],
+
       ['/admin/kullanicilar', 'app'],
       ['/mac/AbCdEf123', 'invite-page'],
       ['/mac', 'invite-page'],
       ['/macx/AbCdEf123', 'app'],
+ main
       ['/bu-sayfa-yok', 'app'],
     ];
     for (const [pathname, name] of cases) {
@@ -235,7 +255,12 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['//api//v1/health/', 'api'],
       ['/api/v1/../v1/health', 'api'],
       ['/SAHALAR/istanbul', 'seo'],
+ feat/admin-web
+      ['/ADMIN/Giris', 'admin'],
+      ['/x/../admin/denetim', 'admin'],
+
       ['/MAC/AbCdEf123', 'invite-page'],
+ main
       // One decoding pass only: `%252d` is the text `%2d`, not a hyphen.
       ['/sifre%252dsifirla', 'app'],
       ['/../..', 'marketing'],

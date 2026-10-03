@@ -88,6 +88,7 @@ describe('headers-check reads the shared surface table', () => {
         'email-link-page /giris',
         'invite-page /mac/headers-check-probe',
         'seo /sahalar/istanbul',
+        'admin /admin/giris',
         'page / (two requests)',
       ]),
     );
@@ -237,6 +238,7 @@ describe.skipIf(!BUILD_CHECKS)('headers-check against the production build', () 
         'email-link-page /giris',
         'invite-page /mac/headers-check-probe',
         'seo /sahalar/istanbul',
+        'admin /admin/giris',
         'page / (two requests)',
       ]),
     );

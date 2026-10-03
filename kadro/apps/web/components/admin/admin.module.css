@@ -1,0 +1,344 @@
+/*
+ * Staff panel (ADR-0068), without animation. Colors are the `--k-*` custom properties of `lib/client/theme.ts`, set on
+ * `.page`; the text pairs are the ones checked for 4.5:1 there. Targets are at least 44 px high,
+ * focus stays visible, and the layout works from 320 px wide.
+ */
+
+.page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: var(--k-background);
+  color: var(--k-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 12px 24px;
+  background-color: var(--k-surface);
+  border-bottom: 1px solid var(--k-textMuted);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--k-primary);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--k-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.navLink[aria-current='page'] {
+  color: var(--k-onPrimary);
+  background-color: var(--k-primary);
+}
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  color: var(--k-textMuted);
+  font-size: 14px;
+}
+
+.main {
+  box-sizing: border-box;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.narrow {
+  box-sizing: border-box;
+  max-width: 480px;
+  margin: 48px auto;
+  padding: 32px 24px;
+  border-radius: 20px;
+  background-color: var(--k-surface);
+  box-shadow: 0 1px 3px rgb(14 26 20 / 12%);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+.lead {
+  margin: 0 0 24px;
+  color: var(--k-textMuted);
+}
+
+.section {
+  margin: 0 0 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background-color: var(--k-surface);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+
+.inlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--k-textMuted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.input,
+.select {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--k-textMuted);
+  border-radius: 10px;
+  background-color: var(--k-surface);
+  color: var(--k-text);
+  font: inherit;
+}
+
+/* Used together with `.input`. */
+.code {
+  max-width: 12ch;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2em;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.button,
+.secondaryButton,
+.dangerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--k-primary);
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button {
+  background-color: var(--k-primary);
+  color: var(--k-onPrimary);
+}
+
+.secondaryButton {
+  background-color: var(--k-surface);
+  color: var(--k-primary);
+}
+
+.dangerButton {
+  border-color: var(--k-danger);
+  background-color: var(--k-surface);
+  color: var(--k-danger);
+}
+
+.button:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button:focus-visible,
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible,
+.navLink:focus-visible,
+.brand:focus-visible,
+.link:focus-visible,
+.input:focus-visible,
+.select:focus-visible,
+.status:focus-visible {
+  outline: 3px solid var(--k-text);
+  outline-offset: 2px;
+}
+
+.link {
+  color: var(--k-link);
+  font-weight: 600;
+}
+
+.status {
+  min-height: 24px;
+  margin: 0;
+}
+
+.error {
+  color: var(--k-danger);
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-left: 4px solid var(--k-primary);
+  border-radius: 8px;
+  background-color: var(--k-surface);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.table th,
+.table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--k-background);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--k-textMuted);
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--k-textMuted);
+  color: var(--k-text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.stat {
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: var(--k-background);
+}
+
+.stat dt {
+  color: var(--k-textMuted);
+  font-size: 13px;
+}
+
+.stat dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.qr {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  margin: 0 auto 16px;
+  background-color: #ffffff;
+}
+
+.secret {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
