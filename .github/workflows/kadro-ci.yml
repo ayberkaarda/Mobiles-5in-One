@@ -199,6 +199,53 @@ jobs:
       - name: Test
         run: pnpm test --continue=dependencies-successful
 
+  # Lighthouse CI on the production build (ADR-0059): home, features, a venue and a district page,
+  # three runs each, median >= 0.9 in every category. Informational: NOT part of "Kadro CI gate"
+  # (not listed in its "needs") and not a required check, so a slow or noisy runner cannot block a
+  # merge. @lhci/cli comes from npx at a pinned version, nothing is added to the repository
+  # dependencies. The suite starts its own disposable database like the test job.
+  lighthouse:
+    name: Lighthouse (informational)
+    needs: changes
+    if: needs.changes.outputs.kadro == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      CHROME_PATH: /usr/bin/google-chrome
+      LHCI_CHROME_FLAGS: --headless=new --no-sandbox
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in kadro/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          package_json_file: kadro/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: kadro/pnpm-lock.yaml
+
+      - name: Pull PostgreSQL + PostGIS test image
+        run: docker pull postgis/postgis:16-3.5-alpine
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lighthouse CI
+        working-directory: kadro/apps/web
+        run: pnpm lighthouse
+
   # The only check to mark as required on main. "changes" must succeed and report kadro=true
   # or kadro=false. true: verify and test must both succeed. false: both must be skipped.
   # Any other output or result (failure, cancelled, empty) fails the gate.
