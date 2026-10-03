@@ -9,6 +9,31 @@ pre-commit:
       root: kadro/
       glob: '*.{js,mjs,cjs,ts,tsx,json,md,yml,yaml,css}'
       run: pnpm exec prettier --check {staged_files}
+    # Askida PHP style check inside the running "server" container of askida/docker-compose.yml.
+    # Fail-open with a visible warning when Docker or the container is not available.
+    askida-pint:
+      root: askida/server/
+      glob: '*.php'
+      run: |
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "WARNING: askida-pint skipped, docker is not on PATH. Run vendor/bin/pint --test manually." >&2
+          exit 0
+        fi
+        if ! docker compose -f ../docker-compose.yml ps --status running --services 2>/dev/null | grep -qx server; then
+          echo "WARNING: askida-pint skipped, the askida server container is not running. Run vendor/bin/pint --test manually." >&2
+          exit 0
+        fi
+        docker compose -f ../docker-compose.yml exec -T server vendor/bin/pint --test {staged_files}
+    # Askida Dart format check. Fail-open with a visible warning when dart is not on PATH.
+    askida-dart-format:
+      root: askida/app/
+      glob: '*.dart'
+      run: |
+        if ! command -v dart >/dev/null 2>&1; then
+          echo "WARNING: askida-dart-format skipped, dart is not on PATH. Run dart format --set-exit-if-changed . in askida/app manually." >&2
+          exit 0
+        fi
+        dart format --set-exit-if-changed {staged_files}
 
 commit-msg:
   commands:
