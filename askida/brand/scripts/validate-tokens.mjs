@@ -1,7 +1,7 @@
 // Validates askida/brand v2 ("rail, not hands"): palette, schemes, WCAG contrast,
 // documented failures, typography, spacing, radius, stroke, elevation, motion.
 // Node only, no dependencies. Usage: node askida/brand/scripts/validate-tokens.mjs [brandDir]
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
@@ -647,6 +647,59 @@ for (const f of DEVICES) {
     fail(`${f}: rail must use the ${sc} text colour`);
 }
 if (existsSync(join(root, "craft"))) fail("craft/ is retired in v2");
+
+// ---------- icons: kept UI icons + brand pictograms (decision section 4) ----------
+const ICONS_UI = [
+  "shop",
+  "qr",
+  "code",
+  "location",
+  "bell",
+  "settings",
+  "close",
+];
+const ICONS_RAIL = ["rail", "tag", "tag-plus"];
+const ICONS_CATEGORY = [
+  "ekmek",
+  "corba",
+  "yemek",
+  "kirtasiye",
+  "bebek",
+  "diger",
+];
+const ICONS = [...ICONS_UI, ...ICONS_RAIL, ...ICONS_CATEGORY].map(
+  (n) => `icons/${n}.svg`,
+);
+const iconDir = join(root, "icons");
+if (existsSync(iconDir)) {
+  const onDisk = readdirSync(iconDir)
+    .filter((n) => n.endsWith(".svg"))
+    .map((n) => `icons/${n}`)
+    .sort();
+  const expected = [...ICONS].sort();
+  if (onDisk.join() !== expected.join())
+    fail(
+      `icons/ file list differs from the contract: on disk [${onDisk.join(", ")}]`,
+    );
+}
+for (const f of ICONS) {
+  const s = checkSvg(f, { group: "icons" });
+  if (!s) continue;
+  if (!s.includes('viewBox="0 0 24 24"')) fail(`${f}: icons use the 24 grid`);
+  if (/#[0-9A-Fa-f]{3,8}\b/.test(s)) fail(`${f}: icons use currentColor only`);
+  for (const [el] of s.matchAll(/<path [^>]*>/g)) {
+    if (!/stroke="currentColor"/.test(el))
+      fail(`${f}: stroke must be currentColor`);
+    if (!/stroke-width="1\.75"/.test(el))
+      fail(`${f}: stroke width must be ${tokens.stroke.icon}`);
+    if (
+      !/stroke-linecap="round"/.test(el) ||
+      !/stroke-linejoin="round"/.test(el)
+    )
+      fail(`${f}: round caps and joins`);
+    if (!/fill="none"/.test(el)) fail(`${f}: icons are strokes, fill="none"`);
+  }
+}
 
 // ---------- rasters: signature, size, no metadata chunks ----------
 const checkPng = (f, ew, eh) => {
