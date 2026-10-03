@@ -1,12 +1,13 @@
-import { CALLS_HOME } from '../calls/links';
+import { CALLS_HOME, matchCallHref } from '../calls/links';
 import { matchHref } from '../matches/components';
 
 /**
- * Opening a push notification (ADR-0031, ADR-0075). The worker sends `data` as
- * `{ type, matchId | teamId | applicationId }`; nothing else in a notification is trusted. The
- * app only navigates: the screen it opens loads the object through the API, where authorization
- * applies, so a notification for an object the user lost access to shows that screen's
- * "not found" state.
+ * Opening a push notification (ADR-0031, ADR-0075, ADR-0079). The worker sends `data` as
+ * `{ type, matchId | teamId | applicationId }`, and an application type also carries the call's
+ * `matchId` (contracts `pushNotificationDataSchema`); nothing else in a notification is trusted.
+ * The app only navigates: the screen it opens loads the object through the API, where
+ * authorization applies, so a notification for an object the user lost access to shows that
+ * screen's "not found" state.
  */
 
 /** Contracts `NOTIFICATION_TYPES` (a test compares). */
@@ -48,10 +49,16 @@ export type NotificationTarget =
       readonly kind: 'application';
       readonly type: NotificationType;
       readonly applicationId: string;
+      /** The match of the application's open call (ADR-0079). */
+      readonly matchId: string;
     };
 
 function isNotificationType(value: unknown): value is NotificationType {
   return typeof value === 'string' && (NOTIFICATION_TYPES as readonly string[]).includes(value);
+}
+
+function isId(value: unknown): value is string {
+  return typeof value === 'string' && ID_PATTERN.test(value);
 }
 
 /** The target of a notification's `data`, or `null` when the payload is not one the app sends. */
@@ -68,7 +75,7 @@ export function parseNotificationData(data: unknown): NotificationTarget | null 
   const key = NOTIFICATION_REF_KEY[type];
   // eslint-disable-next-line security/detect-object-injection -- one of three fixed keys
   const ref = record[key];
-  if (typeof ref !== 'string' || !ID_PATTERN.test(ref)) {
+  if (!isId(ref)) {
     return null;
   }
   switch (key) {
@@ -76,8 +83,10 @@ export function parseNotificationData(data: unknown): NotificationTarget | null 
       return { kind: 'match', type, matchId: ref };
     case 'teamId':
       return { kind: 'team', type, teamId: ref };
-    case 'applicationId':
-      return { kind: 'application', type, applicationId: ref };
+    case 'applicationId': {
+      const { matchId } = record;
+      return isId(matchId) ? { kind: 'application', type, applicationId: ref, matchId } : null;
+    }
   }
 }
 
@@ -88,9 +97,10 @@ export const MATCHES_HOME = '/maclar';
  * - a match opens under its team; the team comes from `GET matches/:id` (`loadMatchTeam`), and
  *   the matches tab opens when that read fails (no access any more, offline);
  * - a team opens the team screen;
- * - an application has no route of its own and no read by id in the contracts: the captain's
- *   `application.received` opens the matches tab, the applicant's `application.decided` the
- *   Eksik Var tab (handoff `wp3-8-to-contracts`).
+ * - an application opens through its call's match (ADR-0079): the captain's (or co-captain's)
+ *   `application.received` opens the staff view of that match's call, with the applications; the
+ *   applicant's `application.decided` opens the match, which an accepted applicant can read as a
+ *   guest. A rejected applicant cannot read it, so the Eksik Var tab opens instead.
  */
 export async function notificationHref(
   target: NotificationTarget,
@@ -106,6 +116,13 @@ export async function notificationHref(
     case 'team':
       return `/takim/${encodeURIComponent(target.teamId)}`;
     case 'application':
-      return target.type === 'application.received' ? MATCHES_HOME : CALLS_HOME;
+      if (target.type === 'application.received') {
+        return matchCallHref(target.matchId);
+      }
+      try {
+        return matchHref(await loadMatchTeam(target.matchId), target.matchId);
+      } catch {
+        return CALLS_HOME;
+      }
   }
 }

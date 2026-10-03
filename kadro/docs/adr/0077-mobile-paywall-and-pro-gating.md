@@ -67,7 +67,8 @@ no store product and no key yet, so nothing here can be exercised against a stor
   requires the in-app purchase capability and the subscription products in App Store Connect, and
   Play requires a billing-enabled upload; both are owner tasks.
 - `me.entitlements` is still optional in the contract (ADR-0063 decision 7); the client reads a
-  missing member as no Pro until the contract makes it required.
+  missing member as no Pro until the contract makes it required. Update (ADR-0079): it is
+  required now and the fallback is removed.
 - The unit test setup aliases `react-native-purchases` to a double whose calls throw, so a test
   that reaches the real store fails loudly.
 - Downgrade handling (locking all but the oldest team after a lapse) is a worker job and is not

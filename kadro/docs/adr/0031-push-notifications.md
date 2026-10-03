@@ -42,6 +42,11 @@ with the cap.
   Example: title "Maç yarın 21:00'de", body "Geliyor musun? Kadronu kontrol et."
 - `data` carries only `{ type, matchId | teamId | openCallId | applicationId }` for the deep link.
   The app loads details through the API, where authorization applies.
+- Update (ADR-0079): the key of each type's `refId` is the worker's `PUSH_REF_KEY` (`matchId`,
+  `teamId` or `applicationId`; no type uses `openCallId`). The application types also carry the
+  call's `matchId`, which the handler reads from the application row at send time:
+  `{ type, applicationId, matchId }`. The shape of every type is the contracts
+  `pushNotificationDataSchema`.
 - The payload is composed at send time from current data; a recipient who lost access (removed,
   match cancelled) is skipped.
 

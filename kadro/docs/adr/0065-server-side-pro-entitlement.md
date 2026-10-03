@@ -61,7 +61,8 @@ an `active` row keeps its status until the nightly run corrects it, up to a day 
 
 7. **Contract.** The server sends `entitlements` on every profile response from this change on.
    The contract member becomes required together with the mobile test fixtures that build a
-   profile without it, because the mobile typecheck reads the same type.
+   profile without it, because the mobile typecheck reads the same type. Update (ADR-0079): done;
+   the app no longer treats a missing member as free.
 
 ## Consequences
 

@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import ProfileTab from '../app/(tabs)/profil/index';
 import SettingsScreen from '../app/ayarlar/index';
 import PaywallScreen from '../app/kadro-pro';
@@ -64,7 +65,6 @@ vi.mock('../src/billing/instance', () => ({
 const ME_ID = '0192a0b0-0000-7000-8000-0000000000f1';
 const KADIKOY_ID = '0192a0b0-0000-7000-8000-0000000000d1';
 
-const NO_PRO: Entitlements = { pro: false, status: 'none', expiresAt: null, store: null };
 const PRO: Entitlements = {
   pro: true,
   status: 'active',
@@ -77,7 +77,7 @@ const OFFERS: readonly BillingOffer[] = [
   { id: 'kadro_pro_yearly', period: 'yearly', priceString: '399,99 TL' },
 ];
 
-function me(entitlements?: Entitlements): MeResponse {
+function me(entitlements: Entitlements = NO_ENTITLEMENTS): MeResponse {
   return {
     id: ME_ID,
     displayName: 'Ali Kaleci',
@@ -90,12 +90,12 @@ function me(entitlements?: Entitlements): MeResponse {
     districtId: KADIKOY_ID,
     providers: { password: true, apple: false, google: false },
     createdAt: '2026-09-01T10:00:00.000Z',
-    ...(entitlements === undefined ? {} : { entitlements }),
+    entitlements,
   };
 }
 
 /** `GET me` answers from a mutable slot, so a test can flip the server's Pro state. */
-function serveMe(initial?: Entitlements) {
+function serveMe(initial: Entitlements = NO_ENTITLEMENTS) {
   const state = { entitlements: initial, reads: 0 };
   mswServer.use(
     http.get(apiUrl('/api/v1/me'), () => {
@@ -166,7 +166,7 @@ beforeEach(async () => {
 
 describe('paywall', () => {
   it('lists the monthly and yearly offers with their store prices and the renewal terms', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     holder.legal = [{ key: 'privacy', url: 'https://kadro.test.invalid/gizlilik' }];
     await render(<PaywallScreen />);
     expect(await screen.findByRole('radio', { name: 'Aylık: 49,99 TL' })).toBeTruthy();
@@ -184,7 +184,7 @@ describe('paywall', () => {
   });
 
   it('buys the chosen offer and shows Pro only once the server reports it', async () => {
-    const server = serveMe(NO_PRO);
+    const server = serveMe(NO_ENTITLEMENTS);
     const port = fakeBilling({
       purchase: async () => {
         // The webhook has been applied by the time the app asks again.
@@ -204,7 +204,7 @@ describe('paywall', () => {
   });
 
   it('defaults to the yearly offer', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     const port = fakeBilling({ purchase: () => Promise.reject(new BillingError('cancelled')) });
     holder.port = port;
     await render(<PaywallScreen />);
@@ -221,7 +221,7 @@ describe('paywall', () => {
     ['store', 'store', /Mağaza işlemi/],
     ['unknown', 'error', /tamamlanamadı/],
   ] as const)('shows the %s purchase failure without granting Pro', async (kind, outcome, text) => {
-    const server = serveMe(NO_PRO);
+    const server = serveMe(NO_ENTITLEMENTS);
     holder.port = fakeBilling({ purchase: () => Promise.reject(new BillingError(kind)) });
     await render(<PaywallScreen />);
     await fireEvent.press(await screen.findByTestId('paywall-subscribe'));
@@ -235,7 +235,7 @@ describe('paywall', () => {
   it('says the purchase is still being activated when the server does not report Pro yet', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
-      serveMe(NO_PRO);
+      serveMe(NO_ENTITLEMENTS);
       await render(<PaywallScreen />);
       await fireEvent.press(await screen.findByTestId('paywall-subscribe'));
       await vi.advanceTimersByTimeAsync(10_000);
@@ -247,7 +247,7 @@ describe('paywall', () => {
   });
 
   it('restores purchases: Pro from the server, or an honest nothing-found', async () => {
-    const server = serveMe(NO_PRO);
+    const server = serveMe(NO_ENTITLEMENTS);
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       const port = fakeBilling();
@@ -266,7 +266,7 @@ describe('paywall', () => {
   });
 
   it('shows a restore network failure', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     holder.port = fakeBilling({ restore: () => Promise.reject(new BillingError('network')) });
     await render(<PaywallScreen />);
     await fireEvent.press(await screen.findByTestId('paywall-restore'));
@@ -274,7 +274,7 @@ describe('paywall', () => {
   });
 
   it('explains an unavailable build and offers no purchase', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     holder.port = fakeBilling({ available: false });
     await render(<PaywallScreen />);
     expect(await screen.findByTestId('paywall-unavailable')).toBeTruthy();
@@ -283,7 +283,7 @@ describe('paywall', () => {
   });
 
   it('shows a price list failure with retry, and an empty list as such', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     let failing = true;
     const port = fakeBilling();
     port.loadOffers = async () => {
@@ -315,18 +315,12 @@ describe('paywall', () => {
 
 describe('pro entry points', () => {
   it('shows the locked statistics hint on the profile of a free user and opens the paywall', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     await render(<ProfileTab />);
     expect(await screen.findByTestId('profile-pro-upsell')).toBeTruthy();
     expect(screen.queryByTestId('profile-pro')).toBeNull();
     await fireEvent.press(screen.getByTestId('profile-pro-upsell-open'));
     expect(routerCalls()).toEqual([{ method: 'push', href: '/kadro-pro' }]);
-  });
-
-  it('treats a profile without the entitlements member as free', async () => {
-    serveMe(undefined);
-    await render(<ProfileTab />);
-    expect(await screen.findByTestId('profile-pro-upsell')).toBeTruthy();
   });
 
   it('shows the Pro badge and no upsell on the profile of a Pro user', async () => {
@@ -337,7 +331,7 @@ describe('pro entry points', () => {
   });
 
   it('hints at the one-team limit on the create-team screen for a free user only', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     await render(<CreateTeamScreen />);
     expect(await screen.findByTestId('create-team-pro-upsell')).toBeTruthy();
     expect(screen.getByText(/en fazla bir takım/)).toBeTruthy();
@@ -357,7 +351,7 @@ describe('pro entry points', () => {
   });
 
   it('settings: free users see the upsell and no manage link', async () => {
-    serveMe(NO_PRO);
+    serveMe(NO_ENTITLEMENTS);
     await render(<SettingsScreen />);
     expect(await screen.findByTestId('settings-pro-upsell')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Aboneliği yönet' })).toBeNull();

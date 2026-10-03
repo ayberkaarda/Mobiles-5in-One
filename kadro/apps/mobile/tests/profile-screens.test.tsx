@@ -10,6 +10,7 @@ import {
   deleteAccountRequestSchema,
   updateMeRequestSchema,
 } from '../../../packages/contracts/src/users';
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import SignInScreen from '../app/(auth)/giris';
 import ProfileTab from '../app/(tabs)/profil/index';
 import DeletionNoticeScreen from '../app/ayarlar/hesap-silindi';
@@ -116,6 +117,7 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
     districtId: KADIKOY_ID,
     providers: { password: true, apple: false, google: false },
     createdAt: '2026-09-01T10:00:00.000Z',
+    entitlements: NO_ENTITLEMENTS,
     ...overrides,
   };
 }

@@ -46,7 +46,7 @@ export default function SettingsScreen() {
   const signOut = useAsyncAction();
   const language = currentLanguage(i18n);
   const me = useQuery(meQuery(api));
-  const subscribed = me.data?.entitlements !== undefined && me.data.entitlements.status !== 'none';
+  const subscribed = me.data !== undefined && me.data.entitlements.status !== 'none';
 
   return (
     <ProfileScreen title={t('settings.title')} testID="settings-screen">

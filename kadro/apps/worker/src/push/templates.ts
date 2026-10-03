@@ -119,7 +119,11 @@ export function renderPush(type: NotificationType, input: PushTemplateInput): Pu
   }
 }
 
-/** Deep-link key of each type's `refId` in the notification `data` (ADR-0031). */
+/**
+ * Deep-link key of each type's `refId` in the notification `data` (ADR-0031). Application types
+ * also carry `matchId`, added by the recipient resolution (ADR-0079); the full shape is the
+ * contracts `pushNotificationDataSchema`.
+ */
 export const PUSH_REF_KEY: Readonly<
   Record<NotificationType, 'matchId' | 'teamId' | 'applicationId'>
 > = {

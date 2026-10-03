@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import TeamsTab from '../app/(tabs)/takimlar/index';
 import InviteLinkScreen from '../app/mac/[code]';
 import TeamInvitesScreen from '../app/takim/[id]/davet';
@@ -111,6 +112,7 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
     districtId: DISTRICT_ID,
     providers: { password: true, apple: false, google: false },
     createdAt: '2026-09-01T10:00:00.000Z',
+    entitlements: NO_ENTITLEMENTS,
     ...overrides,
   };
 }

@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import MatchesTab from '../app/(tabs)/maclar/index';
 import OpenCallsTab from '../app/(tabs)/eksik-var/index';
 import ProfileTab from '../app/(tabs)/profil/index';
@@ -168,6 +169,7 @@ describe('Profil tab', () => {
           districtId: null,
           providers: { password: true, apple: false, google: false },
           createdAt: '2026-09-01T10:00:00.000Z',
+          entitlements: NO_ENTITLEMENTS,
         }),
       ),
       http.get(apiUrl('/api/v1/me/stats'), () =>

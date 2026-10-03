@@ -74,7 +74,9 @@ associated domains and Android intent filters. What was missing:
   - `team.member_joined` opens the team;
   - application types have no route and no read by id in the contracts: `application.received`
     opens the matches tab and `application.decided` the Eksik Var tab (handoff
-    `wp3-8-to-contracts`).
+    `wp3-8-to-contracts`). Update (ADR-0079): their `data` now carries the call's `matchId`;
+    `application.received` opens the staff view of that call (`/ilan/mac/<matchId>`) and
+    `application.decided` opens the match (the Eksik Var tab when that read is refused).
   - A tap while signed out is dropped: the notification may belong to an account that signed out
     on this device (ADR-0054 open item), and the next user must not be routed by it. Each response
     is handled once per process and then cleared.

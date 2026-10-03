@@ -63,7 +63,8 @@ testable with fixtures and a fake REST server, and must stay closed (no Pro) whe
 7. **Entitlement exposure.** `GET /api/v1/me` gains `entitlements: { pro, status, expiresAt,
 store }`. `pro` is true exactly for `active` and `grace_period`; `status: none` means no
    subscription row. The member is optional until the entitlement work package sends it on every
-   profile response; clients read a missing member as no Pro.
+   profile response; clients read a missing member as no Pro. Update (ADR-0079): the member is
+   required.
 8. **Statistics.** `GET /api/v1/me/stats` answers `tier: basic` (matches played, MVP count) for
    everyone and `tier: full` with an `advanced` block for Pro, decided by the server at request
    time.
