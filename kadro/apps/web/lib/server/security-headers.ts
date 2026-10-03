@@ -115,6 +115,8 @@ export const SURFACES: readonly Surface[] = [
   },
   {
     // `(marketing)` route group (ADR-0021 group 2, rendering per ADR-0055).
+    // Reserved, no page yet: `/hakkinda` and `/sss` (ADR-0080 puts them out of scope). The rows
+    // stay so the headers are ready when the pages are added.
     name: 'marketing',
     paths: [
       '/',
@@ -134,6 +136,8 @@ export const SURFACES: readonly Surface[] = [
   },
   {
     // `(seo)` route group: programmatic pages (ADR-0021 group 2, rendering per ADR-0055).
+    // Reserved, no page yet: `/sahalar/**` (ADR-0057 puts the directory listings out of scope). It
+    // stays because the surface tests and the header probe use `/sahalar/istanbul`.
     name: 'seo',
     paths: ['/sahalar/**', '/saha/**', '/eksik-var/**'],
     probe: '/sahalar/istanbul',

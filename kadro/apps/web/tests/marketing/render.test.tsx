@@ -95,7 +95,8 @@ describe('marketing shell', () => {
     expect(html.indexOf('<header')).toBeLessThan(html.indexOf('<main'));
     expect(html.indexOf('<main')).toBeLessThan(html.indexOf('<footer'));
     expect(html).toContain('aria-label="Kadro ana sayfa"');
-    expect(html).toContain('Kadro bir portfolyo projesidir.');
+    expect(html).toContain('© Kadro. Kadro bir portfolyo projesidir.');
+    expect(html).not.toContain('Teknoloji');
     expect(html).toContain('font-class');
     expect(html).toContain('--m-primary:#1B7F4B');
     expectSafeMarkup(html);

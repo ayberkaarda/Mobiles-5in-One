@@ -45,8 +45,8 @@ applications and close the call. The API for this exists (`listOpenCalls`, `publ
   loaded, the list still works without the district filter.
 - A row shows the team, start, format, the venue name (verified venues) or the district, the
   position and the missing count. Opening a row keeps that call for the detail screen.
-- Map view: not built. `react-native-maps` is a dependency, but its config plugin and Google Maps
-  API key are not set up (deps work package note), the public projection carries no coordinates
+- Map view: not built. `react-native-maps` was a dependency until it was removed as unused; no
+  Google Maps API key or config plugin was ever set up, the public projection carries no coordinates
   (only the district centroid would be available) and a map cannot be tested without a device.
   The list is the only view for now.
 

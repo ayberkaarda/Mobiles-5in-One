@@ -58,6 +58,8 @@ regardless of this decision.
 ## Consequences
 
 - `docs/ops/` owns the runbooks: provisioning, deploy, backup/restore and cost alerts.
+  Note (2026-10-03): the backup/restore and cost alert documents were written under
+  `docs/release/` (`backup-restore-drill.md`, `cost-alerts.md`); `docs/ops/README.md` links them.
 - The production compose file and `Caddyfile` are delivered in the release-readiness phase together
   with the deploy runbook; Phase 0 delivers the images and the local stack.
 - Trusted client IP comes from Caddy's `X-Forwarded-For` handling only (rate limiting, item 5); the
@@ -68,7 +70,7 @@ regardless of this decision.
 ## Open points for the owner
 
 - **Cost:** fixed VPS cost for production plus a smaller preview VPS; confirm the budget ceiling used
-  in `docs/ops/cost-alerts.md`.
+  in `docs/release/cost-alerts.md` (path corrected 2026-10-03; it was cited as `docs/ops/`).
 - **Data location (KVKK):** a Türkiye-hosted VPS keeps the primary database in-country; an EU region
   makes the database a cross-border transfer under KVKK Article 9. R2, Resend, Sentry and RevenueCat
   are processors outside Türkiye in either case. Confirm the region before production provisioning.

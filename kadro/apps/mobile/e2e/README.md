@@ -94,7 +94,7 @@ run on a developer machine, not a required check.
 ## Limits
 
 - Android only. iOS runs need a Mac or a `macos-latest` runner and are not part of this setup.
-- `GET /api/v1/districts` is not served by the API yet, so the district pickers show their error
-  state; no flow depends on them (the seed sets the district through `PATCH /me`).
+- `GET /api/v1/districts` is served by the API. No flow depends on the district pickers (the seed
+  sets the district through `PATCH /me`), so they are not exercised.
 - Apple and Google sign-in, push delivery, photo upload and verified https links are not covered:
   they need store accounts, an EAS project or a public domain.

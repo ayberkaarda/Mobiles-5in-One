@@ -116,11 +116,10 @@ Native configuration worth knowing (`app.config.ts`, `plugins/android-network-se
   tokens need an EAS project id, Apple sign-in needs the `usesAppleSignIn` entitlement and
   `react-native-purchases` needs native code. `eas.json` `development` builds a Debug binary that
   loads JavaScript from Metro (no `expo-dev-client` package is used).
-- `expo-location` is registered as a config plugin in `app.config.ts` (with a Turkish
-  when-in-use permission text) but no source file imports it: the location is never read. The
-  open call and venue filters send a district id, and the venue form takes the coordinates as typed
-  text. `react-native-maps` is a dependency, but no source file imports it (the venue directory is
-  a list, ADR-0053).
+- The app does not read the device location: neither `expo-location` nor `react-native-maps` is a
+  dependency, and `app.config.ts` registers no location plugin, so the manifest carries no location
+  permission. The open call and venue filters send a district id, and the venue form takes the
+  coordinates as typed text (the venue directory is a list, ADR-0053).
 - No image picker module is installed (`avatarPicker` is `null` in `src/profile/instance.ts`), so
   "change photo" is hidden on the profile edit screen; the upload flow after the picker exists.
 - No connectivity detection: the `offline` error copy has no producer, an unreachable server shows

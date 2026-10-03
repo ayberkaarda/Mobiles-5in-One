@@ -57,9 +57,9 @@ Kadro saha rezervasyonu yapmaz ve ödeme işlemez. Saha ücretini oyuncular aras
 
 ## Sayfalar
 Özellikler: /ozellikler
-SSS: /sss
-Sahalar: /sahalar
-Eksik Var: /eksik-var
 Blog: /blog
+Saha sayfaları: /saha/{slug}
+Eksik Var ilçe sayfaları: /eksik-var/{il}/{ilce}
+İletişim: /iletisim
 Gizlilik: /gizlilik
 KVKK aydınlatma: /kvkk-aydinlatma

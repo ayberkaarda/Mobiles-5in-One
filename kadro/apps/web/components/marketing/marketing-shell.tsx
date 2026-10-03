@@ -8,8 +8,8 @@ import {
   DOWNLOAD_ANCHOR,
   FOOTER_GROUPS,
   HEADER_LINKS,
-  LEGAL_NAME,
   PORTFOLIO_NOTE,
+  SITE_NAME,
   SITE_TAGLINE,
 } from './site';
 import { marketingThemeVariables } from './theme';
@@ -88,7 +88,7 @@ export function MarketingShell({ children }: { readonly children: ReactNode }) {
             ))}
           </nav>
           <p className={styles.footerLegal}>
-            © {LEGAL_NAME}. {PORTFOLIO_NOTE}
+            © {SITE_NAME}. {PORTFOLIO_NOTE}
           </p>
         </div>
       </footer>

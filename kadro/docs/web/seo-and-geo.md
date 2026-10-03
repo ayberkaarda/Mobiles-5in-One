@@ -60,10 +60,10 @@ product, its audience and its MVP features, and contain the sentence "Kadro bir 
 projesidir." as the fact sheet requires. They invent no user counts, ratings or prices; Kadro Pro
 is described as a paid tier whose prices the stores set.
 
-Open item: `llms.txt` lists the paths `/sss`, `/sahalar` and `/eksik-var` under "Sayfalar". None of
-them exists as a page on `main` (the surface table reserves `/sss` and `/sahalar/**`, the district
-pages live at `/eksik-var/<il>/<ilce>`), so those three lines point at 404s until the pages exist
-or the lines change. Nothing in the code or tests checks the llms files against the route list.
+The "Sayfalar" lists of both llms files name only routes that exist (`/ozellikler`, `/blog`,
+`/saha/{slug}`, `/eksik-var/{il}/{ilce}`, `/iletisim`, `/gizlilik`, `/kvkk-aydinlatma`). The
+surface table still reserves `/sss` and `/sahalar/**`, but they are not listed. Nothing in the code
+or tests checks the llms files against the route list.
 
 ## Programmatic pages
 
@@ -103,9 +103,8 @@ environment, and its demonstration data must never read as real. The mechanisms 
 | llms files              | Both contain "Kadro bir portfolyo projesidir."                                                                                                                                                                                                |
 | Structured data         | No claim that needs a real operator: no organization address, contact, legal name or founding year.                                                                                                                                           |
 
-Open item: the footer line is `© Kadro Teknoloji. Kadro bir portfolyo projesidir.`
-(`LEGAL_NAME` in `components/marketing/site.ts`). The fact sheet says that no company name is
-published, so this constant should be reviewed.
+The footer line is `© Kadro. Kadro bir portfolyo projesidir.` (`SITE_NAME` and `PORTFOLIO_NOTE`
+in `components/marketing/site.ts`). No company name is published, as the fact sheet requires.
 
 The legal texts quote repository paths in code spans; that is part of their review trail and is
 replaced at a real launch (ADR-0080, `../legal/review-checklist.md`).

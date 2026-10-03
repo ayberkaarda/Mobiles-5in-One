@@ -78,15 +78,15 @@ check, and `.github/workflows/kadro-mobile-e2e.yml` (`Maestro on Android emulato
 
 ## Runbooks and operations documents
 
-| Document                                                                       | Scope                                                                                               | Status                                                     |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `README.md`                                                                    | This overview                                                                                       | Written                                                    |
-| [`worker.md`](worker.md)                                                       | Worker queues, configuration, local run, recovery                                                   | Written                                                    |
-| [`../release/backup-restore-drill.md`](../release/backup-restore-drill.md)     | `pg_dump` restore drill (`ops/restore-drill.sh`) and the draft production restore with `age` and R2 | Drill script written; production backup path not built     |
-| [`../release/cost-alerts.md`](../release/cost-alerts.md)                       | Spend thresholds per service and the `cost.guard` design                                            | Proposals only; nothing configured, `cost.guard` not built |
-| [`../release/history-purge-runbook.md`](../release/history-purge-runbook.md)   | Release-time checklist for a leaked secret in Git history                                           | Document only; not executed                                |
-| [`../security/history-purge-runbook.md`](../security/history-purge-runbook.md) | Rotation table and rewrite procedure for a committed `.env`                                         | Document only; not executed                                |
-| `deploy.md`                                                                    | VPS provisioning, Caddy, compose deploy and rollback                                                | Not written (ADR-0002 describes the model)                 |
+| Document                                                                       | Scope                                                                                               | Status                                                                         |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `README.md`                                                                    | This overview                                                                                       | Written                                                                        |
+| [`worker.md`](worker.md)                                                       | Worker queues, configuration, local run, recovery                                                   | Written                                                                        |
+| [`../release/backup-restore-drill.md`](../release/backup-restore-drill.md)     | `pg_dump` restore drill (`ops/restore-drill.sh`) and the draft production restore with `age` and R2 | Drill script written; production backup path not built                         |
+| [`../release/cost-alerts.md`](../release/cost-alerts.md)                       | Spend thresholds per service and the `cost.guard` design                                            | Proposals only; nothing configured at providers, `cost.guard` built (ADR-0081) |
+| [`../release/history-purge-runbook.md`](../release/history-purge-runbook.md)   | Release-time checklist for a leaked secret in Git history                                           | Document only; not executed                                                    |
+| [`../security/history-purge-runbook.md`](../security/history-purge-runbook.md) | Rotation table and rewrite procedure for a committed `.env`                                         | Document only; not executed                                                    |
+| `deploy.md`                                                                    | VPS provisioning, Caddy, compose deploy and rollback                                                | Not written (ADR-0002 describes the model)                                     |
 
 The restore drill script lives at `ops/restore-drill.sh` (repository path `kadro/ops/`); run it with
 `bash ops/restore-drill.sh` from `kadro/`. A history rewrite or a force-push needs the owner's
