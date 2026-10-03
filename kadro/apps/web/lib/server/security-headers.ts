@@ -44,7 +44,8 @@ export const API_CACHE_HEADERS: readonly HeaderEntry[] = [
 /** `nonce`: per-request nonce CSP, dynamic render (HTML). `deny-all`: JSON responses. */
 export type CspVariant = 'nonce' | 'deny-all';
 
-export type SurfaceName = 'api' | 'token-page' | 'email-link-page' | 'marketing' | 'seo' | 'app';
+export type SurfaceName =
+  'api' | 'token-page' | 'email-link-page' | 'marketing' | 'seo' | 'admin' | 'app';
 
 /** One row of the surface table: which paths it covers and which headers they get. */
 export interface Surface {
@@ -131,7 +132,17 @@ export const SURFACES: readonly Surface[] = [
     cacheControl: null,
   },
   {
-    // ADR-0021 group 1: `(app)` pages, `/admin/**`, `/mac/[inviteCode]`, the 404 page and every
+    // `(admin)` staff panel (ADR-0068): never indexed, never cached, no `Referer` with ids.
+    name: 'admin',
+    paths: ['/admin/**'],
+    probe: '/admin/giris',
+    csp: 'nonce',
+    noindex: true,
+    referrerPolicy: 'no-referrer',
+    cacheControl: NO_STORE_VALUE,
+  },
+  {
+    // ADR-0021 group 1: `(app)` pages, `/mac/[inviteCode]`, the 404 page and every
     // path not listed above.
     name: 'app',
     paths: [],

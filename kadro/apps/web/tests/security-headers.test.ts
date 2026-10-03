@@ -110,8 +110,8 @@ describe('HTML pages', () => {
 });
 
 describe('error pages', () => {
-  it('unknown paths (404 page) and admin paths get the same page headers', () => {
-    for (const pathname of ['/bu-sayfa-yok', '/admin/kullanicilar', '/mac/AbCdEf123']) {
+  it('unknown paths (404 page) and app paths get the same page headers', () => {
+    for (const pathname of ['/bu-sayfa-yok', '/mac/AbCdEf123']) {
       const response = proxied(pathname);
       expectPageCsp(response.headers);
       expectStaticHeaders(response.headers);
@@ -155,6 +155,12 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       cache: null,
     },
     seo: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
+    admin: {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'no-referrer',
+      cache: 'no-store',
+    },
     app: { csp: 'nonce', robots: null, referrer: 'strict-origin-when-cross-origin', cache: null },
   };
 
@@ -165,6 +171,7 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       'email-link-page',
       'marketing',
       'seo',
+      'admin',
       'app',
     ]);
     expect(SURFACES.at(-1)?.paths).toEqual([]);
@@ -190,7 +197,10 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['/saha/kadikoy-arena', 'seo'],
       ['/sahalarx', 'app'],
       ['/eksik-var/istanbul/kadikoy', 'seo'],
-      ['/admin/kullanicilar', 'app'],
+      ['/admin', 'admin'],
+      ['/admin/kullanicilar', 'admin'],
+      ['/admin/sahalar/ice-aktar/x', 'admin'],
+      ['/adminx', 'app'],
       ['/mac/AbCdEf123', 'app'],
       ['/bu-sayfa-yok', 'app'],
     ];
@@ -216,6 +226,8 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['//api//v1/health/', 'api'],
       ['/api/v1/../v1/health', 'api'],
       ['/SAHALAR/istanbul', 'seo'],
+      ['/ADMIN/Giris', 'admin'],
+      ['/x/../admin/denetim', 'admin'],
       // One decoding pass only: `%252d` is the text `%2d`, not a hyphen.
       ['/sifre%252dsifirla', 'app'],
       ['/../..', 'marketing'],

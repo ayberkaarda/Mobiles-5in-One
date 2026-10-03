@@ -87,6 +87,7 @@ describe('headers-check reads the shared surface table', () => {
         'token-page /sifre-sifirla',
         'email-link-page /giris',
         'seo /sahalar/istanbul',
+        'admin /admin/giris',
         'page / (two requests)',
       ]),
     );
@@ -235,6 +236,7 @@ describe.skipIf(!BUILD_CHECKS)('headers-check against the production build', () 
         'token-page /sifre-sifirla',
         'email-link-page /giris',
         'seo /sahalar/istanbul',
+        'admin /admin/giris',
         'page / (two requests)',
       ]),
     );
