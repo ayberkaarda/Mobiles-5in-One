@@ -64,6 +64,17 @@ export function androidIntentFilters(host: string | null): IntentFilter[] {
   return filters;
 }
 
+/**
+ * Permissions the Expo prebuild template or a library manifest adds but the app never uses (no
+ * image picker, media library or overlay). Expo writes them with `tools:node="remove"`, so copies
+ * merged from libraries are stripped too. `POST_NOTIFICATIONS` (push) and `INTERNET` stay.
+ */
+export const BLOCKED_ANDROID_PERMISSIONS = [
+  'android.permission.READ_EXTERNAL_STORAGE',
+  'android.permission.WRITE_EXTERNAL_STORAGE',
+  'android.permission.SYSTEM_ALERT_WINDOW',
+] as const;
+
 type UpdatesConfig = NonNullable<ExpoConfig['updates']>;
 
 /**
@@ -111,6 +122,7 @@ export default function createConfig(): ExpoConfig {
     android: {
       package: 'app.kadro.mobile',
       intentFilters: androidIntentFilters(linkHost),
+      blockedPermissions: [...BLOCKED_ANDROID_PERMISSIONS],
     },
     plugins: [
       'expo-router',

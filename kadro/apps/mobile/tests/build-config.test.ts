@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getConfig, type ExpoConfig } from 'expo/config';
-import { compileModsAsync, type ExportedConfig } from 'expo/config-plugins';
+import { AndroidConfig, compileModsAsync, type ExportedConfig } from 'expo/config-plugins';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -95,7 +95,9 @@ beforeAll(async () => {
   stubPublicEnv();
   nativeRoot = mkdtempSync(path.join(tmpdir(), 'kadro-mobile-build-config-'));
   writeAndroidSkeleton(nativeRoot);
-  await compileModsAsync(moddedConfig(), {
+  // `expo prebuild` applies `android.blockedPermissions` through a default plugin that
+  // `getConfig` does not register, so it is added here the same way prebuild does.
+  await compileModsAsync(AndroidConfig.Permissions.withInternalBlockedPermissions(moddedConfig()), {
     projectRoot: nativeRoot,
     platforms: ['android'],
     assertMissingModProviders: false,
@@ -121,6 +123,18 @@ describe('app.config.ts', () => {
       { android: { usesCleartextTraffic: false } },
     ]);
     expect(plugins).toContain('./plugins/android-network-security.js');
+  });
+
+  it('blocks the unused storage and overlay permissions and keeps push and network', () => {
+    stubPublicEnv();
+    const blocked = resolvedConfig().android?.blockedPermissions ?? [];
+    expect([...blocked].sort()).toEqual([
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ]);
+    expect(blocked).not.toContain('android.permission.POST_NOTIFICATIONS');
+    expect(blocked).not.toContain('android.permission.INTERNET');
   });
 
   it('adds no App Transport Security exception on iOS', () => {
@@ -227,6 +241,29 @@ describe('generated Android project', () => {
       );
       expect(domains.sort()).toEqual(['10.0.2.2', '127.0.0.1', 'localhost']);
     }
+  });
+});
+
+/** The `<uses-permission>` element for `name` in the manifest, or an empty string. */
+function permissionEntry(manifest: string, name: string): string {
+  return (
+    manifest
+      .split('<uses-permission')
+      .find((part) => part.trimStart().startsWith(`android:name="${name}"`)) ?? ''
+  );
+}
+
+describe('Android permissions in the prebuilt manifest', () => {
+  it('removes the blocked permissions from the manifest and leaves INTERNET', () => {
+    const manifest = generated('main/AndroidManifest.xml');
+    for (const name of ['READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'SYSTEM_ALERT_WINDOW']) {
+      const entry = permissionEntry(manifest, `android.permission.${name}`);
+      expect(entry).toContain('tools:node="remove"');
+    }
+    expect(manifest).toContain('<uses-permission android:name="android.permission.INTERNET"/>');
+    expect(permissionEntry(manifest, 'android.permission.POST_NOTIFICATIONS')).not.toContain(
+      'tools:node="remove"',
+    );
   });
 });
 
