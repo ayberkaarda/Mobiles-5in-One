@@ -15,6 +15,40 @@ stack, tooling and release cycle; nothing is shared between them.
 | [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                              | 0%       |
 | [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code                              | 0%       |
 
+## Gallery
+
+One card per project. Only Kadro has an application; the other cards are placeholders for products that are still in the design stage.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/kadro.png" alt="Kadro card: in development" width="100%"><br>
+      <sub><b>Kadro</b>: in development</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/readme/askida.png" alt="Askida card: in design stage, no app yet" width="100%"><br>
+      <sub><b>Askida</b>: in design stage, no app yet</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/cetele.png" alt="Cetele card: in design stage, no app yet" width="100%"><br>
+      <sub><b>Cetele</b>: in design stage, no app yet</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
+      <sub><b>Inecek Var</b>: in design stage, no app yet</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/patika.png" alt="Patika card: in design stage, no app yet" width="100%"><br>
+      <sub><b>Patika</b>: in design stage, no app yet</sub>
+    </td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
 ## Status
 
 Only Kadro has code. Its repository foundation, Phase 1 (data model, authentication and the

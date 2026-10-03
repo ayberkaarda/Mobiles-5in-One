@@ -15,6 +15,40 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 | [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                          | %0       |
 | [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Yalnızca tasarım dokümanı, kod yok                          | %0       |
 
+## Galeri
+
+Her proje için bir kart. Yalnızca Kadro'nun uygulaması var; diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/kadro.png" alt="Kadro kartı: geliştirme aşamasında" width="100%"><br>
+      <sub><b>Kadro</b>: geliştirme aşamasında</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/readme/askida.png" alt="Askida kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
+      <sub><b>Askida</b>: tasarım aşamasında, henüz uygulama yok</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/cetele.png" alt="Cetele kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
+      <sub><b>Cetele</b>: tasarım aşamasında, henüz uygulama yok</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
+      <sub><b>Inecek Var</b>: tasarım aşamasında, henüz uygulama yok</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/readme/patika.png" alt="Patika kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
+      <sub><b>Patika</b>: tasarım aşamasında, henüz uygulama yok</sub>
+    </td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
 ## Durum
 
 Şu an yalnızca Kadro'nun kodu var. Depo iskeleti, Phase 1 (veri modeli, kimlik doğrulama ve
