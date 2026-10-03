@@ -9,14 +9,9 @@
   min-height: 100vh;
   background-color: var(--k-background);
   color: var(--k-text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  font-size: 16px;
-  line-height: 24px;
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-body-size);
+  line-height: var(--k-type-body-line-height);
 }
 
 .header {
@@ -36,7 +31,8 @@
   min-height: 44px;
   color: var(--k-primary);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
+  font-stretch: 75%;
   letter-spacing: 0.08em;
   text-decoration: none;
 }
@@ -55,7 +51,7 @@
   align-items: center;
   min-height: 44px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--k-radius-sm);
   color: var(--k-text);
   text-decoration: none;
   font-weight: 600;
@@ -87,9 +83,9 @@
   max-width: 480px;
   margin: 48px auto;
   padding: 32px 24px;
-  border-radius: 20px;
+  border: 1px solid var(--k-color-border);
+  border-radius: var(--k-radius-lg);
   background-color: var(--k-surface);
-  box-shadow: 0 1px 3px rgb(14 26 20 / 12%);
 }
 
 .title {

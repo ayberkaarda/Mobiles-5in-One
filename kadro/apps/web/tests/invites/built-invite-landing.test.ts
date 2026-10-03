@@ -240,7 +240,7 @@ describe.skipIf(!ENABLED)('invite landing and app link files (production build)'
     expect(html).not.toMatch(/<link rel="canonical"/);
     expect(html.match(/<h1\b/g)).toHaveLength(1);
     expect(html).toContain('Deneme İlçesi, Deneme İli');
-    expect(html).toContain('1 oyuncu');
+    expect(html).toMatch(/>1<[^]{0,200}oyuncu/);
     // The hostile team name is text, never markup.
     expect(html).not.toContain(HOSTILE);
     expect(html).toContain(`Deneme FK ${run} &lt;img src=x onerror=alert(1)&gt;`);

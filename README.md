@@ -22,7 +22,7 @@ One card per project. Only Kadro has an application; the other cards are placeho
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/kadro.png" alt="Kadro card: in development" width="100%"><br>
+      <img src="docs/readme/kadro.png" alt="Kadro: web home page and mobile lineup screen, sample data" width="100%"><br>
       <sub><b>Kadro</b>: in development</sub>
     </td>
     <td width="50%" align="center">
@@ -58,7 +58,7 @@ release readiness) is in progress: the attack suite, restore drill and runbooks,
 listing copy and privacy label drafts are merged; the final verification matrix, the SEO and GEO
 checklist, a dependency audit report and the mobile static scan are open. Merged does not mean
 verified in the real world: mobile end-to-end flows have not run on a device, purchases have not run
-against real store accounts, and legal and store texts are samples. See
+against real store accounts, and legal and store texts are samples. The redesign (ADR-0084: light and dark schemes, Archivo type, a squad-sheet look on the web and in the app) is merged into this work and does not change the phase count. See
 [`kadro/README.md`](kadro/README.md) for the detailed breakdown.
 
 Askida, Cetele, Inecek Var and Patika currently consist of a single specification document each.
@@ -68,13 +68,13 @@ No application code exists for them yet.
 
 Last updated: 2026-10-03 (after the Phase 6 documentation and cost guard merge). The figures are estimates, refreshed whenever a batch of work merges.
 
-| Project     | Progress | Basis                                                                                                                                                              |
-| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `kadro`     | ~95%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 7 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 7/11) / 7. |
-| `askida`    | 0%       | Specification only; no code yet.                                                                                                                                   |
-| `cetele`    | 0%       | Specification only; no code yet.                                                                                                                                   |
-| `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                   |
-| `patika`    | 0%       | Specification only; no code yet.                                                                                                                                   |
+| Project     | Progress | Basis                                                                                                                                                                                                                                         |
+| ----------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kadro`     | ~95%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 7 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 7/11) / 7 = 94.8%. The redesign does not change the phase count, so the figure stays. |
+| `askida`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
+| `cetele`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
+| `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
+| `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                              |
 
 Progress means merged into `main`; work that is only on a branch or in an open pull request is not
 counted. The figure reaches 100% only after Phase 6 (hardening and release readiness) is complete.

@@ -16,7 +16,11 @@ export interface TextFieldProps extends Omit<
   readonly ref?: Ref<TextInput>;
 }
 
-/** Labelled text input; the visible label is also the spoken name. */
+/**
+ * Labelled text input (the kit's input): label above, 48 pt field on `surfaceSunken`, radius 8,
+ * `borderStrong` outline, 2 px `focusRing` while focused, `danger` outline and `dangerText`
+ * message on error. The visible label is also the spoken name.
+ */
 export function TextField({
   label,
   error,
@@ -35,8 +39,8 @@ export function TextField({
   const borderColor = hasError
     ? theme.colors.danger
     : focused
-      ? theme.colors.primary
-      : theme.colors.border;
+      ? theme.colors.focusRing
+      : theme.colors.borderStrong;
 
   return (
     <View style={{ marginBottom: theme.spacing['4'] }}>
@@ -63,15 +67,14 @@ export function TextField({
           theme.typography.body,
           styles.input,
           {
-            minHeight: theme.minTouchTarget,
+            minHeight: theme.layout.controlHeight,
             paddingHorizontal: theme.spacing['3'],
             paddingVertical: theme.spacing['2'],
             borderRadius: theme.radius.sm,
             borderColor,
             borderWidth: hasError || focused ? 2 : 1,
-            color: theme.colors.text,
-            backgroundColor: theme.colors.surface,
-            opacity: editable ? 1 : 0.6,
+            color: editable ? theme.colors.text : theme.colors.textMuted,
+            backgroundColor: editable ? theme.colors.surfaceSunken : theme.colors.fillMuted,
           },
         ]}
       />

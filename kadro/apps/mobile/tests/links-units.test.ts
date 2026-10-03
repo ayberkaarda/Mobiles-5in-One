@@ -4,6 +4,7 @@ import { parseDeepLink } from '../../../packages/contracts/src/deep-links';
 import { districtFromLink } from '../src/links/district';
 import {
   allowedLinkOrigins,
+  homeHref,
   isSlug,
   parseLink,
   pendingLinkStep,
@@ -141,11 +142,23 @@ describe('routeIncomingLink', () => {
   });
 
   it('opens the home screen for an unknown path of the app, such as the spec spelling match/', () => {
+    // Signed in, `/` is a hidden route (the entry screen): home is the matches tab.
     expect(routeIncomingLink(`kadro://match/${CODE}`, 'signedIn', [])).toEqual({
+      path: '/maclar',
+      pending: null,
+    });
+    expect(routeIncomingLink(`${ORIGIN}/blog/yazi`, 'signedIn', [ORIGIN]).path).toBe('/maclar');
+    expect(routeIncomingLink(`kadro://match/${CODE}`, 'signedOut', [])).toEqual({
       path: '/',
       pending: null,
     });
-    expect(routeIncomingLink(`${ORIGIN}/blog/yazi`, 'signedIn', [ORIGIN]).path).toBe('/');
+    expect(routeIncomingLink('kadro://bilinmeyen', 'unknown', []).path).toBe('/');
+  });
+
+  it('gives the home route of each session state', () => {
+    expect(homeHref('signedIn')).toBe('/maclar');
+    expect(homeHref('signedOut')).toBe('/');
+    expect(homeHref('unknown')).toBe('/');
   });
 
   it('does not touch links of other schemes or origins', () => {

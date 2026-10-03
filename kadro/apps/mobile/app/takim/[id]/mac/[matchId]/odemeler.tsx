@@ -5,13 +5,14 @@ import { FormError } from '../../../../../src/auth/components';
 import { useAsyncAction } from '../../../../../src/auth/use-async-action';
 import { Fact, MatchScreen, matchHref, RoleError } from '../../../../../src/matches/components';
 import { matchesApi } from '../../../../../src/matches/instance';
-import { formatMinor, paymentSummary } from '../../../../../src/matches/money';
+import { formatLira } from '../../../../../src/i18n/format';
+import { paymentSummary } from '../../../../../src/matches/money';
 import { useMarkPayment, useMatchBusy } from '../../../../../src/matches/mutations';
 import { canMarkPayment, isStaff, paymentsWritable } from '../../../../../src/matches/permissions';
 import { useMatchScreen } from '../../../../../src/matches/use-match';
 import { CachedNotice, Notice, ResourceState, Section } from '../../../../../src/teams/components';
 import { useTheme } from '../../../../../src/theme';
-import { Button, Card, Text } from '../../../../../src/ui';
+import { Badge, Button, Card, Text } from '../../../../../src/ui';
 
 /**
  * Who has paid their share (product spec story 5; no money moves in the app). Team members see
@@ -82,7 +83,7 @@ export default function PaymentsScreen() {
       <Section>
         <Card>
           <View style={{ gap: theme.spacing['2'] }}>
-            <Fact label={t('detail.fee')} value={formatMinor(match.feeTotalMinor, i18n.language)} />
+            <Fact label={t('detail.fee')} value={formatLira(match.feeTotalMinor, i18n.language)} />
             <Fact
               label={t('payments.paidCount')}
               value={t('payments.paidCountValue', { paid: paidCount, total: confirmed.length })}
@@ -90,7 +91,7 @@ export default function PaymentsScreen() {
             />
             <Fact
               label={summary.uneven ? t('payments.collectedAtLeast') : t('payments.collected')}
-              value={formatMinor(summary.collectedMinor, i18n.language)}
+              value={formatLira(summary.collectedMinor, i18n.language)}
               testID="payments-collected"
             />
           </View>
@@ -131,7 +132,7 @@ export default function PaymentsScreen() {
                   accessible
                   accessibilityLabel={[
                     name,
-                    share === null ? null : formatMinor(share, i18n.language),
+                    share === null ? null : formatLira(share, i18n.language),
                     row.paid ? t('payments.paid') : t('payments.unpaid'),
                   ]
                     .filter((part): part is string => part !== null)
@@ -141,14 +142,16 @@ export default function PaymentsScreen() {
                   <Text variant="label" style={{ flexShrink: 1 }}>
                     {name}
                   </Text>
-                  <Text tabular>{share === null ? '' : formatMinor(share, i18n.language)}</Text>
+                  <Text variant="bodyStrong" tabular>
+                    {share === null ? '' : formatLira(share, i18n.language)}
+                  </Text>
                 </View>
-                <Text
-                  tone={row.paid ? 'default' : 'muted'}
-                  style={{ marginTop: theme.spacing['1'] }}
-                >
-                  {row.paid ? t('payments.paid') : t('payments.unpaid')}
-                </Text>
+                <View style={{ marginTop: theme.spacing['2'] }}>
+                  <Badge
+                    label={row.paid ? t('payments.paid') : t('payments.unpaid')}
+                    tone={row.paid ? 'positive' : 'neutral'}
+                  />
+                </View>
                 {markable ? (
                   <Button
                     label={row.paid ? t('payments.markUnpaid') : t('payments.markPaid')}

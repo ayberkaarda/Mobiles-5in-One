@@ -16,8 +16,8 @@ const TABS: readonly { route: string; name: TabIconName }[] = [
 export default function TabsLayout() {
   const { t } = useTranslation('common');
   const theme = useTheme();
-  // Active tab: Pitch Green on the light bar; light text on the dark bar (4.5:1 in both).
-  const activeTint = theme.scheme === 'dark' ? theme.colors.text : theme.colors.primary;
+  // Active tab: green as text (`primaryText`) on the light bar, chalk text on the dark bar.
+  const activeTint = theme.scheme === 'dark' ? theme.colors.text : theme.colors.primaryText;
 
   return (
     <Tabs

@@ -27,13 +27,13 @@
     "noTeamMessage": "Matches are set up inside a team. Create your team or join one with an invite link.",
     "emptyTitle": "No upcoming matches",
     "emptyMessage": "When your captain sets up a match, you will see it here.",
-    "itemSubtitle": "{{team}} · {{format}}",
+    "itemSubtitle": "{{team}}, {{format}}",
     "slots": "{{confirmed}}/{{slots}}"
   },
   "teams": {
     "emptyTitle": "You have no team yet",
     "emptyMessage": "Build your squad or join a team with the invite link a friend sent you.",
-    "itemSubtitle": "{{role}} · squad of {{number}}",
+    "itemSubtitle": "{{role}}, squad of {{number}}",
     "role": {
       "captain": "Captain",
       "co_captain": "Co-captain",
@@ -44,7 +44,7 @@
     "emptyTitle": "No open calls right now",
     "emptyMessage": "When a team is looking for players, the call shows up here.",
     "missing": "{{number}} needed",
-    "itemSubtitle": "{{date}} · {{format}}"
+    "itemSubtitle": "{{date}}, {{format}}"
   },
   "venues": {
     "emptyTitle": "No pitches yet",
@@ -106,6 +106,12 @@
   "settings": {
     "title": "Settings",
     "language": "Language",
+    "appearance": "Appearance",
+    "colorScheme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "push": "Notifications",
     "pushState": {
       "loading": "Reading the notification status",

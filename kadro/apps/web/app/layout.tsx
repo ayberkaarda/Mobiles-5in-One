@@ -1,5 +1,18 @@
+import '@kadro/brand/theme.css';
+import '../components/marketing/fonts.css';
+import './globals.css';
+
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import type { ReactNode } from 'react';
+
+import {
+  COLOR_SCHEME_META,
+  THEME_COLOR,
+  THEME_COOKIE,
+  themePreferenceFromCookie,
+} from '../components/marketing/theme';
+import { ThemePreferenceProvider } from '../components/marketing/theme-context';
 
 export const metadata: Metadata = {
   title: 'Kadro: Halı Saha & Eksik Oyuncu',
@@ -9,7 +22,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1B7F4B',
+  colorScheme: COLOR_SCHEME_META,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: THEME_COLOR.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLOR.dark },
+  ],
 };
 
 /**
@@ -17,20 +34,18 @@ export const viewport: Viewport = {
  * its own layout or page (`(app)/layout.tsx`, `page.tsx`, `not-found.tsx`) so Next.js can apply the
  * CSP nonce set by proxy.ts to its scripts (security checklist item 9); a prerendered page cannot
  * carry a per-request nonce, and `tests/built-server.test.ts` fails if any page is prerendered.
+ *
+ * Colour scheme (ADR-0084): it reads the `kadro-theme` cookie and renders
+ * `<html data-theme="system|light|dark">` (`system` without a valid cookie), so the first paint
+ * is in the right scheme with no inline script and the CSP unchanged. `@kadro/brand/theme.css`
+ * maps the attribute to the colour roles; the footer toggle posts to `app/tema/route.ts`.
  */
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const preference = themePreferenceFromCookie((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang="tr">
-      <body
-        style={{
-          margin: 0,
-          minHeight: '100vh',
-          backgroundColor: '#F4F6F0',
-          color: '#0E1A14',
-          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-        }}
-      >
-        {children}
+    <html lang="tr" data-theme={preference}>
+      <body>
+        <ThemePreferenceProvider value={preference}>{children}</ThemePreferenceProvider>
       </body>
     </html>
   );

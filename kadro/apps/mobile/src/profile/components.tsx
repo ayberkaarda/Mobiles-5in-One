@@ -1,15 +1,16 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
+import { BackLink } from '../navigation/BackLink';
 import { Fact } from '../matches/components';
 import { useTheme } from '../theme';
-import { Button, Card, Screen, SkeletonList, Text } from '../ui';
+import { Button, Numeral, Screen, SkeletonList, Text } from '../ui';
 import { type Level, type MeStatsResponse, type Position } from './contracts';
+import { initialsOf } from './initials';
 
 /** Where "back" leads from the profile and settings screens opened directly (deep link, cold start). */
 export const PROFILE_HOME = '/profil';
@@ -28,25 +29,9 @@ export function ProfileScreen({
 }) {
   const { t } = useTranslation('common');
   const theme = useTheme();
-  const router = useRouter();
   return (
     <Screen scroll testID={testID}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('nav.back')}
-        onPress={() => (router.canGoBack() ? router.back() : router.replace(home))}
-        testID="back"
-        style={{
-          minHeight: theme.minTouchTarget,
-          justifyContent: 'center',
-          alignSelf: 'flex-start',
-          paddingHorizontal: theme.spacing['4'],
-        }}
-      >
-        <Text tone="link" variant="label">
-          {`‹ ${t('nav.back')}`}
-        </Text>
-      </Pressable>
+      <BackLink label={t('nav.back')} fallback={home} />
       <Text
         variant="title1"
         style={{ paddingHorizontal: theme.spacing['4'], paddingBottom: theme.spacing['3'] }}
@@ -69,16 +54,7 @@ export function profileLevelLabel(t: Translate, notSet: string, value: Level | n
   return value === null ? notSet : t(`level.${value}`);
 }
 
-/** Up to two initials of the display name, shown when there is no photo. */
-export function initialsOf(displayName: string): string {
-  return displayName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => Array.from(part)[0] ?? '')
-    .join('')
-    .toLocaleUpperCase('tr');
-}
+export { initialsOf };
 
 const AVATAR_SIZE = 72;
 
@@ -119,12 +95,32 @@ export function Avatar({
         {
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: theme.colors.primary,
+          backgroundColor: theme.colors.inverse,
         },
       ]}
     >
-      <Text variant="title2" accessibilityRole="text" style={{ color: theme.colors.onPrimary }}>
+      <Text variant="bib" accessibilityRole="text" style={{ color: theme.colors.onInverse }}>
         {initialsOf(displayName)}
+      </Text>
+    </View>
+  );
+}
+
+/** One statistic as a kit numeral over its label, read as "label: value". */
+function StatNumeral({
+  label,
+  value,
+  testID,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly testID: string;
+}) {
+  return (
+    <View accessible accessibilityLabel={`${label}: ${value}`} testID={testID}>
+      <Numeral value={value} variant="score" />
+      <Text variant="footnote" tone="muted">
+        {label}
       </Text>
     </View>
   );
@@ -161,13 +157,19 @@ export function StatsCard({
   let body;
   if (data !== undefined) {
     body = (
-      <View style={{ gap: theme.spacing['2'] }}>
-        <Fact
-          label={t('stats.matchesPlayed')}
-          value={String(data.matchesPlayed)}
-          testID="stats-played"
-        />
-        <Fact label={t('stats.mvpCount')} value={String(data.mvpCount)} testID="stats-mvp" />
+      <View style={{ gap: theme.spacing['3'] }}>
+        <View style={{ flexDirection: 'row', gap: theme.spacing['6'] }}>
+          <StatNumeral
+            label={t('stats.matchesPlayed')}
+            value={String(data.matchesPlayed)}
+            testID="stats-played"
+          />
+          <StatNumeral
+            label={t('stats.mvpCount')}
+            value={String(data.mvpCount)}
+            testID="stats-mvp"
+          />
+        </View>
         {data.tier === 'full' ? (
           <>
             <Fact
@@ -214,11 +216,15 @@ export function StatsCard({
     body = <SkeletonList accessibilityLabel={t('state.loading')} rows={2} testID="stats-loading" />;
   }
   return (
-    <Card testID="stats-card">
-      <Text variant="title3" style={{ marginBottom: theme.spacing['3'] }}>
+    <View testID="stats-card">
+      <Text
+        variant="title3"
+        accessibilityRole="header"
+        style={{ marginBottom: theme.spacing['3'] }}
+      >
         {t('stats.title')}
       </Text>
       {body}
-    </Card>
+    </View>
   );
 }

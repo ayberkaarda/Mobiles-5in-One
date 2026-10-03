@@ -49,7 +49,7 @@ import { ConfirmAction, Notice, ResourceState, Section } from '../../../src/team
 import { teamsApi } from '../../../src/teams/instance';
 import { teamDetailQuery } from '../../../src/teams/queries';
 import { useTheme } from '../../../src/theme';
-import { Button, SkeletonList, Text } from '../../../src/ui';
+import { Button, Numeral, SkeletonList, Text } from '../../../src/ui';
 
 const ANY = 'any';
 
@@ -132,9 +132,25 @@ function PublishForm({
   return (
     <View testID="publish-form" style={{ gap: theme.spacing['4'] }}>
       <View>
-        <Text variant="label" style={{ marginBottom: theme.spacing['2'] }}>
-          {t('publish.missing', { max })}
-        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: theme.spacing['3'],
+            marginBottom: theme.spacing['2'],
+          }}
+        >
+          <Text variant="label" style={{ flexShrink: 1 }}>
+            {t('publish.missing', { max })}
+          </Text>
+          {missing === null ? null : (
+            // Preview of the count as the list will draw it; the radio group carries the value.
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Numeral value={missing} variant="score" outlined />
+            </View>
+          )}
+        </View>
         <ChoiceGroup
           label={t('publish.missingGroup')}
           options={Array.from({ length: max }, (_, index) => String(index + 1)).map((value) => ({
@@ -262,7 +278,7 @@ export default function MatchCallScreen() {
 
   const header = {
     title: t('manage.title'),
-    subtitle: `${match.team.name} · ${formatDateTime(match.startsAt, i18n.language)}`,
+    subtitle: `${match.team.name}, ${formatDateTime(match.startsAt, i18n.language)}`,
     back: matchHref(match.team.id, matchId),
   };
 

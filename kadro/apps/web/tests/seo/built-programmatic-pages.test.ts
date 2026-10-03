@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import { foldTr } from '@kadro/contracts';
-import { districts, matches, openCalls, teams, users, venues } from '@kadro/db';
+import { districts, matches, openCalls, teams, users, venueReviews, venues } from '@kadro/db';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -33,6 +33,8 @@ const APP_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const NEXT_BIN = fileURLToPath(new URL('../../node_modules/next/dist/bin/next', import.meta.url));
 const DAY_MS = 86_400_000;
 const HOSTILE = '</script><script>alert(1)</script><!--';
+const HOSTILE_REVIEW =
+  '<img src=x onerror=alert(2)> </script><script>alert(3)</script> "q" \'s\' & <!--';
 
 let database: TestDatabase | undefined;
 let logins: RoleLogins | undefined;
@@ -48,6 +50,7 @@ const slugs = {
   expiring: `kisa-${run}`,
   verified: `ornek-dogrulanmis-${run}`,
   hostile: `ornek-isim-${run}`,
+  review: `ornek-yorum-${run}`,
   sample: `ornek-demo-${run}`,
   pending: `ornek-bekleyen-${run}`,
   cached: `ornek-onbellek-${run}`,
@@ -98,11 +101,18 @@ async function seed(db: TestDatabase['client']['db']): Promise<void> {
     .values([
       venue(slugs.verified, '[ÖRNEK] Deneme Kapalı Saha', { verified: true, isSample: false }),
       venue(slugs.hostile, `[ÖRNEK] Deneme ${HOSTILE}`, { verified: true, isSample: false }),
+      venue(slugs.review, '[ÖRNEK] Deneme Yorumlu Saha', { verified: true, isSample: false }),
       venue(slugs.sample, '[ÖRNEK] Deneme Demo Saha', { verified: false, isSample: true }),
       venue(slugs.pending, '[ÖRNEK] Deneme Bekleyen Saha', { verified: false, isSample: false }),
       venue(slugs.cached, '[ÖRNEK] Deneme İlk Ad', { verified: true, isSample: false }),
     ])
     .returning({ id: venues.id, slug: venues.slug });
+  await db.insert(venueReviews).values({
+    venueId: venueRows.find((row) => row.slug === slugs.review)?.id ?? '',
+    userId: owner?.id ?? '',
+    rating: 4,
+    text: HOSTILE_REVIEW,
+  });
   const [team] = await db
     .insert(teams)
     .values({
@@ -278,6 +288,35 @@ describe.skipIf(!ENABLED)('programmatic SEO pages (production build)', () => {
       (node) => node['@type'] === 'SportsActivityLocation',
     );
     expect(place?.name).toBe(`[ÖRNEK] Deneme ${HOSTILE}`);
+  });
+
+  it('renders a hostile review text as escaped text, in no element or attribute', async () => {
+    const { response, html } = await get(`/saha/${slugs.review}`);
+    expect(response.status, output).toBe(200);
+    // Every script element still carries the nonce: the payload opened no script of its own.
+    const blocks = expectNoncedScripts(response, html);
+    expect(blocks).toHaveLength(1);
+    expect(html).not.toContain('<img src=x');
+    expect(html).not.toContain('<script>alert(');
+    expect(html).not.toMatch(/<[a-z][^>]*\sonerror\s*=/i);
+    expect(html).not.toMatch(/<img[\s/>]/i);
+    // The text is present as entity-escaped character data inside the review paragraph.
+    const paragraph = /<p class="[^"]*reviewText[^"]*">([^]*?)<\/p>/.exec(html)?.[1] ?? '';
+    expect(paragraph).toContain('&lt;img src=x onerror=alert(2)&gt;');
+    expect(paragraph).toContain('&lt;/script&gt;&lt;script&gt;alert(3)&lt;/script&gt;');
+    const decoded = paragraph
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#x27;', "'")
+      .replaceAll('&amp;', '&');
+    expect(decoded).toBe(HOSTILE_REVIEW);
+    // The structured-data block stays one valid, fully escaped JSON document.
+    const raw = /<script type="application\/ld\+json"[^>]*>([^<]*)<\/script>/.exec(html)?.[1] ?? '';
+    expect(raw).not.toBe('');
+    expect(raw).not.toMatch(/[<>]/);
+    expect(raw).not.toContain('onerror');
+    expect(graphTypes(blocks)).toEqual(['BreadcrumbList', 'SportsActivityLocation']);
   });
 
   it('marks a sample venue as demonstration data and keeps it out of the index', async () => {

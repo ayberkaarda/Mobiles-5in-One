@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "kadro-dumps-expire-after-30-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "kadro-"
+      },
+      "Expiration": {
+        "Days": 30
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

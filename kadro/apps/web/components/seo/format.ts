@@ -194,3 +194,13 @@ export function venuePath(slug: string): `/saha/${string}` {
 export function districtPath(ilSlug: string, slug: string): `/eksik-var/${string}` {
   return `/eksik-var/${ilSlug}/${slug}`;
 }
+
+/**
+ * Initial of a display name for an avatar: a leading bracket tag such as `[ÖRNEK]` is dropped
+ * first, so `[ÖRNEK] Deneme` gives `D`, never `[`. Falls back to `?` for an empty name.
+ */
+export function avatarInitial(name: string): string {
+  const stripped = name.replace(/^\s*\[[^\]]*\]\s*/u, '').trim();
+  const first = Array.from(stripped)[0];
+  return first === undefined ? '?' : first.toLocaleUpperCase('tr-TR');
+}

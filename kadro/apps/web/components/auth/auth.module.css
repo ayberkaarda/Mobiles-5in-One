@@ -14,14 +14,9 @@
   align-items: flex-start;
   background-color: var(--k-background);
   color: var(--k-text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  font-size: 16px;
-  line-height: 24px;
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-body-size);
+  line-height: var(--k-type-body-line-height);
 }
 
 .card {
@@ -29,27 +24,26 @@
   width: 100%;
   max-width: 440px;
   padding: 32px 24px;
-  border-radius: 20px;
+  border: 1px solid var(--k-color-border);
+  border-radius: var(--k-radius-lg);
   background-color: var(--k-surface);
-  box-shadow: 0 1px 3px rgb(14 26 20 / 12%);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--k-primary);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--k-text);
   text-decoration: none;
 }
 
 .title {
   margin: 8px 0;
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 600;
+  font-size: var(--k-type-title1-size);
+  line-height: var(--k-type-title1-line-height);
+  font-weight: var(--k-type-title1-weight);
+  font-stretch: var(--k-type-title1-stretch);
+  letter-spacing: var(--k-type-title1-tracking);
 }
 
 .lead {
@@ -85,6 +79,8 @@
 
 .fieldError {
   margin: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--k-danger);
   color: var(--k-danger);
   font-size: 14px;
   line-height: 20px;
@@ -98,7 +94,7 @@
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid var(--k-textMuted);
-  border-radius: 8px;
+  border-radius: var(--k-radius-sm);
   background-color: var(--k-surface);
   color: var(--k-text);
   font: inherit;
@@ -137,7 +133,7 @@
   min-height: 44px;
   padding: 10px 20px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--k-radius-sm);
   background-color: var(--k-primary);
   color: var(--k-onPrimary);
   font: inherit;
@@ -187,6 +183,8 @@
 }
 
 .statusError {
+  padding: 8px 12px;
+  border-left: 3px solid var(--k-danger);
   color: var(--k-danger);
   font-weight: 600;
 }

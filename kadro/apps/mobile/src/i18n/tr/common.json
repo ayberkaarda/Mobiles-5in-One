@@ -27,13 +27,13 @@
     "noTeamMessage": "Maçlar takımın içinde kurulur. Takımını kur ya da davet bağlantısıyla bir takıma katıl.",
     "emptyTitle": "Yaklaşan maç yok",
     "emptyMessage": "Kaptanın maç kurduğunda burada görürsün.",
-    "itemSubtitle": "{{team}} · {{format}}",
+    "itemSubtitle": "{{team}}, {{format}}",
     "slots": "{{confirmed}}/{{slots}}"
   },
   "teams": {
     "emptyTitle": "Henüz bir takımın yok",
     "emptyMessage": "Kadroyu kur ya da arkadaşının gönderdiği davet bağlantısıyla takıma katıl.",
-    "itemSubtitle": "{{role}} · {{number}} oyuncu",
+    "itemSubtitle": "{{role}}, {{number}} oyuncu",
     "role": {
       "captain": "Kaptan",
       "co_captain": "Yardımcı kaptan",
@@ -44,7 +44,7 @@
     "emptyTitle": "Şu an eksik oyuncu ilanı yok",
     "emptyMessage": "Bir takım oyuncu aradığında ilan burada çıkar.",
     "missing": "{{number}} eksik",
-    "itemSubtitle": "{{date}} · {{format}}"
+    "itemSubtitle": "{{date}}, {{format}}"
   },
   "venues": {
     "emptyTitle": "Henüz saha yok",
@@ -106,6 +106,12 @@
   "settings": {
     "title": "Ayarlar",
     "language": "Dil",
+    "appearance": "Görünüm",
+    "colorScheme": {
+      "system": "Sistem",
+      "light": "Açık",
+      "dark": "Koyu"
+    },
     "push": "Bildirimler",
     "pushState": {
       "loading": "Bildirim durumu okunuyor",

@@ -2,7 +2,8 @@
 # - an invite link opened while signed out is held in memory and opens after the sign-in,
 #   without joining (the join still needs a tap);
 # - a venue link opens the venue page;
-# - an unknown path on the app scheme opens the home route instead of an "unmatched" page.
+# - an unknown path on the app scheme opens the home route (signed in: the matches tab) instead
+#   of an "unmatched" page, also while another screen is open.
 appId: app.kadro.mobile
 name: deep-links
 tags:

@@ -6,14 +6,14 @@ import {
   type TextStyle,
 } from 'react-native';
 
-import { useTheme, type ThemeColors, type TypeVariant } from '../theme';
+import { type ColorRole, useTheme, type TypeVariant } from '../theme';
 
 /**
- * Text color roles that meet 4.5:1 on the background and surface of both schemes (token contrast
- * pairs). Pitch Green is not offered as a text tone: in the dark scheme it falls below 4.5:1,
- * so emphasized links use `link`.
+ * Text colour roles. Each one is a brand contrast pair (4.5:1) on `background`, `surface` and
+ * `surfaceRaised` in both schemes: `accent` is orange as text on dark and ink on light, because
+ * orange text on a light ground fails.
  */
-export type TextTone = 'default' | 'muted' | 'danger' | 'link';
+export type TextTone = 'default' | 'muted' | 'danger' | 'link' | 'primary' | 'accent';
 
 export interface TextProps extends Omit<RNTextProps, 'style'> {
   readonly children: ReactNode;
@@ -25,11 +25,13 @@ export interface TextProps extends Omit<RNTextProps, 'style'> {
   readonly style?: StyleProp<TextStyle>;
 }
 
-const TONE_COLOR: Record<TextTone, keyof ThemeColors> = {
+export const TONE_ROLE: Readonly<Record<TextTone, ColorRole>> = {
   default: 'text',
   muted: 'textMuted',
-  danger: 'errorText',
+  danger: 'dangerText',
   link: 'link',
+  primary: 'primaryText',
+  accent: 'accentText',
 };
 
 const HEADER_VARIANTS: ReadonlySet<TypeVariant> = new Set([
@@ -56,7 +58,7 @@ export function Text({
   // eslint-disable-next-line security/detect-object-injection -- variant is a typed TypeVariant
   const typography = theme.typography[variant];
   // eslint-disable-next-line security/detect-object-injection -- tone is a typed TextTone
-  const color = theme.colors[TONE_COLOR[tone]];
+  const color = theme.colors[TONE_ROLE[tone]];
   const role = accessibilityRole ?? (HEADER_VARIANTS.has(variant) ? 'header' : undefined);
   return (
     <RNText

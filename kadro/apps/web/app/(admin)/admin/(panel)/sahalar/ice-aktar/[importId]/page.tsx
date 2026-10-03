@@ -83,7 +83,7 @@ export default async function VenueImportStatusPage({
           Başlatıldı: <time dateTime={state.createdAt}>{formatDateTime(state.createdAt)}</time>
           {state.completedAt === null ? null : (
             <>
-              {' · '}Bitti:{' '}
+              {'. '}Bitti:{' '}
               <time dateTime={state.completedAt}>{formatDateTime(state.completedAt)}</time>
             </>
           )}
