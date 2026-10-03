@@ -628,6 +628,26 @@ for (const f of [
   );
 }
 
+// ---------- devices (decision section 4 'Illustration'): rail counter, station rail, tag ----------
+const DEVICES = ["rail-counter", "station-rail", "tag"].flatMap((n) =>
+  schemeNames.map((sc) => `devices/askida-${n}-${sc}.svg`),
+);
+for (const f of DEVICES) {
+  const s = checkSvg(f, {
+    allowText: /devices\/askida-tag-(light|dark)\.svg$/.test(f),
+    group: "devices",
+  });
+  if (!s) continue;
+  if (!/fill-rule="evenodd"/.test(s)) fail(`${f}: tags need an evenodd hole`);
+  if (/<circle/.test(s)) fail(`${f}: tag holes are cutouts, not drawn circles`);
+  if (!/stroke-width="2"[^>]*d="M[\d.]+ [\d.]+H/.test(s))
+    fail(`${f}: needs a 2 px horizontal rail`);
+  const sc = f.includes("-dark") ? "dark" : "light";
+  if (!s.includes(`stroke="${schemes[sc].text}"`))
+    fail(`${f}: rail must use the ${sc} text colour`);
+}
+if (existsSync(join(root, "craft"))) fail("craft/ is retired in v2");
+
 // ---------- rasters: signature, size, no metadata chunks ----------
 const checkPng = (f, ew, eh) => {
   const p = join(root, f);
