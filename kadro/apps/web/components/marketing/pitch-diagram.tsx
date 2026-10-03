@@ -63,7 +63,7 @@ function EmptyMarker({ marker, x, y }: { marker: PitchMarker; x: number; y: numb
         strokeDasharray="4 4"
       />
       {marker.number === undefined ? null : (
-        <text className={styles.markerEmptyNumber} x={x} y={y + 6} textAnchor="middle">
+        <text className={styles.markerEmptyNumber} x={x} y={y + 7} textAnchor="middle">
           {marker.number}
         </text>
       )}

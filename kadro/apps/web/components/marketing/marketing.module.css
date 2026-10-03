@@ -137,6 +137,53 @@
   min-height: 44px;
 }
 
+.ctaShort {
+  display: none;
+}
+
+/* Phone width: one compact row (wordmark, links, short CTA). The wordmark is the home link, so
+   the "Ana sayfa" item is dropped here. No script. */
+@media (max-width: 480px) {
+  .headerInner {
+    flex-wrap: nowrap;
+    gap: var(--k-space-1);
+  }
+
+  .nav {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .navList {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0;
+  }
+
+  .navHome {
+    display: none;
+  }
+
+  .navLink {
+    padding: 0 var(--k-space-2);
+    white-space: nowrap;
+  }
+
+  .headerCta {
+    flex: 0 0 auto;
+    padding-inline: var(--k-space-3);
+    white-space: nowrap;
+  }
+
+  .ctaLong {
+    display: none;
+  }
+
+  .ctaShort {
+    display: inline;
+  }
+}
+
 .main {
   flex: 1 0 auto;
 }

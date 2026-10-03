@@ -78,7 +78,7 @@ export default async function DistrictCallsPage({ params }: DistrictPageProps) {
       </Section>
       <Section labelledBy="ilanlar" density="dense" ruled>
         <h2 id="ilanlar" className={cx(typeClassName('title1'), styles.sectionTitle)}>
-          Açık ilanlar
+          Bu hafta eksik olan maçlar
         </h2>
         {calls.length === 0 ? (
           <p className={cx(typeClassName('body'), styles.empty)}>
@@ -100,7 +100,7 @@ export default async function DistrictCallsPage({ params }: DistrictPageProps) {
                 />
                 <div className={styles.rowMain}>
                   <h3 className={cx(typeClassName('title3'), styles.rowTitle)}>
-                    {`${call.missingCount} eksik oyuncu · ${formatLabel(call.format)}`}
+                    {`${call.missingCount} eksik oyuncu, ${formatLabel(call.format)}`}
                   </h3>
                   <p className={cx(typeClassName('body'), styles.rowMeta)}>
                     <time dateTime={call.startsAt}>{formatMatchTime(call.startsAt)}</time>

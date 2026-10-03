@@ -64,7 +64,7 @@ export function PanelFrame({
         <PanelNav isAdmin={role === 'admin'} />
         <div className={styles.account}>
           <span>
-            {displayName} · {roleLabel(role)}
+            {displayName}, {roleLabel(role)}
           </span>
           <SignOutButton csrfCookieName={csrfCookieName} />
         </div>

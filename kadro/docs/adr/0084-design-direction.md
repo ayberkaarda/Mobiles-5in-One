@@ -107,13 +107,11 @@ Known gaps against `docs/design/direction.md`, none of them blocking:
 - Match detail: the RSVP answer is three separate buttons, not a three-segment control.
 - Prices are written with the symbol first ("₺1.400"); the direction uses the Turkish order
   ("1.400 ₺").
-- Meta rows still use middle dots as separators.
+- Meta rows in the mobile app still use middle dots as separators (the web copy is done).
 - Settings: Görünüm is a segmented control, the direction describes a radio list.
 - Venue list: facilities are one text chip, not four small icons.
 - Icons: the planned Phosphor set is a new dependency and has not been added.
 - The splash colour in `app.config.ts` has not been moved to the v3 palette.
 - `expo-system-ui` is not installed; prebuild warns about `userInterfaceStyle`, and a flash on a
   dark launch is possible.
-- District page copy: the title reads "Açık ilanlar" and should be reviewed.
-- The web header stacks into three rows on a phone width (about 165 px).
 - LCP: the lab estimate above 2.5 s needs less shared framework script or fewer CSS chunks.
