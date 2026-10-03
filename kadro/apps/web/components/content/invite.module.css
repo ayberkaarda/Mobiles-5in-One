@@ -1,10 +1,14 @@
 /* Team invite landing (direction section 4.4): one centred ticket card, store badges below. */
 
+/* Vertical room on the outer element: the inner one carries the shared `sectionInner` padding. */
 .stage {
+  padding: var(--k-space-12) 0 var(--k-space-16);
+}
+
+.stageInner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--k-space-12) 0 var(--k-space-16);
 }
 
 .ticket {

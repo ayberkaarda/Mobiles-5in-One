@@ -76,8 +76,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
   }
   const { team } = landing;
   return (
-    <article>
-      <div className={`${styles.sectionInner} ${invite.stage}`}>
+    <article className={invite.stage}>
+      <div className={`${styles.sectionInner} ${invite.stageInner}`}>
         <div className={invite.ticket}>
           <p className={invite.eyebrow}>{INVITE_TITLE}</p>
           <h1 className={invite.teamName}>{team.name}</h1>

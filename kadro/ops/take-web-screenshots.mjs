@@ -14,16 +14,19 @@
 //      run time, WEB_ORIGIN pointing at the local URL), like the e2e suite does.
 //   3. Captures the pages listed in PAGES with the installed Chrome (`channel: 'chrome'`), reduced
 //      motion, fonts loaded. Desktop 1440x900, mobile 390x844, device scale factor 1. Full-page
-//      shots are cut at MAX_HEIGHT pixels. The staff panel is captured after a password + TOTP
+//      shots are cut at MAX_HEIGHT pixels. Every public page is captured once per colour scheme
+//      in SCHEMES (the `kadro-theme` cookie the site reads), saved as `<name>-light.png` and
+//      `<name>-dark.png`. The staff panel (always light) is captured once after a password + TOTP
 //      sign-in. The Open Graph card is saved as served (`/og/kadro.png`).
-//   4. Optionally re-encodes every PNG as a 256-colour palette image with Pillow (`--python`).
+//   4. Optionally re-encodes the PNGs of this run as 256-colour palette images with Pillow
+//      (`--python`).
 //   5. Stops the server and removes the container by its exact name.
 //
 // Uses only dependencies already installed in the workspace (@playwright/test, pg, workspace
 // packages) and Node.js 22.18+ (it imports the TOTP helper of apps/web as TypeScript).
 import { execFile, spawn, spawnSync } from 'node:child_process';
 import { randomBytes, generateKeyPairSync } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
@@ -41,6 +44,9 @@ const MAX_HEIGHT = 1400;
 const DAY_MS = 86_400_000;
 
 const DESKTOP = { width: 1440, height: 900 };
+/** Colour schemes of the public pages, set through the `kadro-theme` cookie. */
+const SCHEMES = ['light', 'dark'];
+const THEME_COOKIE = 'kadro-theme';
 const MOBILE = { width: 390, height: 844 };
 
 const VENUE_SLUG = 'ornek-kadikoy-hali-saha-a';
@@ -300,6 +306,7 @@ async function main() {
   const name = `kadro-web-shots-${randomBytes(6).toString('hex')}`;
   let server;
   let browser;
+  let files = [];
   let started = false;
   try {
     await docker([
@@ -361,6 +368,7 @@ async function main() {
     );
     await waitFor(async () => (await fetch(`${base}/api/v1/health`)).ok, 'web server', 60_000);
     console.log(`server ready at ${base}`);
+    const written = [];
 
     browser = await chromium.launch({ channel: 'chrome', headless: true });
     const contextOptions = {
@@ -378,17 +386,28 @@ async function main() {
     });
     const desktopPage = await desktop.newPage();
     const mobilePage = await mobile.newPage();
-    for (const entry of PAGES) {
-      const path = entry.path.replace('{invite}', inviteCode);
-      await capture(desktopPage, base, path, join(options.out, `${entry.name}.png`), DESKTOP);
-      if (entry.mobile !== undefined) {
-        await capture(mobilePage, base, path, join(options.out, `${entry.mobile}.png`), MOBILE);
+    for (const scheme of SCHEMES) {
+      for (const context of [desktop, mobile]) {
+        await context.addCookies([{ name: THEME_COOKIE, value: scheme, url: base }]);
+      }
+      for (const entry of PAGES) {
+        const path = entry.path.replace('{invite}', inviteCode);
+        const desktopFile = join(options.out, `${entry.name}-${scheme}.png`);
+        await capture(desktopPage, base, path, desktopFile, DESKTOP);
+        written.push(desktopFile);
+        if (entry.mobile !== undefined) {
+          const mobileFile = join(options.out, `${entry.mobile}-${scheme}.png`);
+          await capture(mobilePage, base, path, mobileFile, MOBILE);
+          written.push(mobileFile);
+        }
       }
     }
+    await desktop.clearCookies({ name: THEME_COOKIE });
 
     // Staff panel: password sign-in, TOTP step-up, venue queue, one verification, audit log.
     const page = desktopPage;
     await capture(page, base, '/admin/giris', join(options.out, 'web-10-admin-login.png'), DESKTOP);
+    written.push(join(options.out, 'web-10-admin-login.png'));
     await page.getByLabel('E-posta').fill(staff.email);
     await page.getByLabel('Şifre', { exact: true }).fill(staff.password);
     await page.getByRole('button', { name: 'Giriş yap' }).click();
@@ -403,6 +422,7 @@ async function main() {
     await page.waitForURL(`${base}/admin/sahalar`);
     await settle(page);
     await shoot(page, join(options.out, 'web-11-admin-venues.png'), DESKTOP);
+    written.push(join(options.out, 'web-11-admin-venues.png'));
     const firstVerify = page.getByRole('button', { name: /: onayla$/ }).first();
     const label = (await firstVerify.getAttribute('aria-label')) ?? '';
     await firstVerify.click();
@@ -416,13 +436,16 @@ async function main() {
       join(options.out, 'web-12-admin-audit.png'),
       DESKTOP,
     );
+    written.push(join(options.out, 'web-12-admin-audit.png'));
 
     const og = await desktop.request.get(`${base}/og/kadro.png`);
     if (!og.ok()) {
       throw new Error(`/og/kadro.png answered ${og.status()}`);
     }
     writeFileSync(join(options.out, 'web-13-og-card.png'), await og.body());
+    written.push(join(options.out, 'web-13-og-card.png'));
     console.log('saved web-13-og-card.png');
+    files = written;
   } finally {
     await browser?.close().catch(() => undefined);
     server?.kill();
@@ -434,9 +457,6 @@ async function main() {
     }
   }
 
-  const files = readdirSync(options.out)
-    .filter((file) => file.endsWith('.png'))
-    .map((file) => join(options.out, file));
   if (options.python !== null) {
     const result = spawnSync(options.python, ['-c', PILLOW_SCRIPT, ...files], { stdio: 'inherit' });
     if (result.status !== 0) {
