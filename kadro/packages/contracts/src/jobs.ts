@@ -22,6 +22,7 @@ export const JOB_QUEUES = [
   'venue.import',
   'webhook.revenuecat.process',
   'subscription.reconcile',
+  'cost.guard',
 ] as const;
 export const jobQueueSchema = z.enum(JOB_QUEUES);
 export type JobQueue = z.infer<typeof jobQueueSchema>;
@@ -198,7 +199,7 @@ export const accountHardDeleteJobSchema = z.strictObject({
 });
 export type AccountHardDeleteJob = z.infer<typeof accountHardDeleteJobSchema>;
 
-/** Scheduled jobs (`opencall.expire`, `maintenance.sweep`) carry only their key. */
+/** Scheduled jobs (`opencall.expire`, `maintenance.sweep`, `cost.guard`) carry only their key. */
 export const scheduledJobSchema = z.strictObject({
   idempotencyKey: idempotencyKeySchema,
 });
@@ -260,9 +261,13 @@ export const JOB_PAYLOAD_SCHEMAS = {
   'maintenance.sweep': scheduledJobSchema,
   'venue.import': venueImportJobSchema,
   ...BILLING_JOB_PAYLOAD_SCHEMAS,
+  'cost.guard': scheduledJobSchema,
 } as const satisfies Record<JobQueue, z.ZodType>;
 
 export type JobPayload<TQueue extends JobQueue> = z.infer<(typeof JOB_PAYLOAD_SCHEMAS)[TQueue]>;
 
 /** Nightly reconciliation schedule (cron, UTC): 03:17 every day. */
 export const SUBSCRIPTION_RECONCILE_CRON = '17 3 * * *';
+
+/** Usage guard schedule (cron, UTC): every 15 minutes (ADR-0081). */
+export const COST_GUARD_CRON = '*/15 * * * *';

@@ -64,6 +64,7 @@ function sampleJob(queue: (typeof JOB_QUEUES)[number]): Record<string, unknown> 
       return { deletionRequestId: uuidv7(), idempotencyKey };
     case 'opencall.expire':
     case 'maintenance.sweep':
+    case 'cost.guard':
       return { idempotencyKey };
     case 'venue.import':
       return { importId: uuidv7(), idempotencyKey };
