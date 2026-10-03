@@ -1,0 +1,65 @@
+# The captain creates and publishes a match with a free-text venue on the seeded team.
+appId: app.kadro.mobile
+name: create-match
+tags:
+  - matches
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_CAPTAIN_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- scrollUntilVisible:
+    element:
+      id: team-matches-${E2E_CAPTAIN_TEAM_ID}
+    direction: DOWN
+- tapOn:
+    id: team-matches-${E2E_CAPTAIN_TEAM_ID}
+- extendedWaitUntil:
+    visible:
+      id: match-create
+    timeout: 20000
+- tapOn:
+    id: match-create
+- extendedWaitUntil:
+    visible:
+      id: venue-kind
+    timeout: 20000
+- tapOn:
+    id: venue-kind-text
+- tapOn:
+    id: venue-text
+- inputText: E2E Mac Sahasi ${E2E_RUN_ID}
+- tapOn:
+    id: match-date
+- inputText: ${E2E_MATCH_DATE}
+- tapOn:
+    id: match-time
+- inputText: ${E2E_MATCH_TIME}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: match-format-6v6
+    direction: DOWN
+- tapOn:
+    id: match-format-6v6
+- scrollUntilVisible:
+    element:
+      id: match-fee
+    direction: DOWN
+- tapOn:
+    id: match-fee
+- inputText: '1200'
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: create-match-publish
+    direction: DOWN
+- tapOn:
+    id: create-match-publish
+- extendedWaitUntil:
+    visible:
+      id: match-status
+    timeout: 30000
+- assertVisible:
+    text: .*E2E Mac Sahasi ${E2E_RUN_ID}.*

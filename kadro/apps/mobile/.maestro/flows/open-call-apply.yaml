@@ -1,0 +1,49 @@
+# Apply to another team's open call from the Eksik Var tab (ADR-0037, ADR-0052); the call then
+# shows the player's own pending application.
+appId: app.kadro.mobile
+name: open-call-apply
+tags:
+  - open-calls
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_PLAYER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- tapOn:
+    id: tab-openCalls
+- extendedWaitUntil:
+    visible:
+      id: open-calls-list
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: open-call-${E2E_OPEN_CALL_ID}
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: open-call-${E2E_OPEN_CALL_ID}
+- extendedWaitUntil:
+    visible:
+      id: call-screen
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: apply-message
+    direction: DOWN
+- tapOn:
+    id: apply-message
+- inputText: Sol bekte oynarim
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: apply-submit
+    direction: DOWN
+- tapOn:
+    id: apply-submit
+- extendedWaitUntil:
+    visible:
+      id: own-application-status
+    timeout: 30000
+- assertVisible:
+    id: withdraw

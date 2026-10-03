@@ -1,0 +1,66 @@
+# Account deletion from settings (ADR-0032, ADR-0054): two confirmations and the password, then
+# the notice screen. Uses an account seeded only for this flow.
+appId: app.kadro.mobile
+name: delete-account
+tags:
+  - profile
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_DELETER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-settings
+    direction: DOWN
+- tapOn:
+    id: profile-settings
+- scrollUntilVisible:
+    element:
+      id: settings-delete
+    direction: DOWN
+- tapOn:
+    id: settings-delete
+- extendedWaitUntil:
+    visible:
+      id: deletion-explain
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: deletion-continue
+    direction: DOWN
+- tapOn:
+    id: deletion-continue
+- scrollUntilVisible:
+    element:
+      id: deletion-continue-yes
+    direction: DOWN
+- tapOn:
+    id: deletion-continue-yes
+- scrollUntilVisible:
+    element:
+      id: deletion-password
+    direction: DOWN
+- tapOn:
+    id: deletion-password
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: deletion-submit
+    direction: DOWN
+- tapOn:
+    id: deletion-submit
+- scrollUntilVisible:
+    element:
+      id: deletion-submit-yes
+    direction: DOWN
+- tapOn:
+    id: deletion-submit-yes
+- extendedWaitUntil:
+    visible:
+      id: deletion-done-screen
+    timeout: 30000
