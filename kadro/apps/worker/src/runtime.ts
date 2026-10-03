@@ -16,6 +16,7 @@ import {
 } from './billing/revenuecat-client.js';
 import { bootstrapQueues, createBoss, withSessionRole } from './boss.js';
 import { type Clock, systemClock } from './clock.js';
+import { createCostGuardHandler } from './cost/guard.js';
 import { createEmailHandler } from './email/handler.js';
 import { createEmailTransport } from './email/transport.js';
 import { HealthReporter, defaultHealthFile } from './health.js';
@@ -48,6 +49,9 @@ export type WorkerRuntimeEnv = Pick<
   | 'PUSH_TRANSPORT'
   | 'EXPO_ACCESS_TOKEN'
   | 'PUSH_HOURLY_CAP'
+  | 'EMAIL_DAILY_CAP'
+  | 'EMAIL_MONTHLY_CAP'
+  | 'PUSH_DAILY_CAP'
   | 'R2_ENDPOINT'
   | 'R2_ACCESS_KEY_ID'
   | 'R2_SECRET_ACCESS_KEY'
@@ -206,6 +210,16 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       boss,
       clock,
       client: revenueCatClient,
+    }),
+    'cost.guard': createCostGuardHandler({
+      db,
+      clock,
+      metrics,
+      caps: {
+        emailDaily: env.EMAIL_DAILY_CAP,
+        emailMonthly: env.EMAIL_MONTHLY_CAP,
+        pushDaily: env.PUSH_DAILY_CAP,
+      },
     }),
     'venue.import': createVenueImportHandler({
       db,

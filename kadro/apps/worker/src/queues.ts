@@ -1,4 +1,5 @@
 import {
+  COST_GUARD_CRON,
   JOB_QUEUES,
   type JobQueue,
   SUBSCRIPTION_RECONCILE_CRON,
@@ -161,6 +162,18 @@ export const QUEUE_DEFINITIONS: Readonly<Record<JobQueue, QueueDefinition>> = {
     cron: SUBSCRIPTION_RECONCILE_CRON,
     cronTimeZone: 'UTC',
     scheduleData: { userId: null },
+  },
+  // ADR-0081: recomputes usage from counters every 15 minutes; the next run covers a failure.
+  'cost.guard': {
+    name: 'cost.guard',
+    stage: 'active',
+    retryLimit: 0,
+    retryDelaySeconds: 0,
+    retryBackoff: false,
+    expireInSeconds: 120,
+    localConcurrency: 1,
+    cron: COST_GUARD_CRON,
+    cronTimeZone: 'UTC',
   },
 };
 

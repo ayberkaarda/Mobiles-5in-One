@@ -31,6 +31,7 @@ import { type Logger } from 'pino';
 import { inject } from 'vitest';
 
 import { type Clock } from '../src/clock.js';
+import { type CostCaps } from '../src/cost/guard.js';
 import { FakeS3, TEST_INCOMING_BUCKET, TEST_MEDIA_BUCKET } from './fake-s3.js';
 import { createLogger } from '../src/logger.js';
 import { type MetricLabels, type MetricName, type Metrics } from '../src/metrics.js';
@@ -309,6 +310,7 @@ export interface TestWorkerOptions {
   readonly clock?: Clock;
   readonly queueOverrides?: QueueOverrides;
   readonly hourlyCap?: number;
+  readonly costCaps?: Partial<CostCaps>;
   readonly shutdownTimeoutMs?: number;
   readonly schedule?: boolean;
   readonly extra?: Partial<WorkerRuntimeOptions>;
@@ -336,6 +338,9 @@ export async function startTestWorker(
       PUSH_TRANSPORT: 'expo',
       EXPO_ACCESS_TOKEN: secrets.expoAccessToken,
       PUSH_HOURLY_CAP: options.hourlyCap ?? 5_000,
+      EMAIL_DAILY_CAP: options.costCaps?.emailDaily ?? 2_000,
+      EMAIL_MONTHLY_CAP: options.costCaps?.emailMonthly ?? 45_000,
+      PUSH_DAILY_CAP: options.costCaps?.pushDaily ?? 50_000,
       R2_ENDPOINT: provider.origin,
       R2_ACCESS_KEY_ID: 'kadro-test',
       R2_SECRET_ACCESS_KEY: 'A'.repeat(32),

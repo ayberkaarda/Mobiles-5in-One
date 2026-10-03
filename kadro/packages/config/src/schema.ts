@@ -628,6 +628,15 @@ export const workerEnvSchema = z
     PUSH_HOURLY_CAP: intSetting(1, 100_000, 5_000),
 
     /**
+     * Usage thresholds of the `cost.guard` job (ADR-0081, security checklist item 22). It warns at
+     * 80 % and, at 100 %, pauses deferrable sends until the next UTC midnight. `0` disables a
+     * threshold. E-mails are counted per UTC day and over a rolling 30 days; pushes per UTC day.
+     */
+    EMAIL_DAILY_CAP: intSetting(0, 10_000_000, 2_000),
+    EMAIL_MONTHLY_CAP: intSetting(0, 100_000_000, 45_000),
+    PUSH_DAILY_CAP: intSetting(0, 10_000_000, 50_000),
+
+    /**
      * Object storage of the worker (ADR-0030, ADR-0032): read and delete the private incoming
      * bucket, read, write and delete the media bucket. The web app has its own write-only key.
      */

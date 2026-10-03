@@ -4,6 +4,8 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { type PgBoss } from 'pg-boss';
 
 import { type Clock, HOUR_MS, MINUTE_MS } from '../clock.js';
+import { isDeferrablePush } from '../cost/classes.js';
+import { isSendPaused } from '../cost/guard.js';
 import { enqueue } from '../enqueue.js';
 import { hasReceipt, insertReceipt, runOnce } from '../idempotency.js';
 import { type JobContext, TransientJobError } from '../job-runner.js';
@@ -103,6 +105,14 @@ function createPushDelivery(dependencies: PushHandlerDependencies) {
     if (!reminder && now.getTime() - context.createdOn.getTime() > PUSH_STALE_AFTER_MS) {
       await insertReceipt(db, SEND_QUEUE, job.idempotencyKey);
       return 'skipped_stale';
+    }
+
+    // ADR-0081: while `cost.guard` has closed the push gate, deferrable types are dropped.
+    // Essential types never read the gate, so a broken gate cannot block them.
+    if (isDeferrablePush(job.type) && (await isSendPaused(db, 'push', now))) {
+      metrics.increment('cost_capped', { kind: 'push', type: job.type });
+      await insertReceipt(db, SEND_QUEUE, job.idempotencyKey);
+      return 'cost_paused';
     }
 
     const resolution = await resolveRecipient(db, job, now);

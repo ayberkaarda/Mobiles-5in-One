@@ -13,6 +13,9 @@ export const METRIC_NAMES = [
   'push_capped',
   'push_ticket_error',
   'push_receipt_error',
+  'cost_threshold',
+  'cost_capped',
+  'cost_guard_failed',
 ] as const;
 export type MetricName = (typeof METRIC_NAMES)[number];
 
@@ -32,6 +35,9 @@ const LEVELS: Readonly<Record<MetricName, 'info' | 'warn' | 'error'>> = {
   push_capped: 'warn',
   push_ticket_error: 'warn',
   push_receipt_error: 'warn',
+  cost_threshold: 'warn',
+  cost_capped: 'info',
+  cost_guard_failed: 'error',
 };
 
 export function createLogMetrics(logger: Logger): Metrics {
