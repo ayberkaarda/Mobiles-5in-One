@@ -106,6 +106,12 @@
   "settings": {
     "title": "Settings",
     "language": "Language",
+    "appearance": "Appearance",
+    "colorScheme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "push": "Notifications",
     "pushState": {
       "loading": "Reading the notification status",

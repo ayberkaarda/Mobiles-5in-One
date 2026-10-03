@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native/pure';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native/pure';
 import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -440,6 +440,12 @@ describe('match detail states', () => {
     expect(await screen.findByLabelText('Saha: Moda Sahası')).toBeTruthy();
     expect(screen.getByLabelText('Toplam ücret: ₺1.500')).toBeTruthy();
     expect(screen.getByLabelText('Gelen: 2/14')).toBeTruthy();
+    // The kit-figure header repeats the facts, so screen readers skip it.
+    const hidden = { includeHiddenElements: true };
+    expect(screen.queryByTestId('match-hero')).toBeNull();
+    const hero = screen.getByTestId('match-hero', hidden);
+    expect(hero.props.accessibilityElementsHidden).toBe(true);
+    expect(within(hero).getByText('2/14', hidden)).toBeTruthy();
   });
 
   it('shows the error with its reference and loads again on retry', async () => {
@@ -763,6 +769,15 @@ describe('lineup', () => {
     expect(screen.queryAllByRole('radio')).toEqual([]);
     expect(screen.getByRole('header', { name: 'A takımı: 1/7' })).toBeTruthy();
     expect(screen.getByLabelText('Ali Kaptan (sen), Kaleci')).toBeTruthy();
+    // The pitch shows the stored sides with the open places of a 14-slot match.
+    expect(
+      screen.getByRole('image', {
+        name: 'Diziliş: A takımı 1 oyuncu, B takımı 1 oyuncu, 12 eksik',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByTestId('lineup-counts').props.accessibilityLabel).toBe(
+      'A takımı: 1/7 · B takımı: 1/7',
+    );
   });
 
   it('lets the captain assign by tapping, keeps full sides closed and saves the whole lineup', async () => {

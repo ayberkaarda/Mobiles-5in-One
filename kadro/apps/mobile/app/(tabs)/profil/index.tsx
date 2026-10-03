@@ -21,7 +21,7 @@ import { statsQuery } from '../../../src/profile/queries';
 import { meQuery, QueryBoundary } from '../../../src/query';
 import { CachedNotice, ResourceState } from '../../../src/teams/components';
 import { useTheme } from '../../../src/theme';
-import { Button, Card, Screen, Text } from '../../../src/ui';
+import { Badge, Button, Screen, Text } from '../../../src/ui';
 
 /**
  * Own profile (`GET /api/v1/me`): photo, name, position, level, district and the statistics
@@ -79,18 +79,18 @@ export default function ProfileTab() {
     <Screen title={t('tabs.profile')} scroll testID="profile-screen">
       <QueryBoundary>
         <CachedNotice visible={me.isRefetchError} />
-        <Card style={{ marginHorizontal: theme.spacing['4'] }}>
+        <View style={{ marginHorizontal: theme.spacing['4'] }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing['4'] }}>
             <Avatar url={profile.avatarUrl} displayName={profile.displayName} />
             <View style={{ flexShrink: 1 }}>
-              <Text variant="title3">{profile.displayName}</Text>
+              <Text variant="title1">{profile.displayName}</Text>
               <Text selectable tone="muted" variant="footnote">
                 {profile.email}
               </Text>
               {isPro(profile) ? (
-                <Text variant="label" testID="profile-pro">
-                  {t('profile.pro')}
-                </Text>
+                <View style={{ marginTop: theme.spacing['1'] }}>
+                  <Badge label={t('profile.pro')} tone="inverse" testID="profile-pro" />
+                </View>
               ) : null}
             </View>
           </View>
@@ -118,7 +118,7 @@ export default function ProfileTab() {
             testID="profile-edit"
             style={{ marginTop: theme.spacing['4'] }}
           />
-        </Card>
+        </View>
         <View style={{ marginHorizontal: theme.spacing['4'], marginTop: theme.spacing['4'] }}>
           <StatsCard
             status={stats.status}

@@ -15,6 +15,7 @@ import {
   Notice,
   ResourceState,
   Section,
+  SectionHeading,
   TeamScreen,
 } from '../../../src/teams/components';
 import { teamsApi } from '../../../src/teams/instance';
@@ -182,12 +183,7 @@ export default function TeamInvitesScreen() {
         </Section>
       )}
 
-      <Text
-        variant="title3"
-        style={{ paddingHorizontal: theme.spacing['4'], marginBottom: theme.spacing['2'] }}
-      >
-        {t('invites.active')}
-      </Text>
+      <SectionHeading>{t('invites.active')}</SectionHeading>
       {invitesQuery.data === undefined ? (
         <ResourceState
           status={invitesQuery.status === 'error' ? 'error' : 'pending'}

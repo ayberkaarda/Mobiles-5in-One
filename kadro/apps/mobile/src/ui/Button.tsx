@@ -10,6 +10,10 @@ import {
 import { type Theme, useTheme } from '../theme';
 import { Text } from './Text';
 
+/**
+ * `primary`: the main action (green fill). `accent`: the one orange action per viewport.
+ * `secondary`: surface with a `borderStrong` outline. `danger`: destructive.
+ */
 export type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'danger';
 
 export interface ButtonProps {
@@ -32,7 +36,7 @@ interface VariantColors {
   readonly border: string;
 }
 
-function variantColors(theme: Theme, variant: ButtonVariant): VariantColors {
+export function buttonColors(theme: Theme, variant: ButtonVariant): VariantColors {
   const { colors } = theme;
   switch (variant) {
     case 'primary':
@@ -42,10 +46,11 @@ function variantColors(theme: Theme, variant: ButtonVariant): VariantColors {
     case 'danger':
       return { background: colors.danger, foreground: colors.onDanger, border: colors.danger };
     case 'secondary':
-      return { background: colors.surface, foreground: colors.text, border: colors.border };
+      return { background: colors.surface, foreground: colors.text, border: colors.borderStrong };
   }
 }
 
+/** 48 pt high, radius 8, label weight 600. Disabled sits on `fillMuted`. */
 export function Button({
   label,
   onPress,
@@ -58,7 +63,14 @@ export function Button({
   style,
 }: ButtonProps) {
   const theme = useTheme();
-  const palette = variantColors(theme, variant);
+  const active = buttonColors(theme, variant);
+  const palette: VariantColors = disabled
+    ? {
+        background: theme.colors.fillMuted,
+        foreground: theme.colors.textMuted,
+        border: theme.colors.fillMuted,
+      }
+    : active;
   const inactive = disabled || loading;
   return (
     <Pressable
@@ -72,13 +84,12 @@ export function Button({
       style={({ pressed }) => [
         styles.base,
         {
-          minHeight: theme.minTouchTarget,
+          minHeight: theme.layout.controlHeight,
           paddingHorizontal: theme.spacing['5'],
           paddingVertical: theme.spacing['3'],
-          borderRadius: theme.radius.md,
+          borderRadius: theme.radius.sm,
           backgroundColor: palette.background,
           borderColor: palette.border,
-          opacity: disabled ? 0.5 : 1,
         },
         style,
         pressed && !inactive ? { opacity: 0.85 } : null,
