@@ -1,0 +1,10 @@
+# Golden images are rendered and compared on the Windows development host
+# only (text rasterisation differs between operating systems). Everywhere
+# else, including the Linux CI runner, tests tagged `golden` are skipped.
+# Run them explicitly with: flutter test --tags golden
+# Regenerate with:          flutter test --update-goldens --tags golden
+tags:
+  golden:
+    on_platform:
+      "!windows":
+        skip: "Goldens are rendered and compared on the Windows host only."

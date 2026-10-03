@@ -9,7 +9,6 @@ class MerchantHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return EmptyState(
-      icon: Icons.storefront_outlined,
       title: l10n.merchantEmptyTitle,
       body: l10n.merchantEmptyBody,
     );

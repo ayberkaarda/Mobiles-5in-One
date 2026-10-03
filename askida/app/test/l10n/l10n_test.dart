@@ -30,12 +30,34 @@ void main() {
   });
 
   test('copy never uses pitying words', () {
-    final forbidden = RegExp('muhtaç|fakir|yoksul', caseSensitive: false);
+    final forbidden = RegExp(
+      r'muhtaç|fakir|yoksul|ihtiyaç\s+sahibi',
+      caseSensitive: false,
+    );
     for (final locale in ['tr', 'en']) {
-      for (final value in _arbMessages(locale).values) {
+      final messages = _arbMessages(locale);
+      // Covers the design keys added with the rail components as well.
+      expect(
+        messages.keys,
+        containsAll(const [
+          'sampleLabel',
+          'recipientCounterLead',
+          'recipientCounterTail',
+          'codeValidUntil',
+          'codeValidFor',
+          'shopVerified',
+          'shopAvailableCaption',
+          'shopNoneAvailable',
+        ]),
+      );
+      for (final value in messages.values) {
         expect(forbidden.hasMatch(value), isFalse, reason: value);
       }
     }
+  });
+
+  test('the sample label is a literal uppercase string', () {
+    expect(_arbMessages('tr')['sampleLabel'], 'ÖRNEK');
   });
 
   testWidgets('renders Turkish copy for the tr locale', (tester) async {
