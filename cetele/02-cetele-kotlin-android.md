@@ -217,7 +217,7 @@ Each phase ends with the gate in §0.1 (stop, §11 report, wait for `devam`).
 
 **Phase 5 — Web SEO/GEO (§7).** Marketing pages, 4 trade landings, 5 Turkish guides (≥ 600 words each), legal pages, sitemap/robots/JSON-LD/hreflang, `llms.txt`, assetlinks, Lighthouse CI. Gate: Lighthouse ≥ 90 on 5 pages; JSON-LD validates.
 
-**Phase 6 — Hardening and release readiness (items 2, 19, 20, 22, 23 + matrix).** Attack suite, ZAP, MobSF report, dependency-check, backups + restore drill, cost alerts + SMS balance monitor, history-purge runbook, ASO doc, Play listing copy (tr/en), Data Safety mapping, final **23-item verification matrix**. Gate: FINAL REPORT.
+**Phase 6 — Hardening and release readiness (items 2, 16, 19, 20, 22, 23 + matrix).** Attack suite, including the item-16 stored-XSS payload sweep over every rendering surface (item 16 `Verify`; the lint, template and CSP bans from the security baseline stay in place), ZAP, MobSF report, dependency-check, backups + restore drill, cost alerts + SMS balance monitor, history-purge runbook, ASO doc, Play listing copy (tr/en), Data Safety mapping, final **23-item verification matrix**. Gate: FINAL REPORT.
 
 ---
 
