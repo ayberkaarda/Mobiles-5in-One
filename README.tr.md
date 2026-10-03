@@ -58,7 +58,7 @@ uygulama, SEO sayfaları, abonelik ve yönetim paneli) için tüm iş paketleri 
 maliyet bekçisi, mağaza metni ve gizlilik etiketi taslakları birleşti; nihai doğrulama matrisi, SEO
 ve GEO kontrol listesi, bağımlılık denetim raporu ve mobil statik tarama açık. Birleşti, gerçek
 dünyada doğrulandı demek değildir: mobil uçtan uca akışlar bir cihazda koşmadı, satın alma gerçek
-mağaza hesaplarıyla denenmedi, yasal ve mağaza metinleri örnektir. Ayrıntı için
+mağaza hesaplarıyla denenmedi, yasal ve mağaza metinleri örnektir. Yeniden tasarım (ADR-0084: açık ve koyu şema, Archivo yazı tipi, web ve uygulamada kadro kâğıdı görünümü) bu işe birleşti ve faz sayısını değiştirmez. Ayrıntı için
 [`kadro/README.tr.md`](kadro/README.tr.md) dosyasına bakın.
 
 Askida, Cetele, Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
@@ -68,13 +68,13 @@ uygulama kodu yok.
 
 Son güncelleme: 2026-10-03 (Phase 6 dokümantasyonu ve maliyet bekçisi birleştirildikten sonra). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
 
-| Proje       | İlerleme | Dayanak                                                                                                                                                     |
-| ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kadro`     | ~%95     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktıdan 7'si birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 7/11) / 7. |
-| `askida`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                            |
-| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                            |
-| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                            |
-| `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                            |
+| Proje       | İlerleme | Dayanak                                                                                                                                                                                                                         |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kadro`     | ~%95     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktıdan 7'si birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 7/11) / 7 = %94,8. Yeniden tasarım faz sayısını değiştirmez, rakam aynı kalır. |
+| `askida`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                |
+| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                |
+| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                |
+| `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                |
 
 İlerleme `main`'e birleştirilmiş işi ifade eder; yalnızca dalda duran ya da açık bir pull request'teki
 iş sayılmaz. Rakam ancak Phase 6 (sağlamlaştırma ve yayına hazırlık) tamamen bittikten sonra %100 olur.
