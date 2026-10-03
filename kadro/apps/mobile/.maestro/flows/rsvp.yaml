@@ -1,0 +1,44 @@
+# RSVP on the seeded open match: change the answer twice and check the selected choice and the
+# answer line follow (ADR-0035, ADR-0051).
+appId: app.kadro.mobile
+name: rsvp
+tags:
+  - matches
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_CAPTAIN_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- scrollUntilVisible:
+    element:
+      id: match-${E2E_RSVP_MATCH_ID}
+    direction: DOWN
+- tapOn:
+    id: match-${E2E_RSVP_MATCH_ID}
+- extendedWaitUntil:
+    visible:
+      id: rsvp-current
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: rsvp-maybe
+    direction: DOWN
+- tapOn:
+    id: rsvp-maybe
+- extendedWaitUntil:
+    visible:
+      id: rsvp-maybe
+      checked: true
+    timeout: 15000
+- tapOn:
+    id: rsvp-in
+- extendedWaitUntil:
+    visible:
+      id: rsvp-in
+      checked: true
+    timeout: 15000
+- assertVisible:
+    id: rsvp-current
+- assertNotVisible:
+    id: form-error

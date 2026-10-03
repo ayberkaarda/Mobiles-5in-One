@@ -65,6 +65,7 @@ export default function SignInScreen() {
             textContentType="emailAddress"
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
+            testID="sign-in-email"
           />
         )}
       />
@@ -86,6 +87,7 @@ export default function SignInScreen() {
             textContentType="password"
             returnKeyType="go"
             onSubmitEditing={() => void submit()}
+            testID="sign-in-password"
           />
         )}
       />

@@ -1,0 +1,40 @@
+# Sign-in with a seeded account, the session surviving an app restart (refresh token in secure
+# storage, ADR-0047), and sign-out back to the welcome screen.
+appId: app.kadro.mobile
+name: sign-in
+tags:
+  - auth
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_CAPTAIN_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: tab-matches
+    timeout: 60000
+- tapOn:
+    id: tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-settings
+    direction: DOWN
+- tapOn:
+    id: profile-settings
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: settings-sign-out
+    direction: DOWN
+- tapOn:
+    id: settings-sign-out
+- extendedWaitUntil:
+    visible:
+      id: welcome-screen
+    timeout: 20000

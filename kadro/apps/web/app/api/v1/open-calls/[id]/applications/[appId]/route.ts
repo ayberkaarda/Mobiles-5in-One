@@ -2,6 +2,7 @@ import { ENDPOINTS } from '@kadro/contracts';
 
 import { decideApplication } from '../../../../../../../lib/server/calls/applications';
 import { json, route } from '../../../../../../../lib/server/http';
+import { revalidateCallPages } from '../../../../../../../lib/server/seo/invalidate';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,10 @@ export const PATCH = route({
   query: ENDPOINTS.decideApplication.query,
   body: ENDPOINTS.decideApplication.body,
   limitGroup: ENDPOINTS.decideApplication.rateLimit,
-  handler: async ({ params, body, ctx, runtime }) =>
-    json(await decideApplication({ ctx, runtime }, params.id, params.appId, body)),
+  handler: async ({ params, body, ctx, runtime }) => {
+    const result = await decideApplication({ ctx, runtime }, params.id, params.appId, body);
+    // Accepting the last missing player closes the call.
+    await revalidateCallPages(runtime, { openCallId: params.id });
+    return json(result);
+  },
 });

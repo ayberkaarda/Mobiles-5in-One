@@ -31,6 +31,13 @@ vi.mock('../src/api/instance', async () => {
   return { api, session: testSession };
 });
 
+// The settings screen links to the store's subscription page through the billing port; no store
+// is reachable in these tests.
+vi.mock('../src/billing/instance', async () => {
+  const { unavailableBillingPort } = await import('../src/billing/port');
+  return { billing: unavailableBillingPort };
+});
+
 vi.mock('../src/profile/instance', async () => {
   const { api } = await import('../src/api/instance');
   const { createProfileApi } = await import('../src/profile/profile-api');

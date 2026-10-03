@@ -65,7 +65,11 @@ export default function SignUpScreen() {
         <Text accessibilityLiveRegion="polite" style={{ marginBottom: theme.spacing['5'] }}>
           {t('signUp.doneMessage')}
         </Text>
-        <Button label={t('signUp.doneAction')} onPress={() => router.replace('/giris')} />
+        <Button
+          label={t('signUp.doneAction')}
+          onPress={() => router.replace('/giris')}
+          testID="sign-up-done-sign-in"
+        />
       </AuthScreen>
     );
   }
@@ -89,6 +93,7 @@ export default function SignUpScreen() {
             textContentType="name"
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
+            testID="sign-up-name"
           />
         )}
       />
@@ -111,6 +116,7 @@ export default function SignUpScreen() {
             textContentType="emailAddress"
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
+            testID="sign-up-email"
           />
         )}
       />
@@ -133,6 +139,7 @@ export default function SignUpScreen() {
             textContentType="newPassword"
             returnKeyType="go"
             onSubmitEditing={() => void submit()}
+            testID="sign-up-password"
           />
         )}
       />

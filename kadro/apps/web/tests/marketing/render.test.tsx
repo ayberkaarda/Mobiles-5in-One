@@ -5,8 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * Server render of the marketing shell and pages (ADR-0056): landmarks, skip link, heading
  * order, current-page marker, store entries without guessed links, and the generic error view.
- * `next/font` is a compiler transform that only runs in `next build`; here it is replaced by the
- * class names it would produce.
+ * the font module (a CSS import) is replaced by its class name.
  */
 
 const navigation = vi.hoisted(() => ({ pathname: '/' }));
@@ -16,8 +15,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('../../components/marketing/fonts', () => ({
-  displayFont: { variable: 'font-display-variable', className: 'font-display' },
-  bodyFont: { variable: 'font-body-variable', className: 'font-body' },
+  FONT_CLASS: 'font-class',
+  PRELOADED_FONTS: ['/fonts/test.woff2'],
 }));
 
 const { MarketingShell, MAIN_ID } = await import('../../components/marketing/marketing-shell');
@@ -95,7 +94,7 @@ describe('marketing shell', () => {
     expect(html.indexOf('<main')).toBeLessThan(html.indexOf('<footer'));
     expect(html).toContain('aria-label="Kadro ana sayfa"');
     expect(html).toContain('Kadro bir portfolyo projesidir.');
-    expect(html).toContain('font-display-variable');
+    expect(html).toContain('font-class');
     expect(html).toContain('--m-primary:#1B7F4B');
     expectSafeMarkup(html);
   });

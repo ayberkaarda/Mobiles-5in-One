@@ -1,0 +1,39 @@
+# Venue directory search (ADR-0053): a name search finds the seeded sample venue, whose page is
+# marked as a sample.
+appId: app.kadro.mobile
+name: venue-search
+tags:
+  - venues
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_PLAYER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- tapOn:
+    id: tab-venues
+- extendedWaitUntil:
+    visible:
+      id: venue-search
+    timeout: 20000
+- tapOn:
+    id: venue-search
+- inputText: kadikoy
+- hideKeyboard
+- tapOn:
+    id: venue-search-submit
+- scrollUntilVisible:
+    element:
+      id: venue-${E2E_VENUE_ID}
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: venue-${E2E_VENUE_ID}
+- extendedWaitUntil:
+    visible:
+      id: venue-screen
+    timeout: 20000
+- assertVisible:
+    id: venue-sample-notice
+- assertVisible:
+    id: venue-address

@@ -1,0 +1,65 @@
+# Kadro — ürün bilgisi
+
+Kadro, halı saha maçı etrafındaki takım ve oyuncu koordinasyonunu tek yerde yürütmeye yardımcı olan bir mobil uygulamadır. Organizatör takımını kurar, maç bilgilerini ve oyuncu kontenjanını düzenler; oyuncular katılım durumlarını bildirir, kadroyu görür ve saha ücretinin takibini yapar. Takımında yeri olmayan oyuncular, ilçelerindeki Eksik Var ilanlarını inceleyip başvurabilir.
+
+Kadro is an app for organizing amateur football matches, teams, attendance, lineups, fee tracking, and calls for missing players.
+
+Kadro bir portfolyo projesidir.
+
+## Kimler kullanır?
+Organizatör, takımı yöneten ve halı saha rezervasyonunu uygulama dışında yapan kişidir. Oyuncu maçlara katılımını bildirir ve takım kadrosunu takip eder. Serbest oyuncu, bir takıma bağlı olmadan Eksik Var ilanlarını bulup başvuru yapabilir.
+
+## Özellikler
+
+### Takım ve davetler
+Kullanıcı takım kurabilir, adını ve ilçesini belirleyebilir, rozet ekleyebilir ve rol bazlı takım üyeliği yönetebilir. Davet bağlantısı veya QR koduyla oyuncular takıma katılabilir.
+
+### Maç ve katılım
+Organizatör saha veya serbest metin mekân bilgisi, tarih-saat, oyun formatı, ücret ve oyuncu kontenjanıyla maç oluşturabilir. Oyuncular katılıyorum, katılmıyorum veya belki yanıtı verir; kontenjan dolduğunda uygun oyuncular bekleme listesine alınır ve yer açılınca sırayla yükseltilir.
+
+### Kadro
+Kaptan iki taraf için oyuncu seçebilir; uygulama mevkilere göre dengeleme önerisi sunar. Öneri, kaptanın seçiminin yerine geçmez.
+
+### Saha ücreti takibi
+Kadro onaylanmış oyunculara düşen kişi başı payı hesaplar. Kaptan ödeme durumunu ödendi veya ödenmedi olarak işaretleyebilir. Hesaplama katılımcı sayısına göre yapılır; kuruş artığı, katılım sırasına göre ilk oyunculara birer kuruş eklenerek dağıtılır ve payların toplamı saha ücretine eşit kalır.
+
+### Eksik Var
+Kaptan, yaklaşan maç için eksik oyuncu sayısı, gerekiyorsa mevki, seviye ve ilçe bilgisiyle ilan açabilir. Serbest oyuncular açık ilanları inceleyip başvurur; kaptanın kabul ettiği oyuncu maça katılır. Süresi dolan veya kapatılan ilanlar açık listede gösterilmez.
+
+### Saha Rehberi
+Rehber; saha adı, ilçe, konum ve mevcut tesis bilgileri gibi saha ayrıntılarını sunar. Kullanıcılar saha ekleyebilir; yeni eklenen saha doğrulanana kadar genel dizinde görünmez. Yorum yapabilmek için kullanıcının o sahada oynanmış bir maçta katılım kaydı bulunmalıdır. Yapılandırılmış veride toplu puan yalnızca en az üç gerçek yorum olduğunda gösterilir.
+
+### Bildirimler
+Maç hatırlatmaları maçtan 24 saat ve 2 saat önce gönderilir. Katılım değişiklikleri takım sorumlularına, Eksik Var başvuruları ilgili kaptanlara bildirilir. Açık ilanlar için yakındaki oyunculara toplu bildirim gönderilmez.
+
+### Maç sonrası
+Oynanmış maçtan sonra 24 saatlik MVP oylaması açılır. Oyuncu kendisine oy veremez ve her oyuncu bir kez oy kullanabilir; oylama sürerken sonuçlar gizlidir. Profilde oynanan maç ve MVP sayısı gibi temel istatistikler bulunur.
+
+### Kadro Pro
+Kadro Pro ücretli katmandır. Sınırsız takım, kadro geçmişi ve gelişmiş istatistikler sunar. Fiyatlar uygulama mağazalarında belirlenir; burada belirli bir fiyat veya tutar belirtilmez.
+
+## Sık sorulanlar özeti
+
+**Kadro nedir?** Halı saha takımlarının maç, katılım, kadro ve saha ücreti takibini düzenleyen uygulamadır.
+
+**Kadro saha rezervasyonu yapar mı?** Hayır. Organizatör saha rezervasyonunu uygulama dışında yapar; Kadro maç organizasyonunu ve saha bilgilerini takip etmeye yardımcı olur.
+
+**Uygulama içinden ödeme alınır mı?** Hayır. Para uygulama içinde hareket etmez. Uygulama yalnızca ödendi/ödenmedi durumunun işaretlenmesini ve kişi başı pay hesabını sağlar.
+
+**Eksik oyuncu nasıl bulunur?** Kaptan Eksik Var ilanı açar; serbest oyuncular ilanı görüp başvurur ve kaptan başvuruyu değerlendirir.
+
+**Bekleme listesi nasıl işler?** Kontenjan doluyken yeni katılım yanıtı bekleme listesine girer. Yer açıldığında en uzun süredir bekleyen oyuncu sırayla yükseltilir.
+
+**Kadro Pro ne içerir?** Sınırsız takım, kadro geçmişi ve gelişmiş istatistikler. Fiyatlar uygulama mağazalarında belirlenir.
+
+## Ürün sınırları
+Kadro saha rezervasyonu yapmaz ve ödeme işlemez. Saha ücretini oyuncular arasında aktarmak yerine yalnızca payı hesaplar ve ödeme durumunu işaretlemeye yarar. Açık ilanlara yakın çevre için toplu push bildirimi göndermez.
+
+## Sayfalar
+Özellikler: /ozellikler
+SSS: /sss
+Sahalar: /sahalar
+Eksik Var: /eksik-var
+Blog: /blog
+Gizlilik: /gizlilik
+KVKK aydınlatma: /kvkk-aydinlatma

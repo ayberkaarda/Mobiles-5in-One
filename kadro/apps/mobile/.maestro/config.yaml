@@ -1,0 +1,19 @@
+# Maestro workspace of the Kadro app. Flows live in flows/, reusable steps in subflows/.
+# Every flow reads its accounts and ids from the values written by e2e/seed.mjs, which
+# e2e/run-flows.mjs passes with -e; see e2e/README.md.
+flows:
+  - flows/*
+executionOrder:
+  continueOnFailure: true
+  flowsOrder:
+    - sign-up
+    - sign-in
+    - create-team
+    - create-match
+    - rsvp
+    - join-invite-link
+    - open-call-apply
+    - venue-search
+    - profile-edit
+    - deep-links
+    - delete-account

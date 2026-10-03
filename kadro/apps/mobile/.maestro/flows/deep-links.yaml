@@ -1,0 +1,53 @@
+# Incoming links (ADR-0045, ADR-0075):
+# - an invite link opened while signed out is held in memory and opens after the sign-in,
+#   without joining (the join still needs a tap);
+# - a venue link opens the venue page;
+# - an unknown path on the app scheme opens the home route instead of an "unmatched" page.
+appId: app.kadro.mobile
+name: deep-links
+tags:
+  - links
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: welcome-sign-in
+    timeout: 60000
+- openLink: kadro://mac/${E2E_INVITE_CODE}
+- extendedWaitUntil:
+    visible:
+      id: welcome-invite-pending
+    timeout: 20000
+- tapOn:
+    id: welcome-sign-in
+- tapOn:
+    id: sign-in-email
+- inputText: ${E2E_CAPTAIN_EMAIL}
+- tapOn:
+    id: sign-in-password
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: sign-in-submit
+- extendedWaitUntil:
+    visible:
+      id: invite-preview
+    timeout: 30000
+- assertVisible:
+    id: invite-accept
+
+- openLink: kadro://saha/${E2E_VENUE_SLUG}
+- extendedWaitUntil:
+    visible:
+      id: venue-screen
+    timeout: 20000
+- assertVisible:
+    id: venue-sample-notice
+
+- openLink: kadro://match/unknown-path
+- extendedWaitUntil:
+    visible:
+      id: tab-matches
+    timeout: 20000

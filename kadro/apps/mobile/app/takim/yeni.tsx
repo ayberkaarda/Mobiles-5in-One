@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { api } from '../../src/api/instance';
+import { ProUpsell } from '../../src/billing/components';
+import { isPro } from '../../src/billing/hooks';
+import { ApiError } from '../../src/api/errors';
 import { FormError } from '../../src/auth/components';
 import { useAsyncAction } from '../../src/auth/use-async-action';
 import { meQuery } from '../../src/query';
@@ -22,6 +25,7 @@ const NAME_PARAMS = { min: TEAM_LIMITS.nameMin, max: TEAM_LIMITS.nameMax } as co
  */
 export default function CreateTeamScreen() {
   const { t } = useTranslation('teams');
+  const { t: tc } = useTranslation('common');
   const theme = useTheme();
   const router = useRouter();
   const me = useQuery(meQuery(api));
@@ -31,6 +35,11 @@ export default function CreateTeamScreen() {
   const [issue, setIssue] = useState<string | null>(null);
 
   const districtId = me.data?.districtId ?? null;
+  // The free limit is enforced by the server (403 `entitlement_required`); the hint only points
+  // to the paywall and is never shown to a Pro user.
+  const showUpsell =
+    !isPro(me.data) ||
+    (action.error instanceof ApiError && action.error.code === 'entitlement_required');
 
   const submit = (): void => {
     if (districtId === null) {
@@ -73,6 +82,11 @@ export default function CreateTeamScreen() {
           <Notice testID="create-team-unverified">{t('create.unverified')}</Notice>
         </Section>
       )}
+      {showUpsell ? (
+        <Section>
+          <ProUpsell message={tc('paywall.teamLimit')} testID="create-team-pro-upsell" />
+        </Section>
+      ) : null}
       <Section>
         <FormError error={action.error} />
         <TextField

@@ -45,7 +45,11 @@ export const API_CACHE_HEADERS: readonly HeaderEntry[] = [
 export type CspVariant = 'nonce' | 'deny-all';
 
 export type SurfaceName =
+ feat/admin-web
   'api' | 'token-page' | 'email-link-page' | 'marketing' | 'seo' | 'admin' | 'app';
+
+  'api' | 'token-page' | 'email-link-page' | 'invite-page' | 'marketing' | 'seo' | 'app';
+ main
 
 /** One row of the surface table: which paths it covers and which headers they get. */
 export interface Surface {
@@ -103,6 +107,17 @@ export const SURFACES: readonly Surface[] = [
     cacheControl: null,
   },
   {
+    // Team invite landing (ADR-0034, ADR-0058): the code in the path is a bearer secret, so the
+    // page is never indexed, cached or sent as a referrer.
+    name: 'invite-page',
+    paths: ['/mac/**'],
+    probe: '/mac/headers-check-probe',
+    csp: 'nonce',
+    noindex: true,
+    referrerPolicy: 'no-referrer',
+    cacheControl: NO_STORE_VALUE,
+  },
+  {
     // `(marketing)` route group (ADR-0021 group 2, rendering per ADR-0055).
     name: 'marketing',
     paths: [
@@ -132,6 +147,7 @@ export const SURFACES: readonly Surface[] = [
     cacheControl: null,
   },
   {
+ feat/admin-web
     // `(admin)` staff panel (ADR-0068): never indexed, never cached, no `Referer` with ids.
     name: 'admin',
     paths: ['/admin/**'],
@@ -144,6 +160,9 @@ export const SURFACES: readonly Surface[] = [
   {
     // ADR-0021 group 1: `(app)` pages, `/mac/[inviteCode]`, the 404 page and every
     // path not listed above.
+
+    // ADR-0021 group 1: `(app)` pages, `/admin/**`, the 404 page and every path not listed above.
+ main
     name: 'app',
     paths: [],
     probe: '/headers-check-missing-page',

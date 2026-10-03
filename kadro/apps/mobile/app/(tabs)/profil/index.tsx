@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { api } from '../../../src/api/instance';
+import { ProUpsell } from '../../../src/billing/components';
+import { isPro } from '../../../src/billing/hooks';
 import { callsApi } from '../../../src/calls/instance';
 import { districtLabel } from '../../../src/calls/form';
 import { districtsQuery } from '../../../src/calls/queries';
@@ -85,7 +87,7 @@ export default function ProfileTab() {
               <Text selectable tone="muted" variant="footnote">
                 {profile.email}
               </Text>
-              {profile.entitlements?.pro === true ? (
+              {isPro(profile) ? (
                 <Text variant="label" testID="profile-pro">
                   {t('profile.pro')}
                 </Text>
@@ -125,6 +127,11 @@ export default function ProfileTab() {
             onRetry={() => void stats.refetch()}
           />
         </View>
+        {isPro(profile) ? null : (
+          <View style={{ marginHorizontal: theme.spacing['4'], marginTop: theme.spacing['4'] }}>
+            <ProUpsell message={t('paywall.statsLocked')} testID="profile-pro-upsell" />
+          </View>
+        )}
         {settingsButton}
       </QueryBoundary>
     </Screen>
