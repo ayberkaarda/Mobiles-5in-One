@@ -1,0 +1,6 @@
+# Native projects written by `expo prebuild` / `expo run:android`
+/android/
+/ios/
+
+# Maestro reports and screenshots written by e2e/run-flows.mjs
+/e2e/output/

@@ -1,0 +1,107 @@
+---
+title: "KVKK Aydınlatma — Teknik İşleme Örneği"
+description: "Kadro portfolyosunun veri kategorileri, teknik akışları, saklama yaklaşımı ve ilgili kişi haklarına ilişkin örnek metni."
+publishedAt: "2026-10-02"
+modifiedAt: "2026-10-02"
+sample: true
+---
+
+> Portfolyo için teknik veri işleme örneğidir; gerçek hizmetin KVKK aydınlatma yükümlülüğünü karşılayan metin değildir.
+
+## Veri sorumlusu ve kapsam
+
+Veri sorumlusu bu örnekte belirlenmemiştir; gerçek yayında veri sorumlusunun kimliği, adresi ve başvuru kanalı burada yer alır.
+
+Bu metin Kadro mobil uygulaması ve web yüzeylerinin teknik veri işleme örneğini açıklar. ADR-0002 bölgeyi aday bırakır; üretim ortamı yok. Kaynak: `kadro/docs/adr/0002-hosting.md`.
+
+## Toplama yöntemi, veri kategorileri ve amaçlar
+
+Veriler kayıt/giriş, profil, görsel yükleme, takım/maç, başvuru ve yorum işlemleriyle elektronik ortamda alınır. Katılım ve ücret işaretleri takım üyelerinin işlemlerinden; doğrulama bilgileri cihazın sunduğu giriş belirtecinden gelir. Oturum, iş kuyruğu ve teslimat kayıtları bu işlemler sırasında oluşur.
+
+| Kategori | Örnek veri ve amaç | Kaynak |
+| --- | --- | --- |
+| Hesap ve iletişim | E-posta, görünen ad, hesap kimliği, doğrulama durumu ve sağlayıcı hesap kimlikleri; üyelik ve hesap iletişimi. | `kadro/packages/db/src/schema/users.ts` |
+| Kimlik doğrulama / oturum | Parola ve token özetleri, cihaz etiketi, geçerlilik/iptal bilgileri; güvenli giriş. Yetkili personel için şifreli TOTP kaydı. | `kadro/packages/db/src/schema/users.ts`; ADR-0014 |
+| Profil / görsel | Avatar, takım arması, yükleme durumu, pozisyon ve seviye; profil ve kadro sunumu. | `kadro/packages/db/src/schema/users.ts`; `kadro/packages/db/src/schema/teams.ts`; `kadro/packages/db/src/schema/uploads.ts` |
+| Bölge ve saha | Seçilen ilçe, saha noktası, maç yeri; bölgesel arama ve organizasyon. Hassas cihaz konumunun tüm akışı doğrulanacaktır. | `kadro/packages/db/src/schema/users.ts`; `kadro/packages/db/src/schema/venues.ts`; `kadro/packages/db/src/schema/matches.ts`; `kadro/01-kadro-react-native-expo.md` §3 |
+| Takım / maç | Üyelik, rol, davet, katılım, bekleme listesi, diziliş, başvuru mesajı/sonucu, MVP oyu ve geçmiş; maç planlama ve istatistik. | `kadro/packages/db/src/schema/teams.ts`; `kadro/packages/db/src/schema/matches.ts` |
+| Kullanıcı içeriği | Saha puanı, yorum, saha adres/telefonu ve ekleyen kimliği; saha rehberi ve değerlendirmeler. | `kadro/packages/db/src/schema/venues.ts` |
+| Ücret işaretleme | Toplam saha ücreti, kişi payı ve ödendi işareti; ücret takibi. Bu veri modeli kart/banka alanı içermez. | `kadro/packages/db/src/schema/matches.ts` |
+| Bildirim | Push tokenı, platform, son görülme ve teslimat bilgileri; hizmet bildirimleri. | `kadro/packages/db/src/schema/system.ts`; `kadro/apps/worker/src/push/transport.ts` |
+| İşlem güvenliği / silme | Hız sınırlama, ham IP yerine `audit_logs.ip_hash` alanında saklanan anahtarlı IP özeti, denetim eylemi/hedefi, iş makbuzu ve silme talebi/sonucu; kötüye kullanım önleme, işlem tutarlılığı ve silme takibi. Başvuru sürecinin veri kapsamı henüz belirlenmemiştir. | `kadro/packages/db/src/schema/system.ts`; `kadro/packages/db/src/schema/users.ts`; `kadro/apps/web/lib/server/account/deletion.ts`; `kadro/apps/web/lib/server/audit.ts`; `kadro/apps/web/lib/server/keyed-hash.ts`; ADR-0023 |
+
+Abonelik ve hata izleme aşağıdaki planlanmış katmandadır. Özel nitelikli bilgiler ve başkalarına ait kişisel bilgiler fotoğraf, yorum veya mesajlara eklenmemelidir; bunlarla karşılaşılması halinde uygulanacak süreç hukuki incelemede belirlenecektir.
+
+## Görünürlük ve paylaşım
+
+Yetki tasarımına göre görünen ad, avatar, pozisyon, seviye ve istatistikler takım arkadaşları, ortak maç katılımcıları ve başvurulan çağrının takım yetkililerince görülebilir. Saha yorumunda görünen ad yayımlanır. Katılım, diziliş ve kişi payı katılımcılara; ödendi işareti takım üyelerine; başvuru mesajı başvuru sahibi ve ilgili takım yetkililerine görünür. E-posta ve profil ilçesi diğer kullanıcılara açılmaz; yönetim listesinde e-posta maskelenir. Açık çağrının kamu görünümü oyuncu listesi ve kişi bazında ücret dökümü içermez. Doğrulanmamış sahanın adres/telefonu ekleyen kullanıcıyla sınırlıdır. Kaynak: `kadro/docs/security/authorization-matrix.md` §6; fiili yüzeylerle eşleşme incelemesi sürmektedir.
+
+İşlenmiş avatar ve armalar herkese açık medya adreslerinden sunulur; adresi bilen kişiler görsele erişebilir ve kopyalayabilir. Yayımlanan görsel yeniden kodlanırken metadata kaldırılır; gelen ham dosya metadata içerebilir. Kaynak: `kadro/docs/adr/0030-image-upload-pipeline.md`; `kadro/apps/worker/src/uploads/image.ts`.
+
+## Uygulanmış veri akışları
+
+Uygulanmış, adaptörün kodda bulunduğunu ifade eder; üretimde çalıştığı anlamına gelmez. Kullanılacak hizmet etkin ortam ayarlarına bağlıdır.
+
+| Hizmet | Veri ve akış | Kod kaynağı |
+| --- | --- | --- |
+| S3 uyumlu depo / R2 | Avatar ve takım arması dosyaları ile nesne anahtarları. Sunucu adresi yerelde imzalar; cihaz doğrudan depoya yükler. İşçi görseli işler, yayımlar ve kaldırır. | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/storage/storage.ts`; `kadro/apps/worker/src/uploads/process.ts` |
+| Resend | Alıcı e-posta adresi, konu, doğrulama/sıfırlama bağlantısı ve işlem e-postası içeriği gönderilir. | `kadro/packages/emails/src/transport.ts` |
+| Expo Push | Push tokenı, bildirim başlığı/gövdesi ve nesne kimlikleri gönderilir; teslimat makbuzları sorgulanır. | `kadro/apps/worker/src/push/transport.ts` |
+| Apple / Google kimlik doğrulama | Sunucu yalnızca sağlayıcının açık anahtarlarını (JWKS) indirir; kullanıcı verisi sunucudan sağlayıcıya gitmez; tasarım gereği cihaz sağlayıcıyla doğrudan konuşur; mobil giriş akışı henüz uygulanmamıştır. Cihazın ilettiği kimlik belirteci sunucuda doğrulanır. | `kadro/apps/web/lib/server/oauth/providers.ts`; `kadro/apps/web/lib/server/oauth/jwks.ts`; `kadro/apps/web/lib/server/auth/provider-sign-in.ts` |
+| HIBP parola kontrolü | K-anonimlik sorgusunda parolanın SHA-1 özetinin ilk 5 karakteri gönderilir, parola gönderilmez. Kalan özet yerelde karşılaştırılır. | `kadro/packages/auth/src/hibp.ts` |
+
+## Simüle edilen yerel akışlar
+
+| Hizmet | Yerel davranış | Kod kaynağı |
+| --- | --- | --- |
+| E-posta log transportu | Resend gönderimi yerine maskelenmiş alıcı, konu ve bağlantı/token içerebilen mesaj gövdesi yerel loga yazılır; yalnız local ortamında kullanılabilir. | `kadro/packages/emails/src/transport.ts` |
+| Push log transportu | Expo gönderimi yerine başlık, gövde ve nesne bilgileri loga yazılır; cihaz tokenı yazılmaz. Makbuzlar simüle edilir; yalnız local ortamında kullanılabilir. | `kadro/apps/worker/src/push/transport.ts` |
+| Yerel S3 uyumlu depo | yerel S3 uyumlu depo (ADR-0030 tasarımı; yerel ortamda henüz çalışan bir depo servisi yoktur). R2 üzerinde üretim koşusu kanıtı değildir. | `kadro/apps/web/lib/server/uploads/storage.ts`; `kadro/apps/worker/src/storage/storage.ts`; ADR-0030 |
+
+## Planlanmış akışlar
+
+| Hizmet | Plan ve mevcut sınır | Kaynak |
+| --- | --- | --- |
+| RevenueCat | Abonelik kullanıcı kimliği, ürün, durum, bitiş zamanı ve olay özeti için veri modeli vardır. Silme işçisi, abonelik kaydı varsa dış temizlik borcunu kaydeder; dış entegrasyon Faz 5'tir. Bu plan kapsamında mağaza aboneliği ayrıca iptal edilir. | `kadro/packages/db/src/schema/system.ts`; `kadro/packages/db/src/schema/users.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`; ADR-0032 |
+| Sentry | Hata izleme ve alan temizliği spec'te yer alır; bu kaynak durumunda entegrasyon kodu yoktur, planlanmıştır. Gönderilecek olay alanları uygulama ve test sonrası kesinleşecektir. | `kadro/01-kadro-react-native-expo.md` §6 madde 14 ve §8. Kod atfı verilemez: entegrasyon henüz yoktur. |
+
+## Saklama ve silme
+
+Süreler kaynaklardaki teknik yaklaşımı gösterir. Üretimde yaşam döngüsü, bakım ve log rotasyonu doğrulanmamıştır.
+
+| Veri / süreç | Süre ve kapsam | Kaynak / durum |
+| --- | --- | --- |
+| Hesap, içerik ve başvuru kayıtları | Tüm kategoriler için kesin azami süre belirlenmemiştir; ayrı saklama planı incelenecektir. | `kadro/packages/db/src/schema/users.ts`; `kadro/packages/db/src/schema/venues.ts`; `kadro/packages/db/src/schema/system.ts` |
+| Oturum geçerliliği | Web oturumu 7 günlük yenilenen süre; mobil erişim belirteci 15 dakika, yenileme belirteci 30 gün. Bunlar tüm oturum satırlarının silinme süresi değildir. | ADR-0014; tasarım; üretim ortamı yok |
+| Süresi dolmuş / iptal edilmiş oturum satırları | Süre sonu veya iptal zamanının üzerinden 30 gün geçince bakım taramasında kaldırılır. | `kadro/apps/worker/src/maintenance/sweep.ts`; tasarım; üretim ortamı yok |
+| Hesap silme | 7 günlük bekleme sonrası işçi silmesi; saatlik bakım bir saatten fazla gecikmiş talebi yeniden kuyruğa alır. Kesin tamamlanma üst süresi değildir. | ADR-0032; ADR-0028; `kadro/apps/worker/src/maintenance/sweep.ts`; tasarım; üretim ortamı yok |
+| Maç / MVP geçmişi | Hesaba özgü “Silinmiş oyuncu” tombstone'u: kişisel tanımlayıcılardan arındırılmış kayıt, süresiz. Takım silindiğinde bağlı geçmiş kalkabilir; yeniden ilişkilendirme ve saklama gerekçesi inceleme konusudur. | ADR-0033; `kadro/apps/worker/src/accounts/hard-delete.ts` |
+| İş kuyruğu | Tamamlanan işler 7 gün; dead-letter kayıtları 14 gün; işlem makbuzları 30 gün. İlişkilendirilebilir kimlikler incelemeye dahildir. | ADR-0028; `kadro/apps/worker/src/queues.ts`; `kadro/apps/worker/src/boss.ts`; `kadro/apps/worker/src/maintenance/sweep.ts`; tasarım; üretim ortamı yok |
+| Host uygulama logları | 30 günlük rotasyon; Sentry, sağlayıcı logları ve append-only denetim kayıtlarının süresi bundan çıkarılamaz. Denetim kayıtlarının azami süresi belirlenmemiştir. | `kadro/docs/ops/README.md`; ADR-0032; `kadro/packages/db/src/schema/system.ts`; tasarım; üretim ortamı yok |
+| Yedekler | Silinen veri şifreli yedeklerde 30 güne kadar kalabilir; geri yükleme sonrası yeniden silme doğrulanacaktır. | ADR-0002; ADR-0032; tasarım; üretim ortamı yok |
+| Push tokenları | Geçersiz tokenlar tespit edildiğinde; 60 gün görülmeyenler bakımda; hesap silme talebinde bekleme olmadan kaldırılır. | ADR-0031; `kadro/apps/worker/src/maintenance/sweep.ts`; `kadro/apps/web/lib/server/account/deletion.ts`; tasarım; üretim ortamı yok |
+| Görsel dosyaları | Gelen dosya işlem sonucunda kaldırılır; kaçan dosyalar için 1 günlük depo yaşam döngüsü öngörülür. Yayımlanan görsel değiştirme/kaldırma veya hesap/takım silmede temizlenir. max-age=31536000 önbellek ayarı bütün kopyaların silinme garantisi değildir. | ADR-0030; `kadro/apps/worker/src/uploads/process.ts`; tasarım; üretim ortamı yok |
+
+ADR kaynaklarının dosya yolları: `kadro/docs/adr/0023-keyed-hash-secret.md`; `kadro/docs/adr/0014-client-type-and-session-transport.md`; `kadro/docs/adr/0028-worker-queues-and-job-conventions.md`; `kadro/docs/adr/0030-image-upload-pipeline.md`; `kadro/docs/adr/0031-push-notifications.md`; `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/docs/adr/0033-per-account-history-tombstone.md`; `kadro/docs/adr/0002-hosting.md`.
+
+## Hesap silme akışı
+
+Mobil için uygulama içi hesap silme akışı tasarlanmıştır; webde [/hesap-silme sayfası](/hesap-silme) bulunur. Mevcut web sayfasındaki yönlendirme **Profil › Hesabı sil** şeklindedir. Yeniden kimlik doğrulaması istenir. Talep kabulünde hesap devre dışı kalır, web/mobil oturumları iptal edilir ve push tokenları kaldırılır. **7 günlük** beklemede başarılı giriş talebi iptal eder; değiştirilmiş maç katılımı kendiliğinden geri alınmaz. Süre sonunda işçi, hesabı ve bağlı kimlik doğrulama kayıtlarını, avatarları, yorumları ve başvuruları kaldırır; tek üyeli takımları siler, paylaşılan takımlarda kaptanlığı devreder. Saha kaydı kalır, ekleyen hesap bağlantısı kaldırılır. Kalan geçmiş ve denetim kayıtlarının sınırları saklama tablosundadır.
+
+Kaynak: `kadro/docs/adr/0032-account-deletion-flow.md`; `kadro/apps/web/app/(app)/hesap-silme/page.tsx`; `kadro/apps/web/components/auth/delete-account.tsx`; `kadro/apps/web/lib/server/account/deletion.ts`; `kadro/apps/web/lib/server/auth/account-state.ts`; `kadro/apps/worker/src/accounts/hard-delete.ts`. Mobil ekran ve tüm dış servislerde tamamlanma, gerçek yayın öncesi doğrulanacaktır.
+
+## Çerezler ve cihaz izinleri
+
+Web oturumu ve CSRF koruması için çerez kodu vardır. Varsayılan adlar `__Host-kadro_session` ve `__Host-kadro_csrf` olup web oturumu 7 günlük yenilenen sürededir; CSRF çerezi aynı süreyle üretilir. Etkin ortam değerleri ayrıca doğrulanacaktır. Kaynak: `kadro/docs/adr/0014-client-type-and-session-transport.md`; `kadro/apps/web/lib/server/cookies.ts`; `kadro/apps/web/lib/server/auth/sessions.ts`; `kadro/packages/config/src/schema.ts`.
+
+Analitik/reklam çerezleri e-posta bağlantı sayfalarında yoktur (ADR-0040); diğer yüzeyler doğrulanacaktır. Kaynak: `kadro/docs/adr/0040-email-link-pages-phase2-scope.md`. Konum ve bildirim izinleri cihaz ayarlarından yönetilebilir; cihaz izni tek başına ayrı bir veri işleme rızası yerine geçmez.
+
+## İlgili kişinin hakları ve başvuru
+
+KVKK m.11 kapsamında işleme yapılıp yapılmadığını öğrenme, yapılan işleme ilişkin bilgi isteme, amacı ve amaca uygun kullanımı öğrenme, yurt içi/yurt dışı alıcıları öğrenme haklarınız vardır. Yanlış veya eksik verinin düzeltilmesini; kanuni koşullarda silinmesini veya yok edilmesini; düzeltme ve silme/yok etme işlemlerinin alıcılara bildirilmesini talep edebilirsiniz. Yalnız otomatik analizle aleyhinize oluşan sonuca itiraz edebilir ve hukuka aykırı işleme nedeniyle uğradığınız zararın giderilmesini isteyebilirsiniz. Kaynak: [Kurumun ilgili kişi hakları açıklaması](https://www.kvkk.gov.tr/Icerik/2036/Ilgili-Kisinin-Haklari).
+
+Başvuru kanalı belirlenmemiştir. Gerçek yayında kimlik doğrulama, başvuru ve cevap usulü açıklanacaktır. Hesap silme akışı, diğer haklar için başvuru kanalının yerine geçmez.
+
+## Metnin durumu
+
+Kimlik, başvuru kanalı, işleme şartları, etkin sağlayıcı envanteri ve üretim doğrulamaları tamamlanmamıştır. Tarihler örnek metnin yayın ve değişiklik tarihidir. Güncellemelerde fiili veri akışlarıyla eşleşme yeniden incelenecektir.

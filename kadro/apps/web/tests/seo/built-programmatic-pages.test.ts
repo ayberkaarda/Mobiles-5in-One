@@ -380,4 +380,18 @@ describe.skipIf(!ENABLED)('programmatic SEO pages (production build)', () => {
       expect(locs).not.toContain(hidden);
     }
   });
+
+  it('serves robots.txt with the sitemap of the configured origin and the nonce CSP', async () => {
+    const response = await fetch(`${base}/robots.txt`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type') ?? '').toContain('text/plain');
+    expect(response.headers.get('content-security-policy') ?? '').toMatch(/'nonce-[^']+'/);
+    const text = await response.text();
+    expect(text).toContain('User-Agent: *');
+    expect(text).toContain('Allow: /');
+    for (const path of ['/api/', '/admin/', '/mac/', '/giris', '/sifre-sifirla']) {
+      expect(text).toContain(`Disallow: ${path}`);
+    }
+    expect(text).toContain(`Sitemap: ${base}/sitemap.xml`);
+  });
 });

@@ -1,0 +1,31 @@
+# Kadro
+
+Kadro, halı saha maçlarını düzenlemeye yardımcı olan; takım, katılım, kadro, saha ücreti takibi ve eksik oyuncu ilanlarını bir araya getiren bir uygulamadır.
+Kadro is an app for organizing amateur football matches, teams, attendance, lineups, fee tracking, and calls for missing players.
+
+Kadro bir portfolyo projesidir.
+
+## Kimler için?
+Halı saha maçını düzenleyen organizatörler, takım oyuncuları ve takım dışında olup Eksik Var ilanlarına başvurmak isteyen serbest oyuncular için.
+
+## Özellikler
+- Takım kurma, roller, davet bağlantısı ve QR kodu
+- Maç oluşturma, katılım yanıtları ve bekleme listesinin otomatik ilerlemesi
+- İki taraflı kadro ve mevkiye göre dengeleme önerisi
+- Oyuncu başına saha ücreti payını hesaplama ve ödendi/ödenmedi durumunu işaretleme
+- Eksik Var ilanlarını görüntüleme ve başvuru
+- Saha Rehberi, saha değerlendirmeleri ve kısa yorumlar
+- Maç hatırlatmaları ve ilgili etkinlik bildirimleri
+- Maç sonrası MVP oylaması ve temel profil istatistikleri
+- Kadro Pro: sınırsız takım, kadro geçmişi ve gelişmiş istatistikler
+
+Kadro Pro ücretli katmandır; fiyatlar uygulama mağazalarında belirlenir.
+
+## Sayfalar
+- Özellikler: /ozellikler
+- Sıkça sorulan sorular: /sss
+- Sahalar: /sahalar
+- Eksik Var: /eksik-var
+- Blog: /blog
+- Gizlilik: /gizlilik
+- KVKK aydınlatma: /kvkk-aydinlatma

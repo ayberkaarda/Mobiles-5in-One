@@ -1,0 +1,40 @@
+# Create a team as an account that owns none (free accounts own one team). The district comes
+# from the profile, which the seed set; the new team opens with the creator as captain.
+appId: app.kadro.mobile
+name: create-team
+tags:
+  - teams
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_FOUNDER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- tapOn:
+    id: tab-teams
+- extendedWaitUntil:
+    visible:
+      id: teams-create
+    timeout: 20000
+- tapOn:
+    id: teams-create
+- extendedWaitUntil:
+    visible:
+      id: team-name
+    timeout: 20000
+- assertNotVisible:
+    id: create-team-unverified
+- tapOn:
+    id: team-name
+- inputText: E2E Kurulan ${E2E_RUN_ID}
+- hideKeyboard
+- tapOn:
+    id: create-team-submit
+- extendedWaitUntil:
+    visible:
+      id: team-roster
+    timeout: 30000
+- assertVisible:
+    text: E2E Kurulan ${E2E_RUN_ID}
+- assertVisible:
+    id: team-invite

@@ -45,6 +45,8 @@ const PUBLIC_AUTH: ReadonlyMap<string, readonly string[]> = new Map([
   ['/api/v1/open-calls', ['optional']],
   ['/api/v1/venues', ['optional']],
   ['/api/v1/venues/[slug]', ['optional']],
+  // Public reference data, no principal (matrix §3.7).
+  ['/api/v1/districts', ['none']],
 ]);
 
 /** Endpoints without a user principal that may omit `x-kadro-client` (ADR-0014). */
@@ -296,6 +298,7 @@ describe('upload, push-token, deletion, webhook and admin routes match their reg
     'registerPushToken',
     'deleteMe',
     'receiveRevenueCatWebhook',
+ feat/admin-moderation
     // Admin API (matrix §3.8, ADR-0064).
     'adminStepUp',
     'adminTotpEnroll',
@@ -312,6 +315,9 @@ describe('upload, push-token, deletion, webhook and admin routes match their reg
     'setUserRole',
     'setUserDeactivated',
     'listAuditLogs',
+
+    'listDistricts',
+ main
   ] as const;
 
   for (const id of ids) {

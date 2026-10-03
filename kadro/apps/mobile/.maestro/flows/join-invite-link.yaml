@@ -1,0 +1,32 @@
+# Join a team through an invite link (ADR-0034, ADR-0045): the link only opens the preview, the
+# join needs the explicit tap (T-MOB-03), then the team opens with the new member.
+appId: app.kadro.mobile
+name: join-invite-link
+tags:
+  - teams
+  - links
+---
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${E2E_PLAYER_EMAIL}
+      PASSWORD: ${E2E_PASSWORD}
+- openLink: kadro://mac/${E2E_INVITE_CODE}
+- extendedWaitUntil:
+    visible:
+      id: invite-preview
+    timeout: 20000
+- assertVisible:
+    text: .*E2E Davet ${E2E_RUN_ID}.*
+- assertNotVisible:
+    id: invite-unverified
+- tapOn:
+    id: invite-accept
+- extendedWaitUntil:
+    visible:
+      id: team-roster
+    timeout: 30000
+- assertVisible:
+    text: .*E2E Davet ${E2E_RUN_ID}.*
+- assertNotVisible:
+    id: invite-gone

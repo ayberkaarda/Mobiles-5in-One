@@ -2,6 +2,7 @@ import { ENDPOINTS } from '@kadro/contracts';
 
 import { closeMatchOpenCall, publishOpenCall } from '../../../../../../lib/server/calls/open-calls';
 import { json, route } from '../../../../../../lib/server/http';
+import { revalidateCallPages } from '../../../../../../lib/server/seo/invalidate';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,11 @@ export const POST = route({
   query: ENDPOINTS.publishOpenCall.query,
   body: ENDPOINTS.publishOpenCall.body,
   limitGroup: ENDPOINTS.publishOpenCall.rateLimit,
-  handler: async ({ params, body, ctx, runtime }) =>
-    json(await publishOpenCall({ ctx, runtime }, params.id, body), { status: 201 }),
+  handler: async ({ params, body, ctx, runtime }) => {
+    const call = await publishOpenCall({ ctx, runtime }, params.id, body);
+    await revalidateCallPages(runtime, { matchId: params.id });
+    return json(call, { status: 201 });
+  },
 });
 
 /** Closes the match's open call (matrix §3.5 `opencall.close`, footnote 30). */
@@ -27,6 +31,9 @@ export const PATCH = route({
   query: ENDPOINTS.closeOpenCall.query,
   body: ENDPOINTS.closeOpenCall.body,
   limitGroup: ENDPOINTS.closeOpenCall.rateLimit,
-  handler: async ({ params, ctx, runtime }) =>
-    json(await closeMatchOpenCall({ ctx, runtime }, params.id)),
+  handler: async ({ params, ctx, runtime }) => {
+    const call = await closeMatchOpenCall({ ctx, runtime }, params.id);
+    await revalidateCallPages(runtime, { matchId: params.id });
+    return json(call);
+  },
 });

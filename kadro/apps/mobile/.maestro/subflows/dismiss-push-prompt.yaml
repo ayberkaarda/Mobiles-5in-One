@@ -1,0 +1,7 @@
+# The matches tab asks once about notifications; "Not now" hides the card on this device.
+# Builds without push configuration may not show it, so the tap is optional.
+appId: app.kadro.mobile
+---
+- tapOn:
+    id: push-prompt-later
+    optional: true

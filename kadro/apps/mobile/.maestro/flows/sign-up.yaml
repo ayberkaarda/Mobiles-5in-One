@@ -1,0 +1,44 @@
+# Registration: the API answers 202 for every address (ADR-0015), so the flow can only check the
+# "check your email" state and the way on to sign-in.
+appId: app.kadro.mobile
+name: sign-up
+tags:
+  - auth
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: welcome-sign-up
+    timeout: 60000
+- tapOn:
+    id: welcome-sign-up
+- extendedWaitUntil:
+    visible:
+      id: sign-up-screen
+    timeout: 10000
+- tapOn:
+    id: sign-up-name
+- inputText: E2E Yeni ${E2E_RUN_ID}
+- tapOn:
+    id: sign-up-email
+- inputText: ${E2E_SIGNUP_EMAIL}
+- tapOn:
+    id: sign-up-password
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: sign-up-submit
+    direction: DOWN
+- tapOn:
+    id: sign-up-submit
+- extendedWaitUntil:
+    visible:
+      id: sign-up-done
+    timeout: 30000
+- tapOn:
+    id: sign-up-done-sign-in
+- assertVisible:
+    id: sign-in-screen
