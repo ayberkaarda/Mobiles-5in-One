@@ -1,0 +1,127 @@
+# Askida local development stack. Host ports are offset so they do not clash with other projects.
+# The Laravel app reads server/.env (copied from server/.env.example) from the mounted directory.
+# The database and object storage passwords below are local development defaults only.
+name: askida
+
+x-server-image: &server-image
+  build:
+    context: ./docker
+    dockerfile: php/Dockerfile
+  image: askida-server:local
+  volumes:
+    - ./server:/var/www/html
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_DB: askida
+      POSTGRES_USER: askida
+      POSTGRES_PASSWORD: ${ASKIDA_DB_PASSWORD:-askida_local_dev}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - askida_pg:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U askida -d askida"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.11-alpine
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: askida
+      MINIO_ROOT_PASSWORD: ${ASKIDA_MINIO_PASSWORD:-askida_local_dev}
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+    volumes:
+      - askida_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: askida
+      MINIO_ROOT_PASSWORD: ${ASKIDA_MINIO_PASSWORD:-askida_local_dev}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing local/askida-private &&
+        mc mb --ignore-existing local/askida-public &&
+        mc anonymous set download local/askida-public
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:51025:1025"
+      - "127.0.0.1:58025:8025"
+    restart: unless-stopped
+
+  server:
+    <<: *server-image
+    ports:
+      - "127.0.0.1:58080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+  horizon:
+    <<: *server-image
+    command: ["php", "artisan", "horizon"]
+    healthcheck:
+      test: ["CMD", "php", "artisan", "horizon:status"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      server:
+        condition: service_healthy
+
+  scheduler:
+    <<: *server-image
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  askida_pg:
+    name: askida_pg
+  askida_minio:
+    name: askida_minio
