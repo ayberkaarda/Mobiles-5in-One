@@ -11,7 +11,7 @@ documented here, so a gap in the numbering is always explained.
 
 | ADR                                          | Title                                                     | Status                  |
 | -------------------------------------------- | --------------------------------------------------------- | ----------------------- |
-| 0001                                         | Stack and resolved versions                               | Proposed                |
+| [0001](0001-stack-and-versions.md)           | Stack and resolved versions                               | Accepted                |
 | [0002](0002-hosting-and-payment-provider.md) | Hosting and payment provider                              | Accepted                |
 | [0003](0003-map-tiles.md)                    | Map tiles: keyless source, PMTiles self-hosting condition | Accepted                |
 | [0004](0004-push-and-firebase-policy.md)     | Push notifications and Firebase configuration policy      | Accepted                |
