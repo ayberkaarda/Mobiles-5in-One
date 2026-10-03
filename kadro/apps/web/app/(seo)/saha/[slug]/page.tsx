@@ -3,10 +3,17 @@ import type { Metadata, Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import styles from '../../../../components/marketing/marketing.module.css';
 import { pageMetadata } from '../../../../components/marketing/metadata';
+import { ButtonLink } from '../../../../components/marketing/button';
+import { cx } from '../../../../components/marketing/class-names';
+import { KitNumeral } from '../../../../components/marketing/kit-numeral';
+import { Section } from '../../../../components/marketing/section';
 import { DOWNLOAD_ANCHOR } from '../../../../components/marketing/site';
+import { typeClassName } from '../../../../components/marketing/typography';
+import { Breadcrumb } from '../../../../components/seo/breadcrumb';
+import styles from '../../../../components/seo/seo.module.css';
 import {
+  avatarInitial,
   districtPath,
   featureRows,
   formatPriceRange,
@@ -67,20 +74,14 @@ export default async function VenuePage({ params }: VenuePageProps) {
   return (
     <article>
       <JsonLd data={venueStructuredData(loadWebEnv().WEB_ORIGIN, venue, path)} />
-      <header className={styles.sectionInner}>
-        <div className={styles.pageHeader}>
-          <nav aria-label="Konum">
-            <ol className={styles.featureList}>
-              <li>
-                <Link href="/" className={styles.inlineLink}>
-                  Ana sayfa
-                </Link>
-              </li>
-              <li aria-current="page">{venue.name}</li>
-            </ol>
-          </nav>
-          <h1 className={styles.pageTitle}>{venue.name}</h1>
-          <p className={styles.pageLead}>
+      <Section density="dense">
+        <header className={styles.head}>
+          <Breadcrumb current={venue.name} />
+          <div className={styles.titleRow}>
+            <h1 className={cx(typeClassName('display'), styles.title)}>{venue.name}</h1>
+            {venue.isSample ? <span className={styles.tag}>{SAMPLE_NOTICE}</span> : null}
+          </div>
+          <p className={cx(typeClassName('lead'), styles.lead)}>
             {venueIntro({
               name: venue.name,
               il: district.il,
@@ -88,89 +89,123 @@ export default async function VenuePage({ params }: VenuePageProps) {
               indoor: venue.indoor,
             })}
           </p>
-          {venue.isSample ? <p className={styles.notice}>{SAMPLE_NOTICE}</p> : null}
-        </div>
-      </header>
-      <div className={styles.sectionInner}>
-        <ul className={styles.cardGrid}>
-          <li className={styles.card}>
-            <section aria-labelledby="saha-bilgi">
-              <h2 id="saha-bilgi" className={styles.cardTitle}>
-                Saha bilgileri
-              </h2>
-              <ul className={styles.featureList}>
-                <li>
-                  Konum: {district.ilce}, {district.il}
-                </li>
-                <li>Tür: {venue.indoor ? 'Kapalı saha' : 'Açık saha'}</li>
-                <li>Fiyat aralığı: {price ?? 'Belirtilmemiş'}</li>
-                {venue.address === null ? null : <li>Adres: {venue.address}</li>}
-                {venue.phone === null ? null : <li>Telefon: {venue.phone}</li>}
-              </ul>
-            </section>
-          </li>
-          <li className={styles.card}>
-            <section aria-labelledby="saha-olanaklar">
-              <h2 id="saha-olanaklar" className={styles.cardTitle}>
-                Olanaklar
-              </h2>
-              {features.length === 0 ? (
-                <p className={styles.cardText}>Olanak bilgisi girilmemiş.</p>
-              ) : (
-                <ul className={styles.featureList}>
-                  {features.map((feature) => (
-                    <li key={feature.key}>
-                      {feature.label}: {feature.present ? 'Var' : 'Yok'}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </li>
-          <li className={styles.card}>
-            <section aria-labelledby="saha-yorumlar">
-              <h2 id="saha-yorumlar" className={styles.cardTitle}>
-                Oyuncu yorumları
-              </h2>
-              <p className={styles.cardText}>
-                {venue.rating.average === null
-                  ? `${venue.rating.count} yorum. Ortalama puan en az üç yorumla gösterilir.`
-                  : `Ortalama puan ${venue.rating.average.toLocaleString('tr-TR')} / 5 (${venue.rating.count} yorum).`}
-              </p>
-              {venue.recentReviews.length === 0 ? null : (
-                <ul className={styles.featureList}>
-                  {venue.recentReviews.map((review) => (
-                    <li key={review.id}>
-                      <strong>{review.authorDisplayName}</strong> · {review.rating}/5 ·{' '}
-                      {REVIEW_DATE.format(new Date(review.createdAt))}
-                      {review.text === null ? null : <> · {review.text}</>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </li>
-        </ul>
-      </div>
-      <div className={styles.section}>
-        <div className={styles.sectionInner}>
-          <h2 className={styles.sectionTitle}>Bu sahada maç kur</h2>
-          <p className={styles.cardText}>
-            Kadro uygulamasında takımını kur, maçı bu sahaya ekle, eksik oyuncuyu ilçeden bul.
-          </p>
-          <div className={styles.statusActions}>
-            <a href={`/#${DOWNLOAD_ANCHOR}`} className={styles.buttonSolid}>
-              Bu sahada maç kur
-            </a>
-            <Link
-              href={districtPath(district.ilSlug, district.slug) as Route}
-              className={styles.inlineLink}
-            >
-              {district.ilce} eksik oyuncu ilanları
-            </Link>
+        </header>
+      </Section>
+      <Section labelledBy="saha-bilgi" density="dense" ruled>
+        <h2 id="saha-bilgi" className={cx(typeClassName('title1'), styles.sectionTitle)}>
+          Saha bilgileri
+        </h2>
+        <dl className={styles.facts}>
+          <div className={styles.fact}>
+            <dt>Konum</dt>
+            <dd className={typeClassName('body')}>
+              {district.ilce}, {district.il}
+            </dd>
           </div>
+          <div className={styles.fact}>
+            <dt>Tür</dt>
+            <dd className={typeClassName('body')}>{venue.indoor ? 'Kapalı saha' : 'Açık saha'}</dd>
+          </div>
+          <div className={styles.fact}>
+            <dt>Fiyat aralığı</dt>
+            <dd>
+              {price === null ? (
+                <span className={typeClassName('body')}>Belirtilmemiş</span>
+              ) : (
+                <KitNumeral value={price} />
+              )}
+            </dd>
+          </div>
+          {venue.address === null ? null : (
+            <div className={styles.fact}>
+              <dt>Adres</dt>
+              <dd className={typeClassName('body')}>{venue.address}</dd>
+            </div>
+          )}
+          {venue.phone === null ? null : (
+            <div className={styles.fact}>
+              <dt>Telefon</dt>
+              <dd className={typeClassName('body')}>{venue.phone}</dd>
+            </div>
+          )}
+        </dl>
+      </Section>
+      <Section labelledBy="saha-olanaklar" density="dense" ruled>
+        <h2 id="saha-olanaklar" className={cx(typeClassName('title1'), styles.sectionTitle)}>
+          Olanaklar
+        </h2>
+        {features.length === 0 ? (
+          <p className={typeClassName('body')}>Olanak bilgisi girilmemiş.</p>
+        ) : (
+          <ul className={styles.chips}>
+            {features.map((feature) => (
+              <li
+                key={feature.key}
+                className={cx(styles.chip, feature.present ? undefined : styles.chipOff)}
+              >
+                <span aria-hidden="true" className={styles.chipMark}>
+                  {feature.present ? '✓' : '✕'}
+                </span>
+                {`${feature.label}: ${feature.present ? 'Var' : 'Yok'}`}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section labelledBy="saha-yorumlar" density="dense" ruled>
+        <h2 id="saha-yorumlar" className={cx(typeClassName('title1'), styles.sectionTitle)}>
+          Oyuncu yorumları
+        </h2>
+        {venue.rating.average === null ? (
+          <p className={typeClassName('body')}>
+            {`${venue.rating.count} yorum. Ortalama puan en az üç yorumla gösterilir.`}
+          </p>
+        ) : (
+          <div className={styles.ratingBlock}>
+            <KitNumeral value={venue.rating.average.toLocaleString('tr-TR')} of={5} />
+            <p className={cx(typeClassName('caption'), styles.rowCaption)}>
+              {`Ortalama puan ${venue.rating.average.toLocaleString('tr-TR')} / 5 (${venue.rating.count} yorum).`}
+            </p>
+          </div>
+        )}
+        {venue.recentReviews.length === 0 ? null : (
+          <ul className={styles.reviews}>
+            {venue.recentReviews.map((review) => (
+              <li key={review.id} className={styles.review}>
+                <span className={styles.avatar} aria-hidden="true">
+                  {avatarInitial(review.authorDisplayName)}
+                </span>
+                <div className={styles.reviewBody}>
+                  <p className={cx(typeClassName('body'), styles.reviewHead)}>
+                    <strong>{review.authorDisplayName}</strong> · {review.rating}/5 ·{' '}
+                    {REVIEW_DATE.format(new Date(review.createdAt))}
+                  </p>
+                  {review.text === null ? null : (
+                    <p className={cx(typeClassName('body'), styles.reviewText)}>{review.text}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section tone="sunken" density="dense">
+        <h2 className={typeClassName('title1')}>Bu sahada maç kur</h2>
+        <p className={cx(typeClassName('body'), styles.ctaText)}>
+          Kadro uygulamasında takımını kur, maçı bu sahaya ekle, eksik oyuncuyu ilçeden bul.
+        </p>
+        <div className={styles.cta}>
+          <ButtonLink href={`/#${DOWNLOAD_ANCHOR}`} variant="accent">
+            Bu sahada maç kur
+          </ButtonLink>
+          <Link
+            href={districtPath(district.ilSlug, district.slug) as Route}
+            className={styles.textLink}
+          >
+            {district.ilce} eksik oyuncu ilanları
+          </Link>
         </div>
-      </div>
+      </Section>
     </article>
   );
 }
