@@ -27,6 +27,7 @@ export default defineConfig({
       },
       { find: /^@shopify\/flash-list$/, replacement: support('flash-list.tsx') },
       { find: /^react-native-qrcode-svg$/, replacement: support('qrcode-svg.tsx') },
+      { find: /^react-native-purchases$/, replacement: support('react-native-purchases.ts') },
       {
         find: /^@react-native-async-storage\/async-storage$/,
         replacement: support('async-storage.ts'),

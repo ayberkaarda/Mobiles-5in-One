@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
@@ -6,13 +7,17 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useStore } from 'zustand';
 
-import { session } from '../../src/api/instance';
+import { api, session } from '../../src/api/instance';
 import { FormError, TextLink } from '../../src/auth/components';
 import { useAsyncAction } from '../../src/auth/use-async-action';
+import { ProUpsell } from '../../src/billing/components';
+import { isPro } from '../../src/billing/hooks';
+import { ManageSubscriptionLink } from '../../src/billing/ManageSubscriptionLink';
 import { type Language, LANGUAGES } from '../../src/i18n/resources';
 import { ChoiceGroup } from '../../src/matches/components';
 import { ProfileScreen } from '../../src/profile/components';
 import { profileApi } from '../../src/profile/instance';
+import { meQuery } from '../../src/query';
 import { appLegalLinks, pushPort, pushStore } from '../../src/settings/instance';
 import { chooseLanguage, currentLanguage } from '../../src/settings/language';
 import { LEGAL_PAGES } from '../../src/settings/legal';
@@ -40,6 +45,8 @@ export default function SettingsScreen() {
   const router = useRouter();
   const signOut = useAsyncAction();
   const language = currentLanguage(i18n);
+  const me = useQuery(meQuery(api));
+  const subscribed = me.data?.entitlements !== undefined && me.data.entitlements.status !== 'none';
 
   return (
     <ProfileScreen title={t('settings.title')} testID="settings-screen">
@@ -58,6 +65,17 @@ export default function SettingsScreen() {
       <Section>
         <PushSettings />
       </Section>
+      {me.data === undefined ? null : (
+        <Section>
+          <Text variant="title3" style={{ marginBottom: theme.spacing['2'] }}>
+            {t('settings.proTitle')}
+          </Text>
+          {isPro(me.data) ? null : (
+            <ProUpsell message={t('paywall.settingsHint')} testID="settings-pro-upsell" />
+          )}
+          {isPro(me.data) || subscribed ? <ManageSubscriptionLink /> : null}
+        </Section>
+      )}
       <Section>
         <Text variant="title3" style={{ marginBottom: theme.spacing['2'] }}>
           {t('settings.legal')}

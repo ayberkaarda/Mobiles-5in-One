@@ -8,15 +8,17 @@ import {
   Stack,
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { useStore } from 'zustand';
 import { I18nextProvider } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { session } from '../src/api/instance';
+import { api, session } from '../src/api/instance';
 import { authStore, routeAccess, useAuthStatus } from '../src/auth-store';
+import { useBillingIdentity } from '../src/billing/hooks';
+import { billing } from '../src/billing/instance';
 import { errorMessage } from '../src/i18n/error-copy';
 import { i18n } from '../src/i18n/instance';
 import { pendingLink } from '../src/links/instance';
@@ -34,6 +36,7 @@ import {
   connectFocusManager,
   createQueryClient,
   createQueryPersister,
+  meQuery,
   QueryProvider,
 } from '../src/query';
 import { restoreLanguage } from '../src/settings/language';
@@ -82,10 +85,18 @@ function useIncomingNavigation(): void {
   usePushRefresh(status);
 }
 
+/** Ties the store customer to the signed-in user once the profile (and so the user id) is known. */
+function useStoreCustomer(): void {
+  const status = useAuthStatus();
+  const me = useQuery({ ...meQuery(api), enabled: status === 'signedIn' && billing.available });
+  useBillingIdentity(billing, status, me.data?.id);
+}
+
 function RootStack() {
   const theme = useTheme();
   const access = routeAccess(useAuthStatus());
   useIncomingNavigation();
+  useStoreCustomer();
   return (
     <NavigationThemeProvider value={navigationTheme(theme)}>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
@@ -113,6 +124,8 @@ function RootStack() {
           <Stack.Screen name="profil/duzenle" />
           <Stack.Screen name="ayarlar/index" />
           <Stack.Screen name="ayarlar/hesabi-sil" />
+          {/* Kadro Pro paywall: opened from the profile, settings and the team limit. */}
+          <Stack.Screen name="kadro-pro" />
           {/* Venue directory: a venue (`/saha/<slug>`, the app-link path) and the add form. */}
           <Stack.Screen name="saha/[slug]" />
           <Stack.Screen name="saha/yeni" />
