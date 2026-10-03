@@ -22,11 +22,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . ../../scripts/security --max-warnings 0",
     "test": "vitest run",
- feat/admin-web
-    "test:e2e": "playwright test"
-
+    "test:e2e": "playwright test",
     "lighthouse": "node scripts/lighthouse.mjs"
- main
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1144.0",
