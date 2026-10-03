@@ -95,6 +95,8 @@ a default or that need explanation:
 
 ### Brand and fonts
 
+Superseded by ADR-0007 (the font rows below describe the earlier direction).
+
 | Item                 | Value                                                                     |
 | -------------------- | ------------------------------------------------------------------------- |
 | Display font         | Fraunces, weights 600 and 700, static TTF instances, SIL OFL              |

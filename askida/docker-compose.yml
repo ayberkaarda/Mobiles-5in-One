@@ -124,8 +124,8 @@ services:
       server:
         condition: service_healthy
 
+# No fixed `name:` here on purpose: compose prefixes the volume with the project name, so two
+# projects (for example two checkouts or parallel test stacks) never share one data directory.
 volumes:
-  askida_pg:
-    name: askida_pg
-  askida_minio:
-    name: askida_minio
+  askida_pg: {}
+  askida_minio: {}
