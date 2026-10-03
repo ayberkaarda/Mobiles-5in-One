@@ -13,6 +13,7 @@ import styles from '../../components/marketing/marketing.module.css';
 import { pageMetadata } from '../../components/marketing/metadata';
 import { DOWNLOAD_ANCHOR, SITE_TAGLINE } from '../../components/marketing/site';
 import { StoreBadges } from '../../components/marketing/store-badges';
+import { SiteJsonLd } from '../../components/seo/site-json-ld';
 
 export const metadata: Metadata = pageMetadata({
   title: null,
@@ -24,6 +25,7 @@ export const metadata: Metadata = pageMetadata({
 export default function HomePage() {
   return (
     <>
+      <SiteJsonLd />
       <section className={styles.hero} aria-labelledby="hero-baslik">
         <div className={styles.heroInner}>
           <p className={styles.eyebrow}>Halı saha &amp; eksik oyuncu</p>

@@ -31,6 +31,7 @@ export interface FooterGroup {
 export const HEADER_LINKS: readonly SiteLink[] = [
   { href: '/', label: 'Ana sayfa' },
   { href: '/ozellikler', label: 'Özellikler' },
+  { href: '/blog', label: 'Blog' },
 ];
 
 /** Footer navigation (`nav` landmark "Alt menü"). */
@@ -40,11 +41,17 @@ export const FOOTER_GROUPS: readonly FooterGroup[] = [
     links: [
       { href: '/', label: 'Ana sayfa' },
       { href: '/ozellikler', label: 'Özellikler' },
+      { href: '/blog', label: 'Blog' },
     ],
   },
   {
-    title: 'Hesap',
-    links: [{ href: '/hesap-silme', label: 'Hesabımı sil' }],
+    title: 'Hesap ve yasal',
+    links: [
+      { href: '/hesap-silme', label: 'Hesabımı sil' },
+      { href: '/gizlilik', label: 'Gizlilik (örnek)' },
+      { href: '/kvkk-aydinlatma', label: 'KVKK aydınlatma (örnek)' },
+      { href: '/iletisim', label: 'İletişim' },
+    ],
   },
 ];
 

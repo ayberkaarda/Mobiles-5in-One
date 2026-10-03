@@ -59,13 +59,22 @@ let base = '';
 let devtools = '';
 let output = '';
 
-/** The five public pages that exist on this branch: two marketing, one venue, one district. */
+/**
+ * The public pages audited: two marketing pages (Organization and MobileApplication data), the
+ * blog index and an article, a venue, a venue with a hostile name and a district. `jsonLd`
+ * names the structured-data shape of the page: `site` (Organization + MobileApplication) or
+ * `breadcrumb` (a BreadcrumbList first, ADR-0057, ADR-0080) or `none` (legal sample texts).
+ */
 const PAGES = [
-  { name: 'home', path: '/', jsonLd: false },
-  { name: 'features', path: '/ozellikler', jsonLd: false },
-  { name: 'venue', path: `/saha/${slugs.verified}`, jsonLd: true },
-  { name: 'venue with hostile name', path: `/saha/${slugs.hostile}`, jsonLd: true },
-  { name: 'district', path: `/eksik-var/${slugs.il}/${slugs.district}`, jsonLd: true },
+  { name: 'home', path: '/', jsonLd: 'site' },
+  { name: 'features', path: '/ozellikler', jsonLd: 'site' },
+  { name: 'blog index', path: '/blog', jsonLd: 'breadcrumb' },
+  { name: 'blog article', path: '/blog/kadro-nasil-kurulur', jsonLd: 'breadcrumb' },
+  { name: 'privacy sample text', path: '/gizlilik', jsonLd: 'none' },
+  { name: 'KVKK sample text (tables)', path: '/kvkk-aydinlatma', jsonLd: 'none' },
+  { name: 'venue', path: `/saha/${slugs.verified}`, jsonLd: 'breadcrumb' },
+  { name: 'venue with hostile name', path: `/saha/${slugs.hostile}`, jsonLd: 'breadcrumb' },
+  { name: 'district', path: `/eksik-var/${slugs.il}/${slugs.district}`, jsonLd: 'breadcrumb' },
 ] as const;
 
 async function waitFor(check: () => Promise<boolean>, what: string): Promise<void> {
@@ -307,11 +316,8 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
           expect(tag, tag).toContain(`nonce="${nonce}"`);
         }
         const blocks = ldBlocks(html);
-        if (!page.jsonLd) {
-          // Marketing pages carry no structured data on this branch; a block would still be checked.
-          for (const block of blocks) {
-            expect(block.data['@context']).toBe('https://schema.org');
-          }
+        if (page.jsonLd === 'none') {
+          expect(blocks).toEqual([]);
           return;
         }
         expect(blocks).toHaveLength(1);
@@ -325,6 +331,11 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
         for (const node of graph) {
           expect(typeof node['@type']).toBe('string');
         }
+        if (page.jsonLd === 'site') {
+          expect(graph.map((node) => node['@type'])).toEqual(['Organization', 'MobileApplication']);
+          expect(graph[0]?.url).toBe(`${base}/`);
+          return;
+        }
         const crumbs = graph.find((node) => node['@type'] === 'BreadcrumbList');
         expect(crumbs, 'BreadcrumbList').toBeDefined();
         const items = crumbs?.itemListElement as Record<string, unknown>[];
@@ -335,6 +346,13 @@ describe.skipIf(!ENABLED)('web quality gates (production build)', { timeout: 120
           expect(typeof item.name).toBe('string');
           expect(String(item.item).startsWith(`${base}/`)).toBe(true);
         });
+        if (page.path.startsWith('/blog/')) {
+          const article = graph.find((node) => node['@type'] === 'Article');
+          expect(article, 'Article').toBeDefined();
+          expect(article?.url).toBe(`${base}${page.path}`);
+          expect(article?.headline).toEqual(expect.any(String));
+          expect(article?.datePublished).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
         if (page.path.startsWith('/saha/')) {
           const place = graph.find((node) => node['@type'] === 'SportsActivityLocation');
           expect(place, 'SportsActivityLocation').toBeDefined();
