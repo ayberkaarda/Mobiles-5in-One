@@ -7,9 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class AskidaApp extends ConsumerWidget {
   const new({super.key, this.locale});
 
-  /// Forces a locale (tests, settings). When null the device locale is used
-  /// and anything unsupported falls back to Turkish.
+  /// Forces a locale (tests, settings). When null the app runs in tr_TR so
+  /// the font picks the Turkish dotted and dotless i forms.
   final Locale? locale;
+
+  static const Locale defaultLocale = Locale('tr', 'TR');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,7 +21,7 @@ class AskidaApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AskidaTheme.light(),
       darkTheme: AskidaTheme.dark(),
-      locale: locale,
+      locale: locale ?? defaultLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
