@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceHttps;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\Problem\Handler;
@@ -19,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend([
             RequestId::class,
             SecurityHeaders::class,
+        ]);
+
+        // After TrustProxies, so that isSecure() reflects only trusted forwarded headers.
+        $middleware->append([
+            EnforceHttps::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
