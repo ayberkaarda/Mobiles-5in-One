@@ -1,0 +1,185 @@
+# Askıda — Threat Model
+
+|                     |                                                                                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Status              | **OUTLINE (Phase 0).** Threats, assets, entry points and planned mitigations are named; no mitigation is implemented and none is proven. Detail is added with each phase, and a row becomes final only when its "Proof" cell names a test or artefact that exists. |
+| Method              | STRIDE per feature for the eleven threats listed in product spec section 6 item 23. Mitigations reference spec section 6 item numbers (checklist items 1 to 23).                                                                                                   |
+| Companion documents | `authorization-matrix.md` (who may do what, anonymity rules AN-1 to AN-8), `verification-matrix.md` (23 items), `../adr/0006-portfolio-delivery-scope.md` (what cannot be exercised in this environment).                                                          |
+| Review cadence      | Updated at every phase gate. A new endpoint, queue or third-party integration needs a row or a row change here before it ships.                                                                                                                                    |
+
+---
+
+## 1. System overview
+
+Components as designed in the spec (sections 4 and 5). None is deployed.
+
+| Component            | Runtime                               | Holds or touches                                                                                                                                |
+| -------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile app           | Flutter, iOS and Android              | Sanctum token in secure storage, `API_BASE_URL`, the Firebase client config, the one-time code on screen for recipients, the payment WebView    |
+| API and web          | Laravel, php-fpm behind nginx         | All business logic and authorization, `APP_KEY`, `HOOK_CODE_PEPPER`, provider keys, attestation credentials, the Blade pages including `/pay/*` |
+| Admin panel          | Filament at `/admin`                  | Shop documents (signed URLs), decrypted fields on explicit action, payout and abuse tools, TOTP secrets                                         |
+| Queue and scheduler  | Horizon on Redis, `schedule:work`     | Webhook processing, reconciliation, expiry, impact snapshots, push fan-out; job payloads hold ids only                                          |
+| PostgreSQL + PostGIS | PostgreSQL 16                         | Users, shops, donations, hooks (code hash only), `anon_devices`, payment events, activity log                                                   |
+| Object storage       | S3-compatible (MinIO locally)         | Private bucket: shop documents and backups. Public bucket: re-encoded shop photos                                                               |
+| Payment provider     | iyzico (PayTR recorded as fallback)   | Card data (never on our servers), checkout form, retrieve API, signed webhook, sub-merchant payouts                                             |
+| Attestation          | Play Integrity, DeviceCheck           | Device verdicts that bind an `anon_id`                                                                                                          |
+| Push and mail        | FCM or APNs, Resend (mailpit locally) | Push tokens, recipient email addresses of donors and merchants                                                                                  |
+
+## 2. Assets
+
+| Id  | Asset                                                      | Why it matters                                                                      |
+| --- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| A1  | Funds routed through the payment provider                  | Donor money; the platform never holds it but its flow can be diverted or inflated.  |
+| A2  | Unredeemed hooks (prepaid units)                           | Each is a claim on a shop's goods; double use or theft is direct loss.              |
+| A3  | Recipient anonymity and dignity                            | A product invariant; a single identity leak is a failure of the product, not a bug. |
+| A4  | Shop verification state and documents                      | Tax and business papers; they gate who can receive donor money.                     |
+| A5  | Merchant tax number and IBAN                               | Financial identifiers, encrypted at rest.                                           |
+| A6  | Donor and merchant accounts and tokens                     | Access to history, payout data and redemption rights.                               |
+| A7  | Admin panel                                                | Can approve shops, release payout holds and open documents.                         |
+| A8  | Secrets (`APP_KEY`, pepper, provider and attestation keys) | Compromise breaks hashing, encryption and provider trust.                           |
+
+## 3. Trust boundaries and entry points
+
+| Id  | Entry point                                               | Caller                  | Authentication                          |
+| --- | --------------------------------------------------------- | ----------------------- | --------------------------------------- |
+| E1  | `POST hooks/reserve`                                      | recipient device        | anon token (attested device)            |
+| E2  | `POST shops/{id}/redeem`                                  | merchant owner or staff | merchant token plus shop membership     |
+| E3  | `POST anon/attest`                                        | any device              | attestation token                       |
+| E4  | `POST donations`, `GET pay/{token}`, `POST pay/callback`  | donor app, WebView      | donor token; bound single-use pay token |
+| E5  | `POST webhooks/iyzico`                                    | payment provider        | signature over the raw body             |
+| E6  | `donations/*`, `shops/{id}/*`, document endpoints         | donors, merchants       | tokens with ownership checks            |
+| E7  | Web forms and sessions (marketing, `/hesap-silme`, admin) | browsers                | cookie session, CSRF                    |
+| E8  | `/admin/*`                                                | admin staff             | password, TOTP, `strict` session        |
+| E9  | Payment WebView inside the app                            | app user                | none (navigation allowlist)             |
+
+## 4. Threat register
+
+Columns: **Asset** is from section 2, **Entry** from section 3. **Mitigation** names the spec item number (`#n`) and the design decision. **Residual risk** is what stays after the planned mitigation; it is stated now so it is not discovered later. **Proof phase** says when a test or artefact will exist; until then the row is a plan.
+
+### 4.1 Redemption code brute force
+
+Asset A2, A3. Entry E2 (and E1 for code issuance).
+
+| STRIDE            | Threat                                                                                            | Mitigation (spec item)                                                                                                                                                         | Residual risk                                                                                                                                                              | Proof phase                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Spoofing          | An attacker guesses a live code and redeems it as a merchant member, or enrols as staff to guess. | Staff are added only by the owner; redeem needs membership (#3, #4). Code space 32^8 with a 10-minute life; 30 redeems per minute per shop (#5); input pattern validated (#6). | A shop member can attempt 30 guesses per minute against only that shop's live hooks; the odds are negligible against 32^8 but nonzero. Accepted and quantified in Phase 2. | Phase 1 (limiter), Phase 2 (engine), Phase 6 |
+| Information       | The code leaks from storage, logs or responses.                                                   | HMAC-SHA256 with a server pepper, plaintext only in the `reserve` response (#11); no request bodies logged for auth, pay and webhooks, codes masked (#14).                     | Plaintext sits on the recipient's screen and in app memory; shoulder surfing or a screenshot is outside the server's control.                                              | Phase 1 (logs), Phase 2 (hash), Phase 6      |
+| Denial of service | A member floods `redeem` to lock rows or fill the limiter.                                        | Per-shop limit and uniform errors (#5); row locks are short and single-row (#4).                                                                                               | Limiter keyed by shop can be exhausted by one malicious staff account; the owner removes the account. Accepted.                                                            | Phase 1, Phase 6                             |
+
+### 4.2 Redemption race and double-spend
+
+Asset A2, A1. Entry E1, E2.
+
+| STRIDE      | Threat                                                                               | Mitigation (spec item)                                                                                                                                  | Residual risk                                                                                                    | Proof phase      |
+| ----------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Tampering   | Two parallel `redeem` calls both succeed for one code.                               | One transaction with `SELECT ... FOR UPDATE` on the hook row and a unique `REDEEMED` transition (#4). Test: concurrent redeem, exactly one wins.        | Proven only against PostgreSQL in the test environment; behaviour under production replication is not exercised. | Phase 2, Phase 6 |
+| Tampering   | Two devices reserve the last `AVAILABLE` hook, or one device reserves past its caps. | Reserve selects the hook under a row lock; daily caps in `anon_daily_counters` checked in the same transaction (#4, #5). Test: parallel double-reserve. | A cap enforced per `anon_id` does not bind an attacker with many `anon_id` values (see 4.3).                     | Phase 2, Phase 6 |
+| Repudiation | A merchant claims a code was never redeemed, or a donor disputes use.                | `redeemed_by_user_id`, `redeemed_at` and an activity-log entry per transition (#18).                                                                    | The log shows who pressed redeem, not whether the goods changed hands.                                           | Phase 2          |
+
+### 4.3 Anon farming across devices and emulators
+
+Asset A2, A3. Entry E3, E1.
+
+| STRIDE      | Threat                                                                                   | Mitigation (spec item)                                                                                                                                                                                               | Residual risk                                                                                                                                                                                                  | Proof phase                                    |
+| ----------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Spoofing    | One person creates many `anon_id` values with emulators or a device farm to drain hooks. | Play Integrity and DeviceCheck verdicts required before a token (#5); `anon/attest` 3 per day per device; 5 per hour per `anon_id` and 60 per hour per IP on reserve; ban list; per-shop and per-day caps (#5, #22). | A real device farm or rooted device with a valid verdict is not stopped by these controls; this cannot be simulated here. DeviceCheck gives per-device bits, not app integrity. Documented limit, not a claim. | Phase 2 (server limits), Phase 6 (limits only) |
+| Elevation   | A forged or replayed attestation token yields a token for a banned `anon_id`.            | Server-side verdict decoding against the provider API, verdict cached per `anon_id` for 30 days, ban checked on every request (#4).                                                                                  | Real provider verdicts are not exercised without accounts; server logic is tested against fixtures only.                                                                                                       | Phase 2, ADR-0006                              |
+| Information | Defending against farming pushes toward storing more device data.                        | Rule AN-3 limits `anon_devices` columns; no IP or advertising id is stored.                                                                                                                                          | Fewer signals means weaker detection; the trade-off favours anonymity by design.                                                                                                                               | Phase 2                                        |
+
+### 4.4 Merchant self-redeem collusion
+
+Asset A1, A2. Entry E2, E4.
+
+| STRIDE      | Threat                                                                                                       | Mitigation (spec item)                                                                                                                                                                                      | Residual risk                                                                                                                                                                     | Proof phase      |
+| ----------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Spoofing    | A merchant donates to its own shop, reserves with a device it controls and redeems, cycling money to itself. | A user has one kind: merchants cannot donate (authorization matrix, section 1). Caps per transaction, per donor-day and per item-day (#22). Redemption-rate anomaly thresholds trigger a payout hold (#22). | The same person can open a separate donor account. Money moves through the provider and fees are real, which limits profit; anomaly detection is the control and needs real data. | Phase 3, Phase 6 |
+| Repudiation | A shop marks goods as given without a recipient (inflating redeemed counts).                                 | Redeem requires a live reserved code, so a recipient device must exist; per-shop redemption-rate monitoring and `finance` review (#22).                                                                     | A colluding recipient is indistinguishable from a real one by design (anonymity). Accepted; payout hold limits the exposure.                                                      | Phase 3, Phase 6 |
+
+### 4.5 Webhook and callback forgery
+
+Asset A1, A2. Entry E5, E4.
+
+| STRIDE            | Threat                                                                   | Mitigation (spec item)                                                                                                                                                                                                            | Residual risk                                                                                                                                                        | Proof phase      |
+| ----------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Spoofing          | A forged `webhooks/iyzico` call marks a donation paid and creates hooks. | Signature over the raw body checked per the provider's current specification, stale timestamp rejected (#17). A queued job re-fetches the payment with `retrieve` before any transition, so a forged event alone changes nothing. | The signature algorithm is taken from the provider's current documentation at implementation time and has not been read yet; fixtures test only our own consistency. | Phase 3          |
+| Tampering         | `pay/callback` is called with a forged status or amount.                 | The callback never trusts posted fields; it calls `retrieve` and compares amount and currency with `donations` (#17).                                                                                                             | Real sandbox calls are not exercised without a provider account (ADR-0006).                                                                                          | Phase 3          |
+| Repudiation       | The same event is replayed to create hooks twice.                        | Unique index on `payment_events(provider, event_id)`; idempotent transition (#17).                                                                                                                                                | None known once the index and the idempotent job exist.                                                                                                              | Phase 3          |
+| Denial of service | A flood of invalid webhooks consumes workers.                            | Signature check before queueing; respond fast; body size limit (#6).                                                                                                                                                              | Provider-side retry storms are not simulated.                                                                                                                        | Phase 3, Phase 6 |
+
+### 4.6 IDOR on donations and documents
+
+Asset A4, A5, A6. Entry E6.
+
+| STRIDE      | Threat                                                                                | Mitigation (spec item)                                                                                                                   | Residual risk                                                                                      | Proof phase      |
+| ----------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------- |
+| Information | A donor reads another donor's donation by changing the id.                            | Policy checks ownership on every action; 404 for out-of-scope ids (#3, #4). IDOR suite across donors, shops and anon ids.                | New endpoints added later without a matrix row; the matrix change rule is the control.             | Phase 1, Phase 6 |
+| Information | A shop member or outsider reads another shop's redemptions, payouts or items.         | Membership read from `shop_members` per request; staff limited to redeem and redemptions (#3). Table-driven test over every matrix cell. | None known beyond the matrix being complete.                                                       | Phase 1          |
+| Tampering   | A merchant edits an item or document of another shop by mixing `{id}` and `{itemId}`. | Nested ownership: `items.shop_id = {id}` and owner of `{id}` (#4).                                                                       | None known.                                                                                        | Phase 1, Phase 2 |
+| Information | A response leaks recipient data through a donor or merchant view.                     | Anonymity rules AN-1 and AN-2 as response-shape tests.                                                                                   | Aggregates over very small groups can single out an event; district roll-up rule D-4 addresses it. | Phase 1, Phase 2 |
+
+### 4.7 Private document leak
+
+Asset A4, A5. Entry E6, E8.
+
+| STRIDE      | Threat                                                                  | Mitigation (spec item)                                                                                                                               | Residual risk                                                                                                   | Proof phase      |
+| ----------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Information | A document URL is guessable or permanent and gets shared.               | Private disk; 5-minute signed URLs created per admin click; no API role gets a document URL (#7). Tampered or unsigned URL returns 403.              | A signed URL is a bearer link for five minutes; an admin who forwards it extends access. Logged, accepted.      | Phase 2, Phase 6 |
+| Tampering   | An uploaded file is an executable renamed to PDF, or a PDF with script. | MIME by magic bytes, PDF sanity (no JavaScript, 10 pages at most), size and count limits, quota per shop per day (#7). ClamAV is an optional switch. | Without antivirus the sanity checks cannot detect all malicious documents; documents are viewed by admins only. | Phase 2, Phase 6 |
+| Information | Documents or tax numbers appear in backups, logs or Sentry.             | Backups to a separate encrypted bucket with write-only credentials (#20); masked logs and scrubbing (#14); `tax_number` and `iban` encrypted (#11).  | `APP_KEY` rotation needs a re-encryption plan (#2).                                                             | Phase 6          |
+
+### 4.8 CSRF on web
+
+Asset A6, A7. Entry E7, E8.
+
+| STRIDE    | Threat                                                                                     | Mitigation (spec item)                                                                                                                                         | Residual risk                                                                                      | Proof phase      |
+| --------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------- |
+| Tampering | A third-party page submits a state-changing request in the admin or the deletion web page. | CSRF on for all web routes; `__Host-` session cookie, secure, http-only, `strict` for admin and `lax` for public web (#12); CSP `frame-ancestors 'none'` (#9). | `lax` on public web allows top-level GET navigations; no state change is allowed on GET (checked). | Phase 1, Phase 6 |
+| Tampering | The mobile API is attacked through browser credentials.                                    | API uses bearer tokens, not cookies; CORS only `https://askida.app` without credentials (#8).                                                                  | None known.                                                                                        | Phase 1          |
+
+### 4.9 Filament exposure
+
+Asset A4, A7, A1. Entry E8.
+
+| STRIDE                 | Threat                                                                  | Mitigation (spec item)                                                                                                     | Residual risk                                                                                                   | Proof phase      |
+| ---------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Spoofing               | Stolen or guessed admin credentials.                                    | Mandatory TOTP at login, rate limits, `strict` session, optional IP allowlist (#5, #12, #18).                              | A phished TOTP code works within its window; hardware keys are out of scope.                                    | Phase 3, Phase 6 |
+| Elevation of privilege | A `moderator` reaches finance actions, or any role impersonates a user. | Roles `admin`, `moderator`, `finance` with Gates per matrix section 4; impersonation disabled; no manual hook edits (#18). | Gate drift as Filament resources are added; the matrix change rule and a panel-wide role test are the controls. | Phase 3, Phase 6 |
+| Information            | The panel reveals recipient identity or secrets.                        | None stored (AN-3, AN-4); decrypted fields only by explicit logged action; activity log without PII (#18, #21).            | None known beyond the decrypt action itself.                                                                    | Phase 3          |
+| Information            | Panel or Horizon is reachable from the public internet.                 | Auth on both; relaxed CSP only for `/admin` (#9); `noindex` and robots disallow.                                           | Network-level exposure depends on deployment, which is not exercised here (ADR-0006).                           | Phase 3, Phase 6 |
+
+### 4.10 WebView phishing
+
+Asset A1, A6. Entry E9, E4.
+
+| STRIDE    | Threat                                                                                   | Mitigation (spec item)                                                                                                                                            | Residual risk                                                                | Proof phase      |
+| --------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------- |
+| Spoofing  | The payment WebView is steered to a look-alike page that collects card data.             | Navigation allowlist: `https://askida.app/pay/*` and the provider hosts only; non-HTTPS and foreign hosts blocked (#10). Widget test for foreign-host navigation. | A compromised provider or domain is outside the allowlist's reach. Accepted. | Phase 4, Phase 6 |
+| Tampering | Injected content or script reaches the payment page.                                     | No user content on `/pay/*`, relaxed CSP limited to `frame-src` provider hosts (#9, #16); the WebView never receives injected user content.                       | None known once the CSP and template ban exist.                              | Phase 3, Phase 6 |
+| Spoofing  | A deep link or push opens the app into the payment flow with attacker-chosen parameters. | The pay token is server-created and bound to a donation and a donor; nothing in a link changes amount or shop.                                                    | Link handling is built in Phase 4 and not designed in detail yet.            | Phase 4          |
+
+### 4.11 Payment amount tampering
+
+Asset A1. Entry E4.
+
+| STRIDE    | Threat                                                                         | Mitigation (spec item)                                                                                                                                                 | Residual risk                                                                      | Proof phase      |
+| --------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------- |
+| Tampering | The client sends a lower amount or a different item price in `POST donations`. | The server recomputes `amount_minor` from `items.price_minor` and `qty`; bounds on `qty` and price; money is integer kuruş (#6, #23). Test: tampered `amount` ignored. | None known once the recompute and the type rule exist.                             | Phase 3, Phase 6 |
+| Tampering | An item price changes between checkout creation and payment.                   | Amount and currency are fixed on the `donations` row at initiation and compared with `retrieve` data at confirmation (#17).                                            | A very small window exists before the callback; the comparison rejects a mismatch. | Phase 3          |
+| Tampering | Provider-side amount differs from ours (fees, currency).                       | Daily reconciliation job compares provider records with `donations` and alerts (#17).                                                                                  | Reconciliation against the real provider is not exercised (ADR-0006).              | Phase 3, Phase 6 |
+
+## 5. Cross-cutting threats (named, not analysed)
+
+These are not in spec item 23 but follow from other checklist items. They are named so they are not forgotten; no analysis is done in Phase 0.
+
+| Topic                                             | Spec item | Planned phase |
+| ------------------------------------------------- | --------- | ------------- |
+| Secret exposure in repository history             | #1, #2    | 1 and 6       |
+| Dependency and supply-chain risk                  | #19       | 6             |
+| Backup theft and restore integrity                | #20       | 6             |
+| Account deletion leaving personal data behind     | #21       | 2             |
+| Cost abuse (mail, push, provider fees)            | #22       | 6             |
+| Stored XSS across web, admin and WebView surfaces | #16       | 6             |
+
+## 6. Evidence limits
+
+What the planned proofs cannot show in this environment (no payment provider account, no mobile store accounts, no macOS, no real device farm) is recorded in `../adr/0006-portfolio-delivery-scope.md`. A threat row that depends on such an external system keeps the wording "not exercised: <reason>" and its status in `verification-matrix.md` stays `partial` at best.
