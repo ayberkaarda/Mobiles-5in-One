@@ -1,0 +1,222 @@
+# Screen tour of the Kadro app for docs/screenshots/mobile, run by ops/take-mobile-screenshots.sh
+# with the values printed by ops/mobile-screenshots/seed.mjs. The app must start signed out.
+appId: app.kadro.mobile
+name: screenshots
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: welcome-sign-in
+    timeout: 60000
+- waitForAnimationToEnd
+- takeScreenshot: 01-welcome
+- tapOn:
+    id: welcome-sign-in
+- extendedWaitUntil:
+    visible:
+      id: sign-in-screen
+    timeout: 10000
+- tapOn:
+    id: sign-in-email
+- inputText: ${SHOTS_CAPTAIN}
+- tapOn:
+    id: sign-in-password
+- inputText: ${SHOTS_PASSWORD}
+- hideKeyboard
+- takeScreenshot: 02-sign-in
+- tapOn:
+    id: sign-in-submit
+- extendedWaitUntil:
+    visible:
+      id: tab-matches
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: match-${SHOTS_MATCH_ID}
+    timeout: 30000
+- tapOn:
+    id: push-prompt-later
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 03-matches
+- tapOn:
+    id: match-${SHOTS_MATCH_ID}
+- extendedWaitUntil:
+    visible:
+      id: rsvp-current
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 04-match-detail-rsvp
+- scrollUntilVisible:
+    element:
+      id: rsvp-maybe
+    direction: DOWN
+- waitForAnimationToEnd
+- scroll
+- waitForAnimationToEnd
+- takeScreenshot: 05-match-participants
+- back
+- tapOn:
+    id: tab-teams
+- extendedWaitUntil:
+    visible:
+      id: team-${SHOTS_TEAM_ID}
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 06-teams
+- tapOn:
+    id: team-${SHOTS_TEAM_ID}
+- extendedWaitUntil:
+    visible:
+      id: team-roster
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 07-team
+- back
+- tapOn:
+    id: tab-matches
+- scrollUntilVisible:
+    element:
+      id: team-matches-${SHOTS_TEAM_ID}
+    direction: DOWN
+- tapOn:
+    id: team-matches-${SHOTS_TEAM_ID}
+- extendedWaitUntil:
+    visible:
+      id: match-create
+    timeout: 20000
+- tapOn:
+    id: match-create
+- extendedWaitUntil:
+    visible:
+      id: venue-kind
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 08-create-match
+- back
+- back
+- tapOn:
+    id: tab-openCalls
+- extendedWaitUntil:
+    visible:
+      id: open-calls-list
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 09-open-calls
+- tapOn:
+    id: filters-toggle
+- extendedWaitUntil:
+    visible:
+      id: filter-district
+    timeout: 20000
+- waitForAnimationToEnd
+- tapOn:
+    id: filter-district-search
+- inputText: Besik
+- hideKeyboard
+- tapOn: 'Beşiktaş, İstanbul'
+- extendedWaitUntil:
+    visible:
+      id: filter-district-selected
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 10-open-calls-district-filter
+- tapOn:
+    id: tab-venues
+- extendedWaitUntil:
+    visible:
+      id: venues-list
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 11-venues
+- tapOn:
+    id: venue-search
+- inputText: kadikoy
+- hideKeyboard
+- tapOn:
+    id: venue-search-submit
+- extendedWaitUntil:
+    visible:
+      id: venue-${SHOTS_VENUE_ID}
+    timeout: 30000
+- tapOn:
+    id: venue-${SHOTS_VENUE_ID}
+- extendedWaitUntil:
+    visible:
+      id: venue-screen
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 12-venue-detail
+- back
+- tapOn:
+    id: tab-profile
+- extendedWaitUntil:
+    visible:
+      id: profile-edit
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 13-profile
+- scrollUntilVisible:
+    element:
+      id: profile-settings
+    direction: DOWN
+- tapOn:
+    id: profile-settings
+- extendedWaitUntil:
+    visible:
+      id: settings-screen
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 14-settings
+- scrollUntilVisible:
+    element:
+      id: settings-pro-upsell-open
+    direction: DOWN
+- tapOn:
+    id: settings-pro-upsell-open
+- extendedWaitUntil:
+    visible:
+      id: paywall-screen
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 15-pro-paywall-unavailable
+- back
+- scrollUntilVisible:
+    element:
+      id: settings-sign-out
+    direction: DOWN
+- tapOn:
+    id: settings-sign-out
+- extendedWaitUntil:
+    visible:
+      id: welcome-sign-in
+    timeout: 20000
+- tapOn:
+    id: welcome-sign-in
+- tapOn:
+    id: sign-in-email
+- inputText: ${SHOTS_EMPTY}
+- tapOn:
+    id: sign-in-password
+- inputText: ${SHOTS_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: sign-in-submit
+- extendedWaitUntil:
+    visible:
+      id: tab-matches
+    timeout: 30000
+- tapOn:
+    id: push-prompt-later
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 16-matches-empty
+- tapOn:
+    id: tab-teams
+- extendedWaitUntil:
+    visible:
+      id: teams-create
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: 17-teams-empty
