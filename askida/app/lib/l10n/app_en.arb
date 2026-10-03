@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "appTitle": "Askıda",
+  "tagline": "Keep kindness on the hook.",
+  "modeDonor": "Leave on the hook",
+  "modeMerchant": "Shop",
+  "modeRecipient": "Take from the hook",
+  "donorEmptyTitle": "Nothing on the hook from you yet",
+  "donorEmptyBody": "You can leave a loaf of bread or a bowl of soup at a bakery, eatery or stationer in your neighbourhood. What you leave on the hook shows up here.",
+  "merchantEmptyTitle": "Your shop is not listed yet",
+  "merchantEmptyBody": "Once your registration is verified you can add your items and scan hook codes here.",
+  "recipientEmptyTitle": "Nothing is waiting on the hook nearby",
+  "recipientEmptyBody": "Bread, soup or notebooks waiting on the hook at nearby shops are listed here. No account and no questions needed."
+}

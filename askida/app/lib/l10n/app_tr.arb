@@ -1,0 +1,47 @@
+{
+  "@@locale": "tr",
+  "appTitle": "Askıda",
+  "@appTitle": {
+    "description": "Application name shown in the app bar and task switcher."
+  },
+  "tagline": "İyilik askıda kalmasın.",
+  "@tagline": {
+    "description": "Brand tagline."
+  },
+  "modeDonor": "Askıya bırak",
+  "@modeDonor": {
+    "description": "Navigation label of the donor mode."
+  },
+  "modeMerchant": "Esnaf",
+  "@modeMerchant": {
+    "description": "Navigation label of the merchant mode."
+  },
+  "modeRecipient": "Askıdan al",
+  "@modeRecipient": {
+    "description": "Navigation label of the anonymous recipient mode."
+  },
+  "donorEmptyTitle": "Askıda bıraktığın bir şey yok",
+  "@donorEmptyTitle": {
+    "description": "Donor home empty-state title."
+  },
+  "donorEmptyBody": "Mahallendeki fırına, lokantaya ya da kırtasiyeye bir ekmek, bir çorba bırakabilirsin. Askıya bıraktıkların burada görünecek.",
+  "@donorEmptyBody": {
+    "description": "Donor home empty-state body."
+  },
+  "merchantEmptyTitle": "Dükkânın henüz listede değil",
+  "@merchantEmptyTitle": {
+    "description": "Merchant home empty-state title."
+  },
+  "merchantEmptyBody": "Kaydın doğrulandığında ürünlerini ekleyebilir, askıdaki kodları buradan okutabilirsin.",
+  "@merchantEmptyBody": {
+    "description": "Merchant home empty-state body."
+  },
+  "recipientEmptyTitle": "Yakında askıda bekleyen bir şey görünmüyor",
+  "@recipientEmptyTitle": {
+    "description": "Recipient home empty-state title."
+  },
+  "recipientEmptyBody": "Yakındaki dükkânlarda askıda bekleyen ekmek, çorba ya da defter burada listelenir. Hesap açman ya da soru yanıtlaman gerekmez.",
+  "@recipientEmptyBody": {
+    "description": "Recipient home empty-state body."
+  }
+}
