@@ -111,10 +111,20 @@ describe('HTML pages', () => {
 
 describe('error pages', () => {
   it('unknown paths (404 page) and admin paths get the same page headers', () => {
-    for (const pathname of ['/bu-sayfa-yok', '/admin/kullanicilar', '/mac/AbCdEf123']) {
+    for (const pathname of ['/bu-sayfa-yok', '/admin/kullanicilar']) {
       const response = proxied(pathname);
       expectPageCsp(response.headers);
       expectStaticHeaders(response.headers);
+    }
+  });
+
+  it('invite paths get the page CSP with noindex, no-referrer and no-store (ADR-0058)', () => {
+    for (const pathname of ['/mac/AbCdEf123', '/mac/kisa']) {
+      const response = proxied(pathname);
+      expectPageCsp(response.headers);
+      expect(response.headers.get('referrer-policy'), pathname).toBe('no-referrer');
+      expect(response.headers.get('x-robots-tag'), pathname).toBe('noindex, nofollow');
+      expect(response.headers.get('cache-control'), pathname).toBe('no-store');
     }
   });
 });
@@ -148,6 +158,12 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       referrer: 'strict-origin-when-cross-origin',
       cache: null,
     },
+    'invite-page': {
+      csp: 'nonce',
+      robots: 'noindex, nofollow',
+      referrer: 'no-referrer',
+      cache: 'no-store',
+    },
     marketing: {
       csp: 'nonce',
       robots: null,
@@ -163,6 +179,7 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       'api',
       'token-page',
       'email-link-page',
+      'invite-page',
       'marketing',
       'seo',
       'app',
@@ -191,7 +208,9 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['/sahalarx', 'app'],
       ['/eksik-var/istanbul/kadikoy', 'seo'],
       ['/admin/kullanicilar', 'app'],
-      ['/mac/AbCdEf123', 'app'],
+      ['/mac/AbCdEf123', 'invite-page'],
+      ['/mac', 'invite-page'],
+      ['/macx/AbCdEf123', 'app'],
       ['/bu-sayfa-yok', 'app'],
     ];
     for (const [pathname, name] of cases) {
@@ -216,6 +235,7 @@ describe('surface table (ADR-0021, ADR-0055)', () => {
       ['//api//v1/health/', 'api'],
       ['/api/v1/../v1/health', 'api'],
       ['/SAHALAR/istanbul', 'seo'],
+      ['/MAC/AbCdEf123', 'invite-page'],
       // One decoding pass only: `%252d` is the text `%2d`, not a hyphen.
       ['/sifre%252dsifirla', 'app'],
       ['/../..', 'marketing'],
