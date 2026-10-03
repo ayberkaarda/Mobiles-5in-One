@@ -62,6 +62,10 @@ Preconditions, checked under a lock on the deletion request: request exists, `co
    records `revenuecat`; the Phase 5 reconciliation job processes those rows. No subscription can
    exist before Phase 5, so nothing is left behind in the meantime.
 
+   _Update 2026-10-03:_ the subscriber deletion is now implemented by ADR-0082 (called from the
+   hard-delete job, failures stay in `external_pending` and are retried by a follow-up job). The
+   reconciliation-job wording above is superseded by it.
+
 **Then one database transaction:**
 
 3. Teams where the user is captain:
