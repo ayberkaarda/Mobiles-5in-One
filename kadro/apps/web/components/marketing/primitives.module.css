@@ -729,13 +729,15 @@
   padding-bottom: var(--k-space-5);
 }
 
+/* The hero sheet is narrower than numeral plus match block, so the block wraps under the
+   numeral; it starts at the same left edge instead of a ragged right alignment. */
 .sheetMatch {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--k-space-1);
   padding-bottom: var(--k-space-1);
-  text-align: right;
+  text-align: left;
 }
 
 .sheetMatch p {
@@ -746,7 +748,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: var(--k-space-2);
 }
 
@@ -824,13 +826,6 @@
 @media (max-width: 639px) {
   .sheet {
     padding: var(--k-space-4);
-  }
-
-  .sheetMatch,
-  .sheetTeam {
-    align-items: flex-start;
-    justify-content: flex-start;
-    text-align: left;
   }
 
   .sheetWhen {
