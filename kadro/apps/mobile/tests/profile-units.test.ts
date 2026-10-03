@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import { LIMITS } from '../../../packages/contracts/src/limits';
 import { UPLOAD_CONTENT_TYPES } from '../../../packages/contracts/src/uploads';
 import {
@@ -79,6 +80,7 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
     districtId: KADIKOY_ID,
     providers: { password: true, apple: false, google: false },
     createdAt: '2026-09-01T10:00:00.000Z',
+    entitlements: NO_ENTITLEMENTS,
     ...overrides,
   };
 }

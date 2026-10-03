@@ -24,6 +24,7 @@ import {
   webRefreshResponseSchema,
   meResponseSchema,
   mobileAuthResponseSchema,
+  NO_ENTITLEMENTS,
   paginatedResponseSchema,
   paginationQuerySchema,
   problemDetailsSchema,
@@ -299,6 +300,7 @@ const me = {
   districtId: DISTRICT_ID,
   providers: { password: true, apple: false, google: false },
   createdAt: NOW,
+  entitlements: NO_ENTITLEMENTS,
 };
 
 describe('accessTokenClaimsSchema', () => {

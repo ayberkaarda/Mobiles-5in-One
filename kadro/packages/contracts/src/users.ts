@@ -56,8 +56,8 @@ export type LinkedProviders = z.infer<typeof linkedProvidersSchema>;
 
 /**
  * `GET /api/v1/me`: the caller's own profile. `entitlements` is the server-side Pro state
- * (ADR-0063). It is optional only until the entitlement work package makes every profile response
- * carry it; clients treat a missing member as `NO_ENTITLEMENTS`.
+ * (ADR-0063, ADR-0065) and is part of every profile response, including the `user` of the
+ * sign-in responses.
  */
 export const meResponseSchema = z.strictObject({
   ...userPublicSchema.shape,
@@ -67,7 +67,7 @@ export const meResponseSchema = z.strictObject({
   districtId: idSchema.nullable(),
   providers: linkedProvidersSchema,
   createdAt: isoDateTimeSchema,
-  entitlements: entitlementsSchema.optional(),
+  entitlements: entitlementsSchema,
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
 

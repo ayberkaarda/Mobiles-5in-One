@@ -9,9 +9,9 @@ import { QUERY_ROOTS } from '../query/keys';
 import { meQuery } from '../query/resources';
 import { type BillingPort } from './port';
 
-/** Pro as the server reports it; a profile that is not loaded (or has no member) means no Pro. */
+/** Pro as the server reports it; a profile that is not loaded yet means no Pro. */
 export function isPro(me: Pick<MeResponse, 'entitlements'> | undefined): boolean {
-  return me?.entitlements?.pro === true;
+  return me?.entitlements.pro === true;
 }
 
 /**

@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_ENTITLEMENTS } from '../../../packages/contracts/src/billing';
 import { createVenueRequestSchema } from '../../../packages/contracts/src/venues';
 import VenuesTab from '../app/(tabs)/sahalar/index';
 import NewVenueScreen from '../app/saha/yeni';
@@ -135,6 +136,7 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
     districtId: KADIKOY_ID,
     providers: { password: true, apple: false, google: false },
     createdAt: '2026-09-01T10:00:00.000Z',
+    entitlements: NO_ENTITLEMENTS,
     ...overrides,
   };
 }

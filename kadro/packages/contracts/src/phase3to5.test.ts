@@ -58,7 +58,7 @@ describe('entitlements', () => {
     expect(accepts(entitlementsSchema, { ...NO_ENTITLEMENTS, extra: true })).toBe(false);
   });
 
-  it('keeps entitlements optional on the profile until every response carries them', () => {
+  it('requires entitlements on every profile response (ADR-0065)', () => {
     const me = {
       id: uuidv7(),
       displayName: 'Ayşe',
@@ -72,8 +72,9 @@ describe('entitlements', () => {
       providers: { password: true, apple: false, google: false },
       createdAt: isoAt(),
     };
-    expect(accepts(meResponseSchema, me)).toBe(true);
+    expect(accepts(meResponseSchema, me)).toBe(false);
     expect(accepts(meResponseSchema, { ...me, entitlements: NO_ENTITLEMENTS })).toBe(true);
+    expect(accepts(meResponseSchema, { ...me, entitlements: null })).toBe(false);
     expect(accepts(meResponseSchema, { ...me, entitlements: { pro: true } })).toBe(false);
   });
 });

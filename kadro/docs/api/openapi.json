@@ -21997,7 +21997,8 @@
           "role",
           "districtId",
           "providers",
-          "createdAt"
+          "createdAt",
+          "entitlements"
         ],
         "additionalProperties": false
       },
