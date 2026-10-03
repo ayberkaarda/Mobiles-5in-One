@@ -1,15 +1,16 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
+import { BackLink } from '../navigation/BackLink';
 import { Fact } from '../matches/components';
 import { useTheme } from '../theme';
 import { Button, Numeral, Screen, SkeletonList, Text } from '../ui';
 import { type Level, type MeStatsResponse, type Position } from './contracts';
+import { initialsOf } from './initials';
 
 /** Where "back" leads from the profile and settings screens opened directly (deep link, cold start). */
 export const PROFILE_HOME = '/profil';
@@ -28,25 +29,9 @@ export function ProfileScreen({
 }) {
   const { t } = useTranslation('common');
   const theme = useTheme();
-  const router = useRouter();
   return (
     <Screen scroll testID={testID}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('nav.back')}
-        onPress={() => (router.canGoBack() ? router.back() : router.replace(home))}
-        testID="back"
-        style={{
-          minHeight: theme.minTouchTarget,
-          justifyContent: 'center',
-          alignSelf: 'flex-start',
-          paddingHorizontal: theme.spacing['4'],
-        }}
-      >
-        <Text tone="link" variant="label">
-          {`‹ ${t('nav.back')}`}
-        </Text>
-      </Pressable>
+      <BackLink label={t('nav.back')} fallback={home} />
       <Text
         variant="title1"
         style={{ paddingHorizontal: theme.spacing['4'], paddingBottom: theme.spacing['3'] }}
@@ -69,16 +54,7 @@ export function profileLevelLabel(t: Translate, notSet: string, value: Level | n
   return value === null ? notSet : t(`level.${value}`);
 }
 
-/** Up to two initials of the display name, shown when there is no photo. */
-export function initialsOf(displayName: string): string {
-  return displayName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => Array.from(part)[0] ?? '')
-    .join('')
-    .toLocaleUpperCase('tr');
-}
+export { initialsOf };
 
 const AVATAR_SIZE = 72;
 

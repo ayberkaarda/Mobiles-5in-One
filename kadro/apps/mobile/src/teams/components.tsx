@@ -1,10 +1,11 @@
-import { useRouter } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
+import { BackLink as SharedBackLink } from '../navigation/BackLink';
+import { initialsOf } from '../profile/initials';
 import { useTheme } from '../theme';
 import {
   Button,
@@ -23,26 +24,7 @@ export const TEAMS_HOME = '/takimlar';
 /** Back control of the pushed team screens: the previous screen, else the teams tab. */
 export function BackLink() {
   const { t } = useTranslation('teams');
-  const theme = useTheme();
-  const router = useRouter();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('nav.back')}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(TEAMS_HOME))}
-      testID="back"
-      style={{
-        minHeight: theme.minTouchTarget,
-        justifyContent: 'center',
-        alignSelf: 'flex-start',
-        paddingHorizontal: theme.spacing['4'],
-      }}
-    >
-      <Text tone="link" variant="label">
-        {`‹ ${t('nav.back')}`}
-      </Text>
-    </Pressable>
-  );
+  return <SharedBackLink label={t('nav.back')} fallback={TEAMS_HOME} />;
 }
 
 /** Page frame of a pushed team screen: back control, heading, scrolling content. */
@@ -86,9 +68,12 @@ export function SectionHeading({ children }: { readonly children: string }) {
   );
 }
 
-/** Team crest in the kit-number circle: the first letter of the team name. Decorative. */
+/**
+ * Team crest in the kit-number circle: the first letter of the team name, after a leading tag
+ * such as "[ÖRNEK]" (the shared avatar initials). Decorative.
+ */
 export function TeamCrest({ name }: { readonly name: string }) {
-  const letter = name.trim().charAt(0).toLocaleUpperCase('tr') || '?';
+  const letter = Array.from(initialsOf(name))[0] ?? '?';
   return <KitNumber number={letter} size={40} />;
 }
 

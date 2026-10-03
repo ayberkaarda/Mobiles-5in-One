@@ -1,10 +1,10 @@
-import { useRouter } from 'expo-router';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
+import { BackLink as SharedBackLink } from '../navigation/BackLink';
 import { useTheme } from '../theme';
 import { ErrorState, Screen, Text } from '../ui';
 
@@ -30,28 +30,9 @@ export function kickoffTime(iso: string, language: string): string {
 }
 
 /** Back control of the pushed match screens: the previous screen, else `fallback`. */
-function BackLink({ fallback }: { readonly fallback: string }) {
+function MatchBackLink({ fallback }: { readonly fallback: string }) {
   const { t } = useTranslation('matches');
-  const theme = useTheme();
-  const router = useRouter();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('nav.back')}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback))}
-      testID="back"
-      style={{
-        minHeight: theme.minTouchTarget,
-        justifyContent: 'center',
-        alignSelf: 'flex-start',
-        paddingHorizontal: theme.spacing['4'],
-      }}
-    >
-      <Text tone="link" variant="label">
-        {`‹ ${t('nav.back')}`}
-      </Text>
-    </Pressable>
-  );
+  return <SharedBackLink label={t('nav.back')} fallback={fallback} />;
 }
 
 /** Page frame of a pushed match screen: back control, heading, scrolling content. */
@@ -75,7 +56,7 @@ export function MatchScreen({
   const theme = useTheme();
   return (
     <Screen scroll={scroll} testID={testID}>
-      <BackLink fallback={back} />
+      <MatchBackLink fallback={back} />
       {title === undefined ? null : (
         <Text
           variant="title1"

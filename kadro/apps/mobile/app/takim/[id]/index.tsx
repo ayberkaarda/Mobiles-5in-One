@@ -108,7 +108,7 @@ export default function TeamDetailScreen() {
         <Section>
           <Button
             label={t('detail.invite')}
-            variant="accent"
+            variant="primary"
             onPress={() => router.push(`/takim/${encodeURIComponent(team.id)}/davet`)}
             testID="team-invite"
           />

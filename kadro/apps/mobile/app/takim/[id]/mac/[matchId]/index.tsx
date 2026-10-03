@@ -339,7 +339,7 @@ export default function MatchDetailScreen() {
                       onConfirm={castVote}
                       busy={vote.isPending}
                       disabled={disabled || votee === null}
-                      variant="accent"
+                      variant="primary"
                       testID="mvp-submit"
                     />
                   </View>
@@ -432,7 +432,7 @@ export default function MatchDetailScreen() {
                 onConfirm={() => setStatus('played')}
                 busy={update.isPending && update.variables?.status === 'played'}
                 disabled={disabled}
-                variant="accent"
+                variant="primary"
                 testID="match-to-played"
               />
             ) : null}
