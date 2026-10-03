@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { bodyFont, displayFont } from './fonts';
+import { FONT_CLASS, PRELOADED_FONTS } from './fonts';
 import styles from './marketing.module.css';
 import { NavLink } from './nav-link';
 import {
@@ -25,9 +25,19 @@ export const MAIN_ID = 'icerik';
 export function MarketingShell({ children }: { readonly children: ReactNode }) {
   return (
     <div
-      className={`${styles.shell} ${displayFont.variable} ${bodyFont.variable}`}
+      className={`${styles.shell} ${FONT_CLASS}`}
       style={marketingThemeVariables() as CSSProperties}
     >
+      {PRELOADED_FONTS.map((href) => (
+        <link
+          key={href}
+          rel="preload"
+          href={href}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      ))}
       <a className={styles.skipLink} href={`#${MAIN_ID}`}>
         İçeriğe geç
       </a>
