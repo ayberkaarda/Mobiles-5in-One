@@ -1,13 +1,28 @@
 // Validates askida/brand v2 ("rail, not hands"): palette, schemes, WCAG contrast,
 // documented failures, typography, spacing, radius, stroke, elevation, motion.
-// Node only, no dependencies. Usage: node askida/brand/scripts/validate-tokens.mjs [brandDir]
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+// Node only, no dependencies.
+// Usage: node askida/brand/scripts/validate-tokens.mjs [brandDir] [--self-test]
+import {
+  readFileSync,
+  existsSync,
+  readdirSync,
+  writeFileSync,
+  cpSync,
+  mkdtempSync,
+  rmSync,
+  copyFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
 
-const root = process.argv[2]
-  ? resolve(process.argv[2])
+const args = process.argv.slice(2);
+const selfTest = args.includes("--self-test");
+const dirArg = args.find((a) => !a.startsWith("--"));
+const root = dirArg
+  ? resolve(dirArg)
   : join(dirname(fileURLToPath(import.meta.url)), "..");
 const tokens = JSON.parse(readFileSync(join(root, "tokens.json"), "utf8"));
 const errors = [];
@@ -721,6 +736,49 @@ const checkPng = (f, ew, eh) => {
 };
 for (const f of LOGO_PNG) checkPng(f, 1024, 1024);
 
+// ---------- guardrails (decision section 8) ----------
+const walk = (dir) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)],
+  );
+const FORBIDDEN_STYLE = [
+  [/linear-gradient|<linearGradient/i, "gradient"],
+  [/radial-gradient|<radialGradient/i, "gradient"],
+  [/backdrop-filter/i, "backdrop-filter"],
+  [/(^|[;{\s"])filter\s*:/i, "CSS filter"],
+  [/<filter\b|\sfilter="/i, "SVG filter"],
+  [/<pattern\b/i, "pattern"],
+  [/feTurbulence/i, "feTurbulence"],
+  [/<mask\b/i, "mask"],
+  [/text-transform\s*:\s*uppercase/i, "uppercase transform"],
+  [/toUpperCase\(/, "toUpperCase"],
+];
+let linted = 0;
+for (const p of walk(root)) {
+  const rel = p.slice(root.length + 1).replaceAll("\\", "/");
+  if (/hand|heart|person/i.test(rel))
+    fail(
+      `${rel}: file names must not contain hand, heart or person (rail, not hands)`,
+    );
+  if (!/\.(svg|html|css)$/.test(rel)) continue;
+  linted++;
+  const s = readFileSync(p, "utf8");
+  for (const [, id] of s.matchAll(/\sid="([^"]+)"/g)) {
+    if (/hand|heart|person/i.test(id))
+      fail(`${rel}: id "${id}" (rail, not hands)`);
+  }
+  for (const [re, what] of FORBIDDEN_STYLE)
+    if (re.test(s)) fail(`${rel}: ${what} is not allowed (decision section 8)`);
+}
+console.log(
+  `guardrail lint: ${linted} svg/html/css files, file names and ids checked`,
+);
+console.log(
+  `svg checked: ${Object.entries(svgCount)
+    .map(([k, v]) => `${v} ${k}`)
+    .join(", ")}; unique ids: ${allIds.size}`,
+);
+
 // ---------- result ----------
 for (const k of Object.keys(results).sort()) {
   const low = results[k].sort((a, b) => a.r - b.r).slice(0, 3);
@@ -733,3 +791,55 @@ if (errors.length) {
   process.exit(1);
 }
 console.log("askida brand v2 valid");
+
+// ---------- self-test: a deliberately broken copy must fail ----------
+if (selfTest) {
+  const tmp = mkdtempSync(join(tmpdir(), "askida-brand-selftest-"));
+  cpSync(root, tmp, { recursive: true });
+  const t = JSON.parse(readFileSync(join(tmp, "tokens.json"), "utf8"));
+  t.color.scheme.light.secondary = t.color.scheme.light.accent;
+  writeFileSync(join(tmp, "tokens.json"), JSON.stringify(t));
+  const dev = join(tmp, "devices/askida-tag-light.svg");
+  writeFileSync(
+    dev,
+    readFileSync(dev, "utf8")
+      .replace('fill-rule="evenodd"', "")
+      .replace(
+        "</svg>",
+        '<linearGradient id="g"/><image href="https://example.invalid/x.png"/></svg>',
+      ),
+  );
+  copyFileSync(join(tmp, "icons/tag.svg"), join(tmp, "icons/hand-give.svg"));
+  const ic = join(tmp, "icons/bell.svg");
+  writeFileSync(
+    ic,
+    readFileSync(ic, "utf8").replace('stroke-width="1.75"', 'stroke-width="2"'),
+  );
+  const run = spawnSync(
+    process.execPath,
+    [fileURLToPath(import.meta.url), tmp],
+    { encoding: "utf8" },
+  );
+  rmSync(tmp, { recursive: true, force: true });
+  const out = `${run.stdout}${run.stderr}`;
+  const expected = [
+    "light.secondary must not use the accent colour",
+    "tags need an evenodd hole",
+    "gradient is not allowed",
+    "external href",
+    "hand, heart or person",
+    "icons/ file list differs",
+    "stroke width must be 1.75",
+  ];
+  const missing = expected.filter((e) => !out.includes(e));
+  const fails = (out.match(/^FAIL /gm) ?? []).length;
+  if (run.status !== 1 || missing.length) {
+    console.error(
+      `FAIL self-test: broken fixture exited ${run.status}; not reported: ${missing.join(" | ") || "none"}`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `self-test: broken fixture exited 1 with ${fails} FAIL lines; all ${expected.length} planted defects reported`,
+  );
+}
