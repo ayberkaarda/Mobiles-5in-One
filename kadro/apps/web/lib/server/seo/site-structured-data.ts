@@ -95,11 +95,55 @@ export function blogIndexStructuredData(origin: string, description: string): Js
   };
 }
 
+/** A question and its answer as the FAQ page renders them. */
+export interface FaqItem {
+  readonly question: string;
+  readonly answer: string;
+}
+
+/**
+ * `BreadcrumbList`, `FAQPage` and `Organization` of `/sss` (product spec §7). The questions and
+ * answers are the same strings the page renders, in the same order.
+ */
+export function faqStructuredData(
+  origin: string,
+  path: string,
+  title: string,
+  items: readonly FaqItem[],
+): JsonLdObject {
+  const url = absolute(origin, path);
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      breadcrumbs(origin, [
+        { name: SITE_NAME, path: '/' },
+        { name: title, path },
+      ]),
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#sss`,
+        name: title,
+        url,
+        inLanguage: 'tr-TR',
+        publisher: { '@id': organizationId(origin) },
+        mainEntity: items.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+      },
+      organization(origin),
+    ],
+  };
+}
+
 /** `BreadcrumbList` and `Article` of one blog article. */
 export function articleStructuredData(
   origin: string,
   article: ContentDocument,
   path: string,
+  /** Path of the article's Open Graph image (ADR-0083); the `image` of the `Article` node. */
+  image?: string,
 ): JsonLdObject {
   const url = absolute(origin, path);
   const node: Record<string, JsonLdValue> = {
@@ -116,6 +160,9 @@ export function articleStructuredData(
     author: { '@id': organizationId(origin) },
     publisher: { '@id': organizationId(origin) },
   };
+  if (image !== undefined) {
+    node.image = absolute(origin, image);
+  }
   if (article.tags.length > 0) {
     node.keywords = article.tags.join(', ');
   }

@@ -115,8 +115,8 @@ export const SURFACES: readonly Surface[] = [
   },
   {
     // `(marketing)` route group (ADR-0021 group 2, rendering per ADR-0055).
-    // Reserved, no page yet: `/hakkinda` and `/sss` (ADR-0080 puts them out of scope). The rows
-    // stay so the headers are ready when the pages are added.
+    // Reserved, no page yet: `/hakkinda` (ADR-0080 puts it out of scope). The row stays so the
+    // headers are ready when the page is added. `/sss` is the FAQ page (ADR-0083).
     name: 'marketing',
     paths: [
       '/',
