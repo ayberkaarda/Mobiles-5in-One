@@ -128,7 +128,9 @@
     "legalUnavailable": "Links to the legal texts are not set up in this version.",
     "opensBrowser": "Opens in the browser.",
     "signOutScope": "Signs out of this device only. Sessions on your other devices stay open.",
-    "pushOpenSettings": "Open phone settings"
+    "pushOpenSettings": "Open phone settings",
+    "proTitle": "Kadro Pro",
+    "proManage": "Manage subscription"
   },
   "deletion": {
     "entryTitle": "Delete my account",
@@ -180,5 +182,44 @@
     "message": "Should we notify you about match reminders, lineup changes and open-call applications? Notifications never show other players' names.",
     "enable": "Turn on notifications",
     "later": "Not now"
+  },
+  "paywall": {
+    "open": "See Kadro Pro",
+    "title": "Kadro Pro",
+    "subtitle": "Grow your teams and dig deeper into your stats.",
+    "benefit": {
+      "unlimitedTeams": "Unlimited teams",
+      "lineupHistory": "Lineup history",
+      "advancedStats": "Advanced statistics",
+      "noUpsell": "No Pro promotion banners"
+    },
+    "plans": "Membership plan",
+    "plan": {
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "planLabel": "{{plan}}: {{price}}",
+    "subscribe": "Go Pro",
+    "restore": "Restore purchases",
+    "active": "Your Kadro Pro membership is active.",
+    "activeUntil": "Your Kadro Pro membership is active. Renews or ends on: {{date}}.",
+    "offersEmpty": "There is no membership plan to list right now. Try again shortly.",
+    "unavailable": "Purchases are not available in this build.",
+    "renewal": "The membership renews automatically for the period you choose unless it is cancelled at least 24 hours before it ends. Payment is charged to your store account; use your store account settings to cancel or manage it.",
+    "terms": "Terms of use (store)",
+    "statsLocked": "Advanced statistics such as the last 30 days, attendance and MVP rate unlock with Kadro Pro.",
+    "teamLimit": "A free account can own one team. More teams need Kadro Pro.",
+    "settingsHint": "Unlimited teams and advanced statistics with Kadro Pro.",
+    "outcome": {
+      "pro": "Kadro Pro is active. Thank you!",
+      "processing": "Your payment went through and your membership is being activated. If it does not show on your profile within a few minutes, try restoring purchases.",
+      "notFound": "No active membership was found on this store account, or it could not be confirmed yet.",
+      "cancelled": "The purchase was cancelled. You were not charged.",
+      "pending": "Your payment is waiting for store approval. Your membership opens automatically once it is approved.",
+      "network": "Could not connect. Check your internet and try again.",
+      "store": "The store could not complete the request. Try again shortly.",
+      "unavailable": "Purchases are not available right now. Try again shortly.",
+      "error": "The purchase could not be completed. Try again."
+    }
   }
 }

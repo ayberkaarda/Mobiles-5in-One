@@ -128,7 +128,9 @@
     "legalUnavailable": "Yasal metinlerin bağlantısı bu sürümde ayarlı değil.",
     "opensBrowser": "Tarayıcıda açılır.",
     "signOutScope": "Yalnızca bu cihazdan çıkış yapılır. Diğer cihazlardaki oturumların açık kalır.",
-    "pushOpenSettings": "Telefon ayarlarını aç"
+    "pushOpenSettings": "Telefon ayarlarını aç",
+    "proTitle": "Kadro Pro",
+    "proManage": "Aboneliği yönet"
   },
   "deletion": {
     "entryTitle": "Hesabımı sil",
@@ -180,5 +182,44 @@
     "message": "Maç hatırlatmaları, kadro değişiklikleri ve ilan başvuruları için bildirim gönderelim mi? Bildirimlerde başka oyuncuların adı görünmez.",
     "enable": "Bildirimleri aç",
     "later": "Şimdi değil"
+  },
+  "paywall": {
+    "open": "Kadro Pro'yu gör",
+    "title": "Kadro Pro",
+    "subtitle": "Takımını büyüt, istatistiklerini derinleştir.",
+    "benefit": {
+      "unlimitedTeams": "Sınırsız takım",
+      "lineupHistory": "Kadro geçmişi",
+      "advancedStats": "Gelişmiş istatistikler",
+      "noUpsell": "Pro tanıtım bandı yok"
+    },
+    "plans": "Üyelik planı",
+    "plan": {
+      "monthly": "Aylık",
+      "yearly": "Yıllık"
+    },
+    "planLabel": "{{plan}}: {{price}}",
+    "subscribe": "Pro'ya geç",
+    "restore": "Satın alımları geri yükle",
+    "active": "Kadro Pro üyeliğin aktif.",
+    "activeUntil": "Kadro Pro üyeliğin aktif. Yenileme ya da bitiş tarihi: {{date}}.",
+    "offersEmpty": "Şu an listelenecek üyelik planı yok. Biraz sonra tekrar dene.",
+    "unavailable": "Bu sürümde satın alma kullanılamıyor.",
+    "renewal": "Üyelik, bitiminden en az 24 saat önce iptal edilmedikçe seçtiğin süreyle otomatik yenilenir. Ödeme mağaza hesabından alınır; iptal ve yönetim için mağaza hesap ayarlarını kullan.",
+    "terms": "Kullanım koşulları (mağaza)",
+    "statsLocked": "Son 30 gün, katılım ve MVP oranı gibi gelişmiş istatistikler Kadro Pro ile açılır.",
+    "teamLimit": "Ücretsiz hesapla en fazla bir takım kurabilirsin. Daha fazlası için Kadro Pro gerekir.",
+    "settingsHint": "Kadro Pro ile sınırsız takım ve gelişmiş istatistikler.",
+    "outcome": {
+      "pro": "Kadro Pro aktif. Teşekkürler!",
+      "processing": "Ödemen alındı, üyeliğin etkinleştiriliyor. Birkaç dakika içinde profilinde görünmezse satın alımları geri yüklemeyi dene.",
+      "notFound": "Bu mağaza hesabında geri yüklenecek aktif bir üyelik bulunamadı ya da henüz doğrulanamadı.",
+      "cancelled": "Satın alma iptal edildi. Hiçbir ödeme alınmadı.",
+      "pending": "Ödemen mağaza onayı bekliyor. Onaylanınca üyeliğin otomatik açılır.",
+      "network": "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.",
+      "store": "Mağaza işlemi tamamlayamadı. Biraz sonra tekrar dene.",
+      "unavailable": "Satın alma şu an kullanılamıyor. Biraz sonra tekrar dene.",
+      "error": "Satın alma tamamlanamadı. Tekrar dene."
+    }
   }
 }
