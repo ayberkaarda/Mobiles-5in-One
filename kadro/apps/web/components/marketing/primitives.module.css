@@ -1,0 +1,453 @@
+/*
+ * Shared primitives of the marketing and SEO pages (ADR-0084, direction §4). Every colour is a
+ * `--k-color-*` role or a `--k-overlay-*` of `@kadro/brand/theme.css`, so each rule follows the
+ * scheme of the nearest `data-theme`; every size comes from the `--k-type-*`, `--k-space-*`,
+ * `--k-radius-*` and `--k-motion-*` properties. The pitch roles are fixed (night turf in both
+ * schemes). Interactive targets are at least 44 px, focus is a 2 px ring with a 2 px offset.
+ */
+
+/* Type roles: display and numerals at the 75 % width, everything read at 100 %. */
+
+.hero,
+.display,
+.title1,
+.title2,
+.title3,
+.lead,
+.prose,
+.body,
+.label,
+.caption {
+  margin: 0;
+  font-family: var(--k-font-family);
+}
+
+.hero {
+  font-size: var(--k-type-hero-size);
+  line-height: var(--k-type-hero-line-height);
+  font-weight: var(--k-type-hero-weight);
+  font-stretch: var(--k-type-hero-stretch);
+  letter-spacing: var(--k-type-hero-tracking);
+}
+
+.display {
+  font-size: var(--k-type-display-size);
+  line-height: var(--k-type-display-line-height);
+  font-weight: var(--k-type-display-weight);
+  font-stretch: var(--k-type-display-stretch);
+  letter-spacing: var(--k-type-display-tracking);
+}
+
+.title1 {
+  font-size: var(--k-type-title1-size);
+  line-height: var(--k-type-title1-line-height);
+  font-weight: var(--k-type-title1-weight);
+  font-stretch: var(--k-type-title1-stretch);
+  letter-spacing: var(--k-type-title1-tracking);
+}
+
+.title2 {
+  font-size: var(--k-type-title2-size);
+  line-height: var(--k-type-title2-line-height);
+  font-weight: var(--k-type-title2-weight);
+  font-stretch: var(--k-type-title2-stretch);
+  letter-spacing: var(--k-type-title2-tracking);
+}
+
+.title3 {
+  font-size: var(--k-type-title3-size);
+  line-height: var(--k-type-title3-line-height);
+  font-weight: var(--k-type-title3-weight);
+  font-stretch: var(--k-type-title3-stretch);
+}
+
+.lead {
+  max-width: var(--k-measure-prose);
+  font-size: var(--k-type-lead-size);
+  line-height: var(--k-type-lead-line-height);
+  font-weight: var(--k-type-lead-weight);
+  font-stretch: var(--k-type-lead-stretch);
+}
+
+.prose {
+  max-width: var(--k-measure-prose);
+  font-size: var(--k-type-prose-size);
+  line-height: var(--k-type-prose-line-height);
+  font-weight: var(--k-type-prose-weight);
+  font-stretch: var(--k-type-prose-stretch);
+}
+
+.body {
+  font-size: var(--k-type-body-size);
+  line-height: var(--k-type-body-line-height);
+  font-weight: var(--k-type-body-weight);
+  font-stretch: var(--k-type-body-stretch);
+}
+
+.label {
+  font-size: var(--k-type-label-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: var(--k-type-label-weight);
+  font-stretch: var(--k-type-label-stretch);
+}
+
+.caption {
+  font-size: var(--k-type-caption-size);
+  line-height: var(--k-type-caption-line-height);
+  font-weight: var(--k-type-caption-weight);
+  font-stretch: var(--k-type-caption-stretch);
+}
+
+.muted {
+  color: var(--k-color-text-muted);
+}
+
+/* Buttons: 48 px high, radius 8, label weight 600, one line. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--k-space-2);
+  min-height: 48px;
+  padding: 0 var(--k-space-5);
+  border: 1px solid transparent;
+  border-radius: var(--k-radius-sm);
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-body-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: var(--k-type-label-weight);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--k-motion-press) var(--k-ease-standard);
+}
+
+.button:hover {
+  box-shadow: inset 0 0 0 999px var(--k-overlay-pressed);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.primary {
+  background-color: var(--k-color-primary);
+  color: var(--k-color-on-primary);
+}
+
+.accent {
+  background-color: var(--k-color-accent);
+  color: var(--k-color-on-accent);
+}
+
+.secondary {
+  border-color: var(--k-color-border-strong);
+  background-color: var(--k-color-surface);
+  color: var(--k-color-text);
+}
+
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--k-color-primary-text);
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-body-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: var(--k-type-label-weight);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.textButton:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Cards: radius 12, 1 px hairline, no shadow. */
+
+.card {
+  padding: var(--k-space-6);
+  border: 1px solid var(--k-color-border);
+  border-radius: var(--k-radius-md);
+  background-color: var(--k-color-surface);
+  color: var(--k-color-text);
+}
+
+.cardSunken {
+  background-color: var(--k-color-surface-sunken);
+}
+
+.cardRaised {
+  background-color: var(--k-color-surface-raised);
+  box-shadow: var(--k-elevation-2);
+}
+
+/* Sections: 96 px rhythm, 64 px when dense, hero 96 / 128. */
+
+.section {
+  padding: var(--k-space-24) 0;
+}
+
+.sectionDense {
+  padding: var(--k-space-16) 0;
+}
+
+.sectionHero {
+  padding: var(--k-space-24) 0 var(--k-space-32);
+}
+
+.toneSurface {
+  background-color: var(--k-color-surface);
+}
+
+.toneSunken {
+  background-color: var(--k-color-surface-sunken);
+}
+
+.ruled {
+  border-top: 1px solid var(--k-color-border);
+}
+
+.container {
+  width: 100%;
+  max-width: calc(var(--k-layout-max-width) + 2 * var(--k-layout-page-gutter));
+  margin: 0 auto;
+  padding: 0 var(--k-layout-page-gutter);
+}
+
+.containerProse {
+  max-width: calc(var(--k-measure-prose) + 2 * var(--k-layout-page-gutter));
+}
+
+/* Kit numerals: condensed, heavy, tabular. */
+
+.numeral,
+.numeralXl {
+  font-family: var(--k-font-family);
+  font-variant-numeric: var(--k-font-numeric);
+}
+
+.numeral {
+  font-size: var(--k-type-numeral-size);
+  line-height: var(--k-type-numeral-line-height);
+  font-weight: var(--k-type-numeral-weight);
+  font-stretch: var(--k-type-numeral-stretch);
+}
+
+.numeralXl {
+  font-size: var(--k-type-numeral-xl-size);
+  line-height: var(--k-type-numeral-xl-line-height);
+  font-weight: var(--k-type-numeral-xl-weight);
+  font-stretch: var(--k-type-numeral-xl-stretch);
+  letter-spacing: -0.02em;
+}
+
+.numeralOf {
+  color: var(--k-color-text-muted);
+}
+
+.numeralBlock {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--k-space-1);
+  margin: 0;
+}
+
+/* The eksik slot: an empty kit-number outline. */
+
+.eksik {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--k-space-2);
+  margin: 0;
+}
+
+.eksikRing {
+  fill: none;
+  stroke: var(--k-color-text-muted);
+}
+
+.eksikNumber {
+  fill: none;
+  stroke: var(--k-color-text);
+  font-family: var(--k-font-family);
+  font-weight: 800;
+  font-stretch: 75%;
+  font-variant-numeric: var(--k-font-numeric);
+}
+
+.eksikOnPitch .eksikRing,
+.eksikOnPitch .eksikNumber {
+  stroke: var(--k-color-pitch-line);
+}
+
+.eksikLabel {
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-caption-size);
+  line-height: var(--k-type-caption-line-height);
+  font-weight: 700;
+  color: var(--k-color-text);
+  text-transform: uppercase;
+}
+
+/* Pitch diagram: fixed pitch roles, the same in both schemes. */
+
+.pitch {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--k-radius-xs);
+}
+
+.pitchTurf {
+  fill: var(--k-color-pitch);
+}
+
+.pitchChalk {
+  fill: none;
+  stroke: var(--k-color-pitch-line);
+}
+
+.pitchSpot {
+  fill: var(--k-color-pitch-line);
+}
+
+.marker {
+  fill: var(--k-color-pitch-marker);
+}
+
+.markerNumber,
+.markerLabel {
+  font-family: var(--k-font-family);
+  font-variant-numeric: var(--k-font-numeric);
+  text-anchor: middle;
+}
+
+.markerNumber {
+  fill: var(--k-color-on-pitch-marker);
+  font-size: 16px;
+  font-weight: 800;
+  font-stretch: 75%;
+}
+
+.markerEmpty {
+  fill: var(--k-color-pitch);
+  stroke: var(--k-color-pitch-line);
+}
+
+.markerEmptyNumber {
+  fill: none;
+  stroke: var(--k-color-pitch-line);
+  stroke-width: 1;
+  font-size: 16px;
+  font-weight: 800;
+  font-stretch: 75%;
+}
+
+.markerLabel {
+  fill: var(--k-color-on-pitch);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Wordmark: ink follows the scheme (`text`), the ball spot is the accent. */
+
+.wordmark {
+  display: block;
+  width: auto;
+  height: 28px;
+}
+
+.wordmarkInk {
+  fill: var(--k-color-text);
+}
+
+.wordmarkRing {
+  fill: none;
+  stroke: var(--k-color-text);
+}
+
+.wordmarkSpot {
+  fill: var(--k-color-accent);
+}
+
+/* Theme toggle: three submit buttons in a segmented row. */
+
+.themeToggle {
+  margin: 0;
+}
+
+.themeFieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.themeLegend {
+  margin-bottom: var(--k-space-2);
+  padding: 0;
+  font-size: var(--k-type-label-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: var(--k-type-label-weight);
+}
+
+.themeOptions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--k-space-1);
+  padding: var(--k-space-1);
+  border: 1px solid var(--k-color-border-strong);
+  border-radius: var(--k-radius-sm);
+  background-color: var(--k-color-surface);
+}
+
+.themeOption {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 var(--k-space-3);
+  border: 0;
+  border-radius: var(--k-radius-xs);
+  background-color: transparent;
+  color: var(--k-color-text);
+  font-family: var(--k-font-family);
+  font-size: var(--k-type-label-size);
+  line-height: var(--k-type-label-line-height);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.themeOption:hover {
+  background-color: var(--k-color-fill-muted);
+}
+
+.themeOption[aria-pressed='true'] {
+  background-color: var(--k-color-inverse);
+  color: var(--k-color-on-inverse);
+  font-weight: var(--k-type-label-weight);
+}
+
+/* Focus: always visible. */
+
+.button:focus-visible,
+.textButton:focus-visible,
+.themeOption:focus-visible {
+  outline: 2px solid var(--k-color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button:active {
+    transform: none;
+  }
+}

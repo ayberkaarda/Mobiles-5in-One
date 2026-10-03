@@ -16,11 +16,14 @@ import {
 } from '../../lib/client/a11y';
 import { formatGraceUntil, graceUntilFrom, readCookieValue } from '../../lib/client/cookies';
 import { AFTER_LOGIN_TARGETS, afterLoginTarget, PAGE_PATHS } from '../../lib/client/redirects';
-import { NON_TEXT_PAIRS, TEXT_PAIRS, THEME, themeVariables } from '../../lib/client/theme';
+import { NON_TEXT_PAIRS, TEXT_PAIRS, THEME_ROLES, themeVariables } from '../../lib/client/theme';
 import { freshToken } from './support';
 
 const TOKENS_FILE = fileURLToPath(
-  new URL('../../../../packages/brand/tokens.json', import.meta.url),
+  new URL('../../../../packages/brand/theme/tokens.json', import.meta.url),
+);
+const THEME_CSS_FILE = fileURLToPath(
+  new URL('../../../../packages/brand/theme/theme.css', import.meta.url),
 );
 const CSS_FILE = fileURLToPath(new URL('../../components/auth/auth.module.css', import.meta.url));
 
@@ -116,30 +119,44 @@ describe('form helpers', () => {
   });
 });
 
-describe('theme and contrast (WCAG 1.4.3, 1.4.11)', () => {
+describe('theme and contrast (WCAG 1.4.3, 1.4.11), both schemes', () => {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path in the repository
   const tokens = JSON.parse(readFileSync(TOKENS_FILE, 'utf8')) as {
-    color: { theme: { light: Record<string, string> } };
-    contrast: { minimumRatio: number };
+    color: { theme: Record<'light' | 'dark', Record<string, string>> };
+    contrast: { minimumRatio: number; nonTextMinimumRatio: number };
   };
+  const schemes = ['light', 'dark'] as const;
+  const value = (scheme: 'light' | 'dark', name: keyof typeof THEME_ROLES): string =>
+    tokens.color.theme[scheme][THEME_ROLES[name]] ?? '';
 
-  it('uses the brand token values', () => {
-    for (const [name, value] of Object.entries(THEME)) {
-      expect(tokens.color.theme.light[name], name).toBe(value);
+  it('maps every colour name to a brand role of both schemes', () => {
+    for (const scheme of schemes) {
+      for (const [name, role] of Object.entries(THEME_ROLES)) {
+        expect(tokens.color.theme[scheme][role], `${scheme} ${name}`).toMatch(/^#[0-9A-F]{6}$/);
+      }
     }
     expect(tokens.contrast.minimumRatio).toBe(MIN_CONTRAST);
   });
 
-  it('keeps every text pair at 4.5:1 or more', () => {
-    for (const [foreground, background] of TEXT_PAIRS) {
-      const ratio = contrastRatio(THEME[foreground], THEME[background]);
-      expect(ratio, `${foreground} on ${background}`).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  it('keeps every text pair at 4.5:1 or more in both schemes', () => {
+    for (const scheme of schemes) {
+      for (const [foreground, background] of TEXT_PAIRS) {
+        const ratio = contrastRatio(value(scheme, foreground), value(scheme, background));
+        expect(ratio, `${scheme}: ${foreground} on ${background}`).toBeGreaterThanOrEqual(
+          MIN_CONTRAST,
+        );
+      }
     }
   });
 
-  it('keeps focus ring and borders at 3:1 or more', () => {
-    for (const [foreground, background] of NON_TEXT_PAIRS) {
-      expect(contrastRatio(THEME[foreground], THEME[background])).toBeGreaterThanOrEqual(3);
+  it('keeps focus ring and borders at 3:1 or more in both schemes', () => {
+    for (const scheme of schemes) {
+      for (const [foreground, background] of NON_TEXT_PAIRS) {
+        const ratio = contrastRatio(value(scheme, foreground), value(scheme, background));
+        expect(ratio, `${scheme}: ${foreground} on ${background}`).toBeGreaterThanOrEqual(
+          tokens.contrast.nonTextMinimumRatio,
+        );
+      }
     }
   });
 
@@ -149,8 +166,19 @@ describe('theme and contrast (WCAG 1.4.3, 1.4.11)', () => {
     expect(() => contrastRatio('red', '#FFFFFF')).toThrow(RangeError);
   });
 
-  it('exposes every color as a custom property', () => {
-    expect(themeVariables()).toMatchObject({ '--k-text': THEME.text, '--k-danger': THEME.danger });
+  it('exposes every colour as a custom property that follows the scheme', () => {
+    expect(themeVariables()).toMatchObject({
+      '--k-text': 'var(--k-color-text)',
+      '--k-textMuted': 'var(--k-color-text-muted)',
+      '--k-danger': 'var(--k-color-danger-text)',
+    });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path in the repository
+    const themeCss = readFileSync(THEME_CSS_FILE, 'utf8');
+    for (const reference of Object.values(themeVariables())) {
+      const property = /^var\((--k-color-[a-z-]+)\)$/.exec(reference)?.[1];
+      expect(property, reference).toBeDefined();
+      expect(themeCss, reference).toContain(`${property ?? ''}:`);
+    }
   });
 });
 
