@@ -31,7 +31,7 @@ export const COMPLETED_RETENTION_SECONDS = 7 * DAY_SECONDS;
 export type QueueStage =
   /** Handler delivered by this worker. */
   | 'active'
-  /** Queue and dead-letter queue exist; the handler ships later (venue import, Phase 5). */
+  /** Queue and dead-letter queue exist; the handler ships later. */
   | 'queue_only';
 
 export interface QueueDefinition {
@@ -128,9 +128,10 @@ export const QUEUE_DEFINITIONS: Readonly<Record<JobQueue, QueueDefinition>> = {
     localConcurrency: 1,
     cron: '35 * * * *',
   },
+  // ADR-0067: one import per job; a failed last attempt marks the import as failed.
   'venue.import': {
     name: 'venue.import',
-    stage: 'queue_only',
+    stage: 'active',
     retryLimit: 2,
     retryDelaySeconds: 60,
     retryBackoff: false,

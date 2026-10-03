@@ -35,6 +35,7 @@ import { createMatchReminderHandler } from './reminders/handler.js';
 import { safeLog } from './safe-log.js';
 import { type ObjectStorage, createS3Storage } from './storage/storage.js';
 import { createUploadProcessHandler } from './uploads/process.js';
+import { createVenueImportHandler } from './venues/import.js';
 
 export type WorkerRuntimeEnv = Pick<
   WorkerEnv,
@@ -205,6 +206,12 @@ export async function startWorker(options: WorkerRuntimeOptions): Promise<Worker
       boss,
       clock,
       client: revenueCatClient,
+    }),
+    'venue.import': createVenueImportHandler({
+      db,
+      clock,
+      retryLimit:
+        definitions.find((definition) => definition.name === 'venue.import')?.retryLimit ?? 0,
     }),
   };
 

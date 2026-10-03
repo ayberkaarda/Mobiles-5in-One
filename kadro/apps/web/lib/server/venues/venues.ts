@@ -41,7 +41,7 @@ const VENUES = defineKeyset('venues', [
 ]);
 
 /** Marker of seeded demonstration rows (`[ÖRNEK] `), reserved for `is_sample` venues. */
-const SAMPLE_PREFIX = foldTr('[ÖRNEK]');
+export const SAMPLE_PREFIX = foldTr('[ÖRNEK]');
 
 /** Escapes `LIKE` wildcards so a query is matched literally (backslash is the default escape). */
 export function escapeLike(value: string): string {

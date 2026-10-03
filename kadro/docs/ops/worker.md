@@ -7,9 +7,9 @@ observe and recover it.
 Implementation status (Phase 2): queue bootstrap, the job runner (validation, idempotency, retries,
 dead letters, logging, metrics), graceful shutdown, the health signal and the handlers of
 `email.send`, `push.send`, `push.receipts`, `match.reminder`, `upload.process`,
-`account.hard_delete`, `opencall.expire` and `maintenance.sweep` are implemented. `venue.import`
-exists as a queue with its dead-letter queue; its handler ships with the admin area (Phase 5), and
-jobs sent to it wait in the queue until then.
+`account.hard_delete`, `opencall.expire` and `maintenance.sweep` are implemented. The
+`venue.import` handler (Phase 5, ADR-0067) reads an admin's stored CSV and records the result on
+its `venue_imports` row; an import whose last attempt fails is marked `failed` (`internal_error`).
 
 ## Queues
 
@@ -23,7 +23,7 @@ jobs sent to it wait in the queue until then.
 | `account.hard_delete` | delayed (7 days)  | 1           | 10, exponential from 300 s | `account.hard_delete.dead` |
 | `opencall.expire`     | cron `5 * * * *`  | 1           | none (next run covers)     | `opencall.expire.dead`     |
 | `maintenance.sweep`   | cron `35 * * * *` | 1           | none (next run covers)     | `maintenance.sweep.dead`   |
-| `venue.import`        | admin (Phase 5)   | 1           | 2, 60 s (queue only)       | `venue.import.dead`        |
+| `venue.import`        | admin (Phase 5)   | 1           | 2, 60 s                    | `venue.import.dead`        |
 
 The definitions live in `apps/worker/src/queues.ts`. Cron expressions run in `Europe/Istanbul`.
 Every source queue uses the pg-boss `exclusive` policy with `singletonKey = idempotencyKey`: while
@@ -273,9 +273,9 @@ order by name, state;
   pg-boss hands each job and each cron slot to one instance only, and queue bootstrap is
   idempotent.
 
-## Adding the deferred handler
+## Adding a deferred handler
 
-`venue.import` is marked `queue_only` in
-`src/queues.ts`. A handler is added by writing it against its contract schema, registering it in
-the `handlers` map of `src/runtime.ts` and setting the queue's `stage` to `active`; the runner
-supplies validation, dead-lettering, receipts helpers (`src/idempotency.ts`), logging and metrics.
+A queue whose handler ships later is marked `queue_only` in `src/queues.ts` (none today). A
+handler is added by writing it against its contract schema, registering it in the `handlers` map
+of `src/runtime.ts` and setting the queue's `stage` to `active`; the runner supplies validation,
+dead-lettering, receipts helpers (`src/idempotency.ts`), logging and metrics.

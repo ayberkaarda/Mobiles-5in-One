@@ -41,6 +41,8 @@ import {
 // Upload, push-token and account deletion rows (matrix §3.2, §3.7).
 import { deletionRequests, newId, pushTokens, uploads } from '@kadro/db';
 import { storedJobs } from '../support/jobs';
+// Admin moderation, import and audit rows (matrix §3.8).
+import { auditLogs, venueImports } from '@kadro/db';
 
 /**
  * IDOR suite (security checklist item 4): user A attacks resources owned by user B through every
@@ -1423,7 +1425,283 @@ const IDOR_ROWS: readonly IdorRow[] = [
     expected: { status: 403, code: 'csrf_failed' },
     victimIntact: expectTotpUntouched,
   },
+  // Admin moderation and import (matrix §3.8): A holds no staff role, so every admin route
+  // answers 403 before it reads B's resource, and nothing of B's changes.
+  {
+    resource: 'unverified venue',
+    route: 'GET /api/v1/admin/venues',
+    attempt: "A lists unverified venues to read B's contact data",
+    owner: venueCreator,
+    send: ({ a }, request) =>
+      request('GET /api/v1/admin/venues', {
+        headers: bearer(a.mobile.accessToken),
+        query: { verified: 'false' },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimVenueIntact,
+  },
+  {
+    resource: 'unverified venue',
+    route: 'PATCH /api/v1/admin/venues/[id]',
+    attempt: "A verifies and renames B's venue",
+    owner: venueCreator,
+    send: async (current, request) => {
+      const { id } = await victimVenue(current);
+      return request('PATCH /api/v1/admin/venues/[id]', {
+        headers: bearer(current.a.mobile.accessToken),
+        params: { id },
+        json: { verified: true, name: 'Ele Geçirilmiş Saha' },
+      });
+    },
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimVenueIntact,
+  },
+  {
+    resource: 'unverified venue',
+    route: 'POST /api/v1/admin/venues/import',
+    attempt: "A imports a CSV that would duplicate B's venue",
+    owner: venueCreator,
+    send: ({ a }, request) =>
+      request('POST /api/v1/admin/venues/import', {
+        headers: bearer(a.mobile.accessToken),
+        json: { csv: 'name,il,ilce,latitude,longitude,indoor\n', dryRun: false },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimVenueIntact,
+  },
+  {
+    resource: 'venue import',
+    route: 'GET /api/v1/admin/venues/import/[importId]',
+    attempt: "A reads the state of B's import",
+    owner: importCreator,
+    send: async (current, request) =>
+      request('GET /api/v1/admin/venues/import/[importId]', {
+        headers: bearer(current.a.mobile.accessToken),
+        params: { importId: await victimImport(current) },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimImportIntact,
+  },
+  {
+    resource: 'venue review',
+    route: 'GET /api/v1/admin/reviews',
+    attempt: "A lists the reviews of B's venue through the admin API",
+    owner: reviewOwner,
+    send: async (current, request) =>
+      request('GET /api/v1/admin/reviews', {
+        headers: bearer(current.a.mobile.accessToken),
+        query: { venue: (await victimReview(current)).venueId },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimReviewIntact,
+  },
+  {
+    resource: 'venue review',
+    route: 'DELETE /api/v1/admin/reviews/[id]',
+    attempt: "A removes B's review by id",
+    owner: reviewOwner,
+    send: async (current, request) =>
+      request('DELETE /api/v1/admin/reviews/[id]', {
+        headers: bearer(current.a.mobile.accessToken),
+        params: { id: (await victimReview(current)).reviewId },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimReviewIntact,
+  },
+  {
+    resource: 'open call',
+    route: 'GET /api/v1/admin/open-calls',
+    attempt: "A lists open calls including B's through the admin API",
+    owner: callOwner,
+    send: ({ a }, request) =>
+      request('GET /api/v1/admin/open-calls', {
+        headers: bearer(a.mobile.accessToken),
+        query: { status: 'open' },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimCallsIntact,
+  },
+  {
+    resource: 'open call',
+    route: 'DELETE /api/v1/admin/open-calls/[id]',
+    attempt: "A removes B's open call",
+    owner: callOwner,
+    send: async (current, request) =>
+      request('DELETE /api/v1/admin/open-calls/[id]', {
+        headers: bearer(current.a.mobile.accessToken),
+        params: { id: (await victimCalls(current)).callId },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectVictimCallsIntact,
+  },
+  {
+    resource: 'account',
+    route: 'GET /api/v1/admin/users',
+    attempt: "A searches accounts for B's display name",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('GET /api/v1/admin/users', {
+        headers: bearer(a.mobile.accessToken),
+        query: { q: b.displayName },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectAccountIntact,
+  },
+  {
+    resource: 'account',
+    route: 'PATCH /api/v1/admin/users/[id]/role',
+    attempt: 'A makes B an admin',
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('PATCH /api/v1/admin/users/[id]/role', {
+        headers: bearer(a.mobile.accessToken),
+        params: { id: b.id },
+        json: { role: 'admin', totpCode: '123456' },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: async (current) => {
+      await expectProfileUnchanged(current.b);
+      await expectTotpUntouched(current);
+    },
+  },
+  {
+    resource: 'account',
+    route: 'PATCH /api/v1/admin/users/[id]/deactivate',
+    attempt: "A deactivates B's account from A's own web session",
+    owner: ({ b }) => userIdByEmail(b.email),
+    send: ({ a, b }, request) =>
+      request('PATCH /api/v1/admin/users/[id]/deactivate', {
+        headers: web(undefined, { cookie: a.web.cookie, 'x-csrf-token': a.web.csrf }),
+        params: { id: b.id },
+        json: { deactivated: true, totpCode: '123456' },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectAccountIntact,
+  },
+  {
+    resource: 'audit trail',
+    route: 'GET /api/v1/admin/audit-logs',
+    attempt: "A reads the audit rows of B's actions",
+    owner: auditActor,
+    send: ({ a, b }, request) =>
+      request('GET /api/v1/admin/audit-logs', {
+        headers: bearer(a.mobile.accessToken),
+        query: { actor: b.id },
+      }),
+    expected: { status: 403, code: 'forbidden' },
+    victimIntact: expectAccountIntact,
+  },
 ];
+
+// ---------------------------------------------------------------------------
+// Venue, import and audit fixtures of B (admin rows)
+// ---------------------------------------------------------------------------
+
+interface VictimVenue {
+  readonly id: string;
+  readonly name: string;
+}
+
+const victimVenues = new WeakMap<World, Promise<VictimVenue>>();
+
+/** B's unverified venue (created by B, visible to B only). */
+function victimVenue(current: World): Promise<VictimVenue> {
+  let venue = victimVenues.get(current);
+  if (venue === undefined) {
+    const suffix = randomBytes(4).toString('hex');
+    const name = `Gizli Saha ${suffix}`;
+    venue = districtId().then(async (district) => {
+      const [row] = await auth.database.client.db
+        .insert(venues)
+        .values({
+          name,
+          slug: `gizli-saha-${suffix}`,
+          searchName: `gizli saha ${suffix}`,
+          districtId: district,
+          point: { lng: 27.11, lat: 38.46 },
+          phone: '+90 232 111 11 11',
+          createdBy: current.b.id,
+        })
+        .returning({ id: venues.id });
+      if (row === undefined) {
+        throw new Error('venue insert returned no row');
+      }
+      return { id: row.id, name };
+    });
+    victimVenues.set(current, venue);
+  }
+  return venue;
+}
+
+async function venueCreator(current: World): Promise<string | null | undefined> {
+  const { id } = await victimVenue(current);
+  const [row] = await auth.database.client.db
+    .select({ createdBy: venues.createdBy })
+    .from(venues)
+    .where(eq(venues.id, id));
+  return row?.createdBy;
+}
+
+/** B's venue still unverified under its name, no import was stored and no audit row written. */
+async function expectVictimVenueIntact(current: World): Promise<void> {
+  const victim = await victimVenue(current);
+  const db = auth.database.client.db;
+  const [row] = await db.select().from(venues).where(eq(venues.id, victim.id));
+  expect(row).toMatchObject({ name: victim.name, verified: false, createdBy: current.b.id });
+  expect(
+    await db.select().from(venueImports).where(eq(venueImports.createdBy, current.a.id)),
+  ).toEqual([]);
+  expect(await db.select().from(auditLogs).where(eq(auditLogs.targetId, victim.id))).toEqual([]);
+}
+
+const victimImports = new WeakMap<World, Promise<string>>();
+
+/** A queued import stored by B (as an admin's request would be). */
+function victimImport(current: World): Promise<string> {
+  let stored = victimImports.get(current);
+  if (stored === undefined) {
+    stored = auth.database.client.db
+      .insert(venueImports)
+      .values({ createdBy: current.b.id, csv: 'name,il,ilce,latitude,longitude,indoor\n' })
+      .returning({ id: venueImports.id })
+      .then((rows) => rows[0]?.id ?? '');
+    victimImports.set(current, stored);
+  }
+  return stored;
+}
+
+async function importCreator(current: World): Promise<string | null | undefined> {
+  const id = await victimImport(current);
+  const [row] = await auth.database.client.db
+    .select({ createdBy: venueImports.createdBy })
+    .from(venueImports)
+    .where(eq(venueImports.id, id));
+  return row?.createdBy;
+}
+
+async function expectVictimImportIntact(current: World): Promise<void> {
+  const id = await victimImport(current);
+  const [row] = await auth.database.client.db
+    .select()
+    .from(venueImports)
+    .where(eq(venueImports.id, id));
+  expect(row).toMatchObject({ status: 'queued', createdBy: current.b.id, totalRows: null });
+}
+
+/** One audit row with B as actor, written on first use. */
+async function auditActor(current: World): Promise<string | null | undefined> {
+  const db = auth.database.client.db;
+  const [row] = await db
+    .insert(auditLogs)
+    .values({
+      actorId: current.b.id,
+      action: 'venue.created',
+      targetType: 'venue',
+      targetId: newId(),
+    })
+    .returning({ actorId: auditLogs.actorId });
+  return row?.actorId;
+}
 
 // ---------------------------------------------------------------------------
 // Upload, push-token and account fixtures of B

@@ -90,7 +90,7 @@ export function toVenueSummary(row: VenueSummaryRow): VenueSummary {
 }
 
 /** Only the closed key set of `venueFeaturesSchema` with boolean values leaves the server. */
-function toFeatures(stored: Readonly<Record<string, unknown>>): VenueFeatures {
+export function toFeatures(stored: Readonly<Record<string, unknown>>): VenueFeatures {
   const features: VenueFeatures = {};
   for (const key of ['lighting', 'changingRoom', 'shower', 'parking'] as const) {
     // eslint-disable-next-line security/detect-object-injection -- key iterates a literal tuple
