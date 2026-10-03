@@ -2,9 +2,6 @@
 
 use App\Support\Problem\ProblemCode;
 use App\Support\Problem\ProblemException;
-use Tests\TestCase;
-
-uses(TestCase::class);
 
 it('renders the problem details shape', function (): void {
     $response = ProblemException::make(ProblemCode::NotFound, 404)->render();
