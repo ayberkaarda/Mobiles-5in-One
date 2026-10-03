@@ -133,7 +133,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.kadro == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -154,6 +154,25 @@ jobs:
       # Reads kadro/pnpm-lock.yaml; no install and no lifecycle scripts run.
       - name: pnpm audit
         run: pnpm audit --audit-level=high
+
+      # Fails when the lockfile holds duplicate versions that a dedupe would merge.
+      - name: pnpm dedupe check
+        run: pnpm dedupe --check
+
+      # Expo SDK alignment of the mobile dependencies. It reads the app config, which needs the
+      # workspace config package built and the public environment names; the values are local.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build config package
+        run: pnpm --filter @kadro/config build
+
+      - name: expo-doctor
+        working-directory: kadro/apps/mobile
+        env:
+          EXPO_PUBLIC_APP_ENV: local
+          EXPO_PUBLIC_API_URL: http://localhost:3000
+        run: npx --yes expo-doctor@1.20.4
 
   secret-grep:
     name: Secret grep

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Kadro dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
+  "extends": ["config:recommended"],
+  "includePaths": ["kadro/**", ".github/**"],
+  "timezone": "Europe/Istanbul",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "pin",
+  "automerge": false,
+  "platformAutomerge": false,
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "minimumReleaseAge": "3 days",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "labels": ["dependencies", "security"],
+    "automerge": false
+  },
+  "packageRules": [
+    {
+      "description": "One weekly pull request for every minor and patch update of the npm dependencies, except the Expo SDK family below.",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm minor and patch",
+      "automerge": false
+    },
+    {
+      "description": "Expo SDK packages move together with the SDK release (the overrides in pnpm-workspace.yaml and expo-doctor hold the alignment), so they get their own group and major updates are reviewed by hand.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "expo",
+        "expo-*",
+        "@expo/*",
+        "react-native",
+        "react-native-*",
+        "@react-native/*",
+        "@react-native-*/*"
+      ],
+      "groupName": "expo sdk",
+      "automerge": false
+    },
+    {
+      "description": "Major updates open one pull request each so they can be reviewed on their own.",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Workflow actions are pinned to full commit SHAs and updated in one weekly group.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "pinDigests": true,
+      "automerge": false
+    },
+    {
+      "description": "node-forge (ADR-0043) and braces (ADR-0078) carry the two advisories ignored in pnpm-workspace.yaml; no patched release exists, so no update is proposed until the ADRs are reviewed.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["node-forge", "braces"],
+      "enabled": false
+    }
+  ]
+}
