@@ -22,7 +22,7 @@ One card per project. Only Kadro has an application; the other cards are placeho
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/kadro.png" alt="Kadro card: in development" width="100%"><br>
+      <img src="docs/readme/kadro.png" alt="Kadro: web home page and mobile lineup screen, sample data" width="100%"><br>
       <sub><b>Kadro</b>: in development</sub>
     </td>
     <td width="50%" align="center">

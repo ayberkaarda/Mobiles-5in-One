@@ -22,7 +22,7 @@ Her proje için bir kart. Yalnızca Kadro'nun uygulaması var; diğer kartlar he
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/kadro.png" alt="Kadro kartı: geliştirme aşamasında" width="100%"><br>
+      <img src="docs/readme/kadro.png" alt="Kadro: web ana sayfası ve mobil diziliş ekranı, örnek veri" width="100%"><br>
       <sub><b>Kadro</b>: geliştirme aşamasında</sub>
     </td>
     <td width="50%" align="center">
