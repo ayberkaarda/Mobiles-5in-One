@@ -4,6 +4,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
+import { brotliDecompressSync } from "node:zlib";
 
 const root = process.argv[2]
   ? resolve(process.argv[2])
@@ -289,6 +290,181 @@ for (const [name, v] of Object.entries(tokens.motion.easing)) {
     v.some((n) => typeof n !== "number")
   )
     fail(`motion.easing.${name} must be 4 numbers`);
+}
+
+// ---------- fonts: files, cmap (Turkish + lira), GSUB tnum/lnum + TRK, sizes ----------
+const WOFF2_TAGS = (
+  "cmap head hhea hmtx maxp name OS/2 post cvt  fpgm glyf loca prep CFF  VORG EBDT EBLC gasp hdmx kern LTSH " +
+  "PCLT VDMX vhea vmtx BASE GDEF GPOS GSUB EBSC JSTF MATH CBDT CBLC COLR CPAL SVG  sbix acnt avar bdat bloc " +
+  "bsln cvar fdsc feat fmtx fvar gvar hsty just lcar mort morx opbd prop trak Zapf Silf Glat Gloc Feat Sill"
+)
+  .match(/.{4}\s?/g)
+  .map((t) => t.slice(0, 4));
+const base128 = (b, st) => {
+  let v = 0;
+  for (let i = 0; i < 5; i++) {
+    const byte = b[st.o++];
+    v = v * 128 + (byte & 0x7f);
+    if (!(byte & 0x80)) return v;
+  }
+  throw new Error("bad UIntBase128");
+};
+// Returns { tag: Buffer } for the tables we need, from a TTF or a WOFF2 file.
+const fontTables = (buf) => {
+  const out = {};
+  const sig = buf.readUInt32BE(0);
+  if (sig === 0x774f4632) {
+    const numTables = buf.readUInt16BE(12);
+    const compressed = buf.readUInt32BE(20);
+    const st = { o: 48 };
+    const dir = [];
+    for (let i = 0; i < numTables; i++) {
+      const flags = buf[st.o++];
+      let tag = WOFF2_TAGS[flags & 63];
+      if ((flags & 63) === 63) {
+        tag = buf.toString("latin1", st.o, st.o + 4);
+        st.o += 4;
+      }
+      const version = (flags >> 6) & 3;
+      const orig = base128(buf, st);
+      const transformed =
+        tag === "glyf" || tag === "loca" ? version === 0 : version !== 0;
+      const length = transformed ? base128(buf, st) : orig;
+      dir.push({ tag, length });
+    }
+    const data = brotliDecompressSync(buf.subarray(st.o, st.o + compressed));
+    let o = 0;
+    for (const t of dir) {
+      out[t.tag] = data.subarray(o, o + t.length);
+      o += t.length;
+    }
+    return out;
+  }
+  const n = buf.readUInt16BE(4);
+  for (let i = 0; i < n; i++) {
+    const r = 12 + i * 16;
+    const tag = buf.toString("latin1", r, r + 4);
+    const off = buf.readUInt32BE(r + 8);
+    out[tag] = buf.subarray(off, off + buf.readUInt32BE(r + 12));
+  }
+  return out;
+};
+const cmapOf = (t) => {
+  const cps = new Set();
+  const subtables = t.readUInt16BE(2);
+  for (let i = 0; i < subtables; i++) {
+    const rec = 4 + i * 8;
+    const platform = t.readUInt16BE(rec);
+    const st = t.readUInt32BE(rec + 4);
+    const format = t.readUInt16BE(st);
+    if (platform !== 3 && platform !== 0) continue;
+    if (format === 4) {
+      const segX2 = t.readUInt16BE(st + 6);
+      const ends = st + 14;
+      const starts = ends + segX2 + 2;
+      const deltas = starts + segX2;
+      const offsets = deltas + segX2;
+      for (let sg = 0; sg < segX2 / 2; sg++) {
+        const end = t.readUInt16BE(ends + sg * 2);
+        const start = t.readUInt16BE(starts + sg * 2);
+        const delta = t.readInt16BE(deltas + sg * 2);
+        const roAt = offsets + sg * 2;
+        const ro = t.readUInt16BE(roAt);
+        for (let c = start; c <= end && c !== 0xffff; c++) {
+          const gid =
+            ro === 0
+              ? (c + delta) & 0xffff
+              : t.readUInt16BE(roAt + ro + (c - start) * 2);
+          if (gid !== 0) cps.add(c);
+        }
+      }
+    } else if (format === 12) {
+      const groups = t.readUInt32BE(st + 12);
+      for (let g = 0; g < groups; g++) {
+        const o = st + 16 + g * 12;
+        for (let c = t.readUInt32BE(o); c <= t.readUInt32BE(o + 4); c++)
+          cps.add(c);
+      }
+    }
+  }
+  return cps;
+};
+const gsubOf = (t) => {
+  const scriptList = t.readUInt16BE(4);
+  const featureList = t.readUInt16BE(6);
+  const langs = new Set();
+  const sc = t.readUInt16BE(scriptList);
+  for (let i = 0; i < sc; i++) {
+    const so = scriptList + t.readUInt16BE(scriptList + 2 + i * 6 + 4);
+    const lc = t.readUInt16BE(so + 2);
+    for (let j = 0; j < lc; j++)
+      langs.add(t.toString("latin1", so + 4 + j * 6, so + 8 + j * 6));
+  }
+  const feats = new Set();
+  const fc = t.readUInt16BE(featureList);
+  for (let i = 0; i < fc; i++)
+    feats.add(
+      t.toString("latin1", featureList + 2 + i * 6, featureList + 6 + i * 6),
+    );
+  return { langs, feats };
+};
+const ff = typo.fontFiles;
+const fontEntries = [
+  { file: ff.source.file, variable: true },
+  ...ff.flutter.map((f) => ({ ...f, variable: false })),
+  ...ff.web.map((f) => ({ ...f, variable: f.weight === "400 700", web: true })),
+];
+let webTotal = 0;
+if (!existsSync(join(root, ff.source.licence)))
+  fail(`missing ${ff.source.licence}`);
+for (const f of fontEntries) {
+  const p = join(root, f.file);
+  if (!existsSync(p)) {
+    fail(`missing font ${f.file}`);
+    continue;
+  }
+  const buf = readFileSync(p);
+  const kb = buf.length / 1024;
+  let t;
+  try {
+    t = fontTables(buf);
+  } catch (e) {
+    fail(`${f.file}: cannot parse (${e.message})`);
+    continue;
+  }
+  const cps = cmapOf(t.cmap);
+  const missing = [...typo.requiredGlyphs].filter(
+    (ch) => !cps.has(ch.codePointAt(0)),
+  );
+  if (missing.length) fail(`${f.file} lacks glyphs: ${missing.join(" ")}`);
+  const { langs, feats } = gsubOf(t.GSUB);
+  for (const ft of typo.requiredFeatures)
+    if (!feats.has(ft)) fail(`${f.file}: GSUB lacks ${ft}`);
+  if (!langs.has("TRK ")) fail(`${f.file}: GSUB lacks the TRK language system`);
+  if (Boolean(t.fvar) !== f.variable)
+    fail(`${f.file}: expected ${f.variable ? "variable" : "static"} font`);
+  if (f.weight && typeof f.weight === "number") {
+    const w = t["OS/2"].readUInt16BE(4);
+    if (w !== f.weight) fail(`${f.file}: OS/2 weight ${w} != ${f.weight}`);
+  }
+  if (f.web) {
+    if (buf.readUInt32BE(0) !== 0x774f4632) fail(`${f.file}: not a WOFF2 file`);
+    webTotal += kb;
+    if (f.maxKB && kb > f.maxKB)
+      fail(`${f.file}: ${kb.toFixed(1)} KB > ${f.maxKB} KB`);
+  }
+  console.log(
+    `font ${f.file}: ${kb.toFixed(1)} KB, ${cps.size} code points, ${missing.length ? "MISSING glyphs" : "ÇĞİÖŞÜçğıöşü₺ present"}, tnum ${feats.has("tnum")}, lnum ${feats.has("lnum")}, TRK ${langs.has("TRK ")}`,
+  );
+}
+if (webTotal > ff.webTotalMaxKB)
+  fail(`web fonts total ${webTotal.toFixed(1)} KB > ${ff.webTotalMaxKB} KB`);
+console.log(
+  `web fonts total ${webTotal.toFixed(1)} KB (budget ${ff.webTotalMaxKB} KB)`,
+);
+for (const old of ["fonts/fraunces", "fonts/nunito-sans"]) {
+  if (existsSync(join(root, old)))
+    fail(`${old} is retired in v2 (one family only)`);
 }
 
 // ---------- result ----------
