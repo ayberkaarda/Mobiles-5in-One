@@ -14,7 +14,6 @@ import { ProUpsell } from '../../src/billing/components';
 import { isPro } from '../../src/billing/hooks';
 import { ManageSubscriptionLink } from '../../src/billing/ManageSubscriptionLink';
 import { type Language, LANGUAGES } from '../../src/i18n/resources';
-import { ChoiceGroup } from '../../src/matches/components';
 import { ProfileScreen } from '../../src/profile/components';
 import { profileApi } from '../../src/profile/instance';
 import { meQuery } from '../../src/query';
@@ -28,7 +27,7 @@ import {
 } from '../../src/settings/push';
 import { Notice, Section } from '../../src/teams/components';
 import { useTheme } from '../../src/theme';
-import { Button, Card, ColorSchemeSetting, Text } from '../../src/ui';
+import { Button, Card, ColorSchemeSetting, SegmentedControl, Text } from '../../src/ui';
 
 /** Each language is named in itself, so it can be found whatever the current language is. */
 function languageName(language: Language): string {
@@ -54,7 +53,7 @@ export default function SettingsScreen() {
         <Text variant="title3" style={{ marginBottom: theme.spacing['3'] }}>
           {t('settings.language')}
         </Text>
-        <ChoiceGroup<Language>
+        <SegmentedControl<Language>
           label={t('settings.language')}
           options={LANGUAGES.map((value) => ({ value, label: languageName(value) }))}
           selected={language}
