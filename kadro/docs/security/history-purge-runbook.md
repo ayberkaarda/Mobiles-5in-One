@@ -1,11 +1,11 @@
 # Runbook: purge a committed `.env` from Git history and rotate secrets
 
-|         |                                                                                                                                                       |
-| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Item    | Security checklist item 2 (product spec §6)                                                                                                           |
-| Status  | Procedure only. **Not executed.** Every step that rewrites history or pushes needs the repository owner's approval.                                   |
-| Trigger | gitleaks reports a finding in history (CI job `Gitleaks (full history)` in `.github/workflows/security.yml`), or a `.env` file is found in any commit |
-| Owner   | Repository owner (Ayberk). Secret rotation can start immediately; the history rewrite waits for approval.                                             |
+|         |                                                                                                                                                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Item    | Security checklist item 2 (product spec §6)                                                                                                                 |
+| Status  | Procedure only. **Not executed.** Every step that rewrites history or pushes needs the repository owner's approval.                                         |
+| Trigger | gitleaks reports a finding in history (CI job `Gitleaks (full history)` in `.github/workflows/kadro-security.yml`), or a `.env` file is found in any commit |
+| Owner   | Repository owner (Ayberk). Secret rotation can start immediately; the history rewrite waits for approval.                                                   |
 
 ## 1. Order of work
 
