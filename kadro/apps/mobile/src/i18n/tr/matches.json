@@ -173,7 +173,11 @@
     "autoBalance": "Mevkiye göre otomatik dağıt",
     "save": "Dizilişi kaydet",
     "sideEmpty": "Bu tarafta oyuncu yok.",
-    "readOnly": "Dizilişi kaptan ve yardımcı kaptan belirler."
+    "readOnly": "Dizilişi kaptan ve yardımcı kaptan belirler.",
+    "keeperMissing": "Kaleci eksik",
+    "missing": "eksik",
+    "pitchLabel": "Diziliş: A takımı {{a}} oyuncu, B takımı {{b}} oyuncu, {{missing}} eksik",
+    "pitchLabelOpen": "Diziliş: A takımı {{a}} oyuncu, B takımı {{b}} oyuncu"
   },
   "payments": {
     "title": "Ödemeler",

@@ -6,7 +6,16 @@ import { Pressable, View } from 'react-native';
 import { ApiError } from '../api/errors';
 import { errorMessage } from '../i18n/error-copy';
 import { useTheme } from '../theme';
-import { Button, type ButtonVariant, Card, ErrorState, Screen, SkeletonList, Text } from '../ui';
+import {
+  Button,
+  type ButtonVariant,
+  Card,
+  ErrorState,
+  KitNumber,
+  Screen,
+  SkeletonList,
+  Text,
+} from '../ui';
 
 /** Where "back" leads when the screen was opened directly (deep link, cold start). */
 export const TEAMS_HOME = '/takimlar';
@@ -61,6 +70,26 @@ export function TeamScreen({
       {children}
     </Screen>
   );
+}
+
+/** Heading of a block on a team screen ("Kadro", "Aktif davetler"). */
+export function SectionHeading({ children }: { readonly children: string }) {
+  const theme = useTheme();
+  return (
+    <Text
+      variant="title3"
+      accessibilityRole="header"
+      style={{ paddingHorizontal: theme.layout.gutter, marginBottom: theme.spacing['2'] }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+/** Team crest in the kit-number circle: the first letter of the team name. Decorative. */
+export function TeamCrest({ name }: { readonly name: string }) {
+  const letter = name.trim().charAt(0).toLocaleUpperCase('tr') || '?';
+  return <KitNumber number={letter} size={40} />;
 }
 
 /** Horizontal padding of screen content. */

@@ -61,6 +61,7 @@ export default function TeamMatchesScreen() {
           keyExtractor={(match) => match.id}
           renderItem={(match) => (
             <ListItem
+              chevron
               title={formatDateTime(match.startsAt, i18n.language)}
               subtitle={[
                 t(`status.${match.status}`),
