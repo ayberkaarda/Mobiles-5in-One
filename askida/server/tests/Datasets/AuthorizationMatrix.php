@@ -82,7 +82,7 @@ final class AuthorizationMatrix
             'GET shops/{id}/redemptions?day=' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'viewRedemptions', [Hook::class, 'shop']]),
 
             // 3.5 Payouts and impact
-            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']]),
+            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']], ['route', 'api.v1.shops.payouts.index']),
             'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
