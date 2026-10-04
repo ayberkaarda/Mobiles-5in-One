@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // The session time zone must equal app.timezone: Eloquent writes naive
+            // "Y-m-d H:i:s" values, which PostgreSQL reads in the session time zone
+            // before storing them in timestamptz columns.
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'Europe/Istanbul')),
         ],
 
         'sqlsrv' => [

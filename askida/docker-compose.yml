@@ -1,6 +1,10 @@
 # Askida local development stack. Host ports are offset so they do not clash with other projects.
 # The Laravel app reads server/.env (copied from server/.env.example) from the mounted directory.
 # The database and object storage passwords below are local development defaults only.
+# Host ports can be overridden through the environment (defaults shown):
+#   ASKIDA_PG_PORT=55432  ASKIDA_REDIS_PORT=56379  ASKIDA_WEB_PORT=58080
+#   ASKIDA_MINIO_PORT=59000  ASKIDA_MINIO_CONSOLE_PORT=59001
+#   ASKIDA_MAIL_SMTP_PORT=51025  ASKIDA_MAIL_UI_PORT=58025
 name: askida
 
 x-server-image: &server-image
@@ -10,6 +14,8 @@ x-server-image: &server-image
   image: askida-server:local
   volumes:
     - ./server:/var/www/html
+    # Read-only: the authorization matrix test cross-checks docs/security against its dataset.
+    - ./docs:/var/www/docs:ro
   restart: unless-stopped
 
 services:
@@ -20,7 +26,7 @@ services:
       POSTGRES_USER: askida
       POSTGRES_PASSWORD: ${ASKIDA_DB_PASSWORD:-askida_local_dev}
     ports:
-      - "127.0.0.1:55432:5432"
+      - "127.0.0.1:${ASKIDA_PG_PORT:-55432}:5432"
     volumes:
       - askida_pg:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -34,7 +40,7 @@ services:
   redis:
     image: redis:7.4.11-alpine
     ports:
-      - "127.0.0.1:56379:6379"
+      - "127.0.0.1:${ASKIDA_REDIS_PORT:-56379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -49,8 +55,8 @@ services:
       MINIO_ROOT_USER: askida
       MINIO_ROOT_PASSWORD: ${ASKIDA_MINIO_PASSWORD:-askida_local_dev}
     ports:
-      - "127.0.0.1:59000:9000"
-      - "127.0.0.1:59001:9001"
+      - "127.0.0.1:${ASKIDA_MINIO_PORT:-59000}:9000"
+      - "127.0.0.1:${ASKIDA_MINIO_CONSOLE_PORT:-59001}:9001"
     volumes:
       - askida_minio:/data
     healthcheck:
@@ -80,14 +86,14 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.4
     ports:
-      - "127.0.0.1:51025:1025"
-      - "127.0.0.1:58025:8025"
+      - "127.0.0.1:${ASKIDA_MAIL_SMTP_PORT:-51025}:1025"
+      - "127.0.0.1:${ASKIDA_MAIL_UI_PORT:-58025}:8025"
     restart: unless-stopped
 
   server:
     <<: *server-image
     ports:
-      - "127.0.0.1:58080:80"
+      - "127.0.0.1:${ASKIDA_WEB_PORT:-58080}:80"
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,8 +126,8 @@ services:
       server:
         condition: service_healthy
 
+# No fixed `name:` here on purpose: compose prefixes the volume with the project name, so two
+# projects (for example two checkouts or parallel test stacks) never share one data directory.
 volumes:
-  askida_pg:
-    name: askida_pg
-  askida_minio:
-    name: askida_minio
+  askida_pg: {}
+  askida_minio: {}

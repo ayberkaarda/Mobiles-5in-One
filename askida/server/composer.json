@@ -9,6 +9,7 @@
         "php": "^8.3",
         "bepsvpt/secure-headers": "^9.1",
         "filament/filament": "^3.3",
+        "firebase/php-jwt": "^7.0",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.50",
         "laravel/sanctum": "^4.3",

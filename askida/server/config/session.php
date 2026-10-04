@@ -1,6 +1,13 @@
 <?php
 
-use Illuminate\Support\Str;
+/*
+| Security checklist item 12. Outside local development and tests the cookie attributes
+| are fixed, whatever the environment says: secure, http-only, host-only (`__Host-`
+| prefix, path `/`, no domain). The Filament admin panel uses its own cookie with
+| SameSite=strict (App\Http\Middleware\AdminSessionCookie); the public web uses lax.
+*/
+
+$developer = in_array((string) env('APP_ENV', 'production'), ['local', 'testing'], true);
 
 return [
 
@@ -127,10 +134,9 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
-    ),
+    'cookie' => $developer ? env('SESSION_COOKIE', 'askida_session') : '__Host-askida_session',
+
+    'admin_cookie' => $developer ? 'askida_admin_session' : '__Host-askida_admin_session',
 
     /*
     |--------------------------------------------------------------------------
@@ -143,7 +149,7 @@ return [
     |
     */
 
-    'path' => env('SESSION_PATH', '/'),
+    'path' => $developer ? env('SESSION_PATH', '/') : '/',
 
     /*
     |--------------------------------------------------------------------------
@@ -156,7 +162,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => $developer ? env('SESSION_DOMAIN') : null,
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +175,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => $developer ? (bool) env('SESSION_SECURE_COOKIE', false) : true,
 
     /*
     |--------------------------------------------------------------------------
@@ -182,7 +188,7 @@ return [
     |
     */
 
-    'http_only' => env('SESSION_HTTP_ONLY', true),
+    'http_only' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -199,7 +205,9 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+    'same_site' => env('SESSION_SAME_SITE', 'lax') === 'strict' ? 'strict' : 'lax',
+
+    'admin_same_site' => 'strict',
 
     /*
     |--------------------------------------------------------------------------
