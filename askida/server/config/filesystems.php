@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Private Document Disk
+    |--------------------------------------------------------------------------
+    |
+    | Name of the disk that holds shop documents. It must never be publicly
+    | readable; documents are only reachable through short-lived signed URLs.
+    |
+    */
+
+    'private_disk' => env('FILESYSTEM_PRIVATE_DISK', 'private'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -44,6 +56,21 @@ return [
             'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
+            'report' => false,
+        ],
+
+        // Shop documents (S3-compatible, MinIO locally): never publicly readable, no public URL.
+        // Needs the flysystem S3 adapter package, which the shops work adds to composer.
+        'private' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'bucket' => env('AWS_BUCKET_PRIVATE', 'askida-private'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'private',
+            'throw' => true,
             'report' => false,
         ],
 
