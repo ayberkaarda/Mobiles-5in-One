@@ -112,6 +112,6 @@ void main() {
     expect(container.read(sessionProvider).isSignedIn, isFalse);
     expect(await tokens.readUser(), isNull);
     expect(client.dio.options.baseUrl, 'http://10.0.2.2:58080/api/v1/');
-    expect(AuthScope.values, hasLength(3));
+    expect(AuthScope.values, hasLength(4));
   });
 }

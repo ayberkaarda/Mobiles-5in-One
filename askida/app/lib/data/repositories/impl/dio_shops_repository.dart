@@ -28,6 +28,7 @@ class DioShopsRepository implements ShopsRepository {
         if (hasAvailable) 'hasAvailable': 1,
         'cursor': cursor,
       },
+      auth: AuthScope.directory,
     );
     return parse<ShopPage>(() {
       final meta = metaOf(answer);
@@ -41,7 +42,10 @@ class DioShopsRepository implements ShopsRepository {
 
   @override
   Future<ShopDetails> bySlug(String slug) async {
-    final answer = await _api.get('shops/${Uri.encodeComponent(slug)}');
+    final answer = await _api.get(
+      'shops/${Uri.encodeComponent(slug)}',
+      auth: AuthScope.directory,
+    );
     return parse<ShopDetails>(() => ShopDetails.fromJson(objectOf(answer)));
   }
 

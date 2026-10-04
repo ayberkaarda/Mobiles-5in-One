@@ -57,7 +57,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     onUnauthenticated: (scope) => switch (scope) {
       AuthScope.user => session.signedOut(),
       AuthScope.anon => session.anonCleared(),
-      AuthScope.none => null,
+      AuthScope.none || AuthScope.directory => null,
     },
   );
 });

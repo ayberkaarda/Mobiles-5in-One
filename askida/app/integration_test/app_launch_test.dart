@@ -9,8 +9,8 @@ import 'package:integration_test/integration_test.dart';
 
 /// Device smoke test: the app starts on a real device or emulator with the
 /// real plugins (database, links, location) and opens in recipient mode.
-/// Run with `flutter test integration_test --flavor dev` on a device; the
-/// full flows against the local stack are added in Wave C.
+/// Run with `flutter test integration_test/app_launch_test.dart --flavor dev`
+/// on a device; the flows against the local stack are in e2e_flows_test.dart.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
