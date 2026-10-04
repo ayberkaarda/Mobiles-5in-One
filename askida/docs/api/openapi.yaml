@@ -782,6 +782,10 @@ paths:
       summary: Edit a shop
       description: |
         Any subset of the registration fields; `lat` and `lng` travel together.
+        `opening_hours` (edit only) sets the weekly hours shown on the public
+        web page; null clears them and a day left out is closed. Turning
+        `listed_on_web` off removes the shop's public page, sitemap entry and
+        share image at once.
         A real change to the address, province, district, location, tax number or
         IBAN of a verified shop returns it to `pending`; any real change to a
         rejected shop re-submits it. The slug never changes. A path segment that
@@ -801,6 +805,14 @@ paths:
             example:
               name: Çınar Fırını Moda
               listed_on_web: false
+              opening_hours:
+                mon: { open: "08:00", close: "20:00" }
+                tue: { open: "08:00", close: "20:00" }
+                wed: { open: "08:00", close: "20:00" }
+                thu: { open: "08:00", close: "20:00" }
+                fri: { open: "08:00", close: "20:00" }
+                sat: { open: "09:00", close: "18:00" }
+                sun: null
       responses:
         "200":
           description: The updated shop as its owner sees it.
@@ -2052,7 +2064,42 @@ components:
     ShopUpdateRequest:
       allOf:
         - $ref: "#/components/schemas/ShopFields"
+        - type: object
+          properties:
+            opening_hours:
+              $ref: "#/components/schemas/OpeningHours"
       description: Any subset; `lat` requires `lng` and the reverse.
+    OpeningHoursDay:
+      type: [object, "null"]
+      description: Opening and closing time of one day (24-hour `HH:MM`, two different times; a closing time before the opening time means after midnight), or null when closed.
+      additionalProperties: false
+      required: [open, close]
+      properties:
+        open:
+          type: string
+          pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+        close:
+          type: string
+          pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+    OpeningHours:
+      type: [object, "null"]
+      description: Weekly opening hours by day (`mon`..`sun`). In requests a day left out is closed; responses always carry all seven days. Null when the shop has not set hours.
+      additionalProperties: false
+      properties:
+        mon:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        tue:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        wed:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        thu:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        fri:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        sat:
+          $ref: "#/components/schemas/OpeningHoursDay"
+        sun:
+          $ref: "#/components/schemas/OpeningHoursDay"
     ItemFields:
       type: object
       properties:
@@ -2309,6 +2356,7 @@ components:
           il,
           ilce,
           location,
+          opening_hours,
           available_count,
           is_sample,
           items,
@@ -2332,6 +2380,8 @@ components:
           type: string
         location:
           $ref: "#/components/schemas/GeoLocation"
+        opening_hours:
+          $ref: "#/components/schemas/OpeningHours"
         available_count:
           type: integer
           minimum: 0
@@ -2370,6 +2420,7 @@ components:
         - verification_state
         - verified_at
         - listed_on_web
+        - opening_hours
         - created_at
         - updated_at
       properties:
@@ -2407,6 +2458,8 @@ components:
           format: date-time
         listed_on_web:
           type: boolean
+        opening_hours:
+          $ref: "#/components/schemas/OpeningHours"
         created_at:
           $ref: "#/components/schemas/Timestamp"
         updated_at:

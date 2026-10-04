@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
  * Expected columns per domain table (spec section 5 plus id and timestamps).
  */
 dataset('domain tables', [
-    'shops' => ['shops', ['id', 'owner_id', 'name', 'slug', 'type', 'address', 'il', 'ilce', 'location', 'phone', 'tax_number_enc', 'iban_enc', 'sub_merchant_key', 'verification_state', 'verified_at', 'listed_on_web', 'is_sample', 'created_at', 'updated_at']],
+    'shops' => ['shops', ['id', 'owner_id', 'name', 'slug', 'type', 'address', 'il', 'ilce', 'location', 'phone', 'tax_number_enc', 'iban_enc', 'sub_merchant_key', 'verification_state', 'verified_at', 'listed_on_web', 'is_sample', 'created_at', 'updated_at', 'il_slug', 'ilce_slug', 'opening_hours']],
     'shop_documents' => ['shop_documents', ['id', 'shop_id', 'kind', 'path', 'mime', 'size', 'reviewed_at', 'uploaded_at', 'created_at', 'updated_at']],
     'shop_members' => ['shop_members', ['id', 'shop_id', 'user_id', 'role', 'created_at', 'updated_at']],
     'items' => ['items', ['id', 'shop_id', 'name', 'category', 'price_minor', 'currency', 'daily_cap', 'active', 'created_at', 'updated_at']],
@@ -133,6 +133,8 @@ it('declares the unique and lookup indexes', function (string $index, string $fr
 })->with([
     ['shops_slug_unique', 'UNIQUE INDEX'],
     ['shops_sub_merchant_key_unique', 'UNIQUE INDEX'],
+    ['shops_il_slug_index', '(il_slug)'],
+    ['shops_il_slug_ilce_slug_index', '(il_slug, ilce_slug)'],
     ['shop_members_shop_id_user_id_unique', '(shop_id, user_id)'],
     ['donations_provider_payment_unique', 'WHERE (provider_payment_id IS NOT NULL)'],
     ['hooks_shop_code_hash_unique', "WHERE ((status)::text = ANY ((ARRAY['RESERVED'::character varying, 'REDEEMED'::character varying])::text[]))"],
