@@ -19,14 +19,20 @@ class PayoutLedgerRequest extends ApiFormRequest
     private ?Shop $shop = null;
 
     /**
-     * Authorization runs before validation, after a plain lookup: a missing and a
-     * foreign shop both answer 404, staff 403 (PayoutPolicy::viewAny).
+     * Authorization runs before validation: a token without the merchant ability gets 403
+     * before anything is looked up, a missing and a foreign shop both answer 404, staff 403
+     * (PayoutPolicy::viewAny).
      */
     public function authorize(): bool
     {
-        $this->shop = Shop::query()->findOrFail((string) $this->route('id'));
+        $shop = Shop::query()->find((string) $this->route('id'));
 
-        Gate::authorize('viewAny', [Payout::class, $this->shop]);
+        // The policy decides the token's ability first (403 for a donor whether or not the
+        // shop exists); for a missing shop it runs against an unsaved one, so it ends in the
+        // same 404 as a foreign shop.
+        Gate::authorize('viewAny', [Payout::class, $shop ?? new Shop]);
+
+        $this->shop = $shop ?? Shop::query()->findOrFail((string) $this->route('id'));
 
         return true;
     }

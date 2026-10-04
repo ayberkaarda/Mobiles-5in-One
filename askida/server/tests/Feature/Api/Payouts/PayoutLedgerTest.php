@@ -189,6 +189,14 @@ it('answers a donor token with 403 and a guest with 401', function (): void {
     ledgerCall($shop->id, null)->assertStatus(401);
 });
 
+it('answers a donor token 403 for an existing and an unknown shop alike', function (): void {
+    $shop = HookWorld::shop();
+    $token = HookWorld::userToken(HookWorld::donor());
+
+    ledgerCall($shop->id, $token)->assertStatus(403);
+    ledgerCall('00000000-0000-4000-8000-0000000000aa', $token)->assertStatus(403);
+});
+
 it('refuses an anon device token', function (): void {
     $shop = HookWorld::shop();
 
