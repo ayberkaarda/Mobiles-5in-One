@@ -88,8 +88,9 @@ it('renders a forced web exception as the generic Turkish page', function (): vo
 
 it('lists validation errors as field and rule code without the submitted value', function (): void {
     $submitted = 'not-an-address-'.bin2hex(random_bytes(5));
+    $qty = random_int(1_000_000_000, 1_999_999_999);
 
-    $response = $this->postJson('/api/v1/test-errors/validate', ['email' => $submitted, 'qty' => 99]);
+    $response = $this->postJson('/api/v1/test-errors/validate', ['email' => $submitted, 'qty' => $qty]);
 
     $response->assertStatus(422)->assertHeader('Content-Type', 'application/problem+json');
 
@@ -99,7 +100,7 @@ it('lists validation errors as field and rule code without the submitted value',
             ['field' => 'qty', 'code' => 'between'],
         ])
         ->and((string) $response->getContent())->not->toContain($submitted)
-        ->and((string) $response->getContent())->not->toContain('99')
+        ->and((string) $response->getContent())->not->toContain((string) $qty)
         ->and((string) $response->getContent())->not->toContain('message');
 });
 
