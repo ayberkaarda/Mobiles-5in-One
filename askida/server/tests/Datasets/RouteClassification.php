@@ -72,8 +72,17 @@ final class RouteClassification
             'POST api/v1/shops/{shop}/redeem' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'member', 'payload' => 'redeem'],
             'GET api/v1/shops/{shop}/redemptions' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'member'],
 
-            // Impact (matrix 3.5)
+            // Donations (matrix 3.3): donor tokens only; a merchant token is refused by the policy
+            'POST api/v1/donations' => ['class' => 'user', 'abilities' => ['donor'], 'payload' => 'donation'],
+            'GET api/v1/donations' => ['class' => 'user', 'abilities' => ['donor']],
+            'GET api/v1/donations/{id}' => ['class' => 'user', 'abilities' => ['donor']],
+
+            // Impact and payouts (matrix 3.5)
             'GET api/v1/impact' => self::open(null),
+            'GET api/v1/shops/{id}/payouts' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'owner'],
+
+            // Payment provider callback (matrix 3.6): no token, authenticated by its signature
+            'POST api/v1/webhooks/iyzico' => self::open('empty'),
         ];
     }
 

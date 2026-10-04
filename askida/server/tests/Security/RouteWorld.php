@@ -3,6 +3,7 @@
 namespace Tests\Security;
 
 use App\Domain\Anon\Models\AnonDevice;
+use App\Domain\Donations\Models\Donation;
 use App\Domain\Items\Models\Item;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\Feature\Api\Auth\Support\AuthTestKit;
+use Tests\Feature\Api\Donations\Support\PaymentWorld;
 use Tests\Feature\Api\Hooks\Support\HookWorld;
 use Tests\Feature\Api\Shops\Support\ShopTestKit;
 
@@ -35,6 +37,8 @@ final class RouteWorld
     public readonly User $donor;
 
     public readonly AnonDevice $device;
+
+    private ?Donation $donation = null;
 
     public function __construct()
     {
@@ -102,6 +106,10 @@ final class RouteWorld
      */
     public function uri(string $routeUri, ?string $query): string
     {
+        if (str_starts_with($routeUri, 'api/v1/donations/')) {
+            $routeUri = str_replace('{id}', $this->donation()->id, $routeUri);
+        }
+
         $uri = '/'.strtr($routeUri, [
             '{id}' => (string) $this->shop->id,
             '{shop}' => (string) $this->shop->id,
@@ -136,7 +144,29 @@ final class RouteWorld
             'presign' => ['kind' => 'vergi_levhasi', 'mime' => 'application/pdf', 'size' => 2048],
             'reserve' => ['shop_id' => $this->shop->id, 'item_id' => $this->item->id],
             'redeem' => ['code' => HookWorld::newCode()],
+            'donation' => $this->donationBody(),
             default => throw new InvalidArgumentException("Unknown payload {$name}."),
         };
+    }
+
+    /**
+     * An initiated donation of the world's donor on the world's item.
+     */
+    private function donation(): Donation
+    {
+        return $this->donation ??= PaymentWorld::initiated($this->item, $this->donor, 1);
+    }
+
+    /**
+     * A donation request the checkout accepts: a payable shop and the fake gateway.
+     *
+     * @return array<string, mixed>
+     */
+    private function donationBody(): array
+    {
+        PaymentWorld::useFakeGateway();
+        $this->shop->forceFill(['sub_merchant_key' => 'test-sm-'.bin2hex(random_bytes(6))])->save();
+
+        return ['shop_id' => $this->shop->id, 'item_id' => $this->item->id, 'qty' => 1];
     }
 }
