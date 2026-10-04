@@ -87,8 +87,13 @@ final class IyzicoWebhookVerifier
 
         $paymentId = self::text($payload, 'iyziPaymentId');
 
+        // Provider fact, not verified against a sandbox: the V3 signature covers the event
+        // type, payment id, token, conversation id and status, but NOT `iyziEventTime`. The
+        // age check therefore reads an unsigned value, so a holder of a valid payload can
+        // move the timestamp to pass it; the replay is harmless because the dedup id below
+        // is built from signed fields only and settlement re-reads the payment itself.
         return new VerifiedWebhook(
-            eventId: hash('sha256', implode('|', [$eventType, $paymentId, $token, self::text($payload, 'status'), (string) $eventTime])),
+            eventId: hash('sha256', implode('|', [$eventType, $paymentId, $token, self::text($payload, 'paymentConversationId'), self::text($payload, 'status')])),
             eventType: $eventType,
             providerToken: $token,
             providerPaymentId: $paymentId === '' ? null : $paymentId,

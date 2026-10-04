@@ -50,6 +50,10 @@ final class PaymentSettlementService implements SettlesPayments
 
     public const KIND_PAID_AFTER_FAILURE = 'provider_paid_ours_failed';
 
+    public const KIND_EXPIRED = 'paid_after_window';
+
+    public const KIND_NO_PAYMENT_ID = 'missing_payment_id';
+
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly HookIssuer $hooks,
@@ -94,8 +98,21 @@ final class PaymentSettlementService implements SettlesPayments
             $kinds[] = self::KIND_PAID_AFTER_FAILURE;
         }
 
+        // The donor-cap counts an initiated donation only inside this window, so settling one
+        // after it would let a donor exceed the cap. Such a payment goes to the register.
+        $window = max(1, (int) config('payments.caps.initiated_window_minutes', 30));
+
+        if ($donation->status === DonationStatus::Initiated && $donation->created_at?->lt(CarbonImmutable::now()->subMinutes($window)) === true) {
+            $kinds[] = self::KIND_EXPIRED;
+        }
+
         if (! $this->sameConversation($donation, $payment)) {
             $kinds[] = self::KIND_CONVERSATION;
+        }
+
+        // The provider payment id is what a refund needs; never mark paid without it.
+        if ($payment->providerPaymentId === null || $payment->providerPaymentId === '') {
+            $kinds[] = self::KIND_NO_PAYMENT_ID;
         }
 
         if ($payment->paidAmountMinor !== $donation->amount_minor) {
@@ -113,7 +130,7 @@ final class PaymentSettlementService implements SettlesPayments
         $donation->forceFill([
             'status' => DonationStatus::Paid,
             'paid_at' => CarbonImmutable::now(),
-            'provider_payment_id' => $payment->providerPaymentId ?? $donation->provider_payment_id,
+            'provider_payment_id' => $payment->providerPaymentId,
         ])->save();
 
         $this->hooks->issueForDonation($donation);

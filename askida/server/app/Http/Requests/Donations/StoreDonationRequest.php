@@ -43,13 +43,22 @@ class StoreDonationRequest extends ApiFormRequest
 
         $unknown = array_diff(array_map('strval', array_keys($this->all())), self::FIELDS);
 
+        $errors = [];
+
         foreach ($unknown as $field) {
             if (preg_match('/^[A-Za-z0-9_-]{1,64}$/', $field) !== 1) {
                 // A key the validator would read as a path (dots, stars) or an oversized key.
-                throw ProblemException::make(ProblemCode::ValidationFailed, 422, errors: [['field' => '_body', 'code' => 'prohibited']]);
+                $errors = [['field' => '_body', 'code' => 'prohibited']];
+
+                break;
             }
 
-            $rules[$field] = ['prohibited'];
+            // Key presence is enough: the `prohibited` rule would let `null` or '' through.
+            $errors[] = ['field' => $field, 'code' => 'prohibited'];
+        }
+
+        if ($errors !== []) {
+            throw ProblemException::make(ProblemCode::ValidationFailed, 422, errors: $errors);
         }
 
         return $rules;

@@ -83,6 +83,15 @@ it('refuses any amount or other field from the client and creates nothing', func
     ['provider_token', 'x'],
 ]);
 
+it('refuses a client amount key by presence, whatever its value', function (mixed $value): void {
+    donate($this, ['shop_id' => $this->shop->id, 'item_id' => $this->item->id, 'qty' => 1, 'amount_minor' => $value])
+        ->assertStatus(422)
+        ->assertJsonPath('code', 'validation.failed')
+        ->assertJsonFragment(['field' => 'amount_minor', 'code' => 'prohibited']);
+
+    expect(Donation::query()->count())->toBe(0);
+})->with([[null], [''], [0], [false], [[]]]);
+
 it('refuses keys the validator would read as paths', function (): void {
     donate($this, ['shop_id' => $this->shop->id, 'item_id' => $this->item->id, 'qty' => 1, 'amount.minor' => 1])
         ->assertStatus(422)

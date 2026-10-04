@@ -62,8 +62,10 @@ final class FakeGateway implements PaymentGateway
         ?int $paidAmountMinor = null,
         ?string $currency = null,
         ?string $conversationId = null,
+        bool $withoutPaymentId = false,
     ): void {
         $this->cache->put($this->key('script', $providerToken), [
+            'no_payment_id' => $withoutPaymentId,
             'status' => $status->value,
             'paid' => $paidAmountMinor,
             'currency' => $currency,
@@ -158,7 +160,7 @@ final class FakeGateway implements PaymentGateway
         }
 
         $checkout = $this->checkoutFor($providerToken);
-        /** @var array{status: string, paid: int|null, currency: string|null, conversation: string|null}|null $script */
+        /** @var array{status: string, paid: int|null, currency: string|null, conversation: string|null, no_payment_id?: bool}|null $script */
         $script = $this->cache->get($this->key('script', $providerToken));
 
         if ($checkout === null && $script === null) {
@@ -168,7 +170,7 @@ final class FakeGateway implements PaymentGateway
         $status = ProviderPaymentStatus::from($script['status'] ?? ProviderPaymentStatus::Success->value);
         $success = $status === ProviderPaymentStatus::Success;
         $paid = $script['paid'] ?? ($success ? ($checkout['amount'] ?? 0) : 0);
-        $paymentId = $success ? 'fake-pay-'.substr(hash('sha256', 'payment|'.$providerToken), 0, 20) : null;
+        $paymentId = $success && ! ($script['no_payment_id'] ?? false) ? 'fake-pay-'.substr(hash('sha256', 'payment|'.$providerToken), 0, 20) : null;
         $items = [];
 
         if ($success && $checkout !== null) {

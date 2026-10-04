@@ -138,6 +138,16 @@ it('maps declined and in-progress payments', function (array $body, ProviderPaym
     'three d secure pending' => [['status' => 'success', 'paymentStatus' => 'INIT_THREEDS', 'basketId' => 'c'], ProviderPaymentStatus::Pending],
 ]);
 
+it('treats a contradictory or incomplete success as unavailable, never as a payment', function (array $body): void {
+    Http::fake(['*' => Http::response($body)]);
+
+    expect(fn () => (new IyzicoGateway)->retrievePayment('tok-1234567890'))->toThrow(GatewayUnavailable::class);
+})->with([
+    'envelope failure with SUCCESS' => [['status' => 'failure', 'errorCode' => '1', 'paymentStatus' => 'SUCCESS', 'paidPrice' => '30.00', 'currency' => 'TRY', 'basketId' => 'c']],
+    'no amount' => [['status' => 'success', 'paymentStatus' => 'SUCCESS', 'currency' => 'TRY', 'basketId' => 'c']],
+    'no currency' => [['status' => 'success', 'paymentStatus' => 'SUCCESS', 'paidPrice' => '30.00', 'basketId' => 'c']],
+]);
+
 it('treats a refused lookup as unavailable, never as a failed payment', function (): void {
     Http::fake(['*' => Http::response(['status' => 'failure', 'errorCode' => '1001'])]);
 

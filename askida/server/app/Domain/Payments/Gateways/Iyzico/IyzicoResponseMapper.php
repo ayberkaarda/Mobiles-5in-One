@@ -64,6 +64,13 @@ final class IyzicoResponseMapper
             default => ProviderPaymentStatus::Pending,
         };
 
+        // A success needs the envelope to say so too and the amount and currency to be
+        // present: a contradictory or partial answer is "unavailable", never a payment.
+        if ($status === ProviderPaymentStatus::Success
+            && (self::text($body, 'status') !== 'success' || ! isset($body['paidPrice']) || self::text($body, 'currency') === '')) {
+            throw new UnexpectedValueException('Contradictory or incomplete payment detail.');
+        }
+
         $items = [];
 
         foreach (self::list($body, 'itemTransactions') as $line) {
