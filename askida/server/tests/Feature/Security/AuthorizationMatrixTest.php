@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Testing\TestResponse;
 use Tests\Datasets\AuthorizationMatrix;
 use Tests\Security\AuthzScenario;
 use Tests\Security\MatrixDocument;
@@ -185,12 +186,40 @@ it('serves the existing identity endpoint with the matrix authentication rule', 
 
     $middleware = $route?->gatherMiddleware() ?? [];
 
-    if ($row['cells']['guest'] === 'Y') {
+    if (($row['cells']['guest'] ?? 'Y') === 'Y') {
         expect($middleware)->not->toContain('auth:sanctum');
     } else {
         expect($middleware)->toContain('auth:sanctum');
     }
 })->with(matrixRowsWith('route'));
+
+it('serves web routes without Sanctum, ignoring any donor token', function (string $key, array $check): void {
+    $row = AuthorizationMatrix::rows()[$key];
+    $route = Route::getRoutes()->getByName($check[1]);
+
+    expect($route)->not->toBeNull()
+        ->and(routesForMatrixKey($key, $row['section']))->not->toBe([]);
+
+    $middleware = $route?->gatherMiddleware() ?? [];
+
+    foreach ($middleware as $name) {
+        expect(is_string($name) ? $name : '')->not->toBe('auth:sanctum')->not->toStartWith('ability:')->not->toStartWith('abilities:');
+    }
+
+    $method = in_array('POST', $route?->methods() ?? [], true) ? 'POST' : 'GET';
+    $uri = '/'.str_replace('{token}', 'fake-'.str_repeat('0', 40), $route?->uri() ?? '');
+    $donorToken = (new AuthzScenario)->actor('donor')->createToken('matrix-web-check', ['donor'])->plainTextToken;
+
+    // get()/post() apply the default headers; call() would silently drop the token.
+    $send = fn (): TestResponse => $method === 'POST' ? $this->post($uri) : $this->get($uri);
+
+    $without = $send();
+    app('auth')->forgetGuards();
+    $with = $this->withToken($donorToken)->{strtolower($method)}($uri);
+
+    expect($without->getStatusCode())->toBeIn([404, 422])
+        ->and($with->getStatusCode())->toBe($without->getStatusCode());
+})->with(matrixRowsWith('web'));
 
 it('keeps pending rows honest: the endpoint is still absent', function (string $key, array $check): void {
     $row = AuthorizationMatrix::rows()[$key];
