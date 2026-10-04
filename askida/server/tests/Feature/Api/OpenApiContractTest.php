@@ -3,8 +3,8 @@
 use App\Domain\Auth\Codes\OneTimeCodeService;
 use App\Domain\Auth\Enums\IdentityProvider;
 use App\Domain\Auth\Enums\OneTimeCodePurpose;
-use App\Domain\Payments\Gateways\Iyzico\IyzicoSigner;
 use App\Domain\Impact\Services\ImpactSnapshotService;
+use App\Domain\Payments\Gateways\Iyzico\IyzicoSigner;
 use App\Domain\Shops\Models\ShopVerificationState;
 use App\Models\User;
 use App\Support\Problem\ProblemCode;
