@@ -79,7 +79,10 @@ return [
             'key_id' => env('APPLE_DEVICECHECK_KEY_ID'),
             // The .p8 key content (PEM), never a committed file.
             'private_key' => env('APPLE_DEVICECHECK_P8'),
-            'environment' => env('APPLE_DEVICECHECK_ENVIRONMENT', 'production'),
+            // `production` or `development`; `sandbox` is accepted as Apple's name for the latter.
+            'environment' => env('APPLE_DEVICECHECK_ENVIRONMENT', 'production') === 'sandbox'
+                ? 'development'
+                : env('APPLE_DEVICECHECK_ENVIRONMENT', 'production'),
             'urls' => [
                 'production' => 'https://api.devicecheck.apple.com/v1/validate_device_token',
                 'development' => 'https://api.development.devicecheck.apple.com/v1/validate_device_token',
@@ -97,6 +100,16 @@ return [
         'driver' => env('PUSH_DRIVER', 'log'),
         'queue' => 'push',
         'hourly_fanout_cap' => (int) env('PUSH_HOURLY_FANOUT_CAP', 2000),
+    ],
+
+    /*
+    | Object storage as seen by devices. When set, presigned upload URLs are signed
+    | for this endpoint (scheme, host and port) instead of the server's own
+    | AWS_ENDPOINT, so a device that reaches the store under another address gets a
+    | URL the store accepts. The server keeps using AWS_ENDPOINT for its own calls.
+    */
+    'storage' => [
+        'public_endpoint' => env('AWS_PUBLIC_ENDPOINT') ?: null,
     ],
 
     'sentry_dsn' => env('SENTRY_LARAVEL_DSN'),
