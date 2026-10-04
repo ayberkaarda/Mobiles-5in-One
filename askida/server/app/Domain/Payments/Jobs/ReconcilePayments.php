@@ -23,8 +23,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * payments.reconcile (daily 04:10 Europe/Istanbul, and `payments:reconcile`).
  *
- * Looks at donations still `initiated` 30 minutes after creation and donations `paid`
- * in the window (default: the last 48 hours), reads each payment from the provider and:
+ * Looks at donations still `initiated` 30 minutes after creation (up to 30 days back, or
+ * further with --since) and donations `paid` in the window (default: the last 48 hours), reads each payment from the provider and:
  * - fixes a missed transition by calling the settlement service (the only code that
  *   changes a donation), for example a lost webhook or callback;
  * - records a mismatch when we and the provider still disagree afterwards: provider paid
@@ -45,6 +45,9 @@ final class ReconcilePayments implements ShouldBeUnique, ShouldQueue
 
     public const INITIATED_GRACE_MINUTES = 30;
 
+    /** Initiated donations are looked at this long, even when the window is shorter, so an outage over the window cannot strand a charged one. */
+    public const INITIATED_LOOKBACK_DAYS = 30;
+
     public int $uniqueFor = 3600;
 
     public int $timeout = 1800;
@@ -61,14 +64,15 @@ final class ReconcilePayments implements ShouldBeUnique, ShouldQueue
     {
         $now = CarbonImmutable::now();
         $since = $this->since ?? $now->subHours(self::DEFAULT_WINDOW_HOURS);
+        $initiatedSince = $since->min($now->subDays(self::INITIATED_LOOKBACK_DAYS));
         $summary = ['checked' => 0, 'fixed' => 0, 'mismatches' => 0, 'unavailable' => 0];
 
         Donation::query()
             ->whereNotNull('provider_token')
-            ->where(static function (Builder $query) use ($since, $now): void {
-                $query->where(static function (Builder $initiated) use ($since, $now): void {
+            ->where(static function (Builder $query) use ($since, $initiatedSince, $now): void {
+                $query->where(static function (Builder $initiated) use ($initiatedSince, $now): void {
                     $initiated->where('status', DonationStatus::Initiated->value)
-                        ->where('created_at', '>=', $since)
+                        ->where('created_at', '>=', $initiatedSince)
                         ->where('created_at', '<=', $now->subMinutes(self::INITIATED_GRACE_MINUTES));
                 })->orWhere(static function (Builder $paid) use ($since): void {
                     $paid->where('status', DonationStatus::Paid->value)

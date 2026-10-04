@@ -173,6 +173,18 @@ it('opens a new mismatch of the same kind once the earlier one is resolved', fun
         ->and(PaymentMismatch::query()->whereNull('resolved_at')->count())->toBe(1);
 });
 
+it('still settles an initiated donation older than the window after a long outage, but not beyond 30 days', function (): void {
+    $stranded = reconDonation('initiated', CarbonImmutable::now()->subDays(10));
+    $ancient = reconDonation('initiated', CarbonImmutable::now()->subDays(40));
+    $this->gateway->scriptPayment((string) $stranded->provider_token, providerPayment($stranded, ProviderPaymentStatus::Success));
+    $this->gateway->scriptPayment((string) $ancient->provider_token, providerPayment($ancient, ProviderPaymentStatus::Success));
+    $this->settler->outcomes[(string) $stranded->provider_token] = SettlementOutcome::Paid;
+
+    expect(runReconcile())->toMatchArray(['checked' => 1, 'fixed' => 1])
+        ->and($stranded->refresh()->status->value)->toBe('paid')
+        ->and($ancient->refresh()->status->value)->toBe('initiated');
+});
+
 it('ignores paid donations outside the window unless --since widens it', function (): void {
     $old = reconDonation('paid', CarbonImmutable::now()->subDays(4), ['paid_at' => CarbonImmutable::now()->subDays(4)]);
     $this->gateway->scriptPayment((string) $old->provider_token, providerPayment($old, ProviderPaymentStatus::Failure, 0));
