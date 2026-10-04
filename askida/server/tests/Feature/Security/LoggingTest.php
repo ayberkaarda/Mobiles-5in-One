@@ -112,7 +112,7 @@ it('logs one line per request with the route pattern and never the URL or body',
     $item = (string) random_int(100000, 999999);
 
     $response = $this->getJson('/api/v1/test-log/items/'.$item.'?email='.urlencode($email));
-    $this->postJson('/api/v1/auth/login', ['email' => $email, 'password' => 'pw-'.bin2hex(random_bytes(4))]);
+    $this->postJson('/api/v1/auth/no-such-endpoint', ['email' => $email, 'password' => 'pw-'.bin2hex(random_bytes(4))]);
 
     $log = logText($this->logPath);
     $requestId = (string) $response->headers->get('X-Request-Id');
