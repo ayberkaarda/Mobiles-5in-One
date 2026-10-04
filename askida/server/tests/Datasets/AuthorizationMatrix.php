@@ -8,6 +8,15 @@ use App\Domain\Items\Models\Item;
 use App\Domain\Payments\Models\Payout;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
+use App\Filament\Resources\AbuseFlagResource;
+use App\Filament\Resources\ActivityLogResource;
+use App\Filament\Resources\AnonDeviceResource;
+use App\Filament\Resources\DonationResource;
+use App\Filament\Resources\PaymentMismatchResource;
+use App\Filament\Resources\PayoutResource;
+use App\Filament\Resources\ShopResource;
+use App\Filament\Resources\ShopResource\RelationManagers\DocumentsRelationManager;
+use App\Filament\Resources\UserResource;
 use App\Policies\DonationPolicy;
 use App\Policies\HookPolicy;
 use App\Policies\ItemPolicy;
@@ -30,9 +39,12 @@ use App\Policies\ShopPolicy;
  *   parameter names are not compared); its authentication middleware is checked;
  * - ['pending', reason]: the endpoint or principal does not exist yet; the test proves
  *   that it is still absent, so building it forces this row to be upgraded;
- * - ['absent', reason]: the operation must not exist for anyone.
+ * - ['absent', reason]: the operation must not exist for anyone;
+ * - ['panel', ResourceClass, 'viewAny'], ['panel', ResourceClass, 'action', name] or
+ *   ['panel', RelationManagerClass, 'relation']: the admin panel screen or action that
+ *   carries the row, checked per admin principal by tests/Feature/Admin/MatrixPanelRowsTest.php.
  *
- * @phpstan-type Check array{0: string, 1: string, 2?: string, 3?: list<string>}
+ * @phpstan-type Check array{0: string, 1: string, 2?: string, 3?: list<string>|string}
  * @phpstan-type Row array{section: string, cells: array<string, string>, checks: list<Check>}
  */
 final class AuthorizationMatrix
@@ -75,9 +87,9 @@ final class AuthorizationMatrix
             'PATCH shops/{id}/items/{itemId}' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'update', ['item', 'shop']], ['route', 'api.v1.shops.items.update']),
 
             // 3.3 Donations
-            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]], ['pending', 'donation checkout']),
-            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]], ['pending', 'donation history']),
-            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']], ['pending', 'donation detail']),
+            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]], ['route', 'api.v1.donations.store']),
+            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]], ['route', 'api.v1.donations.index']),
+            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']], ['route', 'api.v1.donations.show']),
 
             // 3.4 Reservation and redemption
             'POST hooks/reserve' => self::api('3.4', '- - - - own', ['policy', HookPolicy::class, 'reserve', [Hook::class]], ['route', 'api.v1.hooks.reserve']),
@@ -85,27 +97,29 @@ final class AuthorizationMatrix
             'GET shops/{id}/redemptions?day=' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'viewRedemptions', [Hook::class, 'shop']], ['route', 'api.v1.shops.redemptions']),
 
             // 3.5 Payouts and impact
-            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']], ['pending', 'payout view']),
+            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']], ['route', 'api.v1.shops.payouts.index']),
             'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
-            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
-            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment callback']]],
-            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
+            // No principal columns: a bound token in the URL or payload is the credential. The
+            // `web` check proves the routes are public to Sanctum; PayPageTest proves behaviour.
+            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.show']]],
+            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.callback']]],
+            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['route', 'api.v1.webhooks.iyzico']]],
 
             // 4 Admin panel
-            'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops']),
-            'Approve or reject a shop' => self::admin('Y - Y', ['gate', 'manage-shops']),
-            'Open a shop document' => self::admin('Y - Y', ['gate', 'view-documents'], ['policy', ShopDocumentPolicy::class, 'view', ['document']]),
-            'Suspend a shop or hold new reservations' => self::admin('Y Y Y', ['gate', 'suspend-shops']),
-            'Ban or unban an `anon_id`' => self::admin('Y - Y', ['gate', 'ban-anon-devices']),
-            'View donations and payment events' => self::admin('- Y Y', ['gate', 'view-donations']),
-            'View payouts and reconciliation results' => self::admin('- Y Y', ['gate', 'view-payouts']),
-            'Place or release an automatic payout hold' => self::admin('- Y Y', ['gate', 'manage-payouts']),
-            'Trigger a refund or a manual reconciliation' => self::admin('- Y Y', ['gate', 'refund-payments']),
-            'Reveal a decrypted tax number or IBAN' => self::admin('- Y Y', ['gate', 'reveal-shop-financials']),
-            'Manage admin users and roles' => self::admin('- - Y', ['gate', 'admin']),
-            'View activity log' => self::admin('- - Y', ['gate', 'view-activity-log']),
+            'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops'], ['panel', ShopResource::class, 'viewAny']),
+            'Approve or reject a shop' => self::admin('Y - Y', ['gate', 'manage-shops'], ['panel', ShopResource::class, 'action', 'approve'], ['panel', ShopResource::class, 'action', 'reject']),
+            'Open a shop document' => self::admin('Y - Y', ['gate', 'view-documents'], ['policy', ShopDocumentPolicy::class, 'view', ['document']], ['panel', DocumentsRelationManager::class, 'relation']),
+            'Suspend a shop or hold new reservations' => self::admin('Y Y Y', ['gate', 'suspend-shops'], ['panel', AbuseFlagResource::class, 'viewAny'], ['panel', AbuseFlagResource::class, 'action', 'review']),
+            'Ban or unban an `anon_id`' => self::admin('Y - Y', ['gate', 'ban-anon-devices'], ['panel', AnonDeviceResource::class, 'viewAny'], ['panel', AnonDeviceResource::class, 'action', 'ban'], ['panel', AnonDeviceResource::class, 'action', 'unban']),
+            'View donations and payment events' => self::admin('- Y Y', ['gate', 'view-donations'], ['panel', DonationResource::class, 'viewAny']),
+            'View payouts and reconciliation results' => self::admin('- Y Y', ['gate', 'view-payouts'], ['panel', PayoutResource::class, 'viewAny'], ['panel', PaymentMismatchResource::class, 'viewAny']),
+            'Place or release an automatic payout hold' => self::admin('- Y Y', ['gate', 'manage-payouts'], ['panel', PayoutResource::class, 'action', 'hold']),
+            'Trigger a refund or a manual reconciliation' => self::admin('- Y Y', ['gate', 'refund-payments'], ['panel', DonationResource::class, 'action', 'refund'], ['panel', PaymentMismatchResource::class, 'action', 'resolve']),
+            'Reveal a decrypted tax number or IBAN' => self::admin('- Y Y', ['gate', 'reveal-shop-financials'], ['panel', PayoutResource::class, 'action', 'reveal_financials']),
+            'Manage admin users and roles' => self::admin('- - Y', ['gate', 'admin'], ['panel', UserResource::class, 'viewAny'], ['panel', UserResource::class, 'action', 'assignRole']),
+            'View activity log' => self::admin('- - Y', ['gate', 'view-activity-log'], ['panel', ActivityLogResource::class, 'viewAny']),
             'Open the Horizon dashboard' => self::admin('- - Y', ['gate', 'viewHorizon'], ['gate', 'view-horizon']),
             "Edit a hook's status or code by hand" => self::admin('- - -', ['policy', HookPolicy::class, 'update', ['hook']]),
             'Impersonate another user' => self::admin('- - -', ['gate', 'impersonate']),

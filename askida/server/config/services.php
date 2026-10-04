@@ -39,6 +39,15 @@ return [
     ],
 
     /*
+    | iyzico payment gateway. Used only when PAYMENT_PROVIDER=iyzico. Never log the keys.
+    */
+    'iyzico' => [
+        'base_url' => env('IYZICO_BASE_URL', 'https://sandbox-api.iyzipay.com'),
+        'api_key' => env('IYZICO_API_KEY'),
+        'secret_key' => env('IYZICO_SECRET_KEY'),
+    ],
+
+    /*
     | Sign in with Apple: the identity token audience is the app bundle id (or
     | the Services ID). Apple puts the SHA-256 of the client nonce in the token.
     */

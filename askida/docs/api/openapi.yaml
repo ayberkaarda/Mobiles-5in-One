@@ -4,9 +4,10 @@ info:
   version: "1.0.0"
   summary: JSON API of the Askıda server (mobile app and merchant app).
   description: |
-    The `/api/v1` surface of the Askıda server after Phase 2: accounts, anonymous
+    The `/api/v1` surface of the Askıda server after Phase 3: accounts, anonymous
     device sessions, the verified shop directory, catalogs, verification document
-    uploads, code reservation and redemption, and public impact counters.
+    uploads, code reservation and redemption, donations and their checkout, the
+    shop payout ledger, the payment provider callback and public impact counters.
 
     Conventions that apply to every operation:
 
@@ -54,9 +55,12 @@ tags:
     description: Code reservation by recipients and redemption by shops.
   - name: impact
     description: Public aggregate counters.
-# Phase 3 adds the donation (`/donations`), payment webhook (`/webhooks/*`) and
-# payout operations to `paths` below, after the `hooks` group; their schemas go to
-# `components` next to the hook schemas.
+  - name: donations
+    description: Donations of the signed-in donor and their checkout.
+  - name: payouts
+    description: Per-day payout ledger of a shop (owner only).
+  - name: webhooks
+    description: Signed callbacks of the payment provider.
 paths:
   /auth/register:
     post:
@@ -1158,6 +1162,250 @@ paths:
           $ref: "#/components/responses/ValidationFailed"
         "500":
           $ref: "#/components/responses/ServerError"
+  /donations:
+    post:
+      tags: [donations]
+      operationId: createDonation
+      summary: Start a donation and receive the checkout page address
+      description: |
+        Creates an `initiated` donation for `qty` units of an active item of a
+        verified shop that can take payments, and returns the address of the hosted
+        checkout page. The server computes every amount from `items.price_minor`:
+        any other body field (an amount, a price, a currency, a commission, a donor
+        id) is refused with the rule code `prohibited`. The donor is always the
+        token's account. A shop that is not verified or has no payment account
+        answers 409 `shop.not_payable`; an unknown shop, an inactive item or an item
+        of another shop answer 404. One donation may not exceed 2 000 TRY (422
+        `donation.tx_cap_exceeded`); a donor may not start more than 5 000 TRY per
+        Europe/Istanbul day (409 `donation.cap_exceeded`). A payment provider outage
+        answers 503 and leaves the donation `failed`. Limiter `donations-create`:
+        20 per hour per donor account.
+      security:
+        - bearer: []
+      x-abilities: [donor]
+      x-roles: donor account (merchant tokens 403, anon tokens 401)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DonationRequest"
+            example:
+              shop_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+              item_id: 0199b3c2-7a11-7d02-8e6f-41c0b7a9d352
+              qty: 2
+      responses:
+        "201":
+          description: Donation created; open `checkout_url` in the in-app browser.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonationCheckoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`shop.not_payable` or `donation.cap_exceeded`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: "`validation.failed` or `donation.tx_cap_exceeded`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    get:
+      tags: [donations]
+      operationId: listDonations
+      summary: The calling donor's own donations
+      description: |
+        Newest first, cursor paginated. Only the caller's own donations are listed.
+        A donation shows its shop, item, amounts and payment status; it never shows
+        who collected a unit, a code or any recipient data.
+      security:
+        - bearer: []
+      x-abilities: [donor]
+      x-roles: donor account
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size, 1 to 50 (default 20).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+          example: 20
+        - name: cursor
+          in: query
+          required: false
+          description: The `meta.next_cursor` of the previous page.
+          schema:
+            type: string
+            maxLength: 512
+      responses:
+        "200":
+          description: One page of donations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonationListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /donations/{donation}:
+    get:
+      tags: [donations]
+      operationId: getDonation
+      summary: One of the calling donor's donations
+      description: |
+        Another donor's donation answers 404 like a missing id.
+      security:
+        - bearer: []
+      x-abilities: [donor]
+      x-roles: donor account (owner of the donation)
+      parameters:
+        - $ref: "#/components/parameters/DonationId"
+      responses:
+        "200":
+          description: The donation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DonationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/payouts:
+    get:
+      tags: [payouts]
+      operationId: listShopPayouts
+      summary: The shop's payout ledger by day
+      description: |
+        One row per Europe/Istanbul day, newest first, cursor paginated: paid
+        donations (`donated_minor`), the platform commission stored on each donation,
+        the net amount, the number of units redeemed that day and the provider
+        settlement state of that day (`none` when there is no payout). `meta`
+        carries the commission rule so the app can show it openly. Aggregates only:
+        no donor and no recipient identifiers. Owner only: staff get 403, other
+        merchants and unknown ids 404.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner only (staff 403, donor 403, non-member 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+        - name: limit
+          in: query
+          required: false
+          description: Page size, 1 to 90 (default 30).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+          example: 30
+        - name: cursor
+          in: query
+          required: false
+          description: The `meta.next_cursor` of the previous page.
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: One page of ledger days.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutLedgerResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /webhooks/iyzico:
+    post:
+      tags: [webhooks]
+      operationId: receiveIyzicoWebhook
+      summary: Payment provider event callback
+      description: |
+        Called by the payment provider, never by the apps. No bearer token: the
+        delivery is authenticated by the `X-IYZ-SIGNATURE-V3` header, an HMAC of the
+        signed event fields (event type, payment id, checkout token, conversation id
+        and status) keyed with the merchant secret, checked against the raw body.
+        The body is a JSON object with `iyziEventType`, `iyziEventTime` (epoch
+        milliseconds), `iyziPaymentId`, `token`, `paymentConversationId` and
+        `status`. A bad or missing signature and a stale event time answer the same
+        401 `auth.token_invalid` and leave no trace. A verified delivery is stored
+        once per event: the first answers `accepted` and queues the settlement, a
+        redelivery answers `duplicate`. The event never changes money state: the
+        settlement job re-reads the payment from the provider. Limiter `webhooks`:
+        120 per minute per IP.
+      security: []
+      x-abilities: []
+      x-roles: payment provider (signature)
+      parameters:
+        - name: X-IYZ-SIGNATURE-V3
+          in: header
+          required: true
+          description: Hex HMAC-SHA256 signature of the event, 64 characters.
+          schema:
+            type: string
+            pattern: "^[0-9a-fA-F]{64}$"
+      responses:
+        "200":
+          description: The event was recorded (`accepted`) or had been recorded before (`duplicate`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAckResponse"
+        "401":
+          description: "`auth.token_invalid`: bad signature, malformed body or stale event time."
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              example:
+                type: https://askida.app/problems/auth.token_invalid
+                title: The token is invalid.
+                status: 401
+                code: auth.token_invalid
+                request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
   /impact:
     get:
       tags: [impact]
@@ -1243,6 +1491,14 @@ components:
       in: path
       required: true
       description: Document id (UUID).
+      schema:
+        type: string
+        format: uuid
+    DonationId:
+      name: donation
+      in: path
+      required: true
+      description: Donation id (UUID).
       schema:
         type: string
         format: uuid
@@ -1452,6 +1708,10 @@ components:
         - https_required
         - service_unavailable
         - shop.has_open_hooks
+        - shop.not_payable
+        - payment.mismatch
+        - donation.cap_exceeded
+        - donation.tx_cap_exceeded
         - anon.daily_cap
         - anon.shop_cap
         - hook.none_available
@@ -2362,3 +2622,175 @@ components:
               type: string
               description: Translation key of the methodology text.
               enum: [impact.v1.daily_units]
+    DonationRequest:
+      type: object
+      required: [shop_id, item_id, qty]
+      properties:
+        shop_id:
+          $ref: "#/components/schemas/Uuid"
+        item_id:
+          $ref: "#/components/schemas/Uuid"
+        qty:
+          type: integer
+          minimum: 1
+          maximum: 20
+    DonationCheckoutResponse:
+      type: object
+      additionalProperties: false
+      required: [donation_id, checkout_url]
+      properties:
+        donation_id:
+          $ref: "#/components/schemas/Uuid"
+        checkout_url:
+          type: string
+          format: uri
+          description: Hosted checkout page of this donation (single use, expiring).
+    DonationStatus:
+      type: string
+      enum: [initiated, paid, failed, refunded]
+    Donation:
+      type: object
+      additionalProperties: false
+      required: [id, shop, item, qty, amount_minor, commission_minor, net_minor, currency, status, paid_at, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id:
+              $ref: "#/components/schemas/Uuid"
+            name:
+              type: [string, "null"]
+        item:
+          type: object
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id:
+              $ref: "#/components/schemas/Uuid"
+            name:
+              type: [string, "null"]
+        qty:
+          type: integer
+          minimum: 1
+          maximum: 20
+        amount_minor:
+          type: integer
+          minimum: 1
+        commission_minor:
+          type: integer
+          minimum: 0
+        net_minor:
+          type: integer
+          description: "`amount_minor` minus `commission_minor`."
+        currency:
+          type: string
+          enum: [TRY]
+        status:
+          $ref: "#/components/schemas/DonationStatus"
+        paid_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+    DonationResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Donation"
+    DonationListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Donation"
+        meta:
+          type: object
+          additionalProperties: false
+          required: [next_cursor]
+          properties:
+            next_cursor:
+              type: [string, "null"]
+              description: Cursor of the next page; `null` on the last page.
+    PayoutLedgerDay:
+      type: object
+      additionalProperties: false
+      required: [date, donated_minor, commission_minor, net_minor, redeemed_count, settlement]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar day in Europe/Istanbul.
+        donated_minor:
+          type: integer
+          minimum: 0
+        commission_minor:
+          type: integer
+          minimum: 0
+        net_minor:
+          type: integer
+          description: "`donated_minor` minus `commission_minor`."
+        redeemed_count:
+          type: integer
+          minimum: 0
+        settlement:
+          type: object
+          additionalProperties: false
+          required: [status, amount_minor]
+          properties:
+            status:
+              type: string
+              description: "`held` if any payout of the day is held, else `failed`, else `pending`, else `settled`; `none` without a payout."
+              enum: [none, pending, held, settled, failed]
+            amount_minor:
+              type: [integer, "null"]
+              description: Sum of the day's provider payouts; `null` when `status` is `none`.
+    PayoutLedgerResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayoutLedgerDay"
+        meta:
+          type: object
+          additionalProperties: false
+          required: [currency, next_cursor, commission]
+          properties:
+            currency:
+              type: string
+              enum: [TRY]
+            next_cursor:
+              type: [string, "null"]
+              description: Cursor of the next page; `null` on the last page.
+            commission:
+              type: object
+              additionalProperties: false
+              required: [rate_bps, text_key]
+              properties:
+                rate_bps:
+                  type: integer
+                  minimum: 0
+                  description: Platform commission in basis points of each donation.
+                text_key:
+                  type: string
+                  description: Translation key of the commission text.
+                  enum: [payouts.commission.transparent]
+    WebhookAckResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [accepted, duplicate]

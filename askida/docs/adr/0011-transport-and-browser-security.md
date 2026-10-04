@@ -39,11 +39,10 @@ form-action 'self'; frame-ancestors 'none'`.
   - `script-src 'unsafe-eval'`: Alpine.js, bundled with Livewire, evaluates expressions with the
     Function constructor.
   - `style-src 'unsafe-inline'`: inline style blocks and attributes.
-  - `https://fonts.bunny.net` in `style-src` and `font-src`: the panel's default font provider.
-  - `https://ui-avatars.com` in `img-src`: the default avatar provider after sign-in.
+  - No third-party host: the panel uses the system font stack and an inline initials avatar
+    (`data:` image), so `style-src`, `font-src` and `img-src` list no external origin.
   - No nonce on admin, because a nonce makes browsers ignore `'unsafe-inline'`.
-  - Residual risk: on admin pages XSS is mitigated by Blade escaping and not by CSP. Removing the
-    font and avatar hosts needs local providers in the panel configuration.
+  - Residual risk: on admin pages XSS is mitigated by Blade escaping and not by CSP.
 
 ### CORS
 
