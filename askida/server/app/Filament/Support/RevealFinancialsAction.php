@@ -7,6 +7,7 @@ use App\Domain\Auth\Abilities\AdminPermission;
 use App\Domain\Shops\Models\Shop;
 use Closure;
 use Filament\Actions\MountableAction;
+use Illuminate\Support\HtmlString;
 
 /**
  * "Reveal a decrypted tax number or IBAN" (matrix: finance and admin, draft decision D-5).
@@ -17,6 +18,9 @@ use Filament\Actions\MountableAction;
 final class RevealFinancialsAction
 {
     public const EVENT = 'admin.financials_revealed';
+
+    /** Re-renders of one open modal inside this many seconds count as the same open. */
+    private const WINDOW_SECONDS = 30;
 
     /**
      * @template T of MountableAction
@@ -37,12 +41,19 @@ final class RevealFinancialsAction
             ->modalCancelActionLabel('Kapat')
             ->visible(fn (): bool => PanelActor::allows(AdminPermission::RevealShopFinancials->gate()))
             ->authorize(fn (): bool => PanelActor::allows(AdminPermission::RevealShopFinancials->gate()))
-            ->mountUsing(function (mixed $record) use ($shopOf): void {
-                $shop = $shopOf($record);
-                AdminAudit::log(self::EVENT, PanelActor::user(), $shop, ['shop_id' => $shop->getKey()]);
+            // A fresh open starts a fresh audit window. The audit itself is written where the
+            // values are produced (modalContent), because a client can set the mounted
+            // action directly and so skip every mount hook.
+            ->mountUsing(function (mixed $record, mixed $livewire) use ($shopOf): void {
+                session()->forget(self::markerKey($livewire, $shopOf($record)));
             })
-            ->modalContent(function (mixed $record) use ($shopOf) {
+            ->modalContent(function (mixed $record, mixed $livewire) use ($shopOf) {
+                if (! PanelActor::allows(AdminPermission::RevealShopFinancials->gate())) {
+                    return new HtmlString('');
+                }
+
                 $shop = $shopOf($record);
+                self::auditOncePerOpen($livewire, $shop);
 
                 return view('filament.modals.shop-financials', [
                     'taxNumber' => (string) $shop->tax_number_enc,
@@ -50,5 +61,30 @@ final class RevealFinancialsAction
                 ]);
             })
             ->action(static fn () => null);
+    }
+
+    /**
+     * Writes the entry before the caller reads the decrypted values. Re-renders of the
+     * same open modal (same component, same shop) inside the window write nothing more;
+     * the marker holds a timestamp only, never a value.
+     */
+    private static function auditOncePerOpen(mixed $livewire, Shop $shop): void
+    {
+        $key = self::markerKey($livewire, $shop);
+        $at = session()->get($key);
+
+        if (is_int($at) && time() - $at < self::WINDOW_SECONDS) {
+            return;
+        }
+
+        AdminAudit::log(self::EVENT, PanelActor::user(), $shop, ['shop_id' => $shop->getKey()]);
+        session()->put($key, time());
+    }
+
+    private static function markerKey(mixed $livewire, Shop $shop): string
+    {
+        $component = is_object($livewire) && method_exists($livewire, 'getId') ? (string) $livewire->getId() : 'none';
+
+        return 'admin.reveal.'.$component.'.'.$shop->getKey();
     }
 }

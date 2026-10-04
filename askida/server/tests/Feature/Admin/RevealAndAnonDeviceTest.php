@@ -108,3 +108,40 @@ it('keeps the anonymous device screen closed to finance', function (): void {
     expect(AnonDeviceResource::canViewAny())->toBeFalse();
     Livewire::test(ListAnonDevices::class)->assertForbidden();
 });
+
+it('renders nothing for a moderator who sets the mounted action directly', function (): void {
+    AdminTestKit::signIn(AdminTestKit::staff(AdminRole::Moderator));
+    $shop = ShopTestKit::shop(state: ShopVerificationState::Pending);
+
+    $view = Livewire::test(ViewShop::class, ['record' => $shop->id])
+        ->set('mountedActions', ['reveal_financials']);
+
+    expect($view->html())->not->toContain((string) $shop->tax_number_enc)
+        ->and($view->html())->not->toContain((string) $shop->iban_enc)
+        ->and(json_encode($view->snapshot))->not->toContain((string) $shop->iban_enc)
+        ->and(Activity::query()->where('event', RevealFinancialsAction::EVENT)->count())->toBe(0);
+});
+
+it('audits a bypassed mount for an allowed role exactly once, however often it re-renders', function (): void {
+    AdminTestKit::signIn(AdminTestKit::staff(AdminRole::Admin));
+    $shop = ShopTestKit::shop(state: ShopVerificationState::Pending);
+
+    $view = Livewire::test(ViewShop::class, ['record' => $shop->id])
+        ->set('mountedActions', ['reveal_financials']);
+    $view->assertSee((string) $shop->iban_enc);
+    $view->call('$refresh')->call('$refresh');
+
+    expect(Activity::query()->where('event', RevealFinancialsAction::EVENT)->count())->toBe(1);
+});
+
+it('audits each normal open of the modal once', function (): void {
+    AdminTestKit::signIn(AdminTestKit::staff(AdminRole::Admin));
+    $shop = ShopTestKit::shop(state: ShopVerificationState::Pending);
+
+    $view = Livewire::test(ViewShop::class, ['record' => $shop->id]);
+    $view->mountAction('reveal_financials')->call('$refresh');
+    expect(Activity::query()->where('event', RevealFinancialsAction::EVENT)->count())->toBe(1);
+
+    $view->unmountAction()->mountAction('reveal_financials');
+    expect(Activity::query()->where('event', RevealFinancialsAction::EVENT)->count())->toBe(2);
+});
