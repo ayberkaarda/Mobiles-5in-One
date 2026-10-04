@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Domain\Accounts\Services\SignInReactivation;
 use App\Domain\Auth\Consent\KvkkConsentRecorder;
 use App\Domain\Auth\Contracts\IdentityTokenVerifier;
 use App\Domain\Auth\Enums\IdentityProvider;
@@ -40,6 +41,7 @@ class SocialLoginController extends Controller
         private readonly IdentityTokenVerifier $verifier,
         private readonly DeviceTokenIssuer $tokens,
         private readonly KvkkConsentRecorder $consents,
+        private readonly SignInReactivation $reactivation,
     ) {}
 
     public function apple(SocialLoginRequest $request): JsonResponse
@@ -72,6 +74,8 @@ class SocialLoginController extends Controller
                 $user = $this->createAccount($column, $identity, $request);
                 $created = true;
             }
+
+            $this->reactivation->forVerifiedIdentity($user);
 
             if ($user->isDeactivated()) {
                 throw ProblemException::make(ProblemCode::InvalidCredentials, 401);

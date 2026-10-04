@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Domain\Accounts\Services\SignInReactivation;
 use App\Domain\Auth\Lockout\LoginLockout;
 use App\Domain\Auth\Passwords\CredentialChecker;
 use App\Domain\Auth\Tokens\DeviceTokenIssuer;
@@ -23,6 +24,7 @@ class LoginController extends Controller
         LoginLockout $lockout,
         CredentialChecker $credentials,
         DeviceTokenIssuer $tokens,
+        SignInReactivation $reactivation,
     ): JsonResponse {
         $email = $request->emailAddress();
         $ip = (string) $request->ip();
@@ -35,6 +37,7 @@ class LoginController extends Controller
 
         $password = $request->string('password')->value();
         $user = User::query()->where('email', $email)->first();
+        $reactivation->forPassword($user, $password);
 
         if ($user === null || ! $credentials->check($user, $password)) {
             if ($user === null) {

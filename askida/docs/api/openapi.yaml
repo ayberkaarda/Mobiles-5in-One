@@ -1,0 +1,2364 @@
+openapi: 3.1.0
+info:
+  title: Askıda API
+  version: "1.0.0"
+  summary: JSON API of the Askıda server (mobile app and merchant app).
+  description: |
+    The `/api/v1` surface of the Askıda server after Phase 2: accounts, anonymous
+    device sessions, the verified shop directory, catalogs, verification document
+    uploads, code reservation and redemption, and public impact counters.
+
+    Conventions that apply to every operation:
+
+    - Bodies are JSON (`application/json`). Request bodies are limited to 1 MB
+      (6 MB under `/shops/{shop}/documents`); a larger body answers 413.
+    - Every error is an RFC 9457 problem (`application/problem+json`, schema
+      `Problem`). Validation errors list only the field name and a stable rule
+      code, never the submitted value.
+    - Every response carries `X-Request-Id` (an inbound value matching
+      `^[A-Za-z0-9._-]{8,64}$` is kept, otherwise the server creates one) and
+      API responses carry `Cache-Control: no-store`.
+    - Authentication is a bearer token (`bearer` scheme). A token carries exactly
+      one ability: `donor` or `merchant` for user accounts (from `users.kind`),
+      `anon` for an attested recipient device. `x-abilities` on an operation lists
+      the abilities the route accepts; an empty list means no token is needed.
+      `x-roles` describes the shop-level role (owner or staff) where it matters.
+    - Denials follow `docs/security/authorization-matrix.md` section 2: a token
+      whose ability cannot use the endpoint gets 403 `forbidden` before any lookup;
+      a resource outside the caller's scope (another shop, an unverified shop of
+      someone else) looks missing and gets 404 `not_found`.
+    - Money is integer minor units (kuruş) with currency `TRY`.
+    - Timestamps are ISO 8601 with an offset (server time zone Europe/Istanbul).
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://localhost:58080/api/v1
+    description: Local compose stack (default `ASKIDA_WEB_PORT`).
+  - url: https://askida.app/api/v1
+    description: Production.
+tags:
+  - name: auth
+    description: Sign-up, sign-in and credential recovery for user accounts.
+  - name: me
+    description: The signed-in user account.
+  - name: anon
+    description: Anonymous recipient devices (attestation and erasure).
+  - name: shops
+    description: Verified shop directory, registration and owner edits.
+  - name: items
+    description: Shop catalogs.
+  - name: documents
+    description: Verification document uploads (private storage).
+  - name: hooks
+    description: Code reservation by recipients and redemption by shops.
+  - name: impact
+    description: Public aggregate counters.
+# Phase 3 adds the donation (`/donations`), payment webhook (`/webhooks/*`) and
+# payout operations to `paths` below, after the `hooks` group; their schemas go to
+# `components` next to the hook schemas.
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Create an email and password account
+      description: |
+        Creates the account, records the KVKK consent, mails a 6-digit email
+        verification code and issues a device token. Registration with a taken
+        email answers 422 with the rule code `unique`.
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              email: deniz@example.test
+              password: kestane-agaci-42
+              name: Deniz Kaya
+              kind: donor
+              device_name: pixel-8
+              platform: android
+              kvkk_text_version: "2026-10"
+      responses:
+        "201":
+          description: Account created; the token is shown once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Sign in with email and password
+      description: |
+        Issues a device token. A new sign-in with the same `device_name` revokes
+        that device's previous token. Signing in during the deletion grace period
+        cancels the pending account deletion. After 10 failed attempts for an
+        email and IP pair the pair is locked for 15 minutes (429 `auth.locked`).
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              email: deniz@example.test
+              password: kestane-agaci-42
+              device_name: pixel-8
+              platform: android
+      responses:
+        "200":
+          description: Signed in; the token is shown once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: |
+            `auth.invalid_credentials`: unknown email, wrong password, deactivated
+            account and provider-only account all answer identically.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/apple:
+    post:
+      tags: [auth]
+      operationId: signInWithApple
+      summary: Sign in with Apple
+      description: |
+        Verifies the Apple identity token (signature, issuer, audience, expiry and
+        the SHA-256 of `nonce`). Resolution order: provider subject, then a
+        provider-verified email of an existing account (linked), else a new
+        account (then `kind` and `kvkk_text_version` are required).
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        $ref: "#/components/requestBodies/SocialLogin"
+      responses:
+        "200":
+          description: Existing account signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "201":
+          description: Account created and signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          $ref: "#/components/responses/SocialUnauthorized"
+        "409":
+          $ref: "#/components/responses/SocialConflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/IdentityKeysUnavailable"
+  /auth/google:
+    post:
+      tags: [auth]
+      operationId: signInWithGoogle
+      summary: Sign in with Google
+      description: |
+        Same flow as `/auth/apple` with a Google identity token; the raw `nonce`
+        is compared.
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        $ref: "#/components/requestBodies/SocialLogin"
+      responses:
+        "200":
+          description: Existing account signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "201":
+          description: Account created and signed in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          $ref: "#/components/responses/SocialUnauthorized"
+        "409":
+          $ref: "#/components/responses/SocialConflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/IdentityKeysUnavailable"
+  /auth/verify-email:
+    post:
+      tags: [auth]
+      operationId: verifyEmail
+      summary: Confirm the email address with the mailed code
+      description: |
+        Works without a token: the code is the credential. Unknown email, wrong,
+        used or expired code all answer 422 `auth.token_invalid`.
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+            example:
+              email: deniz@example.test
+              code: "482913"
+      responses:
+        "200":
+          description: The address is verified.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailVerifiedResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: |
+            `validation.failed` for a malformed body, `auth.token_invalid` for an
+            unknown email or a wrong, used or expired code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/forgot:
+    post:
+      tags: [auth]
+      operationId: forgotPassword
+      summary: Request a password reset code
+      description: |
+        Always 202 with the same body, whether or not the email belongs to an
+        account; the code mail is queued.
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: deniz@example.test
+      responses:
+        "202":
+          description: Accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/reset:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Set a new password with the mailed code
+      description: |
+        Sets the password, revokes every token of the account and marks the email
+        verified.
+      security: []
+      x-abilities: []
+      x-roles: guest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              email: deniz@example.test
+              code: "482913"
+              password: findik-bahcesi-77
+      responses:
+        "204":
+          description: Password changed; every token of the account is revoked.
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: |
+            `validation.failed` for a malformed body, `auth.token_invalid` for an
+            unknown email or a wrong, used or expired code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Revoke the current token
+      description: Other devices of the account stay signed in.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant]
+      x-roles: any signed-in user
+      responses:
+        "204":
+          description: The token that made the request is revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: Read the signed-in account
+      description: The account of the token; never the password hash or provider subjects.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant]
+      x-roles: the token's own account (no id in the path)
+      responses:
+        "200":
+          description: The account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: Change the display name
+      description: |
+        Only `name` is writable. `kind`, `email`, `password`, `apple_sub`,
+        `google_sub`, `email_verified_at`, `deactivated_at` and `id` are refused
+        with the rule code `prohibited`.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant]
+      x-roles: the token's own account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeRequest"
+            example:
+              name: Deniz K.
+      responses:
+        "200":
+          description: The updated account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags: [me]
+      operationId: deleteMe
+      summary: Request account deletion
+      description: |
+        Re-authentication is required: `password` for password accounts, or
+        `provider` + `id_token` + `nonce` (a fresh identity token) for Apple and
+        Google accounts. The account is deactivated at once (all tokens revoked,
+        push tokens deleted) and its personal data is erased after a 7-day grace
+        period; signing in during the grace period cancels the request. A merchant
+        whose solely owned shop still has AVAILABLE or RESERVED units is refused
+        with 409 `shop.has_open_hooks`. Shares the `auth` limiter.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant]
+      x-roles: the token's own account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+            example:
+              password: kestane-agaci-42
+      responses:
+        "202":
+          description: Deletion scheduled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletionResponse"
+        "401":
+          description: |
+            `auth.unauthenticated` (no or invalid token), `auth.invalid_credentials`
+            (wrong password, subject mismatch, account not linked to that provider)
+            or `auth.token_invalid` (the identity token failed verification).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: "`shop.has_open_hooks`: a solely owned shop still has open units."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: |
+            `validation.failed`: malformed fields, or the proof this account needs
+            is missing (`password` or `id_token` with code `required`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/IdentityKeysUnavailable"
+  /me/push-token:
+    put:
+      tags: [me]
+      operationId: putPushToken
+      summary: Register or refresh a push token
+      description: |
+        One row per token value (a token registered by another account moves to
+        this one); at most 10 per account, the least recently registered is
+        dropped. The answer is empty so the token never travels back.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant]
+      x-roles: the token's own account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenRequest"
+            example:
+              platform: android
+              token: device-registration-from-fcm
+      responses:
+        "204":
+          description: Registered.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /anon/attest:
+    post:
+      tags: [anon]
+      operationId: attestDevice
+      summary: Exchange a device attestation for an anon token
+      description: |
+        Verifies a Play Integrity (Android) or DeviceCheck (iOS) token bound to
+        `device_nonce`. The same install keeps its anonymous id; one active token
+        per device (issuing deletes the older one); the token expires after 30
+        days. The anonymous id itself is never returned. Limiter `anon-attest`:
+        3 per day per device key (nonce and IP). Outside production-like
+        environments a simulated verifier is bound: any token passes except one
+        starting with `reject` (401) or `unavailable` (503).
+      security: []
+      x-abilities: []
+      x-roles: guest (recipient device)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttestRequest"
+            example:
+              platform: android
+              token: integrity-verdict-from-play-services
+              device_nonce: install-nonce-0001
+      responses:
+        "200":
+          description: Anon session token; shown once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnonTokenResponse"
+        "401":
+          description: "`auth.token_invalid`: the provider rejected the attestation."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: "`forbidden`: the device is banned."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /anon/me:
+    delete:
+      tags: [anon]
+      operationId: deleteAnonDevice
+      summary: Erase this device's anonymous data
+      description: |
+        Releases the device's RESERVED units, deletes its tokens, daily counters
+        and device record. A later attestation of the same install gets a new
+        anonymous id.
+      security:
+        - bearer: []
+      x-abilities: [anon]
+      x-roles: the token's own device
+      responses:
+        "204":
+          description: Erased.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops:
+    get:
+      tags: [shops]
+      operationId: listShops
+      summary: Verified shops near a point
+      description: |
+        Verified shops within `radius` metres of `near`, nearest first, with the
+        count of AVAILABLE units of active items. Never returns owner, contact,
+        tax or bank data. Keyset pagination: pass `meta.next_cursor` as `cursor`
+        until it is `null`. Sample shops appear only outside production when the
+        sample flag is on. Anon tokens (recipient devices) are accepted.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant, anon]
+      x-roles: any signed-in user or attested device
+      parameters:
+        - name: near
+          in: query
+          required: true
+          description: "`lat,lng` in decimal degrees, inside the Türkiye bounding box (lat 35.8..42.2, lng 25.5..45.0)."
+          schema:
+            type: string
+            maxLength: 64
+            pattern: "^\\s*-?\\d{1,3}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?\\s*$"
+          example: "40.9903,29.0290"
+        - name: radius
+          in: query
+          required: false
+          description: Search radius in metres.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 3000
+        - name: hasAvailable
+          in: query
+          required: false
+          description: Only shops with at least one AVAILABLE unit.
+          schema:
+            type: string
+            enum: ["0", "1", "true", "false"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor from `meta.next_cursor`; an invalid cursor answers 422 (`cursor`, `invalid`).
+          schema:
+            type: string
+            maxLength: 256
+      responses:
+        "200":
+          description: One page of shops.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags: [shops]
+      operationId: createShop
+      summary: Register a shop
+      description: |
+        Creates the shop in verification state `pending` with the caller as owner.
+        The slug is made from the name and district. The phone is normalised to
+        `+90XXXXXXXXXX`; the IBAN is normalised (spaces removed, upper case) and
+        checked with mod-97; the tax number must carry a valid check digit.
+        Server-controlled fields (`id`, `owner_id`, `slug`, `verification_state`,
+        `verified_at`, `is_sample`, `sub_merchant_key`, `tax_number_enc`,
+        `iban_enc`, `location`) are refused with the rule code `prohibited`.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: a merchant account that is not staff of any shop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopCreateRequest"
+            example:
+              name: Çınar Fırını
+              type: bakery
+              address: "Moda Caddesi No: 12"
+              il: İstanbul
+              ilce: Kadıköy
+              lat: 40.9903
+              lng: 29.029
+              phone: 0216 555 01 02
+              tax_number: "0000000000"
+              iban: TR00 0000 0000 0000 0000 0000 00
+              listed_on_web: true
+      responses:
+        "201":
+          description: The shop as its owner sees it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopOwnerResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}:
+    get:
+      tags: [shops]
+      operationId: getShop
+      summary: Read a shop by slug
+      description: |
+        A verified shop for every caller, with its active items and their
+        AVAILABLE counts. An unverified shop is visible only to its members; to
+        anyone else it is 404. The shop's owner receives the owner shape instead.
+        Anon tokens (recipient devices) are accepted and get the public shape.
+      security:
+        - bearer: []
+      x-abilities: [donor, merchant, anon]
+      x-roles: any signed-in user or attested device; owner gets the owner shape
+      parameters:
+        - $ref: "#/components/parameters/ShopSlug"
+      responses:
+        "200":
+          description: Public detail, or the owner shape for the shop's owner.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ShopDetailResponse"
+                  - $ref: "#/components/schemas/ShopOwnerResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    patch:
+      tags: [shops]
+      operationId: updateShop
+      summary: Edit a shop
+      description: |
+        Any subset of the registration fields; `lat` and `lng` travel together.
+        A real change to the address, province, district, location, tax number or
+        IBAN of a verified shop returns it to `pending`; any real change to a
+        rejected shop re-submits it. The slug never changes. A path segment that
+        is not a UUID matches only the read route and answers 405.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner (staff 403, others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopUpdateRequest"
+            example:
+              name: Çınar Fırını Moda
+              listed_on_web: false
+      responses:
+        "200":
+          description: The updated shop as its owner sees it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopOwnerResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/items:
+    get:
+      tags: [items]
+      operationId: listShopItems
+      summary: The shop's full catalog
+      description: Owner and staff read every item, inactive ones included, ordered by name. An unknown shop id is 404 for every caller; a donor on an existing shop gets 403.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner or staff (others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      responses:
+        "200":
+          description: The catalog.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags: [items]
+      operationId: createShopItem
+      summary: Add an item to the catalog
+      description: "`id`, `shop_id` and `currency` are refused with the rule code `prohibited`; the currency is always `TRY`."
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner (staff 403, others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreateRequest"
+            example:
+              name: Ekmek
+              category: ekmek
+              price_minor: 1500
+              daily_cap: 20
+              active: true
+      responses:
+        "201":
+          description: The new item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/items/{item}:
+    patch:
+      tags: [items]
+      operationId: updateShopItem
+      summary: Edit an item
+      description: |
+        Any subset of the item fields. A price change never alters units already
+        donated. An item of another shop is 404.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner (staff 403, others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemUpdateRequest"
+            example:
+              price_minor: 1750
+              active: false
+      responses:
+        "200":
+          description: The updated item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/documents/presign:
+    post:
+      tags: [documents]
+      operationId: presignShopDocument
+      summary: Start a verification document upload
+      description: |
+        Creates a pending document and returns a 5-minute presigned PUT URL on the
+        private store. Send the bytes with exactly the returned headers, then call
+        the confirm operation. At most 3 documents per shop (pending uploads whose
+        URL has not expired count) and 10 presigns per shop per day (429 with
+        `Retry-After`, counted only after authorization).
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner (staff 403, others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresignRequest"
+            example:
+              kind: vergi_levhasi
+              mime: application/pdf
+              size: 48213
+      responses:
+        "201":
+          description: The pending document and its upload instructions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresignResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict`: the shop already has the maximum number of documents."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/documents/{document}/confirm:
+    post:
+      tags: [documents]
+      operationId: confirmShopDocument
+      summary: Check and keep an uploaded document
+      description: |
+        Reads the uploaded object back and checks it: size equal to the declared
+        size and at most 5 MB, MIME sniffing and magic bytes matching the declared
+        type, and for PDFs no active content (`/JavaScript`, `/JS`, `/Launch`), no
+        encryption and 1 to 10 pages. On any failure the object and the document
+        are deleted. No request body.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner (staff 403, others 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: The document, now in state `uploaded`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict`: the document is already confirmed."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          description: "`payload_too_large`: the stored object is larger than 5 MB (errors: `document`, `too_large`)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "415":
+          description: "`unsupported_media_type`: the content does not match the declared type (errors: `document`, `mime_mismatch`)."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: |
+            `validation.failed` with errors on field `document`: `missing_object`,
+            `size_mismatch`, `pdf_active_content`, `pdf_encrypted`,
+            `pdf_page_limit` or `pdf_malformed`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /hooks/reserve:
+    post:
+      tags: [hooks]
+      operationId: reserveHook
+      summary: Reserve one unit and receive a code
+      description: |
+        Reserves the oldest AVAILABLE unit of an active item of a verified shop
+        for 10 minutes and returns the 8-character code once (it is stored only
+        as a keyed hash). Caps: 2 reservations per device per Europe/Istanbul day,
+        1 per shop per day (409 `anon.daily_cap` / `anon.shop_cap`); the item's
+        daily cap and an empty shelf answer 409 `hook.none_available`. Unknown or
+        unverified shop, inactive item or an item of another shop answer 404.
+        `anon_id` is refused with the rule code `prohibited`: it always comes
+        from the token. Limiter `hooks-reserve`: 5 per hour per device, 60 per
+        hour per IP.
+      security:
+        - bearer: []
+      x-abilities: [anon]
+      x-roles: attested recipient device (user tokens 403)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveRequest"
+            example:
+              shop_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+              item_id: 0199b3c2-7a11-7d02-8e6f-41c0b7a9d352
+      responses:
+        "201":
+          description: Reserved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`anon.daily_cap`, `anon.shop_cap` or `hook.none_available`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /shops/{shop}/redeem:
+    post:
+      tags: [hooks]
+      operationId: redeemHook
+      summary: Redeem a code at the counter
+      description: |
+        The code is normalised (upper case, spaces and dashes removed, `I`/`L` to
+        `1`, `O` to `0`) and must then match `^[0-9A-HJKMNP-TV-Z]{8}$`. Exactly one
+        redemption per code. The answer names the item only; no recipient data.
+        Unknown, used and other-shop codes answer the same 422
+        `hook.code_invalid`; 422 `hook.code_expired` only when the code matches a
+        reservation of this shop that has expired (the unit is released). Limiter
+        `redeem`: 30 per minute per shop.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner or staff (donor 403, non-member 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemRequest"
+            example:
+              code: 7KQ2-M9XD
+      responses:
+        "200":
+          description: Redeemed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: "`validation.failed`, `hook.code_invalid` or `hook.code_expired`."
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /shops/{shop}/redemptions:
+    get:
+      tags: [hooks]
+      operationId: listRedemptions
+      summary: The shop's redemptions of one day
+      description: |
+        Newest first, with the item name, the time and the redeeming member's role
+        (`null` when that member has left the shop). No pagination: the item daily
+        caps bound the list.
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner or staff (donor 403, non-member 404)
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+        - name: day
+          in: query
+          required: false
+          description: Calendar day in Europe/Istanbul; today when omitted.
+          schema:
+            type: string
+            format: date
+          example: "2026-10-04"
+      responses:
+        "200":
+          description: The day's redemptions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /impact:
+    get:
+      tags: [impact]
+      operationId: getImpact
+      summary: Aggregate counters of the latest snapshot day
+      description: |
+        Units donated and redeemed and the number of verified shops for the latest
+        snapshot day, for Türkiye, a province or a district. A district is shown on
+        its own only with at least 3 verified shops, otherwise the answer rolls up
+        to the province and then to the country (`level` says which). Sample shops
+        are excluded. Cached for 5 minutes. Counts only.
+      security: []
+      x-abilities: []
+      x-roles: public
+      parameters:
+        - name: il
+          in: query
+          required: false
+          description: Province name as stored on shops; required when `ilce` is given.
+          schema:
+            type: string
+            maxLength: 64
+          example: İstanbul
+        - name: ilce
+          in: query
+          required: false
+          description: District name as stored on shops.
+          schema:
+            type: string
+            maxLength: 64
+          example: Kadıköy
+      responses:
+        "200":
+          description: The counters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImpactResponse"
+        "422":
+          $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum personal access token
+      description: |
+        `Authorization: Bearer <token>`. User tokens come from `/auth/register`,
+        `/auth/login`, `/auth/apple` and `/auth/google` (one per device, 30 days,
+        ability `donor` or `merchant`); anon tokens come from `/anon/attest` (30
+        days, ability `anon`). Deactivated accounts and banned devices are refused
+        on every request.
+  parameters:
+    ShopId:
+      name: shop
+      in: path
+      required: true
+      description: Shop id (UUID).
+      schema:
+        type: string
+        format: uuid
+    ShopSlug:
+      name: shop
+      in: path
+      required: true
+      description: Shop slug (lower-case words joined by dashes).
+      schema:
+        type: string
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      example: cinar-firini-kadikoy
+    ItemId:
+      name: item
+      in: path
+      required: true
+      description: Item id (UUID).
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: document
+      in: path
+      required: true
+      description: Document id (UUID).
+      schema:
+        type: string
+        format: uuid
+  headers:
+    RequestId:
+      description: Correlation id of the request; also in the problem body.
+      required: true
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the limit resets.
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    Allow:
+      description: Methods the path supports.
+      required: true
+      schema:
+        type: string
+  requestBodies:
+    SocialLogin:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SocialLoginRequest"
+          example:
+            id_token: identity-token-issued-by-the-provider
+            nonce: client-nonce-0001-abcd
+            device_name: iphone-15
+            platform: ios
+            name: Ayşe Demir
+            kind: donor
+            kvkk_text_version: "2026-10"
+  responses:
+    Unauthenticated:
+      description: "`auth.unauthenticated`: missing, invalid, expired or revoked token, or a token of the wrong kind for this route."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://askida.app/problems/auth.unauthenticated
+            title: Authentication is required.
+            status: 401
+            code: auth.unauthenticated
+            request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+    Forbidden:
+      description: "`forbidden`: the token's ability or the caller's shop role cannot use this operation."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://askida.app/problems/forbidden
+            title: This action is not allowed.
+            status: 403
+            code: forbidden
+            request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+    NotFound:
+      description: "`not_found`: the resource does not exist or is outside the caller's scope."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://askida.app/problems/not_found
+            title: The resource was not found.
+            status: 404
+            code: not_found
+            request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+    MethodNotAllowed:
+      description: "`method_not_allowed`."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+        Allow:
+          $ref: "#/components/headers/Allow"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    PayloadTooLarge:
+      description: "`payload_too_large`: the request body is over the limit."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ValidationFailed:
+      description: "`validation.failed` with an `errors` list of field names and rule codes."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://askida.app/problems/validation.failed
+            title: The request data is invalid.
+            status: 422
+            code: validation.failed
+            request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+            errors:
+              - field: email
+                code: required
+    TooManyRequests:
+      description: "`rate_limited` (a limiter was hit) or `auth.locked` (sign-in lockout)."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://askida.app/problems/rate_limited
+            title: Too many requests.
+            status: 429
+            code: rate_limited
+            request_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+    ServerError:
+      description: "`server_error`: unexpected failure; no internals in the body."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ServiceUnavailable:
+      description: "`service_unavailable`: a provider is unreachable or the request could not be completed now."
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    IdentityKeysUnavailable:
+      description: The identity provider's key set could not be fetched. The body carries the code `service_unavailable` with status 503.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    SocialUnauthorized:
+      description: |
+        `auth.token_invalid` (signature, issuer, audience, expiry or nonce check
+        failed) or `auth.invalid_credentials` (the account is deactivated).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    SocialConflict:
+      description: |
+        `conflict`: the email belongs to an account that cannot be linked (the
+        provider did not verify the email, or the account already has another
+        subject of this provider).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ProblemCode:
+      type: string
+      description: Stable machine-readable problem code. Append-only.
+      enum:
+        - validation.failed
+        - auth.invalid_credentials
+        - auth.locked
+        - auth.unauthenticated
+        - auth.email_unverified
+        - auth.token_invalid
+        - forbidden
+        - not_found
+        - conflict
+        - rate_limited
+        - payload_too_large
+        - unsupported_media_type
+        - server_error
+        - bad_request
+        - method_not_allowed
+        - https_required
+        - service_unavailable
+        - shop.has_open_hooks
+        - anon.daily_cap
+        - anon.shop_cap
+        - hook.none_available
+        - hook.code_invalid
+        - hook.code_expired
+    Problem:
+      type: object
+      description: RFC 9457 problem details. `type` is `https://askida.app/problems/<code>`.
+      additionalProperties: false
+      required: [type, title, status, code, request_id]
+      properties:
+        type:
+          type: string
+          format: uri
+          pattern: "^https://askida\\.app/problems/[a-z_.]+$"
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          $ref: "#/components/schemas/ProblemCode"
+        request_id:
+          type: [string, "null"]
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ValidationError"
+    ValidationError:
+      type: object
+      additionalProperties: false
+      required: [field, code]
+      properties:
+        field:
+          type: string
+          description: Request field name (dot notation for nested fields).
+        code:
+          type: string
+          description: Snake-case rule code, for example `required`, `email`, `max`, `enum`, `regex`, `unique`, `prohibited`, `uncompromised`, `invalid`.
+          pattern: "^[a-z0-9_.]{1,64}$"
+    Uuid:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+    Platform:
+      type: string
+      enum: [android, ios]
+    UserKind:
+      type: string
+      enum: [donor, merchant]
+    RegisterRequest:
+      type: object
+      required:
+        [email, password, name, kind, device_name, platform, kvkk_text_version]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Lower-cased and trimmed by the server; must be unused.
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+          description: Checked against a breached-password list (k-anonymity); the check fails open when the service is unreachable.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        kind:
+          $ref: "#/components/schemas/UserKind"
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        platform:
+          $ref: "#/components/schemas/Platform"
+        kvkk_text_version:
+          type: string
+          maxLength: 32
+          pattern: "^[A-Za-z0-9._-]+$"
+    LoginRequest:
+      type: object
+      required: [email, password, device_name, platform]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          maxLength: 128
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        platform:
+          $ref: "#/components/schemas/Platform"
+    SocialLoginRequest:
+      type: object
+      required: [id_token, nonce, device_name, platform]
+      properties:
+        id_token:
+          type: string
+          maxLength: 8192
+        nonce:
+          type: string
+          minLength: 16
+          maxLength: 255
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        platform:
+          $ref: "#/components/schemas/Platform"
+        name:
+          type: [string, "null"]
+          maxLength: 100
+          description: Used only when the sign-in creates the account.
+        kind:
+          description: Required when the sign-in creates the account.
+          oneOf:
+            - $ref: "#/components/schemas/UserKind"
+            - type: "null"
+        kvkk_text_version:
+          type: [string, "null"]
+          maxLength: 32
+          pattern: "^[A-Za-z0-9._-]+$"
+          description: Required when the sign-in creates the account.
+    VerifyEmailRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    ResetPasswordRequest:
+      type: object
+      required: [email, code, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+    UpdateMeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+    DeleteAccountRequest:
+      type: object
+      description: Either `password`, or `provider` + `id_token` + `nonce`.
+      properties:
+        password:
+          type: [string, "null"]
+          maxLength: 128
+        provider:
+          type: [string, "null"]
+          enum: [apple, google, null]
+          description: Required with `id_token`.
+        id_token:
+          type: [string, "null"]
+          maxLength: 8192
+        nonce:
+          type: [string, "null"]
+          minLength: 16
+          maxLength: 255
+          description: Required with `id_token`.
+    PushTokenRequest:
+      type: object
+      required: [platform, token]
+      properties:
+        platform:
+          $ref: "#/components/schemas/Platform"
+        token:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          pattern: "^[\\x21-\\x7E]+$"
+          description: Opaque push registration token (printable ASCII, no spaces).
+    AttestRequest:
+      type: object
+      required: [platform, token, device_nonce]
+      properties:
+        platform:
+          $ref: "#/components/schemas/Platform"
+        token:
+          type: string
+          minLength: 1
+          maxLength: 8192
+          description: Play Integrity token (Android) or DeviceCheck token (iOS).
+        device_nonce:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{16,128}$"
+          description: Per-install random value bound into the attestation request.
+    ReserveRequest:
+      type: object
+      required: [shop_id, item_id]
+      properties:
+        shop_id:
+          $ref: "#/components/schemas/Uuid"
+        item_id:
+          $ref: "#/components/schemas/Uuid"
+    RedeemRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          maxLength: 32
+          description: The code shown to the recipient; normalised before the check.
+    ShopType:
+      type: string
+      enum: [bakery, restaurant, grocery, stationery, cafe, other]
+    ItemCategory:
+      type: string
+      enum: [ekmek, corba, yemek, kirtasiye, bebek, diger]
+    ShopFields:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        type:
+          $ref: "#/components/schemas/ShopType"
+        address:
+          type: string
+          minLength: 5
+          maxLength: 255
+        il:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: Province.
+        ilce:
+          type: string
+          minLength: 2
+          maxLength: 64
+          description: District.
+        lat:
+          type: number
+          minimum: 35.8
+          maximum: 42.2
+        lng:
+          type: number
+          minimum: 25.5
+          maximum: 45
+        phone:
+          type: string
+          description: Turkish number; `+90XXXXXXXXXX`, `90…`, `0…` or ten digits, spaces, dots, dashes and parentheses allowed.
+        tax_number:
+          type: string
+          description: 10-digit tax number (VKN) with a valid check digit; whitespace is removed.
+        iban:
+          type: string
+          description: Turkish IBAN (26 characters after removing spaces) with a valid mod-97 checksum.
+        listed_on_web:
+          type: boolean
+          description: The merchant's explicit consent to appear in the public web directory.
+    ShopCreateRequest:
+      allOf:
+        - $ref: "#/components/schemas/ShopFields"
+      required:
+        [
+          name,
+          type,
+          address,
+          il,
+          ilce,
+          lat,
+          lng,
+          phone,
+          tax_number,
+          iban,
+          listed_on_web,
+        ]
+    ShopUpdateRequest:
+      allOf:
+        - $ref: "#/components/schemas/ShopFields"
+      description: Any subset; `lat` requires `lng` and the reverse.
+    ItemFields:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        category:
+          $ref: "#/components/schemas/ItemCategory"
+        price_minor:
+          type: integer
+          minimum: 100
+          maximum: 1000000
+          description: Unit price in kuruş.
+        daily_cap:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: Units of this item that may be reserved or redeemed per day.
+        active:
+          type: boolean
+    ItemCreateRequest:
+      allOf:
+        - $ref: "#/components/schemas/ItemFields"
+      required: [name, category, price_minor, daily_cap]
+    ItemUpdateRequest:
+      allOf:
+        - $ref: "#/components/schemas/ItemFields"
+      description: Any subset.
+    PresignRequest:
+      type: object
+      required: [kind, mime, size]
+      properties:
+        kind:
+          type: string
+          enum: [vergi_levhasi, isletme_belgesi]
+        mime:
+          type: string
+          enum: [application/pdf, image/jpeg, image/png]
+        size:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+          description: Declared size in bytes; must equal the uploaded object.
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, name, kind, email_verified]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        kind:
+          $ref: "#/components/schemas/UserKind"
+        email_verified:
+          type: boolean
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/User"
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [token, token_type, expires_at, abilities, user]
+      properties:
+        token:
+          type: string
+          description: Plain-text bearer token; shown once.
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        abilities:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: "#/components/schemas/UserKind"
+        user:
+          $ref: "#/components/schemas/User"
+    AnonTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [token, token_type, expires_at, abilities]
+      properties:
+        token:
+          type: string
+          description: Plain-text bearer token; shown once.
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        abilities:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum: [anon]
+    EmailVerifiedResponse:
+      type: object
+      additionalProperties: false
+      required: [email_verified]
+      properties:
+        email_verified:
+          type: boolean
+          enum: [true]
+    AcceptedResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+    DeletionResponse:
+      type: object
+      additionalProperties: false
+      required: [status, grace_until]
+      properties:
+        status:
+          type: string
+          enum: [pending]
+        grace_until:
+          $ref: "#/components/schemas/Timestamp"
+    GeoLocation:
+      type: object
+      additionalProperties: false
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+    ShopPublic:
+      type: object
+      additionalProperties: false
+      description: Shop as donors see it. `distance_m` is present in the directory list only.
+      required:
+        [
+          id,
+          slug,
+          name,
+          type,
+          type_label,
+          address,
+          il,
+          ilce,
+          location,
+          is_sample,
+        ]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        slug:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          description: Shop type; one of the `ShopType` values for shops registered through the API.
+        type_label:
+          type: [string, "null"]
+          description: Turkish label of `type`; `null` for a value outside `ShopType`.
+        address:
+          type: string
+        il:
+          type: string
+        ilce:
+          type: string
+        location:
+          $ref: "#/components/schemas/GeoLocation"
+        distance_m:
+          type: integer
+          minimum: 0
+          description: Distance from `near` in metres.
+        available_count:
+          type: integer
+          minimum: 0
+          description: AVAILABLE units of active items.
+        is_sample:
+          type: boolean
+    ShopListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ShopPublic"
+            required: [distance_m, available_count]
+        meta:
+          type: object
+          additionalProperties: false
+          required: [radius, next_cursor]
+          properties:
+            radius:
+              type: integer
+            next_cursor:
+              type: [string, "null"]
+              description: Cursor of the next page; `null` on the last page.
+    ItemPublic:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          name,
+          category,
+          category_label,
+          price_minor,
+          currency,
+          available_count,
+        ]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/ItemCategory"
+        category_label:
+          type: string
+        price_minor:
+          type: integer
+        currency:
+          type: string
+          enum: [TRY]
+        available_count:
+          type: integer
+          minimum: 0
+    ShopDetail:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          slug,
+          name,
+          type,
+          type_label,
+          address,
+          il,
+          ilce,
+          location,
+          available_count,
+          is_sample,
+          items,
+        ]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        slug:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        type_label:
+          type: [string, "null"]
+        address:
+          type: string
+        il:
+          type: string
+        ilce:
+          type: string
+        location:
+          $ref: "#/components/schemas/GeoLocation"
+        available_count:
+          type: integer
+          minimum: 0
+          description: Sum of the AVAILABLE counts of the active items.
+        is_sample:
+          type: boolean
+        items:
+          type: array
+          description: Active items only.
+          items:
+            $ref: "#/components/schemas/ItemPublic"
+    ShopDetailResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ShopDetail"
+    ShopOwner:
+      type: object
+      additionalProperties: false
+      description: Shop as its owner sees it. Tax number and IBAN are masked to their last four characters; no owner id and no provider keys.
+      required:
+        - id
+        - slug
+        - name
+        - type
+        - type_label
+        - address
+        - il
+        - ilce
+        - location
+        - phone
+        - tax_number_masked
+        - iban_masked
+        - verification_state
+        - verified_at
+        - listed_on_web
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        slug:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        type_label:
+          type: [string, "null"]
+        address:
+          type: string
+        il:
+          type: string
+        ilce:
+          type: string
+        location:
+          $ref: "#/components/schemas/GeoLocation"
+        phone:
+          type: string
+        tax_number_masked:
+          type: [string, "null"]
+          pattern: "^\\*+[0-9]{4}$"
+        iban_masked:
+          type: [string, "null"]
+          pattern: "^TR\\*+[0-9]{4}$"
+        verification_state:
+          type: string
+          enum: [pending, verified, rejected]
+        verified_at:
+          type: [string, "null"]
+          format: date-time
+        listed_on_web:
+          type: boolean
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+    ShopOwnerResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ShopOwner"
+    Item:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          shop_id,
+          name,
+          category,
+          category_label,
+          price_minor,
+          currency,
+          daily_cap,
+          active,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        shop_id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/ItemCategory"
+        category_label:
+          type: string
+        price_minor:
+          type: integer
+        currency:
+          type: string
+          enum: [TRY]
+        daily_cap:
+          type: integer
+        active:
+          type: boolean
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+    ItemResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Item"
+    ItemListResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+    Document:
+      type: object
+      additionalProperties: false
+      description: Document metadata; never the storage key or a read URL.
+      required: [id, kind, mime, size, state, uploaded_at, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        kind:
+          type: string
+          enum: [vergi_levhasi, isletme_belgesi, other]
+        mime:
+          type: string
+        size:
+          type: integer
+        state:
+          type: string
+          enum: [pending, uploaded]
+        uploaded_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+    DocumentResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Document"
+    PresignResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [document, upload]
+          properties:
+            document:
+              $ref: "#/components/schemas/Document"
+            upload:
+              type: object
+              additionalProperties: false
+              required: [method, url, headers, expires_at]
+              properties:
+                method:
+                  type: string
+                  enum: [PUT]
+                url:
+                  type: string
+                  format: uri
+                  description: Presigned URL on the private store, valid for 5 minutes.
+                headers:
+                  type: object
+                  description: Headers the upload must send; always contains `Content-Type`.
+                  required: [Content-Type]
+                  properties:
+                    Content-Type:
+                      type: string
+                      enum: [application/pdf, image/jpeg, image/png]
+                  additionalProperties:
+                    type: string
+                expires_at:
+                  $ref: "#/components/schemas/Timestamp"
+    ReservationResponse:
+      type: object
+      additionalProperties: false
+      description: The plain-text code is returned only here. No unit id and no anonymous id.
+      required: [code, expires_at, shop, item]
+      properties:
+        code:
+          type: string
+          pattern: "^[0-9A-HJKMNP-TV-Z]{8}$"
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        shop:
+          type: object
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id:
+              $ref: "#/components/schemas/Uuid"
+            name:
+              type: string
+        item:
+          type: object
+          additionalProperties: false
+          required: [name, category]
+          properties:
+            name:
+              type: string
+            category:
+              $ref: "#/components/schemas/ItemCategory"
+    RedemptionResponse:
+      type: object
+      additionalProperties: false
+      required: [message, item, redeemed_at]
+      properties:
+        message:
+          type: string
+          description: Turkish counter message, for example `1 ekmek verildi`.
+        item:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+        redeemed_at:
+          $ref: "#/components/schemas/Timestamp"
+    RedemptionListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [item, redeemed_at, redeemed_by_role]
+            properties:
+              item:
+                type: object
+                additionalProperties: false
+                required: [name]
+                properties:
+                  name:
+                    type: string
+              redeemed_at:
+                $ref: "#/components/schemas/Timestamp"
+              redeemed_by_role:
+                type: [string, "null"]
+                enum: [owner, staff, null]
+        meta:
+          type: object
+          additionalProperties: false
+          required: [day, count]
+          properties:
+            day:
+              type: string
+              format: date
+            count:
+              type: integer
+              minimum: 0
+    ImpactResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            [day, level, il, ilce, donated, redeemed, shops, methodology]
+          properties:
+            day:
+              type: [string, "null"]
+              format: date
+              description: Latest snapshot day; `null` before the first snapshot.
+            level:
+              type: string
+              enum: [ilce, il, tr]
+            il:
+              type: [string, "null"]
+            ilce:
+              type: [string, "null"]
+            donated:
+              type: integer
+              minimum: 0
+            redeemed:
+              type: integer
+              minimum: 0
+            shops:
+              type: integer
+              minimum: 0
+            methodology:
+              type: string
+              description: Translation key of the methodology text.
+              enum: [impact.v1.daily_units]

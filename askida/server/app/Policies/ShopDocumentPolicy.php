@@ -29,6 +29,16 @@ class ShopDocumentPolicy
     }
 
     /**
+     * POST shops/{id}/documents/{documentId}/confirm: owner of the shop, the same rule as
+     * the upload it completes. The document id is looked up inside that shop only, so a
+     * document of another shop looks missing.
+     */
+    public function confirm(User|AnonDevice $actor, Shop $shop): Response
+    {
+        return $this->create($actor, $shop);
+    }
+
+    /**
      * Open a document: panel session with the document permission only. A panel user
      * without the permission is refused (403); to every API caller, the owner included,
      * a document id looks missing.

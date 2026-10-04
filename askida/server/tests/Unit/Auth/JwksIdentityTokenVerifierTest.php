@@ -184,7 +184,7 @@ it('caches the key set between verifications', function (): void {
     Http::assertSentCount(1);
 });
 
-it('fails with a server error when the key set cannot be fetched', function (): void {
+it('fails closed with service unavailable when the key set cannot be fetched', function (): void {
     config(['services.google.jwks_url' => 'https://oauth2.example/certs']);
     Http::fake(['oauth2.example/*' => Http::response('down', 503)]);
 
@@ -196,7 +196,23 @@ it('fails with a server error when the key set cannot be fetched', function (): 
     } catch (ProblemException $e) {
         expect($e)->not->toBeInstanceOf(InvalidIdentityToken::class)
             ->and($e->status)->toBe(503)
-            ->and($e->problem->value)->toBe('server_error');
+            ->and($e->problem->value)->toBe('service_unavailable');
+    }
+});
+
+it('fails closed with service unavailable when the key set has no usable key', function (): void {
+    config(['services.google.jwks_url' => 'https://oauth2.example/certs']);
+    Http::fake(['oauth2.example/*' => Http::response(['keys' => [['kty' => 'EC', 'kid' => 'unused']]])]);
+
+    $token = $this->idp->sign(IdentityTokenFactory::claims(IdentityProvider::Google, $this->nonce));
+
+    try {
+        $this->verifier->verify(IdentityProvider::Google, $token, $this->nonce);
+        throw new RuntimeException('The token was accepted.');
+    } catch (ProblemException $e) {
+        expect($e)->not->toBeInstanceOf(InvalidIdentityToken::class)
+            ->and($e->status)->toBe(503)
+            ->and($e->problem->value)->toBe('service_unavailable');
     }
 });
 
