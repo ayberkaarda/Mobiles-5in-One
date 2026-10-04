@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Domain\Shops\Models\Shop;
 use App\Domain\Web\Contracts\CountersReader;
+use App\Domain\Web\Directory\Console\OgDefaultCommand;
+use App\Domain\Web\Directory\ShopWebObserver;
 use App\Support\Web\ResponseCache\CacheResponse;
 use App\Support\Web\ResponseCache\PageCache;
 use App\Support\Web\ZeroCountersReader;
@@ -45,6 +48,12 @@ class WebServiceProvider extends ServiceProvider
         // endregion impact boot
 
         // region directory boot (append only)
+        // Unlisting invalidation and share image cleanup of the public directory.
+        Shop::observe(ShopWebObserver::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([OgDefaultCommand::class]);
+        }
         // endregion directory boot
 
         // region content boot (append only)
