@@ -20,7 +20,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -148,14 +147,11 @@ class UserResource extends Resource
     private static function confirmedActor(string $code): User
     {
         $actor = PanelActor::user();
-        $limit = Login::limitFor($actor);
-
-        if (RateLimiter::tooManyAttempts($limit->key, $limit->maxAttempts)) {
-            throw ValidationException::withMessages(['mountedTableActionsData.0.code' => 'Çok fazla hatalı deneme. Biraz sonra yeniden deneyin.']);
-        }
+        $throttle = Login::throttleFor($actor);
+        $throttle->ensureAllowed('mountedTableActionsData.0.code');
 
         if (! app(TwoFactorManager::class)->verifyFreshCode($actor, $code)) {
-            RateLimiter::hit($limit->key, $limit->decaySeconds);
+            $throttle->failed();
             AdminAudit::log('admin.totp_failed', $actor, $actor);
 
             throw ValidationException::withMessages(['mountedTableActionsData.0.code' => 'Kod doğrulanamadı.']);

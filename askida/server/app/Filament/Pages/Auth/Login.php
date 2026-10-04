@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Auth;
 use App\Domain\Admin\PanelAccess;
 use App\Domain\Admin\Services\AdminAudit;
 use App\Domain\Admin\Services\TwoFactorManager;
+use App\Domain\Admin\Support\TotpThrottle;
 use App\Domain\Admin\Support\TwoFactorSession;
 use App\Models\User;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
@@ -110,19 +111,14 @@ class Login extends BaseLogin
             ]);
         }
 
-        $limit = self::limitFor($user);
-
-        if (RateLimiter::tooManyAttempts($limit->key, $limit->maxAttempts)) {
-            throw ValidationException::withMessages([
-                'data.code' => 'Çok fazla hatalı deneme. '.RateLimiter::availableIn($limit->key).' saniye sonra yeniden deneyin.',
-            ]);
-        }
+        $throttle = self::throttleFor($user);
+        $throttle->ensureAllowed('data.code');
 
         $data = $this->form->getState();
         $method = app(TwoFactorManager::class)->verifyLogin($user, (string) ($data['code'] ?? ''));
 
         if ($method === null) {
-            RateLimiter::hit($limit->key, $limit->decaySeconds);
+            $throttle->failed();
             AdminAudit::log('admin.totp_failed', $user, $user);
 
             throw ValidationException::withMessages([
@@ -130,7 +126,7 @@ class Login extends BaseLogin
             ]);
         }
 
-        RateLimiter::clear($limit->key);
+        $throttle->succeeded();
 
         Filament::auth()->login($user);
         session()->regenerate();
@@ -138,6 +134,11 @@ class Login extends BaseLogin
         AdminAudit::log('admin.login', $user, $user, ['method' => $method]);
 
         return app(LoginResponse::class);
+    }
+
+    public static function throttleFor(User $user): TotpThrottle
+    {
+        return new TotpThrottle($user, static fn (): Limit => self::limitFor($user));
     }
 
     /**

@@ -10,7 +10,6 @@ use App\Filament\Pages\Auth\Login;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -47,25 +46,20 @@ class TwoFactorSetup extends Page
     public function confirm(): void
     {
         $user = $this->user();
-        $limit = Login::limitFor($user);
-
-        if (RateLimiter::tooManyAttempts($limit->key, $limit->maxAttempts)) {
-            throw ValidationException::withMessages([
-                'code' => 'Çok fazla hatalı deneme. '.RateLimiter::availableIn($limit->key).' saniye sonra yeniden deneyin.',
-            ]);
-        }
+        $throttle = Login::throttleFor($user);
+        $throttle->ensureAllowed('code');
 
         $codes = app(TwoFactorManager::class)->confirm($user, $this->code);
         $this->code = '';
 
         if ($codes === null) {
-            RateLimiter::hit($limit->key, $limit->decaySeconds);
+            $throttle->failed();
             AdminAudit::log('admin.totp_failed', $user, $user);
 
             throw ValidationException::withMessages(['code' => 'Kod doğrulanamadı.']);
         }
 
-        RateLimiter::clear($limit->key);
+        $throttle->succeeded();
         session()->regenerate();
         TwoFactorSession::markPassed(session()->driver(), $user);
         AdminAudit::log('admin.login', $user, $user, ['method' => 'totp_setup']);
