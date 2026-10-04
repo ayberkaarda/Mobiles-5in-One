@@ -80,6 +80,12 @@ void main() {
       expect(page.nextCursor, isNull);
       final donation = await repo.byId('0192a4c1-a000-7a10-9b3c-000000000031');
       expect(donation.qty, 3);
+      // openapi `Donation` nests the shop and the item.
+      expect(donation.shopId, '0192a4c1-7000-7a10-9b3c-000000000001');
+      expect(donation.shopName, '[ÖRNEK] Köşe Fırını');
+      expect(donation.itemId, '0192a4c1-8000-7a10-9b3c-000000000011');
+      expect(donation.itemName, 'Ekmek');
+      expect(page.donations.single.shopName, '[ÖRNEK] Köşe Fırını');
     });
   });
 

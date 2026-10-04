@@ -34,7 +34,21 @@ abstract class Donation with _$Donation {
     DateTime? createdAt,
   }) = _Donation;
 
-  factory fromJson(Map<String, dynamic> json) => _$DonationFromJson(json);
+  /// The API nests the shop and the item (`shop: {id, name}`,
+  /// `item: {id, name}`, openapi `Donation`); the model keeps them flat.
+  factory fromJson(Map<String, dynamic> json) =>
+      _$DonationFromJson(_flattenRefs(json));
+}
+
+Map<String, dynamic> _flattenRefs(Map<String, dynamic> json) {
+  final shop = json['shop'];
+  final item = json['item'];
+  return {
+    for (final entry in json.entries)
+      if (entry.key != 'shop' && entry.key != 'item') entry.key: entry.value,
+    if (shop is Map) ...{'shop_id': shop['id'], 'shop_name': shop['name']},
+    if (item is Map) ...{'item_id': item['id'], 'item_name': item['name']},
+  };
 }
 
 /// One cursor page of `GET donations`.
