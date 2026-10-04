@@ -1,0 +1,135 @@
+import 'package:askida/core/attest/attest_channel.dart';
+import 'package:askida/core/attest/attestation_service.dart';
+import 'package:askida/core/env/app_env.dart';
+import 'package:askida/core/env/flavor.dart';
+import 'package:askida/core/http/api_client.dart';
+import 'package:askida/core/locale/app_locale.dart';
+import 'package:askida/core/storage/secure_token_store.dart';
+import 'package:askida/data/models/api_problem.dart';
+import 'package:askida/data/models/user.dart';
+import 'package:askida/data/repositories/anon_repository.dart';
+import 'package:askida/data/repositories/auth_repository.dart';
+import 'package:askida/data/repositories/donations_repository.dart';
+import 'package:askida/data/repositories/hooks_repository.dart';
+import 'package:askida/data/repositories/impact_repository.dart';
+import 'package:askida/data/repositories/impl/dio_anon_repository.dart';
+import 'package:askida/data/repositories/impl/dio_auth_repository.dart';
+import 'package:askida/data/repositories/impl/dio_donations_repository.dart';
+import 'package:askida/data/repositories/impl/dio_hooks_repository.dart';
+import 'package:askida/data/repositories/impl/dio_misc_repositories.dart';
+import 'package:askida/data/repositories/impl/dio_shops_repository.dart';
+import 'package:askida/data/repositories/impl/json_body.dart';
+import 'package:askida/data/repositories/payouts_repository.dart';
+import 'package:askida/data/repositories/push_repository.dart';
+import 'package:askida/data/repositories/shops_repository.dart';
+import 'package:askida/data/session.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Every seam the features use has a provider here; tests override them
+// (fakes live in test/fakes). Features never construct implementations.
+
+/// Secure storage of the user and anon tokens.
+final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
+
+/// `android` or `ios`, as the API expects it.
+final devicePlatformProvider = Provider<String>(
+  (ref) => defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+);
+
+/// The single HTTP client. A 401 `auth.unauthenticated` clears the token and
+/// updates the session, which makes the guards send the user to sign-in.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final session = ref.read(sessionProvider.notifier);
+  return ApiClient(
+    baseUrl: ref.watch(appEnvProvider).apiBaseUrl,
+    tokens: ref.watch(tokenStoreProvider),
+    languageTag: () => ref.read(apiLanguageProvider),
+    onUnauthenticated: (scope) => switch (scope) {
+      AuthScope.user => session.signedOut(),
+      AuthScope.anon => session.anonCleared(),
+      AuthScope.none => null,
+    },
+  );
+});
+
+/// Wipes the offline database after an account or anon identity is erased.
+final localDataEraserProvider = Provider<LocalDataEraser>((ref) => () async {});
+
+/// Device attestation for the anon identity (dev flavor fallback inside).
+final attestationServiceProvider = Provider<AttestationService>(
+  (ref) => ChannelAttestationService(
+    channel: ref.watch(attestChannelProvider),
+    platform: ref.watch(devicePlatformProvider),
+    devFlavor: ref.watch(devFlavorProvider),
+  ),
+);
+
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => DioAuthRepository(
+    ref.watch(apiClientProvider),
+    platform: ref.watch(devicePlatformProvider),
+    session: ref.read(sessionProvider.notifier),
+    eraseLocalData: ref.watch(localDataEraserProvider),
+  ),
+);
+
+final anonRepositoryProvider = Provider<AnonRepository>(
+  (ref) => DioAnonRepository(
+    ref.watch(apiClientProvider),
+    attestation: ref.watch(attestationServiceProvider),
+    session: ref.read(sessionProvider.notifier),
+    eraseLocalData: ref.watch(localDataEraserProvider),
+  ),
+);
+
+/// Network-only shops repository; features use [shopsRepositoryProvider].
+final remoteShopsRepositoryProvider = Provider<ShopsRepository>(
+  (ref) => DioShopsRepository(ref.watch(apiClientProvider)),
+);
+
+final shopsRepositoryProvider = Provider<ShopsRepository>(
+  (ref) => ref.watch(remoteShopsRepositoryProvider),
+);
+
+final hooksRepositoryProvider = Provider<HooksRepository>(
+  (ref) => DioHooksRepository(ref.watch(apiClientProvider)),
+);
+
+final donationsRepositoryProvider = Provider<DonationsRepository>(
+  (ref) => DioDonationsRepository(ref.watch(apiClientProvider)),
+);
+
+final payoutsRepositoryProvider = Provider<PayoutsRepository>(
+  (ref) => DioPayoutsRepository(ref.watch(apiClientProvider)),
+);
+
+final impactRepositoryProvider = Provider<ImpactRepository>(
+  (ref) => DioImpactRepository(ref.watch(apiClientProvider)),
+);
+
+final pushRepositoryProvider = Provider<PushRepository>(
+  (ref) => DioPushRepository(ref.watch(apiClientProvider)),
+);
+
+/// Reads the secure store at launch and loads the account when a user
+/// token exists. Offline, the token is kept and the user stays unknown.
+final sessionRestoreProvider = FutureProvider<void>((ref) async {
+  final tokens = ref.read(tokenStoreProvider);
+  final hasAnon = await tokens.readAnon() != null;
+  User? user;
+  if (await tokens.readUser() != null) {
+    try {
+      user = await ref.read(authRepositoryProvider).me();
+    } on ApiProblem {
+      user = null;
+    }
+  }
+  ref
+      .read(sessionProvider.notifier)
+      .restored(
+        hasUserToken: await tokens.readUser() != null,
+        hasAnonToken: hasAnon,
+        user: user,
+      );
+});
