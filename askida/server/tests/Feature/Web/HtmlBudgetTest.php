@@ -23,6 +23,15 @@ dataset('public pages within budget', [
     // endregion shell
 
     // region pages
+    'home en' => ['/en', WebPage::BUDGET, 'en'],
+    'how it works' => ['/nasil-calisir', WebPage::BUDGET, 'tr'],
+    'how it works en' => ['/en/how-it-works', WebPage::BUDGET, 'en'],
+    'merchants' => ['/esnaf', WebPage::BUDGET, 'tr'],
+    'donors' => ['/bagisci', WebPage::BUDGET, 'tr'],
+    'recipients' => ['/askidan-al', WebPage::BUDGET, 'tr'],
+    'faq' => ['/sss', WebPage::BUDGET_LONG, 'tr'],
+    'about' => ['/hakkinda', WebPage::BUDGET, 'tr'],
+    'contact' => ['/iletisim', WebPage::BUDGET, 'tr'],
     // endregion pages
 
     // region content
