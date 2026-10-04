@@ -55,3 +55,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Device attestation for the anonymous recipient identity
+    // (AttestChannel.kt, classic request API). No key ships with the app.
+    implementation("com.google.android.play:integrity:1.4.0")
+}
