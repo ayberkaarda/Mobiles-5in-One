@@ -1,4 +1,5 @@
 import 'package:askida/design/widgets/mode_switcher.dart';
+import 'package:askida/features/settings/presentation/settings_screen.dart';
 import 'package:askida/routing/app_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,4 +54,30 @@ void main() {
       findsOneWidget,
     );
   });
+
+  for (final mode in AppMode.values) {
+    testWidgets('settings open from the ${mode.name} app bar, no account', (
+      tester,
+    ) async {
+      await tester.pumpAskida(locale: const Locale('tr'));
+      await tester.tap(modeTab(mode));
+      await tester.pumpAndSettle();
+
+      final action = find.byKey(const ValueKey('shell-settings'));
+      expect(action, findsOneWidget);
+      expect(find.byTooltip('Ayarlar'), findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      // A pushed page over the shell (the shell's location stays).
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text('Dil'), findsWidgets);
+      expect(find.text('Görünüm'), findsWidgets);
+
+      // Back returns to the same mode.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(selectedMode(tester), mode);
+    });
+  }
 }
