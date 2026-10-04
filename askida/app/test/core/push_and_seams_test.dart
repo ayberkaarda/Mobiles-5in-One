@@ -18,50 +18,90 @@ import '../fakes/fake_identity_provider.dart';
 import '../fakes/fake_push_service.dart';
 
 void main() {
-  // The exact payloads the server builds today (title, body, data).
+  // The exact data the server sends (openapi `PushDataHooksIssued` and
+  // `PushDataHookRedeemed` examples), with the notification title/body.
+  const shopId = '0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90';
+  const donationId = '0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c91';
   final newHooks = PushMessage.fromPayload(const {
     'title': 'Yeni askı',
-    'body': '3 ekmek askıya bırakıldı.',
-    'data': {'item': 'ekmek', 'count': '3'},
+    'body': '2 Ekmek askıya bırakıldı.',
+    'data': {
+      'type': 'hooks.issued',
+      'shop_id': shopId,
+      'item': 'Ekmek',
+      'count': '2',
+    },
   });
   final redeemed = PushMessage.fromPayload(const {
     'title': 'Askın alındı',
-    'body': '[ÖRNEK] Köşe Fırını içindeki askından 1 ekmek alındı.',
-    'data': {'item': 'ekmek', 'shop': '[ÖRNEK] Köşe Fırını'},
+    'body': 'Çınar Fırını içindeki askından 1 Ekmek alındı.',
+    'data': {
+      'type': 'hook.redeemed',
+      'donation_id': donationId,
+      'shop_id': shopId,
+      'item': 'Ekmek',
+      'shop': 'Çınar Fırını',
+    },
   });
 
   group('push routing model', () {
-    test('merchant new hooks open the redemptions list', () {
+    test('hooks.issued opens the merchant redemptions list', () {
       expect(pushKindOf(newHooks), PushKind.newHooks);
       expect(routeForPush(newHooks), '/merchant/redemptions');
     });
 
-    test('donor collected unit opens the donations', () {
+    test('hook.redeemed opens the donation', () {
       expect(pushKindOf(redeemed), PushKind.redeemed);
-      expect(routeForPush(redeemed), '/donor/donations');
+      expect(routeForPush(redeemed), '/donor/donation/$donationId');
     });
 
-    test('an explicit type and donation id win', () {
+    test('a flat data map (data-only transport) routes the same', () {
       final message = PushMessage.fromPayload(const {
         'type': 'hook.redeemed',
-        'donation_id': 'abc-1',
+        'donation_id': donationId,
+        'shop_id': shopId,
+        'item': 'Ekmek',
+        'shop': 'Çınar Fırını',
       });
-      expect(message.data, {'type': 'hook.redeemed', 'donation_id': 'abc-1'});
-      expect(routeForPush(message), '/donor/donation/abc-1');
-      expect(
-        routeForPush(const PushMessage(data: {'type': 'hooks.issued'})),
-        '/merchant/redemptions',
-      );
+      expect(message.data['type'], 'hook.redeemed');
+      expect(routeForPush(message), '/donor/donation/$donationId');
     });
 
-    test('a hostile donation id is not used as a path', () {
+    test('a missing or non-UUID donation id falls back to history', () {
+      for (final id in [null, '../../admin', 'abc-1', '$donationId/x']) {
+        expect(
+          routeForPush(
+            PushMessage(data: {'type': 'hook.redeemed', 'donation_id': ?id}),
+          ),
+          '/donor/donations',
+          reason: '$id',
+        );
+      }
+    });
+
+    test('the type decides, not the title or other keys', () {
+      // Shapes without `type` (an older server) open nothing.
       expect(
         routeForPush(
           const PushMessage(
-            data: {'type': 'hook.redeemed', 'donation_id': '../../admin'},
+            title: 'Yeni askı',
+            data: {'item': 'Ekmek', 'count': '2'},
           ),
         ),
-        '/donor/donations',
+        isNull,
+      );
+      expect(
+        routeForPush(
+          const PushMessage(
+            title: 'Askın alındı',
+            data: {'item': 'Ekmek', 'shop': 'Çınar Fırını'},
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        routeForPush(const PushMessage(data: {'type': 'hooks.unknown'})),
+        isNull,
       );
     });
 
@@ -70,13 +110,15 @@ void main() {
       expect(routeForPush(PushMessage.fromPayload(const {})), isNull);
     });
 
-    test('payloads carry no recipient data', () {
-      for (final message in [newHooks, redeemed]) {
-        expect(
-          message.data.keys,
-          everyElement(isIn(['item', 'count', 'shop'])),
-        );
-      }
+    test('payloads carry exactly the documented keys, no recipient data', () {
+      expect(newHooks.data.keys.toSet(), {'type', 'shop_id', 'item', 'count'});
+      expect(redeemed.data.keys.toSet(), {
+        'type',
+        'donation_id',
+        'shop_id',
+        'item',
+        'shop',
+      });
     });
   });
 
@@ -96,8 +138,9 @@ void main() {
           ),
         if (mode == AppMode.donor)
           GoRoute(
-            path: 'donations',
-            builder: (context, state) => const Text('donations screen'),
+            path: 'donation/:id',
+            builder: (context, state) =>
+                Text('donation ${state.pathParameters['id']}'),
           ),
       ],
       topLevelRoutes: const [],
@@ -129,7 +172,7 @@ void main() {
     );
     push.deliver(redeemed);
     await tester.pumpAndSettle();
-    expect(find.text('donations screen'), findsOneWidget);
+    expect(find.text('donation $donationId'), findsOneWidget);
   });
 
   group('defaults of the platform seams', () {

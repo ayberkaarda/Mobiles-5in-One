@@ -92,31 +92,55 @@ void main() {
   });
 
   group('tapping a notification opens its screen', () {
+    // Server data shapes (openapi `PushData`); ids are UUIDs.
+    const shopId = '0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90';
+    const donationId = '0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c91';
     final cases = <String, (Map<String, Object?>, String)>{
-      "merchant 'Yeni askı' -> redemptions": (
+      "merchant 'Yeni askı' (hooks.issued) -> redemptions": (
         {
           'title': 'Yeni askı',
-          'body': '2 ekmek askıya bırakıldı',
-          'data': {'item': 'Ekmek', 'count': 2},
+          'body': '2 Ekmek askıya bırakıldı.',
+          'data': {
+            'type': 'hooks.issued',
+            'shop_id': shopId,
+            'item': 'Ekmek',
+            'count': '2',
+          },
         },
         'at /merchant/redemptions',
       ),
-      'merchant typed payload': (
-        {
-          'data': {'type': 'hooks.issued'},
-        },
-        'at /merchant/redemptions',
-      ),
-      "donor 'Askın alındı' -> history": (
+      "donor 'Askın alındı' (hook.redeemed) -> receipt": (
         {
           'title': 'Askın alındı',
-          'data': {'item': 'Ekmek', 'shop': 'Köşe Fırını'},
+          'body': 'Köşe Fırını içindeki askından 1 Ekmek alındı.',
+          'data': {
+            'type': 'hook.redeemed',
+            'donation_id': donationId,
+            'shop_id': shopId,
+            'item': 'Ekmek',
+            'shop': 'Köşe Fırını',
+          },
+        },
+        'at donation $donationId',
+      ),
+      'donor payload with a broken donation id -> history': (
+        {
+          'data': {
+            'type': 'hook.redeemed',
+            'donation_id': 'abc-1',
+            'shop_id': shopId,
+            'item': 'Ekmek',
+            'shop': 'Köşe Fırını',
+          },
         },
         'at /donor/donations',
       ),
-      'donor payload with a donation id -> receipt': (
-        {'type': 'hook.redeemed', 'donation_id': 'abc-1'},
-        'at donation abc-1',
+      'untyped payload -> stays': (
+        {
+          'title': 'Yeni askı',
+          'data': {'item': 'Ekmek', 'count': '2'},
+        },
+        'at /recipient',
       ),
       'unknown payload -> stays': ({'title': 'Başka bir şey'}, 'at /recipient'),
     };

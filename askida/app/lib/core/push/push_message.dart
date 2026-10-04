@@ -32,44 +32,42 @@ class PushMessage {
   final String? title;
   final String? body;
   final Map<String, String> data;
-
-  /// Title of the merchant notification for new units on the rail.
-  static const newHooksTitle = 'Yeni askı';
-
-  /// Title of the donor notification when a unit was collected.
-  static const redeemedTitle = 'Askın alındı';
 }
 
-/// What a push is about.
-enum PushKind { newHooks, redeemed, unknown }
+/// What a push is about, from its `type` data value (openapi `PushData`).
+enum PushKind {
+  /// `{type: hooks.issued, shop_id, item, count}`: "Yeni askı" to the
+  /// owner and staff of the shop.
+  newHooks,
 
-/// Classifies [message]. An explicit `type` (`hooks.issued`,
-/// `hook.redeemed`) wins; otherwise the shapes the server sends today:
-/// new hooks carry `item` + `count`, a collected unit `item` + `shop`.
-PushKind pushKindOf(PushMessage message) {
-  final type = message.data['type'];
-  if (type == 'hooks.issued') return PushKind.newHooks;
-  if (type == 'hook.redeemed') return PushKind.redeemed;
-  final data = message.data;
-  if (message.title == PushMessage.newHooksTitle ||
-      (data.containsKey('item') && data.containsKey('count'))) {
-    return PushKind.newHooks;
-  }
-  if (message.title == PushMessage.redeemedTitle ||
-      (data.containsKey('item') && data.containsKey('shop'))) {
-    return PushKind.redeemed;
-  }
-  return PushKind.unknown;
+  /// `{type: hook.redeemed, donation_id, shop_id, item, shop}`: "Askın
+  /// alındı" to the donor whose unit was collected.
+  redeemed,
+
+  unknown,
 }
 
-/// Where tapping [message] opens: merchant 'Yeni askı' -> the redemptions
-/// list, donor 'Askın alındı' -> the donation (by `donation_id` when sent,
-/// else the donation history). Unknown pushes open nothing (null).
+/// Classifies [message] by its `type`. Messages without a known type (an
+/// older server, another sender) are [PushKind.unknown].
+PushKind pushKindOf(PushMessage message) => switch (message.data['type']) {
+  'hooks.issued' => PushKind.newHooks,
+  'hook.redeemed' => PushKind.redeemed,
+  _ => PushKind.unknown,
+};
+
+final RegExp _uuid = RegExp(
+  '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+  r'[0-9a-fA-F]{12}$',
+);
+
+/// Where tapping [message] opens: `hooks.issued` -> the merchant's
+/// redemptions list; `hook.redeemed` -> the donation `donation_id` (the
+/// donation history when the id is missing or not a UUID, so nothing else
+/// is ever used as a path). Unknown pushes open nothing (null).
 String? routeForPush(PushMessage message) => switch (pushKindOf(message)) {
   PushKind.newHooks => AppPaths.merchantRedemptions,
   PushKind.redeemed => switch (message.data['donation_id']) {
-    final String id when RegExp(r'^[A-Za-z0-9-]{1,64}$').hasMatch(id) =>
-      AppPaths.donation(id),
+    final String id when _uuid.hasMatch(id) => AppPaths.donation(id),
     _ => AppPaths.donorDonations,
   },
   PushKind.unknown => null,
