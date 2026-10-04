@@ -4,9 +4,11 @@ use App\Domain\Anon\Models\DevicePlatform;
 use App\Domain\Auth\Models\DevicePushToken;
 use App\Domain\Hooks\Events\HookRedeemed;
 use App\Domain\Hooks\Listeners\NotifyDonorRedeemed;
+use App\Domain\Hooks\Listeners\NotifyShopNewHooks;
 use App\Domain\Push\Contracts\PushTransport;
 use App\Domain\Push\Jobs\SendPush;
 use App\Domain\Push\PushMessage;
+use App\Domain\Push\PushType;
 use App\Domain\Push\Transports\LogPushTransport;
 use App\Models\User;
 use Illuminate\Cache\RateLimiter;
@@ -74,7 +76,13 @@ it('pushes "Askın alındı" to the donor with the item and shop names only', fu
 
         return $job->userId === $donor->id
             && $job->message->title === 'Askın alındı'
-            && $job->message->data === ['item' => 'Ekmek', 'shop' => $shop->name]
+            && $job->message->data === [
+                'type' => 'hook.redeemed',
+                'donation_id' => $hook->donation_id,
+                'shop_id' => $shop->id,
+                'item' => 'Ekmek',
+                'shop' => $shop->name,
+            ]
             && ! str_contains($serialized, $device->anon_id)
             && ! str_contains($serialized, $device->id)
             && ! str_contains($serialized, $code)
@@ -101,8 +109,31 @@ it('delivers to every device of the donor through the transport', function (): v
         ->and($this->transport->sent[0]['message']->toArray())->toBe([
             'title' => 'Askın alındı',
             'body' => "{$shop->name} içindeki askından 1 Ekmek alındı.",
-            'data' => ['item' => 'Ekmek', 'shop' => $shop->name],
+            'data' => [
+                'type' => 'hook.redeemed',
+                'donation_id' => $hook->donation_id,
+                'shop_id' => $shop->id,
+                'item' => 'Ekmek',
+                'shop' => $shop->name,
+            ],
         ]);
+});
+
+it('gives the app a routable type and string ids in every push it sends', function (): void {
+    $donor = NotifyDonorRedeemed::message('Ekmek', 'Çınar Fırını', (string) Str::uuid7(), (string) Str::uuid7());
+    $shop = NotifyShopNewHooks::message(2, 'Ekmek', (string) Str::uuid7());
+
+    expect($donor->data['type'])->toBe(PushType::HookRedeemed->value)
+        ->and($shop->data['type'])->toBe(PushType::HooksIssued->value)
+        ->and(array_keys($donor->data))->toBe(['type', 'donation_id', 'shop_id', 'item', 'shop'])
+        ->and(array_keys($shop->data))->toBe(['type', 'shop_id', 'item', 'count']);
+
+    foreach ([$donor, $shop] as $message) {
+        expect(Str::isUuid($message->data['shop_id']))->toBeTrue()
+            ->and(array_filter($message->data, 'is_string'))->toBe($message->data);
+    }
+
+    expect(Str::isUuid($donor->data['donation_id']))->toBeTrue();
 });
 
 it('sends nothing for an anonymised donation', function (): void {

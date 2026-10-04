@@ -87,6 +87,7 @@ it('tells the shop members about new units without naming the donor', function (
         $text = json_encode($push['message']->toArray(), JSON_UNESCAPED_UNICODE);
         expect($push['message']->title)->toBe('Yeni askı')
             ->and($push['message']->body)->toBe('2 Ekmek askıya bırakıldı.')
+            ->and($push['message']->data)->toBe(['type' => 'hooks.issued', 'shop_id' => $shop->id, 'item' => 'Ekmek', 'count' => '2'])
             ->and($text)->not->toContain($donor->id)->not->toContain($donor->email)->not->toContain($donor->name)->not->toContain($donation->id);
     }
 });
