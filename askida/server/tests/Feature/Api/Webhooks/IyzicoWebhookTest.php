@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Illuminate\Support\Testing\Fakes\QueueFake;
 use Illuminate\Testing\TestResponse;
 use Tests\Support\ScriptedPaymentGateway;
 
@@ -136,6 +137,7 @@ it('answers a replayed event as duplicate without processing it again', function
     $headers = ScriptedPaymentGateway::sign($body);
 
     deliverWebhook($body, $headers)->assertOk()->assertExactJson(['status' => 'accepted']);
+    PaymentEvent::query()->update(['processed_at' => now()]);
     deliverWebhook($body, $headers)->assertOk()->assertExactJson(['status' => 'duplicate']);
 
     // A re-signed resend of the same event id (new timestamp, other bytes) is a duplicate too.
@@ -181,4 +183,39 @@ it('limits deliveries to 120 per minute per address', function (): void {
 
     // Another address keeps its own budget.
     deliverWebhook($body, ScriptedPaymentGateway::sign($body), '198.51.100.8')->assertOk();
+});
+
+it('queues a retried delivery again when the first dispatch failed, once, and nothing after processing', function (): void {
+    $fake = new class($this->app) extends QueueFake
+    {
+        public bool $failNext = true;
+
+        public function push($job, $data = '', $queue = null)
+        {
+            if ($this->failNext) {
+                $this->failNext = false;
+
+                throw new RuntimeException('queue down');
+            }
+
+            return parent::push($job, $data, $queue);
+        }
+    };
+    Queue::swap($fake);
+
+    $body = webhookBody('evt-redispatch-1');
+    $headers = ScriptedPaymentGateway::sign($body);
+
+    $this->withoutExceptionHandling();
+    expect(fn () => deliverWebhook($body, $headers))->toThrow(RuntimeException::class);
+    $fake->assertNothingPushed();
+    expect(PaymentEvent::query()->count())->toBe(1);
+
+    deliverWebhook($body, $headers)->assertOk()->assertExactJson(['status' => 'duplicate']);
+    $fake->assertPushed(ProcessPaymentEvent::class, 1);
+
+    PaymentEvent::query()->update(['processed_at' => now()]);
+    deliverWebhook($body, $headers)->assertOk()->assertExactJson(['status' => 'duplicate']);
+    $fake->assertPushed(ProcessPaymentEvent::class, 1);
+    expect(PaymentEvent::query()->count())->toBe(1);
 });

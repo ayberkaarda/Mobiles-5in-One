@@ -22,8 +22,8 @@ use Illuminate\Support\Str;
  *    with the headers. A bad signature and a stale timestamp get the same 401
  *    `auth.token_invalid` problem (no oracle telling which check failed) and leave no row.
  * 2. A verified delivery is recorded once in `payment_events`; the unique
- *    (provider, event_id) index decides, so a replay answers `duplicate` and dispatches
- *    nothing.
+ *    (provider, event_id) index decides, so a replay answers `duplicate`; it queues the
+ *    job again only while the stored event is not yet processed.
  * 3. A new delivery answers `accepted` at once and queues `ProcessPaymentEvent`, which
  *    re-reads the payment from the provider. The event body never changes money state.
  */
@@ -58,6 +58,18 @@ final class IyzicoWebhookController extends Controller
         ]);
 
         if ($inserted === 0) {
+            // A stored event that was never processed (the dispatch after the insert failed,
+            // or the job is still waiting) is queued again; the job is idempotent. A
+            // processed event queues nothing.
+            $stored = DB::table('payment_events')
+                ->where('provider', self::PROVIDER)
+                ->where('event_id', $event->eventId)
+                ->first(['id', 'processed_at']);
+
+            if ($stored !== null && $stored->processed_at === null) {
+                ProcessPaymentEvent::dispatch((string) $stored->id, $event->providerToken);
+            }
+
             return new JsonResponse(['status' => 'duplicate']);
         }
 
