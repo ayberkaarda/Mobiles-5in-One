@@ -149,5 +149,141 @@
   "categoryDiger": "Diğer",
   "@categoryDiger": {
     "description": "Item category."
+  },
+  "problemValidationFailed": "Bazı bilgiler eksik ya da hatalı. İşaretli alanlara bir göz at.",
+  "@problemValidationFailed": {
+    "description": "Error copy for problem code validation.failed."
+  },
+  "problemAuthInvalidCredentials": "E-posta ya da şifre eşleşmedi.",
+  "@problemAuthInvalidCredentials": {
+    "description": "Error copy for problem code auth.invalid_credentials."
+  },
+  "problemAuthLocked": "Çok fazla deneme oldu. Biraz bekleyip yeniden dene.",
+  "@problemAuthLocked": {
+    "description": "Error copy for problem code auth.locked."
+  },
+  "problemAuthUnauthenticated": "Oturumun sona erdi. Yeniden giriş yapabilirsin.",
+  "@problemAuthUnauthenticated": {
+    "description": "Error copy for problem code auth.unauthenticated."
+  },
+  "problemAuthEmailUnverified": "Bu işlem için önce e-posta adresini doğrulaman gerekiyor.",
+  "@problemAuthEmailUnverified": {
+    "description": "Error copy for problem code auth.email_unverified."
+  },
+  "problemAuthTokenInvalid": "Kod geçersiz ya da süresi dolmuş. Yeni bir kod isteyebilirsin.",
+  "@problemAuthTokenInvalid": {
+    "description": "Error copy for problem code auth.token_invalid."
+  },
+  "problemForbidden": "Bu işlem için yetkin yok.",
+  "@problemForbidden": {
+    "description": "Error copy for problem code forbidden."
+  },
+  "problemNotFound": "Aradığın kayıt bulunamadı.",
+  "@problemNotFound": {
+    "description": "Error copy for problem code not_found."
+  },
+  "problemConflict": "Bu işlem şu anki durumla çakışıyor. Sayfayı yenileyip yeniden dene.",
+  "@problemConflict": {
+    "description": "Error copy for problem code conflict."
+  },
+  "problemRateLimited": "Kısa sürede çok fazla istek gönderildi. Biraz sonra yeniden dene.",
+  "@problemRateLimited": {
+    "description": "Error copy for problem code rate_limited."
+  },
+  "problemPayloadTooLarge": "Dosya çok büyük. En fazla 5 MB yükleyebilirsin.",
+  "@problemPayloadTooLarge": {
+    "description": "Error copy for problem code payload_too_large."
+  },
+  "problemUnsupportedMediaType": "Bu dosya türü desteklenmiyor. PDF, JPEG ya da PNG yükleyebilirsin.",
+  "@problemUnsupportedMediaType": {
+    "description": "Error copy for problem code unsupported_media_type."
+  },
+  "problemServerError": "Bir şeyler ters gitti. Biraz sonra yeniden dene.",
+  "@problemServerError": {
+    "description": "Error copy for problem code server_error."
+  },
+  "problemBadRequest": "İstek işlenemedi. Yeniden dene.",
+  "@problemBadRequest": {
+    "description": "Error copy for problem code bad_request."
+  },
+  "problemMethodNotAllowed": "Bu işlem şu an yapılamıyor.",
+  "@problemMethodNotAllowed": {
+    "description": "Error copy for problem code method_not_allowed."
+  },
+  "problemHttpsRequired": "Güvenli bağlantı kurulamadı.",
+  "@problemHttpsRequired": {
+    "description": "Error copy for problem code https_required."
+  },
+  "problemServiceUnavailable": "Hizmet şu an yanıt vermiyor. Biraz sonra yeniden dene.",
+  "@problemServiceUnavailable": {
+    "description": "Error copy for problem code service_unavailable."
+  },
+  "problemShopHasOpenHooks": "Dükkânında bekleyen askılar var. Hepsi verildikten ya da iade edildikten sonra hesabını silebilirsin.",
+  "@problemShopHasOpenHooks": {
+    "description": "Error copy for problem code shop.has_open_hooks (account deletion of a merchant)."
+  },
+  "problemShopNotVerified": "Bu dükkân henüz doğrulanmadı.",
+  "@problemShopNotVerified": {
+    "description": "Error copy for problem code shop.not_verified."
+  },
+  "problemShopNotPayable": "Bu dükkâna şu an askı bırakılamıyor. Başka bir dükkân seçebilirsin.",
+  "@problemShopNotPayable": {
+    "description": "Error copy for problem code shop.not_payable."
+  },
+  "problemAnonDailyCap": "Bugün için alabileceğin kadarını aldın. Yarın yeniden bakabilirsin.",
+  "@problemAnonDailyCap": {
+    "description": "Error copy for problem code anon.daily_cap. Calm, no judgement."
+  },
+  "problemAnonShopCap": "Bu dükkândan bugün bir askı aldın. Yarın yeniden alabilirsin.",
+  "@problemAnonShopCap": {
+    "description": "Error copy for problem code anon.shop_cap."
+  },
+  "problemHookNoneAvailable": "Bu üründen şu an askıda kalmadı. Yakındaki başka bir dükkâna bakabilirsin.",
+  "@problemHookNoneAvailable": {
+    "description": "Error copy for problem code hook.none_available."
+  },
+  "problemHookCodeInvalid": "Bu kod geçerli değil. Kodu yeniden okutmayı ya da elle yazmayı dene.",
+  "@problemHookCodeInvalid": {
+    "description": "Error copy for problem code hook.code_invalid (merchant side)."
+  },
+  "problemHookCodeExpired": "Bu kodun süresi dolmuş. Yeni bir kod alınabilir.",
+  "@problemHookCodeExpired": {
+    "description": "Error copy for problem code hook.code_expired."
+  },
+  "problemHookWrongShop": "Bu kod başka bir dükkâna ait.",
+  "@problemHookWrongShop": {
+    "description": "Error copy for problem code hook.wrong_shop."
+  },
+  "problemDonationCapExceeded": "Bugünkü askı bırakma sınırına ulaştın. Yarın yeniden bırakabilirsin.",
+  "@problemDonationCapExceeded": {
+    "description": "Error copy for problem code donation.cap_exceeded (daily donor cap)."
+  },
+  "problemDonationTxCapExceeded": "Tek seferde bırakılabilecek tutarın üstüne çıktın. Adedi azaltabilirsin.",
+  "@problemDonationTxCapExceeded": {
+    "description": "Error copy for problem code donation.tx_cap_exceeded (per transaction cap)."
+  },
+  "problemPaymentMismatch": "Ödeme doğrulanamadı. Kayıt incelenecek ve sonucu sana bildirilecek.",
+  "@problemPaymentMismatch": {
+    "description": "Error copy for problem code payment.mismatch."
+  },
+  "problemNetworkOffline": "İnternet bağlantısı yok. Bağlantını kontrol edip yeniden dene.",
+  "@problemNetworkOffline": {
+    "description": "Error copy when the device cannot reach the server."
+  },
+  "problemNetworkTimeout": "Sunucu zamanında yanıt vermedi. Yeniden dene.",
+  "@problemNetworkTimeout": {
+    "description": "Error copy when a request timed out."
+  },
+  "problemBadResponse": "Sunucudan beklenmeyen bir yanıt geldi. Yeniden dene.",
+  "@problemBadResponse": {
+    "description": "Error copy when the server answer cannot be read."
+  },
+  "problemCancelled": "İşlem iptal edildi.",
+  "@problemCancelled": {
+    "description": "Error copy when the app cancelled a request."
+  },
+  "problemGeneric": "Bir şeyler ters gitti. Yeniden dene.",
+  "@problemGeneric": {
+    "description": "Error copy for any problem code the app does not know."
   }
 }
