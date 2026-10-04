@@ -38,8 +38,13 @@ final class OgImageRenderer
 
     private const MARGIN = 80;
 
+    public function __construct(private readonly DirectoryQuery $directory) {}
+
     /**
-     * PNG bytes of a public shop's image, rendered once per name and update time.
+     * PNG bytes of a public shop's image, rendered once per name and update time. Writing a
+     * new image removes the shop's older variants (one file per shop on disk). The listing
+     * is checked again after the write: a shop unlisted while its image was being drawn
+     * (the unlisting cleanup may already have run) keeps no file behind.
      */
     public function forShop(Shop $shop): string
     {
@@ -52,6 +57,11 @@ final class OgImageRenderer
 
         $png = $this->render(self::truncate($shop->name), 76, wordmark: true);
         $disk->put($path, $png);
+        $this->forget($shop->slug, except: $path);
+
+        if ($this->directory->shop($shop->slug) === null) {
+            $disk->delete($path);
+        }
 
         return $png;
     }
@@ -65,15 +75,16 @@ final class OgImageRenderer
 
     /**
      * Deletes every cached image of the shop with this slug (exactly `<slug>-<sha1>.png`,
-     * so a shop whose slug starts with another shop's slug is never touched).
+     * so a shop whose slug starts with another shop's slug is never touched), except the
+     * given path.
      */
-    public function forget(string $slug): void
+    public function forget(string $slug, ?string $except = null): void
     {
         $disk = $this->disk();
         $pattern = '#^'.preg_quote(self::DIRECTORY.'/'.$slug, '#').'-[0-9a-f]{40}\.png$#';
 
         foreach ($disk->files(self::DIRECTORY) as $file) {
-            if (preg_match($pattern, $file) === 1) {
+            if ($file !== $except && preg_match($pattern, $file) === 1) {
                 $disk->delete($file);
             }
         }

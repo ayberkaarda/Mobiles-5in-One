@@ -53,6 +53,9 @@ return [
     */
     'apple' => [
         'client_id' => $list(env('APPLE_CLIENT_ID', '')),
+        // Apple Developer team id (also used by DeviceCheck): prefix of the app id in
+        // /.well-known/apple-app-site-association; empty renders the bare app id.
+        'team_id' => (string) env('APPLE_TEAM_ID', ''),
         'issuers' => ['https://appleid.apple.com'],
         'jwks_url' => 'https://appleid.apple.com/auth/keys',
         'nonce_hashed' => true,
