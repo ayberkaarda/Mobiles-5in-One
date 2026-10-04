@@ -24,13 +24,13 @@ uses(RefreshDatabase::class);
 
 beforeEach(fn () => AdminTestKit::boot());
 
-function asEnvironment(string $name): void
+function adminAsEnvironment(string $name): void
 {
     app()->detectEnvironment(fn (): string => $name);
 }
 
 it('denies every address in production when the allowlist is empty, missing or wrongly typed', function (mixed $value): void {
-    asEnvironment('production');
+    adminAsEnvironment('production');
     config(['admin.ip_allowlist' => $value]);
 
     $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])->get('https://localhost/admin/login')->assertForbidden();
@@ -46,7 +46,7 @@ it('denies every address in production when the allowlist is empty, missing or w
 ]);
 
 it('logs a clear message when it closes the panel for a misconfigured list', function (): void {
-    asEnvironment('production');
+    adminAsEnvironment('production');
     config(['admin.ip_allowlist' => []]);
     $messages = [];
     Event::listen(MessageLogged::class, function (MessageLogged $event) use (&$messages): void {
@@ -59,7 +59,7 @@ it('logs a clear message when it closes the panel for a misconfigured list', fun
 });
 
 it('still applies a valid list in production and honours the explicit wildcard', function (): void {
-    asEnvironment('production');
+    adminAsEnvironment('production');
 
     config(['admin.ip_allowlist' => ['203.0.113.7', '192.0.2.0/24', '2001:db8::/32']]);
     $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])->get('https://localhost/admin/login')->assertOk();
@@ -72,7 +72,7 @@ it('still applies a valid list in production and honours the explicit wildcard',
 });
 
 it('keeps an empty list open in local and testing', function (string $environment): void {
-    asEnvironment($environment);
+    adminAsEnvironment($environment);
     config(['admin.ip_allowlist' => []]);
 
     $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.9'])->get('/admin/login')->assertOk();
