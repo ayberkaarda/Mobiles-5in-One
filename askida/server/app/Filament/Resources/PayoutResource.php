@@ -7,10 +7,12 @@ use App\Domain\Admin\Services\AdminAudit;
 use App\Domain\Auth\Abilities\AdminPermission;
 use App\Domain\Payments\Models\Payout;
 use App\Domain\Payments\Models\PayoutStatus;
+use App\Domain\Shops\Models\Shop;
 use App\Filament\Concerns\GatedByAdminAbilities;
 use App\Filament\Resources\PayoutResource\Pages;
 use App\Filament\Support\Money;
 use App\Filament\Support\PanelActor;
+use App\Filament\Support\RevealFinancialsAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -64,6 +66,10 @@ class PayoutResource extends Resource
                 Tables\Filters\TernaryFilter::make('hold')->label('Beklemede'),
             ])
             ->actions([
+                RevealFinancialsAction::configure(
+                    Tables\Actions\Action::make('reveal_financials'),
+                    fn (Payout $record): Shop => $record->shop()->firstOrFail(),
+                ),
                 Tables\Actions\Action::make('hold')
                     ->label('Beklet')
                     ->icon('heroicon-o-pause-circle')
