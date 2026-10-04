@@ -59,8 +59,8 @@ final class AuthorizationMatrix
             'PATCH me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.update']),
             'DELETE me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.destroy']),
             'PUT me/push-token' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.push-token']),
-            'POST anon/attest' => self::api('3.1', 'Y - - - -', ['pending', 'device attestation and anon tokens']),
-            'DELETE anon/me' => self::api('3.1', '- - - - own', ['pending', 'device attestation and anon tokens']),
+            'POST anon/attest' => self::api('3.1', 'Y - - - -', ['route', 'api.v1.anon.attest']),
+            'DELETE anon/me' => self::api('3.1', '- - - - own', ['route', 'api.v1.anon.me.destroy']),
 
             // 3.2 Shops and catalog
             'GET shops' => self::api('3.2', '- Y Y Y Y', ['policy', ShopPolicy::class, 'viewAny', [Shop::class]], ['route', 'api.v1.shops.index']),
@@ -77,7 +77,7 @@ final class AuthorizationMatrix
             'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']]),
 
             // 3.4 Reservation and redemption
-            'POST hooks/reserve' => self::api('3.4', '- - - - own', ['policy', HookPolicy::class, 'reserve', [Hook::class]]),
+            'POST hooks/reserve' => self::api('3.4', '- - - - own', ['policy', HookPolicy::class, 'reserve', [Hook::class]], ['route', 'api.v1.hooks.reserve']),
             'POST shops/{id}/redeem' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'redeem', [Hook::class, 'shop']]),
             'GET shops/{id}/redemptions?day=' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'viewRedemptions', [Hook::class, 'shop']]),
 
