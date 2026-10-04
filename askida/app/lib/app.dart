@@ -1,5 +1,7 @@
 import 'package:askida/core/locale/app_locale.dart';
 import 'package:askida/design/theme.dart';
+import 'package:askida/features/settings/presentation/app_bootstrap.dart';
+import 'package:askida/features/settings/presentation/settings_controller.dart';
 import 'package:askida/l10n/gen/app_localizations.dart';
 import 'package:askida/routing/app_router.dart';
 import 'package:flutter/material.dart';
@@ -22,10 +24,13 @@ class AskidaApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AskidaTheme.light(),
       darkTheme: AskidaTheme.dark(),
+      themeMode: ref.watch(themeModeProvider),
       locale: locale ?? ref.watch(appLocaleProvider) ?? defaultLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
+      builder: (context, child) =>
+          AppBootstrap(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -301,5 +301,718 @@
         "type": "int"
       }
     }
+  },
+  "authSignInTitle": "Giriş yap",
+  "@authSignInTitle": {
+    "description": "Donor block (auth, donor, impact, settings) starts here. Title of the sign-in screen."
+  },
+  "authSignInLead": "Askıya bırakmak ya da dükkânını yönetmek için hesabınla giriş yap.",
+  "@authSignInLead": {
+    "description": "Lead text on the sign-in screen."
+  },
+  "authEmailLabel": "E-posta",
+  "@authEmailLabel": {
+    "description": "E-mail field label."
+  },
+  "authPasswordLabel": "Şifre",
+  "@authPasswordLabel": {
+    "description": "Password field label."
+  },
+  "authNewPasswordLabel": "Yeni şifre",
+  "@authNewPasswordLabel": {
+    "description": "New password field label on the reset screen."
+  },
+  "authPasswordHelper": "En az {min} karakter.",
+  "@authPasswordHelper": {
+    "description": "Password rule under the field.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "authNameLabel": "Adın",
+  "@authNameLabel": {
+    "description": "Name field label at registration."
+  },
+  "authNameHelper": "Yalnızca sana yazdığımız e-postalarda kullanılır.",
+  "@authNameHelper": {
+    "description": "Helper under the name field."
+  },
+  "authSignInAction": "Giriş yap",
+  "@authSignInAction": {
+    "description": "Primary sign-in button."
+  },
+  "authForgotLink": "Şifremi unuttum",
+  "@authForgotLink": {
+    "description": "Link to the password reset request."
+  },
+  "authOr": "ya da",
+  "@authOr": {
+    "description": "Separator between e-mail sign-in and provider buttons."
+  },
+  "authContinueWithApple": "Apple ile devam et",
+  "@authContinueWithApple": {
+    "description": "Sign in with Apple button."
+  },
+  "authContinueWithGoogle": "Google ile devam et",
+  "@authContinueWithGoogle": {
+    "description": "Sign in with Google button."
+  },
+  "authProviderConsentNote": "Apple ya da Google ile ilk kez devam edersen bağışçı hesabın açılır ve KVKK aydınlatma metnini (örnek metin) kabul etmiş olursun.",
+  "@authProviderConsentNote": {
+    "description": "Consent note under the provider buttons."
+  },
+  "authProviderUnavailable": "Bu giriş yöntemi bu sürümde kullanılamıyor. E-posta ve şifreyle devam edebilirsin.",
+  "@authProviderUnavailable": {
+    "description": "Shown when Apple or Google sign-in is not configured."
+  },
+  "authNoAccount": "Hesabın yok mu?",
+  "@authNoAccount": {
+    "description": "Text above the create-account button."
+  },
+  "authCreateAccountAction": "Hesap oluştur",
+  "@authCreateAccountAction": {
+    "description": "Button to the registration screen."
+  },
+  "authHaveAccount": "Zaten hesabım var",
+  "@authHaveAccount": {
+    "description": "Link from registration back to sign-in."
+  },
+  "authRegisterTitle": "Hesap oluştur",
+  "@authRegisterTitle": {
+    "description": "Title of the registration screen."
+  },
+  "authRegisterLead": "Hesap, askıya bırakmak ya da dükkânını listelemek için gerekir. Askıdan almak için hesap gerekmez.",
+  "@authRegisterLead": {
+    "description": "Lead text of the registration screen."
+  },
+  "authKindTitle": "Hesap türü",
+  "@authKindTitle": {
+    "description": "Heading of the account kind choice."
+  },
+  "authKindDonor": "Bağışçı",
+  "@authKindDonor": {
+    "description": "Donor account choice."
+  },
+  "authKindDonorBody": "Mahalle esnafında ekmek, çorba ya da defter askıya bırakırım.",
+  "@authKindDonorBody": {
+    "description": "Explanation of the donor account."
+  },
+  "authKindMerchant": "Esnaf",
+  "@authKindMerchant": {
+    "description": "Merchant account choice."
+  },
+  "authKindMerchantBody": "Dükkânımı listeler, askıdaki ürünleri veririm.",
+  "@authKindMerchantBody": {
+    "description": "Explanation of the merchant account."
+  },
+  "authKvkkConsent": "KVKK aydınlatma metnini (örnek metin) okudum, kabul ediyorum.",
+  "@authKvkkConsent": {
+    "description": "Consent checkbox at registration."
+  },
+  "authKvkkRequired": "Devam etmek için aydınlatma metnini kabul etmelisin.",
+  "@authKvkkRequired": {
+    "description": "Error when the consent box is not ticked."
+  },
+  "authRegisterAction": "Hesabı oluştur",
+  "@authRegisterAction": {
+    "description": "Primary registration button."
+  },
+  "authFieldRequired": "Bu alan gerekli.",
+  "@authFieldRequired": {
+    "description": "Field error: required."
+  },
+  "authFieldEmailInvalid": "Geçerli bir e-posta adresi yaz.",
+  "@authFieldEmailInvalid": {
+    "description": "Field error: e-mail format."
+  },
+  "authFieldEmailTaken": "Bu e-postayla bir hesap zaten var. Giriş yapabilirsin.",
+  "@authFieldEmailTaken": {
+    "description": "Field error: e-mail already registered."
+  },
+  "authFieldPasswordShort": "Şifre en az 10 karakter olmalı.",
+  "@authFieldPasswordShort": {
+    "description": "Field error: password too short."
+  },
+  "authFieldPasswordBreached": "Bu şifre sızdırılmış şifre listelerinde geçiyor. Başka bir şifre seç.",
+  "@authFieldPasswordBreached": {
+    "description": "Field error: password found in breach lists."
+  },
+  "authFieldInvalid": "Bu değer geçerli değil.",
+  "@authFieldInvalid": {
+    "description": "Field error: other validation codes."
+  },
+  "authForgotTitle": "Şifre sıfırlama",
+  "@authForgotTitle": {
+    "description": "Title of the reset request screen."
+  },
+  "authForgotLead": "E-posta adresini yaz; hesabın varsa 6 haneli bir kod göndereceğiz.",
+  "@authForgotLead": {
+    "description": "Lead of the reset request screen."
+  },
+  "authForgotAction": "Kod gönder",
+  "@authForgotAction": {
+    "description": "Button sending the reset code."
+  },
+  "authResetTitle": "Yeni şifre",
+  "@authResetTitle": {
+    "description": "Title of the reset screen."
+  },
+  "authResetLead": "{email} adresine gönderdiğimiz kodu ve yeni şifreni yaz.",
+  "@authResetLead": {
+    "description": "Lead of the reset screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResetAction": "Şifreyi değiştir",
+  "@authResetAction": {
+    "description": "Button of the reset screen."
+  },
+  "authResetDone": "Şifren değişti. Güvenliğin için tüm cihazlardaki oturumlar kapandı; yeni şifrenle giriş yapabilirsin.",
+  "@authResetDone": {
+    "description": "Shown after a successful reset."
+  },
+  "authCodeLabel": "Kod",
+  "@authCodeLabel": {
+    "description": "Label of the 6-digit code field."
+  },
+  "authCodeHelper": "E-postadaki 6 haneli kod.",
+  "@authCodeHelper": {
+    "description": "Helper of the code field."
+  },
+  "authCodeInvalid": "Kod 6 rakamdan oluşur.",
+  "@authCodeInvalid": {
+    "description": "Error of the code field."
+  },
+  "authVerifyTitle": "E-postanı doğrula",
+  "@authVerifyTitle": {
+    "description": "Title of the verification screen."
+  },
+  "authVerifyLead": "{email} adresine 6 haneli bir kod gönderdik.",
+  "@authVerifyLead": {
+    "description": "Lead of the verification screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authVerifyAction": "Doğrula",
+  "@authVerifyAction": {
+    "description": "Verification button."
+  },
+  "authVerifyLater": "Şimdilik geç",
+  "@authVerifyLater": {
+    "description": "Link that skips verification."
+  },
+  "authVerifyDone": "E-posta adresin doğrulandı.",
+  "@authVerifyDone": {
+    "description": "Snackbar after verification."
+  },
+  "donorNeedsDonorAccount": "Bu hesap bir esnaf hesabı. Askıya bırakmak için bağışçı hesabıyla giriş yapabilirsin; dükkânlara yine de göz atabilirsin.",
+  "@donorNeedsDonorAccount": {
+    "description": "Donor home when a merchant account is signed in."
+  },
+  "donorHistoryLink": "Bağış geçmişi",
+  "@donorHistoryLink": {
+    "description": "Link to the donation history."
+  },
+  "donorLocationTitle": "Yakındaki dükkânlar",
+  "@donorLocationTitle": {
+    "description": "Title of the location prompt."
+  },
+  "donorLocationRationale": "Dükkânları uzaklığa göre sıralamak için konumunu kullanabiliriz. Konumun yalnızca liste için kullanılır, kaydedilmez. İstersen bir ilçe de seçebilirsin.",
+  "@donorLocationRationale": {
+    "description": "Why the donor home asks for the location."
+  },
+  "donorLocationUnavailable": "Konum şu an kullanılamıyor. Bir ilçe seçerek dükkânları görebilirsin.",
+  "@donorLocationUnavailable": {
+    "description": "Shown when the location is refused or off."
+  },
+  "donorUseLocation": "Konumu kullan",
+  "@donorUseLocation": {
+    "description": "Button asking for the location."
+  },
+  "donorPickDistrict": "İlçe seç",
+  "@donorPickDistrict": {
+    "description": "Button opening the district picker."
+  },
+  "donorNearYou": "Konumuna yakın",
+  "@donorNearYou": {
+    "description": "Area label when the device location is used."
+  },
+  "donorChangeArea": "Değiştir",
+  "@donorChangeArea": {
+    "description": "Button changing the area."
+  },
+  "donorShopsTitle": "Doğrulanmış dükkânlar",
+  "@donorShopsTitle": {
+    "description": "Heading of the shop list."
+  },
+  "donorViewList": "Liste",
+  "@donorViewList": {
+    "description": "List view segment."
+  },
+  "donorViewMap": "Harita",
+  "@donorViewMap": {
+    "description": "Map view segment."
+  },
+  "donorNoShops": "Bu bölgede henüz doğrulanmış dükkân yok. Başka bir ilçe seçebilirsin.",
+  "@donorNoShops": {
+    "description": "Empty shop list."
+  },
+  "donorRetry": "Yeniden dene",
+  "@donorRetry": {
+    "description": "Retry button."
+  },
+  "donorShopTitle": "Dükkân",
+  "@donorShopTitle": {
+    "description": "Shop screen title while loading."
+  },
+  "donorOwnShop": "Bu senin dükkânın. Ürünlerini Esnaf bölümünden yönetebilirsin.",
+  "@donorOwnShop": {
+    "description": "Shown when a merchant opens their own shop."
+  },
+  "donorShopItemsTitle": "Askıya bırakabileceklerin",
+  "@donorShopItemsTitle": {
+    "description": "Heading of the item list."
+  },
+  "donorShopNoItems": "Bu dükkânda şu an askıya bırakılabilecek ürün yok.",
+  "@donorShopNoItems": {
+    "description": "Empty item list."
+  },
+  "donorShopFootnote": "Ödediğin ürün dükkânın askısına asılır. Kimin aldığını kimse bilmez, sen de bilmezsin.",
+  "@donorShopFootnote": {
+    "description": "Footnote on the shop screen."
+  },
+  "donorItemLabel": "{name}, {price}, askıda {count}",
+  "@donorItemLabel": {
+    "description": "Accessibility label of an item row.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "donateTitle": "Askıya bırak",
+  "@donateTitle": {
+    "description": "Title of the donation form."
+  },
+  "donateItemGone": "Bu ürün artık dükkânın listesinde değil.",
+  "@donateItemGone": {
+    "description": "Shown when the item is missing."
+  },
+  "donateQtyLabel": "Adet",
+  "@donateQtyLabel": {
+    "description": "Quantity heading."
+  },
+  "donateQtyValue": "{qty} adet",
+  "@donateQtyValue": {
+    "description": "Accessibility value of the quantity.",
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
+  "donateQtyLess": "Bir azalt",
+  "@donateQtyLess": {
+    "description": "Tooltip of the minus button."
+  },
+  "donateQtyMore": "Bir artır",
+  "@donateQtyMore": {
+    "description": "Tooltip of the plus button."
+  },
+  "donateMaxUnits": "Bir bağışta en fazla {max} adet bırakılabilir.",
+  "@donateMaxUnits": {
+    "description": "Hint at the 20-item maximum.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "donateTxCap": "Tek ödemede en fazla {amount} bırakılabilir.",
+  "@donateTxCap": {
+    "description": "Hint at the per-payment limit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateTotal": "Toplam",
+  "@donateTotal": {
+    "description": "Total label."
+  },
+  "donateTotalLabel": "Toplam {amount}",
+  "@donateTotalLabel": {
+    "description": "Accessibility label of the total.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateDailyCapNote": "Günlük toplam sınır {amount}.",
+  "@donateDailyCapNote": {
+    "description": "Note on the daily limit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateHowItWorks": "Ödeme, ödeme kuruluşunun güvenli sayfasında yapılır. Ödeme onaylanınca ürünler dükkânın askısına asılır ve e-postana makbuz gelir.",
+  "@donateHowItWorks": {
+    "description": "How the payment works."
+  },
+  "donatePayAction": "Ödemeye geç",
+  "@donatePayAction": {
+    "description": "Primary button starting the payment."
+  },
+  "donateCheckoutTitle": "Ödeme",
+  "@donateCheckoutTitle": {
+    "description": "Title of the payment page."
+  },
+  "donateCheckoutBlocked": "Ödeme sayfası güvenli adres listesinde olmadığı için açılmadı. Ödeme alınmadı.",
+  "@donateCheckoutBlocked": {
+    "description": "Shown when the checkout URL is not allowed."
+  },
+  "donateSeeStatus": "Bağışın durumunu gör",
+  "@donateSeeStatus": {
+    "description": "Button to the receipt."
+  },
+  "donateLeaveTitle": "Ödemeden çıkılsın mı?",
+  "@donateLeaveTitle": {
+    "description": "Dialog title when closing the payment page."
+  },
+  "donateLeaveBody": "Ödemeyi tamamlamadıysan ücret alınmaz. Bağışın durumunu geçmişte görebilirsin.",
+  "@donateLeaveBody": {
+    "description": "Dialog body when closing the payment page."
+  },
+  "donateLeaveStay": "Ödemeye dön",
+  "@donateLeaveStay": {
+    "description": "Dialog button staying on the payment page."
+  },
+  "donateLeaveConfirm": "Çık",
+  "@donateLeaveConfirm": {
+    "description": "Dialog button leaving the payment page."
+  },
+  "donationStatusInitiated": "Ödeme bekleniyor",
+  "@donationStatusInitiated": {
+    "description": "Donation status initiated."
+  },
+  "donationStatusPaid": "Askıda",
+  "@donationStatusPaid": {
+    "description": "Donation status paid."
+  },
+  "donationStatusFailed": "Ödeme tamamlanmadı",
+  "@donationStatusFailed": {
+    "description": "Donation status failed."
+  },
+  "donationStatusRefunded": "İade edildi",
+  "@donationStatusRefunded": {
+    "description": "Donation status refunded."
+  },
+  "donationLine": "{qty} × {item}",
+  "@donationLine": {
+    "description": "Quantity and item of a donation.",
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      },
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "donationItemFallback": "ürün",
+  "@donationItemFallback": {
+    "description": "Item word when the name is missing."
+  },
+  "receiptTitle": "Bağış",
+  "@receiptTitle": {
+    "description": "Title of the receipt screen."
+  },
+  "receiptPaidTitle": "Askıya asıldı",
+  "@receiptPaidTitle": {
+    "description": "Receipt heading when paid."
+  },
+  "receiptPaidBody": "Teşekkürler. Ürünler dükkânın askısında; makbuz e-postana gönderildi.",
+  "@receiptPaidBody": {
+    "description": "Receipt text when paid."
+  },
+  "receiptPendingTitle": "Ödeme henüz onaylanmadı",
+  "@receiptPendingTitle": {
+    "description": "Receipt heading while initiated."
+  },
+  "receiptPendingBody": "Ödemeyi tamamlamadıysan ücret alınmaz. Tamamladıysan onay birkaç dakika sürebilir.",
+  "@receiptPendingBody": {
+    "description": "Receipt text while initiated."
+  },
+  "receiptPendingConfirming": "Ödeme sayfası işlemin tamamlandığını bildirdi; onay kaydedilince ürünler askıya asılır. Birazdan yenileyebilirsin.",
+  "@receiptPendingConfirming": {
+    "description": "Receipt text when the link said paid but the server has not confirmed yet."
+  },
+  "receiptFailedTitle": "Ödeme tamamlanmadı",
+  "@receiptFailedTitle": {
+    "description": "Receipt heading when failed."
+  },
+  "receiptFailedBody": "Ücret alınmadı. İstersen dükkândan yeniden deneyebilirsin.",
+  "@receiptFailedBody": {
+    "description": "Receipt text when failed."
+  },
+  "receiptRefundedTitle": "İade edildi",
+  "@receiptRefundedTitle": {
+    "description": "Receipt heading when refunded."
+  },
+  "receiptRefundedBody": "Ödemen iade edildi; ayrıntılar e-postana gönderildi.",
+  "@receiptRefundedBody": {
+    "description": "Receipt text when refunded."
+  },
+  "receiptAmount": "Tutar",
+  "@receiptAmount": {
+    "description": "Receipt row: amount."
+  },
+  "receiptToShop": "Esnafa giden",
+  "@receiptToShop": {
+    "description": "Receipt row: net to the shop."
+  },
+  "receiptCommission": "Platform komisyonu",
+  "@receiptCommission": {
+    "description": "Receipt row: commission."
+  },
+  "receiptDate": "Tarih",
+  "@receiptDate": {
+    "description": "Receipt row: date."
+  },
+  "receiptStatus": "Durum",
+  "@receiptStatus": {
+    "description": "Receipt row: status."
+  },
+  "receiptAnonymityNote": "Askıdan kimin aldığı kaydedilmez; alındığında yalnızca \"Askın alındı\" bildirimi gelir.",
+  "@receiptAnonymityNote": {
+    "description": "Anonymity note on the receipt."
+  },
+  "receiptRefresh": "Yenile",
+  "@receiptRefresh": {
+    "description": "Button re-reading the donation."
+  },
+  "receiptBackToShops": "Dükkânlara dön",
+  "@receiptBackToShops": {
+    "description": "Button back to the donor home."
+  },
+  "historyTitle": "Bağış geçmişi",
+  "@historyTitle": {
+    "description": "Title of the history screen."
+  },
+  "historyEmptyBody": "Askıya bıraktıkların burada listelenir.",
+  "@historyEmptyBody": {
+    "description": "Empty history."
+  },
+  "historyMore": "Daha fazla göster",
+  "@historyMore": {
+    "description": "Button loading the next page."
+  },
+  "impactCardTitle": "Askıda: {area}",
+  "@impactCardTitle": {
+    "description": "Title of the impact card with the area name.",
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "impactAreaCountry": "Türkiye",
+  "@impactAreaCountry": {
+    "description": "Area name for the country level."
+  },
+  "impactCounterLead": "Bugün",
+  "@impactCounterLead": {
+    "description": "Words before the number on the impact rail counter."
+  },
+  "impactCounterTail": "askıya bırakıldı",
+  "@impactCounterTail": {
+    "description": "Words after the number on the impact rail counter."
+  },
+  "impactRedeemed": "askıdan alındı",
+  "@impactRedeemed": {
+    "description": "Caption of the taken count."
+  },
+  "impactShops": "dükkân",
+  "@impactShops": {
+    "description": "Caption of the shop count."
+  },
+  "impactMine": "Bıraktıkların: {units} ürün, {shops} dükkân",
+  "@impactMine": {
+    "description": "Accessibility label of the donor numbers.",
+    "placeholders": {
+      "units": {
+        "type": "int"
+      },
+      "shops": {
+        "type": "int"
+      }
+    }
+  },
+  "impactMineTail": "ürün askıya bıraktın, {shops} dükkânda.",
+  "@impactMineTail": {
+    "description": "Text after the donor unit count (the count is shown before it).",
+    "placeholders": {
+      "units": {
+        "type": "int"
+      },
+      "shops": {
+        "type": "int"
+      }
+    }
+  },
+  "impactMethodologyDailyUnits": "Günlük ürün sayıları, saatlik güncellenir",
+  "@impactMethodologyDailyUnits": {
+    "description": "Methodology line for impact.v1.daily_units."
+  },
+  "impactMethodologyGeneric": "Ürün sayıları, düzenli güncellenir",
+  "@impactMethodologyGeneric": {
+    "description": "Methodology line for an unknown method key."
+  },
+  "impactLoading": "Sayılar yükleniyor",
+  "@impactLoading": {
+    "description": "Accessibility label while impact loads."
+  },
+  "impactUnavailable": "Askı sayıları şu an yüklenemedi.",
+  "@impactUnavailable": {
+    "description": "Shown when impact fails."
+  },
+  "settingsTitle": "Ayarlar",
+  "@settingsTitle": {
+    "description": "Settings title and link."
+  },
+  "settingsAccountSection": "Hesap",
+  "@settingsAccountSection": {
+    "description": "Settings section: account."
+  },
+  "settingsSignedOutBody": "Askıdan almak için hesap gerekmez. Askıya bırakmak ya da dükkân yönetmek için giriş yapabilirsin.",
+  "@settingsSignedOutBody": {
+    "description": "Account section when signed out."
+  },
+  "settingsSignOut": "Çıkış yap",
+  "@settingsSignOut": {
+    "description": "Sign-out button."
+  },
+  "settingsSignedOut": "Çıkış yapıldı.",
+  "@settingsSignedOut": {
+    "description": "Snackbar after sign-out."
+  },
+  "settingsDeleteAccount": "Hesabımı sil",
+  "@settingsDeleteAccount": {
+    "description": "Link to account deletion."
+  },
+  "settingsLanguageSection": "Dil",
+  "@settingsLanguageSection": {
+    "description": "Settings section: language."
+  },
+  "settingsThemeSection": "Görünüm",
+  "@settingsThemeSection": {
+    "description": "Settings section: theme."
+  },
+  "settingsThemeSystem": "Sistem ayarı",
+  "@settingsThemeSystem": {
+    "description": "Theme option: system."
+  },
+  "settingsThemeLight": "Açık",
+  "@settingsThemeLight": {
+    "description": "Theme option: light."
+  },
+  "settingsThemeDark": "Koyu",
+  "@settingsThemeDark": {
+    "description": "Theme option: dark."
+  },
+  "settingsNotificationsSection": "Bildirimler",
+  "@settingsNotificationsSection": {
+    "description": "Settings section: push."
+  },
+  "settingsPushUnavailable": "Bu sürümde bildirim servisi yapılandırılmadı; bildirim gönderilmez.",
+  "@settingsPushUnavailable": {
+    "description": "Push state: no transport or no token."
+  },
+  "settingsPushWaiting": "Bildirimler giriş yaptığında bu cihaza açılır.",
+  "@settingsPushWaiting": {
+    "description": "Push state: token waits for an account."
+  },
+  "settingsPushRegistered": "Bu cihaz bildirim alıyor (\"Yeni askı\", \"Askın alındı\").",
+  "@settingsPushRegistered": {
+    "description": "Push state: registered."
+  },
+  "settingsPushFailed": "Bildirim kaydı şu an yapılamadı; bir sonraki açılışta yeniden denenecek.",
+  "@settingsPushFailed": {
+    "description": "Push state: registration failed."
+  },
+  "settingsPrivacySection": "Gizlilik",
+  "@settingsPrivacySection": {
+    "description": "Settings section: privacy."
+  },
+  "settingsPrivacyBody": "Uygulamada reklam ve analiz aracı yok. Askıdan alanlar hakkında hiçbir bilgi tutulmaz.",
+  "@settingsPrivacyBody": {
+    "description": "Privacy statement."
+  },
+  "deleteTitle": "Hesabı sil",
+  "@deleteTitle": {
+    "description": "Title of the deletion screen."
+  },
+  "deleteLead": "Hesabın hemen kapanır ve 7 gün sonra kalıcı olarak silinir. Bu sürede giriş yaparsan silme iptal olur. Bağışlarının tutarları muhasebe için adsız olarak saklanır. Güvenliğin için şifreni yaz.",
+  "@deleteLead": {
+    "description": "Explanation of the deletion."
+  },
+  "deleteAction": "Hesabımı sil",
+  "@deleteAction": {
+    "description": "Destructive delete button."
+  },
+  "deleteProviderLead": "Apple ya da Google ile giriş yapıyorsan, şifre yerine yeniden doğrula:",
+  "@deleteProviderLead": {
+    "description": "Lead above the provider re-auth buttons."
+  },
+  "deleteConfirmTitle": "Hesap silinsin mi?",
+  "@deleteConfirmTitle": {
+    "description": "Confirmation dialog title."
+  },
+  "deleteConfirmBody": "Hesabın hemen kapanır. 7 gün içinde giriş yapmazsan kalıcı olarak silinir.",
+  "@deleteConfirmBody": {
+    "description": "Confirmation dialog body."
+  },
+  "deleteConfirmCancel": "Vazgeç",
+  "@deleteConfirmCancel": {
+    "description": "Confirmation dialog cancel."
+  },
+  "deleteConfirmAction": "Sil",
+  "@deleteConfirmAction": {
+    "description": "Confirmation dialog confirm."
+  },
+  "deleteDone": "Hesabın kapandı ve {date} tarihinde kalıcı olarak silinecek. Bu cihazdaki oturum ve kayıtlı veriler silindi.",
+  "@deleteDone": {
+    "description": "Shown after deletion with the grace date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteDoneAction": "Tamam",
+  "@deleteDoneAction": {
+    "description": "Button after deletion."
+  },
+  "deleteSignInFirst": "Hesabını silmek için önce giriş yap.",
+  "@deleteSignInFirst": {
+    "description": "Deletion screen opened without an account."
   }
 }

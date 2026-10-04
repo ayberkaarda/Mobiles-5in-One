@@ -1,6 +1,11 @@
 import 'package:askida/data/session.dart';
 import 'package:askida/design/theme.dart';
 import 'package:askida/design/widgets/mode_switcher.dart';
+import 'package:askida/features/auth/auth_routes.dart';
+import 'package:askida/features/donor/donor_routes.dart';
+import 'package:askida/features/merchant/merchant_routes.dart';
+import 'package:askida/features/recipient/recipient_routes.dart';
+import 'package:askida/features/settings/settings_routes.dart';
 import 'package:askida/l10n/gen/app_localizations.dart';
 import 'package:askida/routing/app_mode.dart';
 import 'package:askida/routing/app_router.dart';
@@ -65,12 +70,18 @@ Future<void> _pumpRouter(WidgetTester tester, GoRouter router) async {
 }
 
 void main() {
-  test('the registry files start empty and are all registered', () {
-    expect(allFeatureRoutes, isEmpty);
-    expect(topLevelFeatureRoutes, isEmpty);
-    for (final mode in AppMode.values) {
-      expect(modeChildRoutes(mode), isEmpty);
-    }
+  test('every feature route list is registered', () {
+    expect(allFeatureRoutes, [
+      ...authRoutes,
+      ...recipientRoutes,
+      ...merchantRoutes,
+      ...donorRoutes,
+      ...settingsRoutes,
+    ]);
+    expect(topLevelFeatureRoutes, [...authRoutes, ...settingsRoutes]);
+    expect(modeChildRoutes(AppMode.recipient), same(recipientRoutes));
+    expect(modeChildRoutes(AppMode.donor), same(donorRoutes));
+    expect(modeChildRoutes(AppMode.merchant), same(merchantRoutes));
   });
 
   testWidgets('unknown locations land on the current mode home', (
