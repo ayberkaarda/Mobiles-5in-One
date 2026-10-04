@@ -27,6 +27,7 @@ it('holds payouts only for the fraud kinds', function (): void {
 it('covers the last fourteen Istanbul days up to today', function (): void {
     $period = PayoutSynchronizer::period(CarbonImmutable::parse('2026-10-03 22:30:00', 'UTC'));
 
-    expect($period->getStartDate()->toDateString())->toBe('2026-09-20')
-        ->and($period->getEndDate()?->toDateString())->toBe('2026-10-04');
+    expect($period->getStartDate()->toDateString())->toBe('2026-09-21')
+        ->and($period->getEndDate()?->toDateString())->toBe('2026-10-04')
+        ->and(iterator_count($period->setDateInterval('P1D')))->toBe(14);
 });

@@ -9,6 +9,7 @@ use App\Domain\Payouts\Services\PayoutSynchronizer;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Feature\Api\Hooks\Support\HookWorld;
 use Tests\Support\Payouts\PayoutWorld;
 use Tests\Support\Payouts\ScriptedPayoutGateway;
@@ -51,7 +52,7 @@ it('upserts provider settlements with the status mapping and the 14-day period',
         ->and($summary['created'])->toBe(3)
         ->and($this->gateway->settlementCalls)->toHaveCount(1)
         ->and($this->gateway->settlementCalls[0]['key'])->toBe($key)
-        ->and($this->gateway->settlementCalls[0]['period']->getStartDate()->toDateString())->toBe('2026-09-20')
+        ->and($this->gateway->settlementCalls[0]['period']->getStartDate()->toDateString())->toBe('2026-09-21')
         ->and($this->gateway->settlementCalls[0]['period']->getEndDate()?->toDateString())->toBe('2026-10-04');
 
     expect(payoutBySettlement('st-a'))
@@ -131,6 +132,43 @@ it('starts a new pending payout on hold while the shop has an unreviewed fraud f
         ->hold->toBeTrue()
         ->hold_reason->toBe('fraud.redeem_rate')
         ->and(payoutBySettlement('st-paid')->hold)->toBeFalse();
+});
+
+it('puts a failed or pending payout on hold when it becomes pending after its shop was flagged', function (string $before): void {
+    $key = PayoutWorld::key();
+    ['shop' => $shop] = PayoutWorld::shopWithFinancials(subMerchantKey: $key);
+    PayoutWorld::payout($shop, PayoutStatus::from($before), '2026-10-02', 7_000, settlementId: 'st-up');
+    (new AbuseFlag)->forceFill(['shop_id' => $shop->id, 'kind' => 'redeem_rate', 'detail' => ['redemptions' => 40]])->save();
+    $this->gateway->settlements[$key] = [PayoutWorld::record('st-up', $key, 7_500, 'pending', '2026-10-02')];
+
+    syncNow();
+
+    expect(payoutBySettlement('st-up'))
+        ->status->toBe(PayoutStatus::Held)
+        ->hold->toBeTrue()
+        ->hold_reason->toBe('fraud.redeem_rate')
+        ->amount_minor->toBe(7_500);
+})->with(['pending', 'failed']);
+
+it('locks the shop row before it reads the fraud flags or writes a payout', function (): void {
+    $key = PayoutWorld::key();
+    ['shop' => $shop] = PayoutWorld::shopWithFinancials(subMerchantKey: $key);
+    $this->gateway->settlements[$key] = [PayoutWorld::record('st-lock', $key, 9_000, 'pending', '2026-10-03')];
+    $statements = [];
+    DB::listen(function ($query) use (&$statements): void {
+        $statements[] = $query->sql;
+    });
+
+    syncNow();
+
+    $lock = collect($statements)->search(fn (string $sql): bool => str_contains($sql, 'from "shops"') && str_contains($sql, 'for update'));
+    $flags = collect($statements)->search(fn (string $sql): bool => str_contains($sql, 'from "abuse_flags"'));
+    $insert = collect($statements)->search(fn (string $sql): bool => str_starts_with($sql, 'insert into "payouts"'));
+
+    expect($lock)->not->toBeFalse()
+        ->and($lock)->toBeLessThan($flags)
+        ->and($lock)->toBeLessThan($insert)
+        ->and($shop->id)->not->toBe('');
 });
 
 it('rejects records of another sub-merchant, unknown statuses and foreign objects', function (): void {

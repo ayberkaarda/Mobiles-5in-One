@@ -63,6 +63,25 @@ it('does not flag a shop at exactly the redemption maximum', function (): void {
     Mail::assertNothingQueued();
 });
 
+it('locks the shop row before it holds payouts', function (): void {
+    $shop = HookWorld::shop();
+    PayoutWorld::payout($shop, PayoutStatus::Pending, '2026-10-03');
+    PayoutWorld::redeemed($shop, minutesAgo(10), 31);
+    $statements = [];
+    DB::listen(function ($query) use (&$statements): void {
+        $statements[] = $query->sql;
+    });
+
+    scanNow();
+
+    $lock = collect($statements)->search(fn (string $sql): bool => str_contains($sql, 'from "shops"') && str_contains($sql, 'for update'));
+    $hold = collect($statements)->search(fn (string $sql): bool => str_starts_with($sql, 'update "payouts"'));
+
+    expect($lock)->not->toBeFalse()
+        ->and($hold)->not->toBeFalse()
+        ->and($lock)->toBeLessThan($hold);
+});
+
 it('holds the pending payouts, flags and alerts one redemption above the maximum', function (): void {
     $shop = HookWorld::shop();
     $pending = PayoutWorld::payout($shop, PayoutStatus::Pending, '2026-10-03');

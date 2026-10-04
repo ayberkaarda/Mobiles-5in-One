@@ -25,7 +25,8 @@ use Illuminate\Support\Facades\Log;
  *   non-negative amount and a settlement id of at most 191 characters;
  * - upsert by (shop_id, provider_settlement_id); a `settled` payout is never changed
  *   again (no downgrade), a held payout is never overwritten (finance releases it);
- * - a new pending payout of a shop with an unreviewed fraud flag starts on hold;
+ * - a payout that is (or becomes) pending while its shop has an unreviewed fraud flag is
+ *   put on hold; the shop row is locked first, like the fraud scan does;
  * - repeating a sync with the same provider data changes nothing.
  */
 final class PayoutSynchronizer
@@ -75,13 +76,13 @@ final class PayoutSynchronizer
     }
 
     /**
-     * The last WINDOW_DAYS Istanbul calendar days up to and including today.
+     * The last WINDOW_DAYS Istanbul calendar days, today included (14 days: today and the 13 before).
      */
     public static function period(CarbonImmutable $now): CarbonPeriod
     {
         $today = $now->setTimezone(self::TIMEZONE)->startOfDay();
 
-        return CarbonPeriod::create($today->subDays(self::WINDOW_DAYS), $today->endOfDay());
+        return CarbonPeriod::create($today->subDays(self::WINDOW_DAYS - 1), $today->endOfDay());
     }
 
     /**
@@ -138,6 +139,10 @@ final class PayoutSynchronizer
     {
         try {
             return DB::transaction(function () use ($shop, $record, $status): string {
+                // Same lock, same order as the fraud scan (shop row first, payouts after): a
+                // scan's hold and a new pending payout can never both slip past each other.
+                Shop::query()->whereKey($shop->id)->lockForUpdate()->first();
+
                 $period = $record->settlementDate->setTimezone(self::TIMEZONE)->toDateString();
 
                 /** @var Payout|null $existing */
@@ -178,6 +183,12 @@ final class PayoutSynchronizer
                     'status' => $status,
                     'period' => $period,
                 ]);
+
+                $reason = $status === PayoutStatus::Pending ? $this->holds->reasonForNewPayout($shop) : null;
+
+                if ($reason !== null) {
+                    $existing->forceFill(['hold' => true, 'hold_reason' => $reason, 'status' => PayoutStatus::Held]);
+                }
 
                 if (! $existing->isDirty()) {
                     return 'unchanged';

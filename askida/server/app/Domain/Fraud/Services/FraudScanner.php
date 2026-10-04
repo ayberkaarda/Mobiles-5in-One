@@ -119,6 +119,10 @@ final class FraudScanner
     private function flag(Shop $shop, AbuseFlagKind $kind, int $redeemed, int $self, int|float $threshold): array
     {
         return DB::transaction(function () use ($shop, $kind, $redeemed, $self, $threshold): array {
+            // Shop row first, payouts after: the same order as the settlement sync, so a
+            // payout inserted by a concurrent sync is either held here or sees the flag.
+            Shop::query()->whereKey($shop->id)->lockForUpdate()->first();
+
             $held = $this->holds->hold($shop, $kind->holdReason());
 
             $detail = [
