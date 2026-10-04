@@ -24,6 +24,32 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Links are routed by app_links + go_router, not by the
+                 embedding's own deep-link handling. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+            <!-- Web shop pages open the shop in the app. autoVerify is not
+                 exercised: no domain, so /.well-known/assetlinks.json is not
+                 served for askida.app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="askida.app"
+                    android:pathPrefix="/dukkan/"/>
+            </intent-filter>
+            <!-- askida://shop/<slug> and askida://donation/<id>?status=
+                 (return from the checkout page). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="askida" android:host="shop"/>
+                <data android:scheme="askida" android:host="donation"/>
+            </intent-filter>
         </activity>
         <!-- Required by the Flutter embedding (v2); keep it. -->
         <meta-data

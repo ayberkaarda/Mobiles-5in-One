@@ -1,3 +1,4 @@
+import 'package:askida/core/locale/app_locale.dart';
 import 'package:askida/design/theme.dart';
 import 'package:askida/l10n/gen/app_localizations.dart';
 import 'package:askida/routing/app_router.dart';
@@ -21,7 +22,7 @@ class AskidaApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AskidaTheme.light(),
       darkTheme: AskidaTheme.dark(),
-      locale: locale ?? defaultLocale,
+      locale: locale ?? ref.watch(appLocaleProvider) ?? defaultLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
