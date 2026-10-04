@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Anon\Auth\AnonTokenRule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -10,7 +11,7 @@ use Tests\Security\RouteWorld;
 
 /*
 | Security checklist items 3 and 4 at the route level: every /api/v1 route is classified
-| (public, user, merchant, anon) with the token abilities that reach it, the route
+| (public, user, any, merchant, anon) with the token abilities that reach it, the route
 | middleware agrees with that classification, and real tokens of every principal get
 | the answer the classification promises: 401 `auth.unauthenticated` for guests,
 | revoked tokens, deactivated accounts and tokens of the wrong kind of principal on
@@ -110,7 +111,7 @@ function classificationCases(): array
     foreach (RouteClassification::routes() as $key => $entry) {
         $principals = match ($entry['class']) {
             'public' => ['guest'],
-            'user' => ['guest', 'anon', 'donor', 'owner', 'staff', 'deactivated', 'revoked'],
+            'user', 'any' => ['guest', 'anon', 'donor', 'owner', 'staff', 'deactivated', 'revoked'],
             'merchant' => ['guest', 'anon', 'donor', 'owner', 'staff', 'deactivated', 'revoked'],
             'anon' => ['guest', 'anon', 'banned-anon', 'donor', 'owner', 'deactivated', 'revoked'],
             default => [],
@@ -163,7 +164,9 @@ it('uses only known classes, abilities and shop rules', function (string $key): 
         'anon' => expect($entry['abilities'])->toBe(['anon']),
         'merchant' => expect($entry['abilities'])->toBe(['merchant'])
             ->and(RouteClassification::SHOP_RULES)->toContain($entry['shop'] ?? ''),
-        'user' => expect(array_intersect(['donor', 'merchant'], $entry['abilities']))->not->toBe([]),
+        'user' => expect(array_intersect(['donor', 'merchant'], $entry['abilities']))->not->toBe([])
+            ->and($entry['abilities'])->not->toContain('anon'),
+        'any' => expect($entry['abilities'])->toBe(['donor', 'merchant', 'anon']),
         default => throw new LogicException('unreachable'),
     };
 
@@ -193,8 +196,7 @@ it('matches the route middleware to the classification', function (string $key):
     expect($middleware)->toContain('auth:sanctum');
 
     // A device token needs an explicit anon ability middleware; nothing else may carry one.
-    $anonMiddleware = array_intersect(['abilities:anon', 'ability:anon'], $middleware) !== [];
-    expect($anonMiddleware)->toBe(in_array('anon', $reachable, true));
+    expect(AnonTokenRule::routeAdmitsAnon($route))->toBe(in_array('anon', $reachable, true));
 
     if ($declared !== null) {
         $sortedDeclared = $declared;

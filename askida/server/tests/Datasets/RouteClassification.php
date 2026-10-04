@@ -12,8 +12,8 @@ namespace Tests\Datasets;
  *
  * Classes:
  * - public: no token needed; any bearer token sent is ignored by the action;
- * - user: a user token (`donor` and/or `merchant`, listed in `abilities`); the two
- *   directory reads also admit `anon` (authorization matrix 3.2);
+ * - user: a user token (`donor` and/or `merchant`, listed in `abilities`);
+ * - any: any API token, user or anon device (the shop directory reads, matrix 3.2);
  * - merchant: a merchant token plus a shop rule for the shop in the path:
  *   `owner` (owner only, staff 403), `member` (owner and staff), `not-staff` (any
  *   merchant that is not staff somewhere: opening a shop);
@@ -30,7 +30,7 @@ namespace Tests\Datasets;
  */
 final class RouteClassification
 {
-    public const CLASSES = ['public', 'user', 'merchant', 'anon'];
+    public const CLASSES = ['public', 'user', 'any', 'merchant', 'anon'];
 
     public const SHOP_RULES = ['owner', 'member', 'not-staff'];
 
@@ -39,11 +39,6 @@ final class RouteClassification
      */
     public static function routes(): array
     {
-        $anonDirectoryGap = [
-            'anon' => 'The anon token rule accepts device tokens only on routes that carry exactly `abilities:anon` or `ability:anon`; '
-                .'the directory routes carry neither, so recipients get 401 although matrix 3.2 says Y.',
-        ];
-
         return [
             // Identity (matrix 3.1)
             'POST api/v1/auth/register' => self::open('empty'),
@@ -62,8 +57,8 @@ final class RouteClassification
             'DELETE api/v1/anon/me' => ['class' => 'anon', 'abilities' => ['anon']],
 
             // Shops and catalog (matrix 3.2)
-            'GET api/v1/shops' => ['class' => 'user', 'abilities' => ['donor', 'merchant', 'anon'], 'gaps' => $anonDirectoryGap, 'query' => 'near'],
-            'GET api/v1/shops/{slug}' => ['class' => 'user', 'abilities' => ['donor', 'merchant', 'anon'], 'gaps' => $anonDirectoryGap],
+            'GET api/v1/shops' => ['class' => 'any', 'abilities' => ['donor', 'merchant', 'anon'], 'query' => 'near'],
+            'GET api/v1/shops/{slug}' => ['class' => 'any', 'abilities' => ['donor', 'merchant', 'anon']],
             'POST api/v1/shops' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'not-staff', 'payload' => 'shop'],
             'PATCH api/v1/shops/{id}' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'owner', 'payload' => 'shop-change'],
             'GET api/v1/shops/{id}/items' => ['class' => 'merchant', 'abilities' => ['merchant'], 'shop' => 'member'],
