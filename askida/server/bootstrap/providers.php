@@ -11,6 +11,7 @@ use App\Providers\PaymentsServiceProvider;
 use App\Providers\RateLimitServiceProvider;
 use App\Providers\SecurityServiceProvider;
 use App\Providers\ShopsServiceProvider;
+use App\Providers\WebServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -24,4 +25,5 @@ return [
     AccountsServiceProvider::class,
     PaymentsServiceProvider::class,
     PayoutsServiceProvider::class,
+    WebServiceProvider::class,
 ];
