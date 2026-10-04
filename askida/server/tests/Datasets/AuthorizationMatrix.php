@@ -26,7 +26,8 @@ use App\Policies\ShopPolicy;
  * - ['policy', PolicyClass, method, args]: args are class strings or the fixture names
  *   'shop', 'item', 'donation', 'hook', 'document';
  * - ['gate', ability];
- * - ['route', route name]: the endpoint exists; its authentication middleware is checked;
+ * - ['route', route name]: the endpoint exists under the row's method and path (path
+ *   parameter names are not compared); its authentication middleware is checked;
  * - ['pending', reason]: the endpoint or principal does not exist yet; the test proves
  *   that it is still absent, so building it forces this row to be upgraded;
  * - ['absent', reason]: the operation must not exist for anyone.
@@ -68,21 +69,23 @@ final class AuthorizationMatrix
             'POST shops' => self::api('3.2', '- - Y - -', ['policy', ShopPolicy::class, 'create', [Shop::class]], ['route', 'api.v1.shops.store']),
             'PATCH shops/{id}' => self::api('3.2', '- - member - -', ['policy', ShopPolicy::class, 'update', ['shop']], ['route', 'api.v1.shops.update']),
             'POST shops/{id}/documents/presign' => self::api('3.2', '- - member - -', ['policy', ShopDocumentPolicy::class, 'create', [ShopDocument::class, 'shop']], ['route', 'api.v1.shops.documents.presign']),
+            'POST shops/{id}/documents/{documentId}/confirm' => self::api('3.2', '- - member - -', ['policy', ShopDocumentPolicy::class, 'confirm', [ShopDocument::class, 'shop']], ['route', 'api.v1.shops.documents.confirm']),
+            'GET shops/{id}/items' => self::api('3.2', '- - member member -', ['policy', ItemPolicy::class, 'viewAny', [Item::class, 'shop']], ['route', 'api.v1.shops.items.index']),
             'POST shops/{id}/items' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'create', [Item::class, 'shop']], ['route', 'api.v1.shops.items.store']),
             'PATCH shops/{id}/items/{itemId}' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'update', ['item', 'shop']], ['route', 'api.v1.shops.items.update']),
 
             // 3.3 Donations
-            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]]),
-            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]]),
-            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']]),
+            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]], ['pending', 'donation checkout']),
+            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]], ['pending', 'donation history']),
+            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']], ['pending', 'donation detail']),
 
             // 3.4 Reservation and redemption
             'POST hooks/reserve' => self::api('3.4', '- - - - own', ['policy', HookPolicy::class, 'reserve', [Hook::class]], ['route', 'api.v1.hooks.reserve']),
-            'POST shops/{id}/redeem' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'redeem', [Hook::class, 'shop']]),
-            'GET shops/{id}/redemptions?day=' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'viewRedemptions', [Hook::class, 'shop']]),
+            'POST shops/{id}/redeem' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'redeem', [Hook::class, 'shop']], ['route', 'api.v1.shops.redeem']),
+            'GET shops/{id}/redemptions?day=' => self::api('3.4', '- - member member -', ['policy', HookPolicy::class, 'viewRedemptions', [Hook::class, 'shop']], ['route', 'api.v1.shops.redemptions']),
 
             // 3.5 Payouts and impact
-            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']]),
+            'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']], ['pending', 'payout view']),
             'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)

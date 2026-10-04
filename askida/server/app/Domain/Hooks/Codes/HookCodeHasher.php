@@ -13,6 +13,9 @@ class HookCodeHasher
 {
     public const MIN_PEPPER_LENGTH = 32;
 
+    /** The published local development value of `.env.example`; refused outside local and testing. */
+    public const EXAMPLE_PEPPER = 'local-development-pepper-not-a-secret';
+
     public function __construct(private readonly ?string $pepper) {}
 
     public function hash(string $normalisedCode): string
