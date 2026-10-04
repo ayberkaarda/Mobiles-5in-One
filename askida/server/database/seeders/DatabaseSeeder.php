@@ -13,10 +13,13 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database.
      *
      * Sample data (is_sample = true, names prefixed with [ÖRNEK]) is written only in the
-     * local and testing environments; elsewhere this seeder writes nothing.
+     * local and testing environments; elsewhere only the admin roles are written.
      */
     public function run(): void
     {
+        // Admin roles and permissions exist in every environment.
+        $this->call(RolesSeeder::class);
+
         if (app()->environment(SampleDataSeeder::ALLOWED_ENVIRONMENTS)) {
             $this->call(SampleDataSeeder::class);
 
