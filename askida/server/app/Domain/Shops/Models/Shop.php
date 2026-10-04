@@ -7,6 +7,7 @@ use App\Domain\Hooks\Models\Hook;
 use App\Domain\Items\Models\Item;
 use App\Domain\Payments\Models\Payout;
 use App\Models\User;
+use App\Support\Web\TurkishSlug;
 use Carbon\CarbonImmutable;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -26,6 +27,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $address
  * @property string $il
  * @property string $ilce
+ * @property string $il_slug
+ * @property string $ilce_slug
+ * @property array<string, array{open: string, close: string}|null>|null $opening_hours
  * @property GeoPoint $location
  * @property string $phone
  * @property string|null $tax_number_enc
@@ -60,6 +64,7 @@ class Shop extends Model
         'phone',
         'tax_number_enc',
         'iban_enc',
+        'opening_hours',
     ];
 
     /**
@@ -93,9 +98,22 @@ class Shop extends Model
             'verified_at' => 'immutable_datetime',
             'listed_on_web' => 'boolean',
             'is_sample' => 'boolean',
+            'opening_hours' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * Keeps the URL slugs of the province and district (`/dukkanlar/{il}/{ilce}`) in sync
+     * with the names on every save.
+     */
+    protected static function booted(): void
+    {
+        static::saving(static function (Shop $shop): void {
+            $shop->setAttribute('il_slug', mb_substr(TurkishSlug::make((string) $shop->getAttribute('il')), 0, 64));
+            $shop->setAttribute('ilce_slug', mb_substr(TurkishSlug::make((string) $shop->getAttribute('ilce')), 0, 64));
+        });
     }
 
     /**
