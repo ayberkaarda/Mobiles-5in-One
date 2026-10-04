@@ -58,7 +58,7 @@ final class AuthorizationMatrix
             'GET me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.show']),
             'PATCH me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.update']),
             'DELETE me' => self::api('3.1', '- own own own -', ['pending', 'account deletion flow (spec item 21)']),
-            'PUT me/push-token' => self::api('3.1', '- own own own -', ['pending', 'push tokens']),
+            'PUT me/push-token' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.push-token']),
             'POST anon/attest' => self::api('3.1', 'Y - - - -', ['pending', 'device attestation and anon tokens']),
             'DELETE anon/me' => self::api('3.1', '- - - - own', ['pending', 'device attestation and anon tokens']),
 
