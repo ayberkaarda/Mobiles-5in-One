@@ -143,16 +143,16 @@ jobs:
       MAIL_MAILER: array
       PAYMENT_PROVIDER: fake
       # S3-compatible store: MinIO started by the "Start MinIO and create buckets" step (same
-      # image and bucket names as askida/docker-compose.yml). CI-only dummy credentials. The
-      # public endpoint equals the server endpoint here; ASKIDA_MINIO_PORT is read by
-      # PublicEndpointPresignTest to build its public address (http://localhost:9000).
+      # image and bucket names as askida/docker-compose.yml). CI-only dummy credentials.
+      # AWS_PUBLIC_ENDPOINT is left unset, as in .env.example, so presigned URLs use
+      # AWS_ENDPOINT. ASKIDA_MINIO_PORT is read by PublicEndpointPresignTest, which sets its own
+      # public endpoint (http://localhost:9000) in config.
       AWS_ACCESS_KEY_ID: askida
       AWS_SECRET_ACCESS_KEY: askida_ci_only
       AWS_DEFAULT_REGION: us-east-1
       AWS_BUCKET_PRIVATE: askida-private
       AWS_BUCKET_PUBLIC: askida-public
       AWS_ENDPOINT: http://127.0.0.1:9000
-      AWS_PUBLIC_ENDPOINT: http://localhost:9000
       AWS_USE_PATH_STYLE_ENDPOINT: "true"
       ASKIDA_MINIO_PORT: "9000"
     steps:
@@ -230,7 +230,10 @@ jobs:
           MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
           MC_IMAGE: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
         run: |
-          docker run -d --name askida-minio -p 9000:9000             -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID"             -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY"             "$MINIO_IMAGE" server /data
+          docker run -d --name askida-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY" \
+            "$MINIO_IMAGE" server /data
           ready=false
           for _ in $(seq 1 60); do
             if curl -fsS -o /dev/null "$AWS_ENDPOINT/minio/health/ready"; then
@@ -245,7 +248,13 @@ jobs:
             exit 1
           fi
           echo "MinIO ready at $AWS_ENDPOINT"
-          docker run --rm --network host --entrypoint /bin/sh             -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID"             -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY"             -e MINIO_ENDPOINT="$AWS_ENDPOINT"             -e BUCKET_PRIVATE="$AWS_BUCKET_PRIVATE"             -e BUCKET_PUBLIC="$AWS_BUCKET_PUBLIC"             "$MC_IMAGE" -c '
+          docker run --rm --network host --entrypoint /bin/sh \
+            -e MINIO_ROOT_USER="$AWS_ACCESS_KEY_ID" \
+            -e MINIO_ROOT_PASSWORD="$AWS_SECRET_ACCESS_KEY" \
+            -e MINIO_ENDPOINT="$AWS_ENDPOINT" \
+            -e BUCKET_PRIVATE="$AWS_BUCKET_PRIVATE" \
+            -e BUCKET_PUBLIC="$AWS_BUCKET_PUBLIC" \
+            "$MC_IMAGE" -c '
               mc alias set local "$MINIO_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&
               mc mb --ignore-existing "local/$BUCKET_PRIVATE" &&
               mc mb --ignore-existing "local/$BUCKET_PUBLIC" &&
