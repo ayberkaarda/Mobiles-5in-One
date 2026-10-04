@@ -1,5 +1,6 @@
 import 'package:askida/core/attest/attest_channel.dart';
 import 'package:askida/core/attest/attestation_service.dart';
+import 'package:askida/core/auth/native_identity_provider.dart';
 import 'package:askida/core/env/app_env.dart';
 import 'package:askida/core/env/flavor.dart';
 import 'package:askida/core/http/api_client.dart';
@@ -146,9 +147,11 @@ final pushServiceProvider = Provider<PushService>(
   (ref) => const NoopPushService(),
 );
 
-/// Apple / Google sign-in; unconfigured in this repository.
+/// Apple / Google sign-in over the native SDKs. No Google server client id
+/// ships, so Google reports IdentityUnavailable; Apple works where the
+/// platform supports it (iOS), otherwise the same.
 final identityProviderProvider = Provider<IdentityProvider>(
-  (ref) => const UnconfiguredIdentityProvider(),
+  (ref) => const NativeIdentityProvider(),
 );
 
 /// Map tiles (tests override with a fake provider; no network in tests).
