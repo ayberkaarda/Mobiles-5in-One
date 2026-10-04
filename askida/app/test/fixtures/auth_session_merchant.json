@@ -1,0 +1,12 @@
+{
+  "token_type": "Bearer",
+  "expires_at": "2026-11-03T09:41:00+03:00",
+  "abilities": ["merchant"],
+  "user": {
+    "id": "0192a4c1-6d2e-7a10-9b3c-1f2e3d4c5b61",
+    "email": "esnaf@example.com",
+    "name": "Ayşe Kaya",
+    "kind": "merchant",
+    "email_verified": true
+  }
+}

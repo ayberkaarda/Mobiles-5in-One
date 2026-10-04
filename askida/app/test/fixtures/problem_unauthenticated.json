@@ -1,0 +1,7 @@
+{
+  "type": "https://askida.app/problems/auth.unauthenticated",
+  "title": "Authentication is required.",
+  "status": 401,
+  "code": "auth.unauthenticated",
+  "request_id": "0192a4c1-b000-7a10-9b3c-000000000042"
+}

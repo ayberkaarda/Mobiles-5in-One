@@ -1,0 +1,5 @@
+{
+  "token_type": "Bearer",
+  "expires_at": "2026-11-03T09:41:00+03:00",
+  "abilities": ["anon"]
+}

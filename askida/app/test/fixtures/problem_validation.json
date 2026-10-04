@@ -1,0 +1,11 @@
+{
+  "type": "https://askida.app/problems/validation.failed",
+  "title": "The request data is invalid.",
+  "status": 422,
+  "code": "validation.failed",
+  "request_id": "0192a4c1-b000-7a10-9b3c-000000000041",
+  "errors": [
+    {"field": "email", "code": "email"},
+    {"field": "password", "code": "min"}
+  ]
+}
