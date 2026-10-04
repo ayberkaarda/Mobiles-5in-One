@@ -118,7 +118,11 @@ class AnonServiceProvider extends ServiceProvider
             return;
         }
 
-        HookCodeHasher::requirePepper(config('askida.hook_code_pepper'));
+        $pepper = HookCodeHasher::requirePepper(config('askida.hook_code_pepper'));
+
+        if (hash_equals(HookCodeHasher::EXAMPLE_PEPPER, trim($pepper))) {
+            throw new RuntimeException('HOOK_CODE_PEPPER still holds the .env.example value; set a long random secret.');
+        }
 
         if (config('askida.attestation.driver') !== 'real') {
             throw new RuntimeException('ATTESTATION_DRIVER must be "real" outside local and testing.');

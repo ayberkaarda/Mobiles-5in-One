@@ -72,6 +72,7 @@ it('guards the configuration of production-like environments', function (array $
 })->with([
     'empty pepper' => [['askida.hook_code_pepper' => ''], 'HOOK_CODE_PEPPER'],
     'short pepper' => [['askida.hook_code_pepper' => 'short'], 'HOOK_CODE_PEPPER'],
+    'published example pepper' => [['askida.hook_code_pepper' => 'local-development-pepper-not-a-secret'], 'still holds the .env.example value'],
     'fake attestation' => [['askida.attestation.driver' => 'fake'], 'ATTESTATION_DRIVER'],
     'log push' => [['askida.push.driver' => 'log'], 'PUSH_DRIVER'],
 ]);
