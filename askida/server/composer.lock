@@ -4,7 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+ feat/askida-p3
     "content-hash": "909149fffc6617cd21c85ef4b00d8788",
+
+    "content-hash": "5509312bb7b910f9687899b375541be4",
+ main
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
