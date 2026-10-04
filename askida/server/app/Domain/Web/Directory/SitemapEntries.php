@@ -2,6 +2,7 @@
 
 namespace App\Domain\Web\Directory;
 
+use App\Domain\Web\Impact\ImpactWebReader;
 use App\Support\Web\SitemapXml;
 use App\Support\Web\TurkishSlug;
 use Carbon\CarbonImmutable;
@@ -27,10 +28,12 @@ final class SitemapEntries
 
     /**
      * @param  string|null  $guidesDirectory  directory of the guide Markdown files (default resources/content/guides)
+     * @param  ImpactWebReader|null  $impact  read model of the impact pages (default from the container)
      */
     public function __construct(
         private readonly DirectoryQuery $directory,
         private readonly ?string $guidesDirectory = null,
+        private readonly ?ImpactWebReader $impact = null,
     ) {}
 
     public function build(): SitemapXml
@@ -92,12 +95,33 @@ final class SitemapEntries
     }
 
     /**
-     * Province slugs with impact snapshots in the last IMPACT_DAYS days and the time of
-     * their latest snapshot.
+     * Province impact pages worth indexing: exactly the provinces the impact pages publish
+     * with their own figures (ImpactWebReader::publishedProvinces(), the same slugs as the
+     * `/etki/{il}` route; provinces below the small-cell threshold answer `noindex` and are
+     * left out), with the time of their latest snapshot as lastmod when there is one.
      *
      * @return array<string, CarbonImmutable|null>
      */
     public function impactProvinces(): array
+    {
+        $updated = $this->snapshotTimes();
+        $provinces = [];
+
+        foreach (($this->impact ?? app(ImpactWebReader::class))->publishedProvinces() as $province) {
+            $provinces[$province['slug']] = $updated[$province['slug']] ?? null;
+        }
+
+        ksort($provinces);
+
+        return $provinces;
+    }
+
+    /**
+     * Time of the latest impact snapshot per province slug in the last IMPACT_DAYS days.
+     *
+     * @return array<string, CarbonImmutable|null>
+     */
+    private function snapshotTimes(): array
     {
         $since = CarbonImmutable::now('Europe/Istanbul')->subDays(self::IMPACT_DAYS)->toDateString();
         $provinces = [];
@@ -121,8 +145,6 @@ final class SitemapEntries
             $current = $provinces[$slug] ?? null;
             $provinces[$slug] = $current !== null && $updated !== null && $current->greaterThan($updated) ? $current : ($updated ?? $current);
         }
-
-        ksort($provinces);
 
         return $provinces;
     }
