@@ -5,6 +5,9 @@ namespace Tests\Feature\Web\Support;
 use App\Support\Web\Facts;
 use App\Support\Web\Format;
 use App\Support\Web\Origin;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use PHPUnit\Framework\Assert;
@@ -32,8 +35,9 @@ final class WebPage
     /**
      * Resets framework state that outlives a test inside one PHP process: once any test has
      * rendered a Livewire component (the admin panel), Livewire would inject its own style and
-     * script tags into every later HTML response of the run. Call it in `beforeEach` of every
-     * test file that renders public pages.
+     * script tags into every later HTML response of the run. Tests\TestCase::setUp() now does
+     * this before every test; the call in `beforeEach` of the public page tests is kept as an
+     * explicit, harmless second reset.
      */
     public static function isolate(): void
     {
@@ -83,11 +87,39 @@ final class WebPage
         Assert::assertLessThanOrEqual($budget, $size, "The gzip-9 body is {$size} bytes, over the {$budget} byte budget.");
     }
 
+    /**
+     * Elements and attributes are read from the parsed DOM, not matched in the raw markup, so
+     * escaped text that merely looks like markup (a shop called `"><img onerror=…>` renders
+     * as `&quot;&gt;&lt;img onerror=…` inside an attribute value) is not mistaken for an
+     * attribute.
+     */
     public static function assertNoInlineStyleOrScript(string $html): void
     {
-        Assert::assertDoesNotMatchRegularExpression('/<style\b/i', $html, 'Public pages ship no inline <style>.');
-        Assert::assertDoesNotMatchRegularExpression('/<[a-z][^>]*\sstyle\s*=/i', $html, 'Public pages carry no style="" attribute.');
-        Assert::assertDoesNotMatchRegularExpression('/<[a-z][^>]*\son[a-z]+\s*=/i', $html, 'Public pages carry no event handler attribute.');
+        $dom = new DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?>'.$html, LIBXML_NONET);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        Assert::assertSame(0, $dom->getElementsByTagName('style')->length, 'Public pages ship no inline <style>.');
+
+        foreach ((new DOMXPath($dom))->query('//*[@*]') ?: [] as $element) {
+            if (! $element instanceof DOMElement) {
+                continue;
+            }
+
+            foreach ($element->attributes as $attribute) {
+                $name = strtolower($attribute->nodeName);
+
+                Assert::assertNotSame('style', $name, 'Public pages carry no style="" attribute (on <'.$element->nodeName.'>).');
+                Assert::assertDoesNotMatchRegularExpression('/^on[a-z]+$/', $name, 'Public pages carry no event handler attribute ('.$name.' on <'.$element->nodeName.'>).');
+
+                if (in_array($name, ['href', 'src', 'action', 'formaction', 'xlink:href'], true)) {
+                    Assert::assertDoesNotMatchRegularExpression('/^\s*javascript:/i', $attribute->nodeValue ?? '', 'No javascript: URL on <'.$element->nodeName.'>.');
+                }
+            }
+        }
+
         Assert::assertDoesNotMatchRegularExpression('/(href|src|action)\s*=\s*["\']\s*javascript:/i', $html);
 
         preg_match_all('/<script\b([^>]*)>/i', $html, $scripts);
