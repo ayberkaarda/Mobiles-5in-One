@@ -301,5 +301,355 @@
         "type": "int"
       }
     }
+  },
+  "recipientStationLeave": "Bırak",
+  "@recipientStationLeave": {
+    "description": "Station rail, first tag: someone leaves an item."
+  },
+  "recipientStationHang": "Askıda",
+  "@recipientStationHang": {
+    "description": "Station rail, middle tag: the item waits on the hook."
+  },
+  "recipientStationTake": "Al",
+  "@recipientStationTake": {
+    "description": "Station rail, last tag: anyone takes it."
+  },
+  "recipientStationLabel": "Bırak, askıda, al: biri askıya bırakır, askıda bekler, isteyen alır.",
+  "@recipientStationLabel": {
+    "description": "Accessibility label of the station rail graphic."
+  },
+  "recipientIntroTitle": "Askıda bekleyeni al, soru sorulmaz.",
+  "@recipientIntroTitle": {
+    "description": "Recipient onboarding screen 1 title."
+  },
+  "recipientIntroBody": "Mahalle esnafında birilerinin önceden ödediği ekmek, çorba ya da defter askıda bekler. Hesap açman, adını vermen gerekmez.",
+  "@recipientIntroBody": {
+    "description": "Recipient onboarding screen 1 body."
+  },
+  "recipientIntroStart": "Başla",
+  "@recipientIntroStart": {
+    "description": "Recipient onboarding screen 1 button."
+  },
+  "recipientIntroOtherModes": "Askıya bırakmak ya da dükkânını eklemek için yukarıdan kullanım biçimini değiştirebilirsin.",
+  "@recipientIntroOtherModes": {
+    "description": "Recipient onboarding screen 1 footnote pointing to the mode switcher."
+  },
+  "recipientLocationTitle": "Yakındaki askılar için yaklaşık konum",
+  "@recipientLocationTitle": {
+    "description": "Recipient onboarding screen 2 title."
+  },
+  "recipientLocationBody": "Konumun yaklaşık bir kilometreye yuvarlanır ve hiçbir yerde saklanmaz. İstersen konum yerine ilçe seçebilirsin.",
+  "@recipientLocationBody": {
+    "description": "Recipient onboarding screen 2 body."
+  },
+  "recipientLocationFailed": "Konum şu an okunamadı. İlçe seçerek devam edebilirsin.",
+  "@recipientLocationFailed": {
+    "description": "Shown when permission exists but no position could be read."
+  },
+  "recipientLocationBlocked": "Konum izni kapalı. İlçe seçerek devam edebilirsin.",
+  "@recipientLocationBlocked": {
+    "description": "Shown when the system will not ask for location again."
+  },
+  "recipientUseLocation": "Konumu kullan",
+  "@recipientUseLocation": {
+    "description": "Button: use the approximate device location."
+  },
+  "recipientPickDistrict": "İlçe seç",
+  "@recipientPickDistrict": {
+    "description": "Button: pick a district instead of the location."
+  },
+  "recipientDistrictSheetTitle": "İlçe seç",
+  "@recipientDistrictSheetTitle": {
+    "description": "Title of the district picker sheet."
+  },
+  "recipientAreaApproximate": "Yaklaşık konumun",
+  "@recipientAreaApproximate": {
+    "description": "Area chip when the device location is used."
+  },
+  "recipientChangeArea": "Değiştir",
+  "@recipientChangeArea": {
+    "description": "Button next to the area chip."
+  },
+  "recipientChangeAreaLabel": "Bölgeyi değiştir",
+  "@recipientChangeAreaLabel": {
+    "description": "Accessibility label of the change area button."
+  },
+  "recipientViewList": "Liste",
+  "@recipientViewList": {
+    "description": "Segment: shop list."
+  },
+  "recipientViewMap": "Harita",
+  "@recipientViewMap": {
+    "description": "Segment: shop map."
+  },
+  "recipientNearbyLead": "Yakında",
+  "@recipientNearbyLead": {
+    "description": "Rail counter on the recipient list: words before the number."
+  },
+  "recipientNearbyTail": "ürün askıda",
+  "@recipientNearbyTail": {
+    "description": "Rail counter on the recipient list: words after the number. Counts items, never people."
+  },
+  "recipientRadiusNote": "{km} km içindeki, askıda ürünü olan dükkânlar.",
+  "@recipientRadiusNote": {
+    "description": "Footnote under the shop list.",
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientWiden": "5 km'ye kadar bak",
+  "@recipientWiden": {
+    "description": "Button: widen the search radius to the 5 km maximum."
+  },
+  "recipientActiveCodeTitle": "Aktif bir kodun var",
+  "@recipientActiveCodeTitle": {
+    "description": "Banner on the list while a code is valid."
+  },
+  "recipientActiveCodeOpen": "Kodu göster",
+  "@recipientActiveCodeOpen": {
+    "description": "Button: open the active code."
+  },
+  "recipientImpactTitle": "Bugün {area}",
+  "@recipientImpactTitle": {
+    "description": "Impact card title with the area name.",
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientImpactTr": "Türkiye",
+  "@recipientImpactTr": {
+    "description": "Impact area name for the whole country."
+  },
+  "recipientImpactDonated": "askıya bırakıldı",
+  "@recipientImpactDonated": {
+    "description": "Impact card: caption under the number of items left today."
+  },
+  "recipientImpactRedeemed": "askıdan alındı",
+  "@recipientImpactRedeemed": {
+    "description": "Impact card: caption under the number of items taken today."
+  },
+  "recipientImpactShops": "esnaf",
+  "@recipientImpactShops": {
+    "description": "Impact card: caption under the number of shops."
+  },
+  "recipientImpactNote": "{day} tarihli sayılar, saatte bir güncellenir.",
+  "@recipientImpactNote": {
+    "description": "Impact card footnote with the date of the figures.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientShopTitle": "Dükkân",
+  "@recipientShopTitle": {
+    "description": "Title bar of the recipient shop detail."
+  },
+  "recipientShopOwnView": "Bu dükkân senin hesabına bağlı. Esnaf görünümünü Esnaf bölümünde bulabilirsin.",
+  "@recipientShopOwnView": {
+    "description": "Shown when the signed-in owner opens their own shop in recipient mode."
+  },
+  "recipientShopItemsTitle": "Askıda",
+  "@recipientShopItemsTitle": {
+    "description": "Heading of the item list on the shop detail."
+  },
+  "recipientShopLimits": "Bir günde en fazla iki askı alınabilir, aynı dükkândan bir tane. Kod 10 dakika geçerlidir.",
+  "@recipientShopLimits": {
+    "description": "Fairness limits under the item list."
+  },
+  "recipientItemCount": "{count} askıda",
+  "@recipientItemCount": {
+    "description": "Number of units of an item on the rail.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientItemCountLabel": "{name}, {count} askıda",
+  "@recipientItemCountLabel": {
+    "description": "Accessibility label of an item row.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientTake": "Askıdan al",
+  "@recipientTake": {
+    "description": "Button on an item row."
+  },
+  "recipientTakeLabel": "{name} askıdan al",
+  "@recipientTakeLabel": {
+    "description": "Accessibility label of the take button.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientReserveTitle": "Askıdan al",
+  "@recipientReserveTitle": {
+    "description": "Reserve screen title."
+  },
+  "recipientReserveItem": "1 {name}",
+  "@recipientReserveItem": {
+    "description": "Reserve screen: the item being taken.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientReserveBody": "Kodun {minutes} dakika geçerli olur. Dükkâna gidip kodu esnafa göstermen yeterli; kimse soru sormaz.",
+  "@recipientReserveBody": {
+    "description": "Reserve screen explanation.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientReserveConfirm": "Kodu al",
+  "@recipientReserveConfirm": {
+    "description": "Reserve screen button."
+  },
+  "recipientReserveHolding": "Geçerli bir kodun zaten var. Yenisini, bu kod kullanıldıktan ya da süresi dolduktan sonra alabilirsin.",
+  "@recipientReserveHolding": {
+    "description": "Reserve screen while another code is valid."
+  },
+  "recipientBackToShops": "Dükkânlara dön",
+  "@recipientBackToShops": {
+    "description": "Button back to the shop list."
+  },
+  "recipientBackToShop": "Dükkâna dön",
+  "@recipientBackToShop": {
+    "description": "Button back to the shop of an expired code."
+  },
+  "recipientCodeTitle": "Kodun",
+  "@recipientCodeTitle": {
+    "description": "Code screen title."
+  },
+  "recipientItemLine": "1 {name}",
+  "@recipientItemLine": {
+    "description": "Item line on the code tag.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientCountdown": "Kalan süre {time}",
+  "@recipientCountdown": {
+    "description": "Countdown under the code tag (mm:ss).",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientCountdownLabel": "Kalan süre yaklaşık {minutes} dakika",
+  "@recipientCountdownLabel": {
+    "description": "Spoken countdown, once a minute.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientCodeRules": "Kod yalnızca bu cihazın belleğinde durur ve kaydedilmez. Uygulamayı kapatırsan yeniden gösterilemez; süresi dolarsa askı askıya döner.",
+  "@recipientCodeRules": {
+    "description": "Rules under the code tag."
+  },
+  "recipientCodeExpiredTitle": "Kodun süresi doldu",
+  "@recipientCodeExpiredTitle": {
+    "description": "Code screen after expiry."
+  },
+  "recipientCodeExpiredBody": "Askı yeniden askıya döndü. İstersen dükkândan yeni bir kod alabilirsin; günlük sınırlar geçerlidir.",
+  "@recipientCodeExpiredBody": {
+    "description": "Code screen after expiry, body."
+  },
+  "recipientNoCodeTitle": "Gösterilecek bir kod yok",
+  "@recipientNoCodeTitle": {
+    "description": "Code screen without an active code."
+  },
+  "recipientNoCodeBody": "Kodlar yalnızca bu ekranda, geçerli oldukları sürece durur. Yakındaki dükkânlardan yeni bir askı seçebilirsin.",
+  "@recipientNoCodeBody": {
+    "description": "Code screen without an active code, body."
+  },
+  "recipientFullClose": "Kapat",
+  "@recipientFullClose": {
+    "description": "Closes the full-brightness code view."
+  },
+  "recipientAttestTitle": "Kod almadan önce",
+  "@recipientAttestTitle": {
+    "description": "Anonymous entry title."
+  },
+  "recipientAttestBody": "Bu cihaza anonim bir kimlik verilir. Hesap, ad ya da telefon numarası istenmez. Telefonun kendi hizmeti bunun gerçek bir cihaz olduğunu doğrular; bu doğrulama seni tanımlamaz.",
+  "@recipientAttestBody": {
+    "description": "Anonymous entry body."
+  },
+  "recipientAttestContinue": "Devam et",
+  "@recipientAttestContinue": {
+    "description": "Anonymous entry button."
+  },
+  "recipientAttestNote": "Bu kimliği istediğin an \"Verilerimi sıfırla\" ile silebilirsin.",
+  "@recipientAttestNote": {
+    "description": "Anonymous entry footnote."
+  },
+  "recipientAttestBlockedTitle": "Bu cihaz doğrulanamadı",
+  "@recipientAttestBlockedTitle": {
+    "description": "Blocking message when the device cannot attest (prod flavor)."
+  },
+  "recipientAttestBlockedBody": "Kod almak için cihazın, telefonun kendi doğrulama hizmetiyle doğrulanması gerekiyor. Bu cihazda bu hizmet yok ya da şu an çalışmıyor. Dükkânları ve askıdaki sayıları görmeye devam edebilirsin.",
+  "@recipientAttestBlockedBody": {
+    "description": "Blocking message body."
+  },
+  "recipientResetAction": "Verilerimi sıfırla",
+  "@recipientResetAction": {
+    "description": "Button that deletes the anonymous identity."
+  },
+  "recipientResetHint": "Hesap yok, ad yok. Bu cihazın anonim kimliğini ve kayıtlı listeyi istediğin an silebilirsin.",
+  "@recipientResetHint": {
+    "description": "Explanation under the reset button."
+  },
+  "recipientResetTitle": "Verilerimi sıfırla",
+  "@recipientResetTitle": {
+    "description": "Reset confirmation dialog title."
+  },
+  "recipientResetBody": "Bu cihazın anonim kimliği sunucudan ve cihazdan silinir. Kayıtlı dükkân listesi, seçtiğin bölge ve aktif kodun da silinir.",
+  "@recipientResetBody": {
+    "description": "Reset confirmation dialog body."
+  },
+  "recipientResetCancel": "Vazgeç",
+  "@recipientResetCancel": {
+    "description": "Reset dialog: cancel."
+  },
+  "recipientResetConfirm": "Sıfırla",
+  "@recipientResetConfirm": {
+    "description": "Reset dialog: confirm (destructive)."
+  },
+  "recipientResetDone": "Verilerin sıfırlandı.",
+  "@recipientResetDone": {
+    "description": "Snackbar after a reset."
+  },
+  "recipientResetDoneOffline": "Cihazdaki veriler silindi. Sunucuya şu an ulaşılamadı; anonim anahtarın süresi dolunca sunucuda da geçersiz olur.",
+  "@recipientResetDoneOffline": {
+    "description": "Snackbar after a reset when the server could not be reached."
+  },
+  "recipientRetry": "Yeniden dene",
+  "@recipientRetry": {
+    "description": "Retry button on recipient screens."
+  },
+  "recipientLoading": "Yükleniyor",
+  "@recipientLoading": {
+    "description": "Accessibility label of the progress indicator."
   }
 }
