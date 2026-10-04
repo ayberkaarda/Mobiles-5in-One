@@ -1014,5 +1014,671 @@
   "deleteSignInFirst": "Hesabını silmek için önce giriş yap.",
   "@deleteSignInFirst": {
     "description": "Deletion screen opened without an account."
+  },
+  "merchantSignedOutBody": "Dükkânını kaydetmek, ürünlerini eklemek ve askıdaki kodları okutmak için esnaf hesabınla giriş yap.",
+  "@merchantSignedOutBody": {
+    "description": "Merchant home body for a guest."
+  },
+  "merchantWrongAccountBody": "Bu bölüm esnaf hesapları için. Bağışçı hesabınla giriş yaptın; dükkân için esnaf hesabıyla giriş yapabilirsin.",
+  "@merchantWrongAccountBody": {
+    "description": "Merchant home body when a donor is signed in."
+  },
+  "merchantSignIn": "Giriş yap",
+  "@merchantSignIn": {
+    "description": "Button to the sign-in screen."
+  },
+  "merchantNoShopTitle": "Dükkânını ekle",
+  "@merchantNoShopTitle": {
+    "description": "Merchant home title when the account has no shop on this device."
+  },
+  "merchantNoShopBody": "Dükkânını kaydet; doğrulandığında askıdaki ürünler burada görünür. Bir dükkânda çalışıyorsan dükkânın adresiyle bağlanabilirsin.",
+  "@merchantNoShopBody": {
+    "description": "Merchant home body when the account has no shop."
+  },
+  "merchantRegisterShop": "Dükkânımı kaydet",
+  "@merchantRegisterShop": {
+    "description": "Button and title of the shop registration."
+  },
+  "merchantLinkShop": "Bir dükkâna bağlan",
+  "@merchantLinkShop": {
+    "description": "Button and title of linking an existing shop."
+  },
+  "merchantBack": "Geri",
+  "@merchantBack": {
+    "description": "Back control."
+  },
+  "merchantRetry": "Yeniden dene",
+  "@merchantRetry": {
+    "description": "Retry button."
+  },
+  "merchantCancel": "Vazgeç",
+  "@merchantCancel": {
+    "description": "Cancel button."
+  },
+  "merchantContinue": "Devam",
+  "@merchantContinue": {
+    "description": "Continue button."
+  },
+  "merchantSave": "Kaydet",
+  "@merchantSave": {
+    "description": "Save button."
+  },
+  "merchantSending": "Gönderiliyor…",
+  "@merchantSending": {
+    "description": "Button label while a request is in flight."
+  },
+  "merchantYes": "Evet",
+  "@merchantYes": {
+    "description": "Yes."
+  },
+  "merchantNo": "Hayır",
+  "@merchantNo": {
+    "description": "No."
+  },
+  "merchantRoleOwner": "Dükkân sahibi",
+  "@merchantRoleOwner": {
+    "description": "Role chip: shop owner."
+  },
+  "merchantRoleStaff": "Çalışan",
+  "@merchantRoleStaff": {
+    "description": "Role chip: shop staff."
+  },
+  "merchantOfflineNote": "Bağlantı yok. Kod okutma bağlantı gelince çalışır; kayıtlı liste görünür.",
+  "@merchantOfflineNote": {
+    "description": "Dashboard note when the shop could not be loaded."
+  },
+  "merchantStaffNote": "Çalışan olarak kod okutabilir ve verilenleri görebilirsin. Ürünleri, belgeleri ve ödemeleri dükkân sahibi yönetir.",
+  "@merchantStaffNote": {
+    "description": "Dashboard note for staff."
+  },
+  "merchantStatePendingTitle": "Kaydın inceleniyor",
+  "@merchantStatePendingTitle": {
+    "description": "Verification banner: pending."
+  },
+  "merchantStatePendingBody": "Belgelerini yükle; kontrol edildikten sonra dükkânın listede görünür.",
+  "@merchantStatePendingBody": {
+    "description": "Verification banner body: pending."
+  },
+  "merchantStateVerifiedTitle": "Doğrulanmış",
+  "@merchantStateVerifiedTitle": {
+    "description": "Verification banner: verified."
+  },
+  "merchantStateVerifiedBody": "Dükkânın listede. Askıya bırakılanlar burada görünür.",
+  "@merchantStateVerifiedBody": {
+    "description": "Verification banner body: verified."
+  },
+  "merchantStateRejectedTitle": "Kaydın onaylanmadı",
+  "@merchantStateRejectedTitle": {
+    "description": "Verification banner: rejected."
+  },
+  "merchantStateRejectedBody": "Dükkân bilgilerini ve belgelerini güncelleyip yeniden gönderebilirsin.",
+  "@merchantStateRejectedBody": {
+    "description": "Verification banner body: rejected."
+  },
+  "merchantRedeemAction": "Kod okut",
+  "@merchantRedeemAction": {
+    "description": "Primary dashboard action to the redemption scanner."
+  },
+  "merchantRedemptionsTitle": "Verilenler",
+  "@merchantRedemptionsTitle": {
+    "description": "Redemption list title."
+  },
+  "merchantRedemptionsSubtitle": "Son 30 günde askıdan verilenler",
+  "@merchantRedemptionsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantCatalogTitle": "Ürünler",
+  "@merchantCatalogTitle": {
+    "description": "Catalog title."
+  },
+  "merchantCatalogSubtitleOwner": "Askıya bırakılabilecek ürünler, fiyatlar ve günlük sınırlar",
+  "@merchantCatalogSubtitleOwner": {
+    "description": "Dashboard row subtitle (owner)."
+  },
+  "merchantCatalogSubtitleStaff": "Dükkânın ürün listesi",
+  "@merchantCatalogSubtitleStaff": {
+    "description": "Dashboard row subtitle (staff)."
+  },
+  "merchantPayoutsTitle": "Ödemeler",
+  "@merchantPayoutsTitle": {
+    "description": "Payouts title."
+  },
+  "merchantPayoutsSubtitle": "Bağışlar, komisyon ve aktarım durumu",
+  "@merchantPayoutsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantDocumentsTitle": "Belgeler",
+  "@merchantDocumentsTitle": {
+    "description": "Documents title."
+  },
+  "merchantDocumentsSubtitle": "Vergi levhası ve işletme belgesi",
+  "@merchantDocumentsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantProfileTitle": "Dükkân bilgileri",
+  "@merchantProfileTitle": {
+    "description": "Shop profile title."
+  },
+  "merchantProfileSubtitle": "Ad, adres, telefon ve görünürlük",
+  "@merchantProfileSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantFieldRequired": "Bu alan gerekli.",
+  "@merchantFieldRequired": {
+    "description": "Form error: required."
+  },
+  "merchantFieldTooShort": "Biraz daha uzun yaz.",
+  "@merchantFieldTooShort": {
+    "description": "Form error: too short."
+  },
+  "merchantFieldTooLong": "Bu alan çok uzun.",
+  "@merchantFieldTooLong": {
+    "description": "Form error: too long."
+  },
+  "merchantFieldInvalid": "Bu değer geçerli görünmüyor.",
+  "@merchantFieldInvalid": {
+    "description": "Form error: invalid."
+  },
+  "merchantFieldOutOfRange": "Bu değer izin verilen aralıkta değil.",
+  "@merchantFieldOutOfRange": {
+    "description": "Form error: out of range."
+  },
+  "merchantFieldShopName": "Dükkân adı",
+  "@merchantFieldShopName": {
+    "description": "Field label."
+  },
+  "merchantFieldShopType": "Dükkân türü",
+  "@merchantFieldShopType": {
+    "description": "Field label."
+  },
+  "merchantFieldPhone": "Telefon",
+  "@merchantFieldPhone": {
+    "description": "Field label."
+  },
+  "merchantFieldPhoneHint": "Örnek: 0212 555 00 00",
+  "@merchantFieldPhoneHint": {
+    "description": "Field hint."
+  },
+  "merchantFieldTaxNumber": "Vergi numarası",
+  "@merchantFieldTaxNumber": {
+    "description": "Field label."
+  },
+  "merchantFieldIban": "IBAN",
+  "@merchantFieldIban": {
+    "description": "Field label."
+  },
+  "merchantFieldIbanHint": "Ödemeler bu hesaba aktarılır; TR ile başlar.",
+  "@merchantFieldIbanHint": {
+    "description": "Field hint."
+  },
+  "merchantFieldListedOnWeb": "Web sitesinde listelensin",
+  "@merchantFieldListedOnWeb": {
+    "description": "Switch label."
+  },
+  "merchantFieldListedOnWebHint": "Doğrulandıktan sonra dükkânın askida.app dükkân listesinde görünür.",
+  "@merchantFieldListedOnWebHint": {
+    "description": "Switch hint."
+  },
+  "merchantFieldAddress": "Adres",
+  "@merchantFieldAddress": {
+    "description": "Field label."
+  },
+  "merchantFieldIl": "İl",
+  "@merchantFieldIl": {
+    "description": "Field label."
+  },
+  "merchantFieldIlce": "İlçe",
+  "@merchantFieldIlce": {
+    "description": "Field label."
+  },
+  "merchantFieldNewTaxNumber": "Yeni vergi numarası",
+  "@merchantFieldNewTaxNumber": {
+    "description": "Field label (profile)."
+  },
+  "merchantFieldNewIban": "Yeni IBAN",
+  "@merchantFieldNewIban": {
+    "description": "Field label (profile)."
+  },
+  "merchantFieldKeepBlank": "Değiştirmeyeceksen boş bırak.",
+  "@merchantFieldKeepBlank": {
+    "description": "Field hint (profile)."
+  },
+  "merchantShopTypeBakery": "Fırın",
+  "@merchantShopTypeBakery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeRestaurant": "Lokanta",
+  "@merchantShopTypeRestaurant": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeGrocery": "Bakkal / manav",
+  "@merchantShopTypeGrocery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeStationery": "Kırtasiye",
+  "@merchantShopTypeStationery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeCafe": "Kahvehane",
+  "@merchantShopTypeCafe": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeOther": "Diğer",
+  "@merchantShopTypeOther": {
+    "description": "Shop type."
+  },
+  "merchantWizardStep": "Adım {current} / {total}",
+  "@merchantWizardStep": {
+    "description": "Wizard progress.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantWizardDetailsTitle": "Dükkân bilgileri",
+  "@merchantWizardDetailsTitle": {
+    "description": "Wizard step 1 title."
+  },
+  "merchantWizardLocationTitle": "Adres ve konum",
+  "@merchantWizardLocationTitle": {
+    "description": "Wizard step 2 title."
+  },
+  "merchantWizardReviewTitle": "Kontrol et ve gönder",
+  "@merchantWizardReviewTitle": {
+    "description": "Wizard step 3 title."
+  },
+  "merchantWizardReviewNote": "Gönderdikten sonra kaydın incelenir. Doğrulanana kadar dükkânın listede görünmez.",
+  "@merchantWizardReviewNote": {
+    "description": "Wizard review note."
+  },
+  "merchantWizardSubmit": "Kaydı gönder",
+  "@merchantWizardSubmit": {
+    "description": "Wizard submit."
+  },
+  "merchantMapLabel": "Dükkânın konumunu seçmek için harita",
+  "@merchantMapLabel": {
+    "description": "Accessibility label of the pin map."
+  },
+  "merchantMapHint": "Dükkânın yerini işaretlemek için haritaya dokun.",
+  "@merchantMapHint": {
+    "description": "Map hint."
+  },
+  "merchantMapPinned": "İşaretlenen konum: {lat}, {lng}",
+  "@merchantMapPinned": {
+    "description": "Map pin coordinates.",
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantMapPinRequired": "Devam etmek için haritada dükkânın yerini işaretle.",
+  "@merchantMapPinRequired": {
+    "description": "Map error: no pin."
+  },
+  "merchantMapPinOutside": "İşaretlenen konum kabul edilmedi. Türkiye içinde bir nokta seç.",
+  "@merchantMapPinOutside": {
+    "description": "Map error from the server."
+  },
+  "merchantUseMyLocation": "Konumumu kullan",
+  "@merchantUseMyLocation": {
+    "description": "Button: use device location for the pin."
+  },
+  "merchantLocationRationaleTitle": "Konumun neden gerekli?",
+  "@merchantLocationRationaleTitle": {
+    "description": "Location rationale title."
+  },
+  "merchantLocationRationaleBody": "Konumun yalnızca dükkânının haritadaki yerini işaretlemek için bir kez okunur.",
+  "@merchantLocationRationaleBody": {
+    "description": "Location rationale body."
+  },
+  "merchantLocationFailed": "Konum alınamadı. Haritaya dokunarak işaretleyebilirsin.",
+  "@merchantLocationFailed": {
+    "description": "Location error."
+  },
+  "merchantLinkBody": "Çalıştığın dükkânın adresini ya da kısa adını yaz. Dükkân sahibi seni çalışan olarak eklemiş olmalı.",
+  "@merchantLinkBody": {
+    "description": "Link screen body."
+  },
+  "merchantLinkField": "Dükkân adresi",
+  "@merchantLinkField": {
+    "description": "Link field label."
+  },
+  "merchantLinkFieldHint": "Örnek: askida.app/dukkan/kose-firini",
+  "@merchantLinkFieldHint": {
+    "description": "Link field hint."
+  },
+  "merchantLinkSubmit": "Bağlan",
+  "@merchantLinkSubmit": {
+    "description": "Link submit."
+  },
+  "merchantLinkInvalid": "Bu bir dükkân adresi gibi görünmüyor.",
+  "@merchantLinkInvalid": {
+    "description": "Link error: malformed."
+  },
+  "merchantLinkNotMember": "Bu dükkânda çalışan olarak kayıtlı değilsin. Dükkân sahibine danışabilirsin.",
+  "@merchantLinkNotMember": {
+    "description": "Link error: not a member."
+  },
+  "merchantDocumentsBody": "Doğrulama için en fazla üç belge yükleyebilirsin. Belgenin fotoğrafı net ve okunur olsun.",
+  "@merchantDocumentsBody": {
+    "description": "Documents body."
+  },
+  "merchantDocumentKind": "Belge türü",
+  "@merchantDocumentKind": {
+    "description": "Documents: kind label."
+  },
+  "merchantDocumentVergiLevhasi": "Vergi levhası",
+  "@merchantDocumentVergiLevhasi": {
+    "description": "Document kind."
+  },
+  "merchantDocumentIsletmeBelgesi": "İşletme belgesi",
+  "@merchantDocumentIsletmeBelgesi": {
+    "description": "Document kind."
+  },
+  "merchantDocumentCamera": "Fotoğraf çek",
+  "@merchantDocumentCamera": {
+    "description": "Documents: camera."
+  },
+  "merchantDocumentGallery": "Galeriden seç",
+  "@merchantDocumentGallery": {
+    "description": "Documents: gallery."
+  },
+  "merchantDocumentUploading": "Belge gönderiliyor…",
+  "@merchantDocumentUploading": {
+    "description": "Documents: uploading."
+  },
+  "merchantDocumentWrongType": "Yalnızca JPEG ya da PNG fotoğraf yüklenebilir.",
+  "@merchantDocumentWrongType": {
+    "description": "Documents error: type."
+  },
+  "merchantDocumentTooLarge": "Fotoğraf en fazla 5 MB olabilir.",
+  "@merchantDocumentTooLarge": {
+    "description": "Documents error: size."
+  },
+  "merchantDocumentPickerFailed": "Fotoğraf seçilemedi. Kamera ya da galeri iznini kontrol et.",
+  "@merchantDocumentPickerFailed": {
+    "description": "Documents error: picker."
+  },
+  "merchantDocumentLimit": "En fazla üç belge yükleyebilirsin.",
+  "@merchantDocumentLimit": {
+    "description": "Documents error: limit."
+  },
+  "merchantDocumentsSent": "Gönderilen belgeler",
+  "@merchantDocumentsSent": {
+    "description": "Documents: list title."
+  },
+  "merchantDocumentReceived": "Alındı, incelenecek",
+  "@merchantDocumentReceived": {
+    "description": "Documents: row state."
+  },
+  "merchantDocumentsDone": "Tamam, ana sayfaya dön",
+  "@merchantDocumentsDone": {
+    "description": "Documents: finish."
+  },
+  "merchantCatalogAdd": "Ürün ekle",
+  "@merchantCatalogAdd": {
+    "description": "Catalog: add."
+  },
+  "merchantCatalogEmptyOwner": "Henüz ürün yok. Askıya bırakılabilecek ilk ürününü ekle.",
+  "@merchantCatalogEmptyOwner": {
+    "description": "Catalog empty (owner)."
+  },
+  "merchantCatalogEmptyStaff": "Henüz ürün yok.",
+  "@merchantCatalogEmptyStaff": {
+    "description": "Catalog empty (staff)."
+  },
+  "merchantCatalogDailyCap": "günde en çok {count}",
+  "@merchantCatalogDailyCap": {
+    "description": "Catalog row: daily cap.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCatalogInactive": "Pasif",
+  "@merchantCatalogInactive": {
+    "description": "Catalog row: inactive."
+  },
+  "merchantCatalogActiveToggle": "{name} askıda olsun",
+  "@merchantCatalogActiveToggle": {
+    "description": "Accessibility label of the active switch.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantItemNewTitle": "Yeni ürün",
+  "@merchantItemNewTitle": {
+    "description": "Item form title (new)."
+  },
+  "merchantItemEditTitle": "Ürünü düzenle",
+  "@merchantItemEditTitle": {
+    "description": "Item form title (edit)."
+  },
+  "merchantItemName": "Ürün adı",
+  "@merchantItemName": {
+    "description": "Field label."
+  },
+  "merchantItemNameHint": "Örnek: Ekmek, Mercimek çorbası, Defter",
+  "@merchantItemNameHint": {
+    "description": "Field hint."
+  },
+  "merchantItemCategory": "Kategori",
+  "@merchantItemCategory": {
+    "description": "Field label."
+  },
+  "merchantItemPrice": "Fiyat (₺)",
+  "@merchantItemPrice": {
+    "description": "Field label."
+  },
+  "merchantItemPriceHint": "Örnek: 15,50",
+  "@merchantItemPriceHint": {
+    "description": "Field hint."
+  },
+  "merchantItemDailyCap": "Günlük sınır",
+  "@merchantItemDailyCap": {
+    "description": "Field label."
+  },
+  "merchantItemDailyCapHint": "Bu üründen bir günde en çok kaç tane verilebilir.",
+  "@merchantItemDailyCapHint": {
+    "description": "Field hint."
+  },
+  "merchantItemActive": "Askıya bırakılabilir",
+  "@merchantItemActive": {
+    "description": "Switch label."
+  },
+  "merchantItemActiveHint": "Kapalıyken ürün bağışçılara görünmez.",
+  "@merchantItemActiveHint": {
+    "description": "Switch hint."
+  },
+  "merchantRedeemTitle": "Kod okut",
+  "@merchantRedeemTitle": {
+    "description": "Redeem screen title."
+  },
+  "merchantScannerLabel": "Kamera görüntüsü: kodun karekodunu çerçeveye getir",
+  "@merchantScannerLabel": {
+    "description": "Accessibility label of the scanner."
+  },
+  "merchantScannerHint": "Karekodu çerçeveye getir; okununca kendiliğinden kontrol edilir.",
+  "@merchantScannerHint": {
+    "description": "Scanner hint."
+  },
+  "merchantCameraFailed": "Kamera açılamadı. Kodu aşağıya elle yazabilirsin.",
+  "@merchantCameraFailed": {
+    "description": "Scanner error."
+  },
+  "merchantTorchOn": "Feneri aç",
+  "@merchantTorchOn": {
+    "description": "Torch button."
+  },
+  "merchantTorchOff": "Feneri kapat",
+  "@merchantTorchOff": {
+    "description": "Torch button."
+  },
+  "merchantManualTitle": "Ya da kodu yaz",
+  "@merchantManualTitle": {
+    "description": "Manual entry title."
+  },
+  "merchantManualField": "8 karakterlik kod",
+  "@merchantManualField": {
+    "description": "Manual entry label."
+  },
+  "merchantManualSubmit": "Kodu onayla",
+  "@merchantManualSubmit": {
+    "description": "Manual entry submit."
+  },
+  "merchantRedeemChecking": "Kod kontrol ediliyor…",
+  "@merchantRedeemChecking": {
+    "description": "Redeem busy."
+  },
+  "merchantRedeemApproved": "Kod onaylandı",
+  "@merchantRedeemApproved": {
+    "description": "Redeem success title."
+  },
+  "merchantRedeemGiven": "1 {item} verildi",
+  "@merchantRedeemGiven": {
+    "description": "What was handed over (item name as the shop wrote it).",
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantRedeemAt": "Saat {time}",
+  "@merchantRedeemAt": {
+    "description": "Redeem time.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantRedeemNext": "Sıradaki kodu okut",
+  "@merchantRedeemNext": {
+    "description": "Redeem success button."
+  },
+  "merchantRedeemRetry": "Yeniden dene",
+  "@merchantRedeemRetry": {
+    "description": "Redeem failure button."
+  },
+  "merchantRedeemMalformed": "Bu bir Askıda kodu değil. Kod 8 karakterdir; yeniden okutmayı ya da elle yazmayı dene.",
+  "@merchantRedeemMalformed": {
+    "description": "Redeem error: malformed input."
+  },
+  "merchantDayToday": "Bugün",
+  "@merchantDayToday": {
+    "description": "Day chip."
+  },
+  "merchantDayYesterday": "Dün",
+  "@merchantDayYesterday": {
+    "description": "Day chip."
+  },
+  "merchantRedemptionsCount": "{day}: {count} ürün verildi",
+  "@merchantRedemptionsCount": {
+    "description": "Accessibility summary of a day.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantRedemptionsCountTail": "ürün verildi",
+  "@merchantRedemptionsCountTail": {
+    "description": "Text next to the day count."
+  },
+  "merchantRedemptionsEmpty": "Bu gün askıdan bir şey verilmedi.",
+  "@merchantRedemptionsEmpty": {
+    "description": "Redemptions empty."
+  },
+  "merchantRedemptionsOffline": "Bağlantı yok: bu cihazda kayıtlı liste gösteriliyor.",
+  "@merchantRedemptionsOffline": {
+    "description": "Redemptions offline note."
+  },
+  "merchantPayoutsBody": "Her gün için askıya bırakılan tutar, platform komisyonu ve sana aktarılacak net tutar.",
+  "@merchantPayoutsBody": {
+    "description": "Payouts intro."
+  },
+  "merchantPayoutsEmpty": "Henüz ödeme kaydı yok.",
+  "@merchantPayoutsEmpty": {
+    "description": "Payouts empty."
+  },
+  "merchantPayoutNet": "Net {amount}",
+  "@merchantPayoutNet": {
+    "description": "Accessibility label of the net amount.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantPayoutBreakdown": "Bağış {donated} · Komisyon {commission}",
+  "@merchantPayoutBreakdown": {
+    "description": "Payout row breakdown.",
+    "placeholders": {
+      "donated": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantPayoutRedeemed": "{count} ürün verildi",
+  "@merchantPayoutRedeemed": {
+    "description": "Payout row redeemed count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantPayoutPending": "Bekliyor",
+  "@merchantPayoutPending": {
+    "description": "Payout status."
+  },
+  "merchantPayoutPaid": "Aktarıldı",
+  "@merchantPayoutPaid": {
+    "description": "Payout status."
+  },
+  "merchantPayoutHeld": "Bekletiliyor",
+  "@merchantPayoutHeld": {
+    "description": "Payout status."
+  },
+  "merchantPayoutFailed": "Aktarılamadı",
+  "@merchantPayoutFailed": {
+    "description": "Payout status."
+  },
+  "merchantProfileMasked": "Vergi no: {tax} · IBAN: {iban}",
+  "@merchantProfileMasked": {
+    "description": "Masked identifiers on the profile.",
+    "placeholders": {
+      "tax": {
+        "type": "String"
+      },
+      "iban": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantProfileReviewNote": "Ad, adres, vergi numarası ya da IBAN değişikliği kaydını yeniden incelemeye gönderebilir.",
+  "@merchantProfileReviewNote": {
+    "description": "Profile note."
+  },
+  "merchantProfileSaved": "Kaydedildi.",
+  "@merchantProfileSaved": {
+    "description": "Profile saved."
   }
 }
