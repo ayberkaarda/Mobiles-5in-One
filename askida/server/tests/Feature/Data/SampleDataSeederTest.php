@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Auth\Enums\UserKind;
 use App\Domain\Items\Models\Item;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopMember;
@@ -53,8 +54,8 @@ it('creates the sample merchant as owner of every sample shop and a sample donor
     $merchant = User::query()->where('email', SampleDataSeeder::MERCHANT_EMAIL)->firstOrFail();
     $donor = User::query()->where('email', SampleDataSeeder::DONOR_EMAIL)->firstOrFail();
 
-    expect($merchant->getAttribute('kind'))->toBe('merchant')
-        ->and($donor->getAttribute('kind'))->toBe('donor')
+    expect($merchant->kind)->toBe(UserKind::Merchant)
+        ->and($donor->kind)->toBe(UserKind::Donor)
         ->and(Hash::check(implode('-', ['ornek', 'esnaf']), (string) $merchant->getAttribute('password')))->toBeTrue()
         ->and(Hash::check(implode('-', ['ornek', 'bagisci']), (string) $donor->getAttribute('password')))->toBeTrue()
         ->and(Shop::query()->where('owner_id', $merchant->getKey())->count())->toBe(6)

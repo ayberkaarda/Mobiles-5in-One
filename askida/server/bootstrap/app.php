@@ -10,6 +10,7 @@ use App\Support\Problem\Handler;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,6 +33,12 @@ return Application::configure(basePath: dirname(__DIR__))
             LimitRequestBody::class,
             AdminSessionCookie::class,
         ]);
+
+        // There is no "login" route: API guests get the auth.unauthenticated problem
+        // whatever their Accept header, web guests go to the admin panel login.
+        $middleware->redirectGuestsTo(
+            static fn (Request $request): ?string => Handler::isApi($request) ? null : '/admin/login',
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Handler::register($exceptions);

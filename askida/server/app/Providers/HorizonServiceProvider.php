@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domain\Auth\Abilities\AdminAccess;
+use App\Domain\Auth\Abilities\AdminPermission;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
 
@@ -18,13 +20,11 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     /**
      * Register the Horizon gate.
      *
-     * Outside the local environment nobody may open the dashboard until the
-     * admin roles exist; access is then granted to the admin role only.
+     * Outside the local environment only a panel session of the admin role (permission
+     * horizon.view) may open the dashboard.
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return false;
-        });
+        Gate::define('viewHorizon', static fn (mixed $user = null): bool => AdminAccess::allows($user, AdminPermission::ViewHorizon));
     }
 }

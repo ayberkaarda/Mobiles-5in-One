@@ -116,9 +116,13 @@ return [
     /*
      * When set to true, the method for checking permissions will be registered on the gate.
      * Set this to false if you want to implement custom logic for checking permissions.
+     *
+     * Off: admin permissions are checked only through the admin gates (AdminAccess),
+     * which also refuse API tokens. The package hook would grant any ability named like
+     * a permission and is typed for users only, so it would fail for anon device actors.
      */
 
-    'register_permission_check_method' => true,
+    'register_permission_check_method' => false,
 
     /*
      * When set to true, Laravel\Octane\Events\OperationTerminated event listener will be registered
