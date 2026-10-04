@@ -36,6 +36,13 @@ dataset('public pages within budget', [
     // endregion pages
 
     // region content
+    'guide askida-ekmek-gelenegi-nedir' => ['/rehber/askida-ekmek-gelenegi-nedir', WebPage::BUDGET_LONG, 'tr'],
+    'guide esnaf-icin-askida-sistemi-nasil-isler' => ['/rehber/esnaf-icin-askida-sistemi-nasil-isler', WebPage::BUDGET_LONG, 'tr'],
+    'guide bagisiniz-nereye-gidiyor' => ['/rehber/bagisiniz-nereye-gidiyor', WebPage::BUDGET_LONG, 'tr'],
+    'guide askidan-almak-ayip-degil' => ['/rehber/askidan-almak-ayip-degil', WebPage::BUDGET_LONG, 'tr'],
+    'guide isletmenizi-nasil-dogrulariz' => ['/rehber/isletmenizi-nasil-dogrulariz', WebPage::BUDGET_LONG, 'tr'],
+    'privacy' => ['/gizlilik', WebPage::BUDGET_LONG, 'tr'],
+    'kvkk' => ['/kvkk-aydinlatma', WebPage::BUDGET_LONG, 'tr'],
     // endregion content
 
     // region directory
