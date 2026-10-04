@@ -12,11 +12,21 @@ use Illuminate\Auth\Access\Response;
 
 /**
  * Authorization matrix section 3.2 (catalog). Called as
- * `authorize('create', [Item::class, $shop])` and `authorize('update', [$item, $shop])`.
+ * `authorize('viewAny', [Item::class, $shop])`, `authorize('create', [Item::class, $shop])`
+ * and `authorize('update', [$item, $shop])`.
  */
 class ItemPolicy
 {
     use AuthorizesActors;
+
+    /**
+     * GET shops/{id}/items: owner or staff of the shop (the full catalog, inactive items
+     * included); a non-member sees a missing shop.
+     */
+    public function viewAny(User|AnonDevice $actor, Shop $shop): Response
+    {
+        return $this->memberOf($actor, $shop);
+    }
 
     /**
      * POST shops/{id}/items: owner of the shop.

@@ -1,11 +1,13 @@
 <?php
 
+use App\Domain\Payouts\PayoutsServiceProvider;
 use App\Providers\AccountsServiceProvider;
 use App\Providers\AnonServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
+use App\Providers\PaymentsServiceProvider;
 use App\Providers\RateLimitServiceProvider;
 use App\Providers\SecurityServiceProvider;
 use App\Providers\ShopsServiceProvider;
@@ -20,4 +22,6 @@ return [
     ShopsServiceProvider::class,
     AnonServiceProvider::class,
     AccountsServiceProvider::class,
+    PaymentsServiceProvider::class,
+    PayoutsServiceProvider::class,
 ];

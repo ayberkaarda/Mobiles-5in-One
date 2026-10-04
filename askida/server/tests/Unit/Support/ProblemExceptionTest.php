@@ -62,3 +62,19 @@ it('builds titles and types for every code', function (): void {
             ->and($code->type())->toBe('https://askida.app/problems/'.$code->value);
     }
 });
+
+it('declares the payment problem codes with their titles', function (): void {
+    $expected = [
+        'shop.not_payable' => 'This shop cannot receive donations yet.',
+        'payment.mismatch' => 'The payment does not match the donation.',
+        'donation.cap_exceeded' => 'The daily donation limit has been reached.',
+        'donation.tx_cap_exceeded' => 'The donation exceeds the per-donation limit.',
+    ];
+
+    foreach ($expected as $value => $title) {
+        $code = ProblemCode::from($value);
+
+        expect($code->title())->toBe($title)
+            ->and($code->type())->toBe('https://askida.app/problems/'.$value);
+    }
+});

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Testing\TestResponse;
 use Tests\Datasets\AuthorizationMatrix;
 use Tests\Security\AuthzScenario;
 use Tests\Security\MatrixDocument;
@@ -107,7 +108,9 @@ function inspectMatrixCheck(AuthzScenario $scenario, string $principal, array $c
 }
 
 /**
- * Routes whose URI and one of whose methods match the matrix row key.
+ * Routes whose URI and one of whose methods match the matrix row key. Path parameter
+ * names are not compared (`shops/{id}/redeem` matches a route declared as
+ * `shops/{shop}/redeem`): the document names the parameter, the route binds it.
  *
  * @return list<RoutingRoute>
  */
@@ -116,10 +119,11 @@ function routesForMatrixKey(string $key, string $section): array
     [$methods, $path] = explode(' ', $key, 2);
     $path = explode('?', $path)[0];
     $uri = $section === '3.6' && str_starts_with($path, 'pay/') ? $path : 'api/v1/'.$path;
+    $shape = static fn (string $uri): string => (string) preg_replace('/\{[^}]+\}/', '{}', $uri);
 
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
-        static fn (RoutingRoute $route): bool => $route->uri() === $uri
+        static fn (RoutingRoute $route): bool => $shape($route->uri()) === $shape($uri)
             && array_intersect(explode('/', $methods), $route->methods()) !== [],
     ));
 }
@@ -185,18 +189,54 @@ it('serves the existing identity endpoint with the matrix authentication rule', 
 
     $middleware = $route?->gatherMiddleware() ?? [];
 
-    if ($row['cells']['guest'] === 'Y') {
+    // Section 3.6 rows have no principal columns: they are reached without a bearer token
+    // (provider deliveries and payment pages authenticate by signature or token lookup).
+    if (($row['cells']['guest'] ?? 'Y') === 'Y') {
         expect($middleware)->not->toContain('auth:sanctum');
     } else {
         expect($middleware)->toContain('auth:sanctum');
     }
 })->with(matrixRowsWith('route'));
 
+it('serves web routes without Sanctum, ignoring any donor token', function (string $key, array $check): void {
+    $row = AuthorizationMatrix::rows()[$key];
+    $route = Route::getRoutes()->getByName($check[1]);
+
+    expect($route)->not->toBeNull()
+        ->and(routesForMatrixKey($key, $row['section']))->not->toBe([]);
+
+    $middleware = $route?->gatherMiddleware() ?? [];
+
+    foreach ($middleware as $name) {
+        expect(is_string($name) ? $name : '')->not->toBe('auth:sanctum')->not->toStartWith('ability:')->not->toStartWith('abilities:');
+    }
+
+    $method = in_array('POST', $route?->methods() ?? [], true) ? 'POST' : 'GET';
+    $uri = '/'.str_replace('{token}', 'fake-'.str_repeat('0', 40), $route?->uri() ?? '');
+    $donorToken = (new AuthzScenario)->actor('donor')->createToken('matrix-web-check', ['donor'])->plainTextToken;
+
+    // get()/post() apply the default headers; call() would silently drop the token.
+    $send = fn (): TestResponse => $method === 'POST' ? $this->post($uri) : $this->get($uri);
+
+    $without = $send();
+    app('auth')->forgetGuards();
+    $with = $this->withToken($donorToken)->{strtolower($method)}($uri);
+
+    expect($without->getStatusCode())->toBeIn([404, 422])
+        ->and($with->getStatusCode())->toBe($without->getStatusCode());
+})->with(matrixRowsWith('web'));
+
 it('keeps pending rows honest: the endpoint is still absent', function (string $key, array $check): void {
+    if ($key === '') {
+        expect(matrixRowsWith('pending'))->toBe([]);
+
+        return;
+    }
+
     $row = AuthorizationMatrix::rows()[$key];
 
     expect(routesForMatrixKey($key, $row['section']))->toBe([]);
-})->with(matrixRowsWith('pending'));
+})->with(fn (): array => matrixRowsWith('pending') ?: ['no pending rows' => ['', []]]);
 
 it('offers no way to an operation that must not exist', function (string $key, array $check): void {
     $names = array_merge(

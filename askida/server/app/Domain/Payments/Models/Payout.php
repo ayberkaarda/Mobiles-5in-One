@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $currency
  * @property PayoutStatus $status
  * @property CarbonImmutable $period
+ * @property bool $hold
+ * @property string|null $hold_reason
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -33,7 +35,7 @@ class Payout extends Model
     /**
      * @var list<string>
      */
-    protected $fillable = [];
+    protected $fillable = ['hold', 'hold_reason'];
 
     /**
      * @var array<string, mixed>
@@ -41,6 +43,7 @@ class Payout extends Model
     protected $attributes = [
         'currency' => 'TRY',
         'status' => 'pending',
+        'hold' => false,
     ];
 
     /**
@@ -51,6 +54,7 @@ class Payout extends Model
         return [
             'amount_minor' => 'integer',
             'status' => PayoutStatus::class,
+            'hold' => 'boolean',
             'period' => 'immutable_date',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

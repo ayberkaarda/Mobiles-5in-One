@@ -163,7 +163,7 @@ final class JwksIdentityTokenVerifier implements IdentityTokenVerifier
         if (! is_array($body) || ! isset($body['keys']) || ! is_array($body['keys'])) {
             Log::warning('Identity provider key set unavailable.', ['provider' => $provider->value]);
 
-            throw ProblemException::make(ProblemCode::ServerError, 503, 'Identity provider key set unavailable.');
+            throw ProblemException::make(ProblemCode::ServiceUnavailable, 503, 'Identity provider key set unavailable.');
         }
 
         $usable = [];
@@ -190,7 +190,7 @@ final class JwksIdentityTokenVerifier implements IdentityTokenVerifier
         if ($usable === []) {
             Log::warning('Identity provider key set has no usable keys.', ['provider' => $provider->value]);
 
-            throw ProblemException::make(ProblemCode::ServerError, 503, 'Identity provider key set unavailable.');
+            throw ProblemException::make(ProblemCode::ServiceUnavailable, 503, 'Identity provider key set unavailable.');
         }
 
         return $usable;

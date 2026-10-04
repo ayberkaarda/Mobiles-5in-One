@@ -2,19 +2,13 @@
 
 namespace App\Http\Controllers\Api\Items;
 
-use App\Domain\Auth\Abilities\Ability;
 use App\Domain\Items\Models\Item;
 use App\Domain\Shops\Models\Shop;
-use App\Domain\Shops\Services\ShopMembership;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Shops\StoreItemRequest;
 use App\Http\Requests\Shops\UpdateItemRequest;
 use App\Http\Resources\ItemResource;
-use App\Models\User;
-use App\Support\Problem\ProblemCode;
-use App\Support\Problem\ProblemException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,26 +20,15 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ItemController extends Controller
 {
-    public function __construct(private readonly ShopMembership $membership) {}
-
     /**
-     * GET shops/{id}/items: owner or staff of the shop. The matrix has no row for this
-     * read yet, so it applies the same order as the policies: ability (403), then
-     * membership (404 for a non-member).
+     * GET shops/{id}/items: owner or staff of the shop (ItemPolicy::viewAny), inactive
+     * items included.
      */
-    public function index(Request $request, string $id): AnonymousResourceCollection
+    public function index(string $id): AnonymousResourceCollection
     {
-        $user = $this->user($request);
-
-        if (! $user->tokenCan(Ability::Merchant->value)) {
-            throw ProblemException::make(ProblemCode::Forbidden, 403);
-        }
-
         $shop = Shop::query()->findOrFail($id);
 
-        if ($user->isDeactivated() || $this->membership->roleOf($user, $shop) === null) {
-            throw ProblemException::make(ProblemCode::NotFound, 404);
-        }
+        Gate::authorize('viewAny', [Item::class, $shop]);
 
         return ItemResource::collection($shop->items()->orderBy('name')->orderBy('id')->get());
     }
@@ -74,13 +57,5 @@ class ItemController extends Controller
         $item->fill($request->validated())->save();
 
         return new ItemResource($item->refresh());
-    }
-
-    private function user(Request $request): User
-    {
-        /** @var User $user */
-        $user = $request->user();
-
-        return $user;
     }
 }

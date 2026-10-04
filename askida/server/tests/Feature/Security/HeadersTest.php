@@ -100,7 +100,9 @@ it('relaxes the policy on the admin panel only as far as the real login page nee
     $csp = cspDirectives($response);
 
     expect($csp['script-src'])->toBe("'self' 'unsafe-inline' 'unsafe-eval'")
-        ->and($csp['style-src'])->toBe("'self' 'unsafe-inline' https://fonts.bunny.net")
+        ->and($csp['style-src'])->toBe("'self' 'unsafe-inline'")
+        ->and($csp['font-src'])->toBe("'self' data:")
+        ->and($csp['img-src'])->toBe("'self' data:")
         ->and($csp['default-src'])->toBe("'self'")
         ->and($csp['connect-src'])->toBe("'self'")
         ->and($csp)->not->toHaveKey('frame-src');
@@ -112,11 +114,9 @@ it('relaxes the policy on the admin panel only as far as the real login page nee
         static fn (string $origin): bool => ! str_contains($origin, 'localhost'),
     )));
 
-    expect($hosts)->toBe(['https://fonts.bunny.net']);
-
-    foreach ($hosts as $host) {
-        expect($csp['style-src'])->toContain($host)->and($csp['font-src'])->toContain($host);
-    }
+    // No third-party host: not in the header and not referenced by the page.
+    expect($hosts)->toBe([])
+        ->and((string) $response->headers->get('Content-Security-Policy'))->not->toContain('https://');
 });
 
 it('opens frame-src on payment pages to the configured hosts only', function (): void {
@@ -144,6 +144,51 @@ it('reads the payment frame hosts from the environment list', function (): void 
 
     expect($config['csp_profiles']['pay']['frame-src'])
         ->toBe(['allow' => ['https://a.payments.test', 'https://b.payments.test']]);
+});
+
+it('opens script-src and connect-src on payment pages to the configured hosts and changes no other profile', function (): void {
+    $emptyConfig = TemporaryEnv::run(
+        ['SECURITY_CSP_SCRIPT_SRC_PAY' => '', 'SECURITY_CSP_CONNECT_SRC_PAY' => '', 'SECURITY_CSP_FRAME_SRC_PAY' => ''],
+        fn (): array => require config_path('secure-headers.php'),
+    );
+    $configured = TemporaryEnv::run(
+        [
+            'SECURITY_CSP_SCRIPT_SRC_PAY' => 'https://scripts.payments.test, ,https://more.payments.test',
+            'SECURITY_CSP_CONNECT_SRC_PAY' => 'https://api.payments.test',
+            'SECURITY_CSP_FRAME_SRC_PAY' => '',
+        ],
+        fn (): array => require config_path('secure-headers.php'),
+    );
+
+    expect(array_keys($emptyConfig['csp_profiles']['pay']))->toBe(['frame-src'])
+        ->and($configured['csp_profiles']['pay']['script-src'])
+        ->toBe(['self' => true, 'use-nonce' => true, 'allow' => ['https://scripts.payments.test', 'https://more.payments.test']])
+        ->and($configured['csp_profiles']['pay']['connect-src'])->toBe(['self' => true, 'allow' => ['https://api.payments.test']])
+        ->and($configured['csp_profiles']['pay']['frame-src'])->toBe(['none' => true])
+        ->and(array_diff_key($configured['csp_profiles'], ['pay' => 1]))->toBe(array_diff_key($emptyConfig['csp_profiles'], ['pay' => 1]))
+        ->and($configured['csp'])->toBe($emptyConfig['csp']);
+
+    $before = [
+        'pay' => cspDirectives($this->get('/pay/test-headers')),
+        'web' => cspDirectives($this->get('/test-headers/inline')),
+        'api' => cspDirectives($this->getJson('/api/v1/test-headers/probe')),
+    ];
+    config(['secure-headers.csp_profiles' => $configured['csp_profiles']]);
+    $after = [
+        'pay' => cspDirectives($this->get('/pay/test-headers')),
+        'web' => cspDirectives($this->get('/test-headers/inline')),
+        'api' => cspDirectives($this->getJson('/api/v1/test-headers/probe')),
+    ];
+
+    expect($before['pay']['script-src'])->toMatch("/^'self' 'nonce-[^ ']+'$/")
+        ->and($after['pay']['script-src'])->toMatch("/^'self' 'nonce-[^ ']+' https:\/\/scripts\.payments\.test https:\/\/more\.payments\.test$/")
+        ->and($after['pay']['connect-src'])->toContain('https://api.payments.test')
+        ->and($before['pay']['connect-src'])->toBe("'self'")
+        ->and($after['pay']['frame-src'])->toBe("'none'")
+        ->and(preg_replace("/'nonce-[^']+'/", "'nonce'", implode(';', $after['web'])))->toBe(preg_replace("/'nonce-[^']+'/", "'nonce'", implode(';', $before['web'])))
+        ->and($after['api'])->toBe($before['api'])
+        ->and($after['web']['script-src'])->not->toContain('payments.test')
+        ->and($after['web']['connect-src'])->toBe("'self'");
 });
 
 it('locks API responses down and disables caching', function (): void {

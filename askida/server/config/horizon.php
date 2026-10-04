@@ -199,7 +199,10 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['default'],
+            // `push`: device notifications (askida.push.queue). `payments`: payment event
+            // processing of the payment phase, listed ahead of time so no edit is needed
+            // when those jobs arrive; an empty queue costs nothing.
+            'queue' => ['default', 'push', 'payments'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,

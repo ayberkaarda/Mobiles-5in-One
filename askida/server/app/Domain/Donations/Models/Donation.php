@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $provider_token
  * @property DonationStatus $status
  * @property CarbonImmutable|null $paid_at
+ * @property CarbonImmutable|null $hooks_issued_at
+ * @property string|null $conversation_id
  * @property CarbonImmutable|null $anonymized_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -59,6 +61,7 @@ class Donation extends Model
      */
     protected $hidden = [
         'provider_token',
+        'conversation_id',
     ];
 
     /**
@@ -81,6 +84,7 @@ class Donation extends Model
             'commission_minor' => 'integer',
             'status' => DonationStatus::class,
             'paid_at' => 'immutable_datetime',
+            'hooks_issued_at' => 'immutable_datetime',
             'anonymized_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

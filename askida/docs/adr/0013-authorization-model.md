@@ -79,3 +79,7 @@ policies and to the routes that exist (`/me` is self-only by construction).
 - Anonymous device principals are exercised through policy objects, not through issued tokens.
 - Evidence: `tests/Feature/Security/AuthorizationMatrixTest.php` (272 tests in the authorization
   worker's run), `tests/Security/IdorTest.php`, `AbilityMiddlewareTest.php`, `RolesSeederTest.php`.
+
+## Addendum (Phase 2, 2026-10-04)
+
+The five Phase 2 rows (DELETE me, PUT me/push-token, POST anon/attest, DELETE anon/me, GET impact) are now implemented and route-checked. The current `PENDING` set is the one in `docs/security/authorization-matrix.md` (seven rows, all Phase 3), which is the source of truth from here on.
