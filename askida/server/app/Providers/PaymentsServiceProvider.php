@@ -2,9 +2,16 @@
 
 namespace App\Providers;
 
+use App\Domain\Payments\Console\ReconcileCommand;
 use App\Domain\Payments\Contracts\PaymentGateway;
+use App\Domain\Payments\Listeners\OnShopRejectedRefund;
 use App\Domain\Payments\Services\CommissionCalculator;
+use App\Domain\Shops\Events\ShopRejected;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use RuntimeException;
@@ -67,5 +74,17 @@ class PaymentsServiceProvider extends ServiceProvider
 
         // Rate limiters donations-create and pay-callback are added here by the payments
         // area; the webhooks limiter is owned by the webhook area.
+
+        // region webhooks (webhook limiter, reconciliation command, refund listener)
+        RateLimiter::for('webhooks', static fn (Request $request): Limit => Limit::perMinute(120)
+            ->by('webhooks:'.(string) $request->ip())
+            ->response(RateLimitServiceProvider::problemResponse(...)));
+
+        Event::listen(ShopRejected::class, OnShopRejectedRefund::class);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReconcileCommand::class]);
+        }
+        // endregion webhooks
     }
 }
