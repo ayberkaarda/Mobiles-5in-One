@@ -6,6 +6,7 @@ use App\Domain\Payments\Contracts\SettlesPayments;
 use App\Domain\Payments\Data\ProviderPaymentStatus;
 use App\Domain\Payments\Data\SettlementOutcome;
 use App\Domain\Payments\Exceptions\GatewayUnavailable;
+use App\Domain\Payments\Jobs\ReconcilePayments;
 use App\Domain\Payments\Jobs\SendDonationReceipt;
 use App\Domain\Payments\Mail\DonationReceiptMail;
 use App\Domain\Payments\Mail\SettlementMismatchMail;
@@ -115,15 +116,47 @@ it('records a mismatch instead of paying, once while unresolved, with an alert a
     'failure of another conversation' => [fn (object $t) => $t->fake->scriptPayment($t->token, ProviderPaymentStatus::Failure, 0, 'TRY', 'someone-else'), 'conversation_mismatch'],
 ]);
 
-it('does not settle a success that arrives after the cap window and registers it instead', function (): void {
+it('settles a verified success that arrives after the initiated window', function (): void {
     scriptExact($this);
     $this->travel(31)->minutes();
 
-    expect(settle($this->token))->toBe(SettlementOutcome::Mismatch)
-        ->and($this->donation->refresh()->status)->toBe(DonationStatus::Initiated)
-        ->and(PaymentMismatch::query()->pluck('kind')->all())->toBe(['paid_after_window'])
-        ->and(Hook::query()->count())->toBe(0);
-    Queue::assertNothingPushed();
+    expect(settle($this->token))->toBe(SettlementOutcome::Paid)
+        ->and($this->donation->refresh()->status)->toBe(DonationStatus::Paid)
+        ->and(PaymentMismatch::query()->count())->toBe(0)
+        ->and(Hook::query()->where('donation_id', $this->donation->id)->count())->toBe(3);
+    Queue::assertPushed(SendDonationReceipt::class, 1);
+});
+
+it('settles a success that only reconciliation finds after the callback and webhook were lost', function (): void {
+    scriptExact($this);
+    $this->travel(45)->minutes();
+
+    $summary = app()->call([new ReconcilePayments, 'handle']);
+
+    expect($this->donation->refresh()->status)->toBe(DonationStatus::Paid)
+        ->and($summary['fixed'])->toBe(1)
+        ->and($summary['mismatches'])->toBe(0)
+        ->and(PaymentMismatch::query()->count())->toBe(0)
+        ->and(Hook::query()->where('donation_id', $this->donation->id)->count())->toBe(3);
+});
+
+it('settles a late success above the donor day cap and registers the cap breach for finance', function (): void {
+    // An earlier paid donation of the same donor today, then this one paid late.
+    $earlier = PaymentWorld::initiated($this->item, $this->donation->donor, qty: 2);
+    $earlier->forceFill(['status' => DonationStatus::Paid, 'paid_at' => now(), 'provider_payment_id' => 'pay-'.bin2hex(random_bytes(4))])->save();
+    config(['payments.caps.donor_day_minor' => $this->donation->amount_minor + $earlier->amount_minor - 1]);
+    scriptExact($this);
+    $this->travel(40)->minutes();
+
+    expect(settle($this->token))->toBe(SettlementOutcome::Paid)
+        ->and($this->donation->refresh()->status)->toBe(DonationStatus::Paid)
+        ->and(PaymentMismatch::query()->pluck('kind')->all())->toBe(['donor_cap_exceeded'])
+        ->and(Hook::query()->where('donation_id', $this->donation->id)->count())->toBe(3);
+    Mail::assertQueued(SettlementMismatchMail::class, fn (SettlementMismatchMail $mail): bool => $mail->kinds === ['donor_cap_exceeded']);
+
+    // A replay adds nothing.
+    expect(settle($this->token))->toBe(SettlementOutcome::AlreadyPaid)
+        ->and(PaymentMismatch::query()->count())->toBe(1);
 });
 
 it('still settles a success inside the cap window', function (): void {
