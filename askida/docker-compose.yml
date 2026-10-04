@@ -14,6 +14,8 @@ x-server-image: &server-image
   image: askida-server:local
   volumes:
     - ./server:/var/www/html
+    # Read-only: the authorization matrix test cross-checks docs/security against its dataset.
+    - ./docs:/var/www/docs:ro
   restart: unless-stopped
 
 services:
