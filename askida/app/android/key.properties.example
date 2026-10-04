@@ -1,0 +1,6 @@
+# Copy to key.properties (gitignored) on the machine that builds the release.
+# Every value below is a documented dummy; the real upload key never enters the repository.
+storeFile=/absolute/path/to/upload-keystore.jks
+storePassword=change-me-store-password
+keyAlias=upload
+keyPassword=change-me-key-password
