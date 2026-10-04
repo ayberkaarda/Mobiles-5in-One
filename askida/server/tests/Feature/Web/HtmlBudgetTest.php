@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Impact\Models\ImpactSnapshot;
 use App\Domain\Web\Contracts\CountersReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Fakes\FakeCountersReader;
@@ -41,6 +42,19 @@ dataset('public pages within budget', [
     // endregion directory
 
     // region impact
+    'impact' => ['/etki', WebPage::BUDGET, 'tr'],
+    'impact province' => [
+        function (): string {
+            foreach ([['İstanbul', 'Kadıköy', 3], ['İstanbul', 'Beşiktaş', 1], ['Ankara', 'Çankaya', 4]] as [$il, $ilce, $shops]) {
+                $row = new ImpactSnapshot;
+                $row->forceFill(['il' => $il, 'ilce' => $ilce, 'day' => now()->toDateString(), 'donated' => 4, 'redeemed' => 2, 'shops' => $shops])->save();
+            }
+
+            return '/etki/istanbul';
+        },
+        WebPage::BUDGET_LONG,
+        'tr',
+    ],
     // endregion impact
 ]);
 
