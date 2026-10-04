@@ -227,10 +227,16 @@ it('serves web routes without Sanctum, ignoring any donor token', function (stri
 })->with(matrixRowsWith('web'));
 
 it('keeps pending rows honest: the endpoint is still absent', function (string $key, array $check): void {
+    if ($key === '') {
+        expect(matrixRowsWith('pending'))->toBe([]);
+
+        return;
+    }
+
     $row = AuthorizationMatrix::rows()[$key];
 
     expect(routesForMatrixKey($key, $row['section']))->toBe([]);
-})->with(matrixRowsWith('pending'));
+})->with(fn (): array => matrixRowsWith('pending') ?: ['no pending rows' => ['', []]]);
 
 it('offers no way to an operation that must not exist', function (string $key, array $check): void {
     $names = array_merge(
