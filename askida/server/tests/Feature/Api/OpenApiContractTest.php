@@ -319,8 +319,7 @@ describe('shops', function (): void {
         Spec::assertProblem('GET', '/shops', $cursor, 422, 'validation.failed');
 
         Spec::assertProblem('GET', '/shops', W::call('GET', "/api/v1/shops?near={$near}"), 401, 'auth.unauthenticated');
-        // Recipient devices are refused by this route today (see the operation description).
-        Spec::assertProblem('GET', '/shops', W::call('GET', "/api/v1/shops?near={$near}", null, W::anonToken()), 401, 'auth.unauthenticated');
+        Spec::assertResponse('GET', '/shops', W::send('GET', "/api/v1/shops?near={$near}&radius=3000", null, W::anonToken())->assertOk());
     });
 
     it('create', function (): void {
@@ -352,6 +351,7 @@ describe('shops', function (): void {
         $pending = W::shop(state: ShopVerificationState::Pending);
         Spec::assertProblem('GET', '/shops/{shop}', W::call('GET', "/api/v1/shops/{$pending->slug}", null, W::token(W::donor())), 404, 'not_found');
         Spec::assertProblem('GET', '/shops/{shop}', W::call('GET', "/api/v1/shops/{$shop->slug}"), 401, 'auth.unauthenticated');
+        Spec::assertResponse('GET', '/shops/{shop}', W::send('GET', "/api/v1/shops/{$shop->slug}", null, W::anonToken())->assertOk());
     });
 
     it('update', function (): void {
@@ -378,6 +378,8 @@ describe('items', function (): void {
         Spec::assertResponse('GET', '/shops/{shop}/items', W::send('GET', "/api/v1/shops/{$shop->id}/items", null, W::token(W::staff($shop)))->assertOk());
         Spec::assertProblem('GET', '/shops/{shop}/items', W::call('GET', "/api/v1/shops/{$shop->id}/items", null, W::token(W::donor())), 403, 'forbidden');
         Spec::assertProblem('GET', '/shops/{shop}/items', W::call('GET', "/api/v1/shops/{$shop->id}/items", null, W::token(W::merchant())), 404, 'not_found');
+        $unknown = '00000000-0000-4000-8000-000000000000';
+        Spec::assertProblem('GET', '/shops/{shop}/items', W::call('GET', "/api/v1/shops/{$unknown}/items", null, W::token(W::donor())), 404, 'not_found');
     });
 
     it('create', function (): void {

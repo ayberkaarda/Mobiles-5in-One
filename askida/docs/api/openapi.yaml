@@ -596,11 +596,11 @@ paths:
         count of AVAILABLE units of active items. Never returns owner, contact,
         tax or bank data. Keyset pagination: pass `meta.next_cursor` as `cursor`
         until it is `null`. Sample shops appear only outside production when the
-        sample flag is on. Anon tokens are not accepted by this route today (401).
+        sample flag is on. Anon tokens (recipient devices) are accepted.
       security:
         - bearer: []
-      x-abilities: [donor, merchant]
-      x-roles: any signed-in user
+      x-abilities: [donor, merchant, anon]
+      x-roles: any signed-in user or attested device
       parameters:
         - name: near
           in: query
@@ -715,10 +715,11 @@ paths:
         A verified shop for every caller, with its active items and their
         AVAILABLE counts. An unverified shop is visible only to its members; to
         anyone else it is 404. The shop's owner receives the owner shape instead.
+        Anon tokens (recipient devices) are accepted and get the public shape.
       security:
         - bearer: []
-      x-abilities: [donor, merchant]
-      x-roles: any signed-in user; owner gets the owner shape
+      x-abilities: [donor, merchant, anon]
+      x-roles: any signed-in user or attested device; owner gets the owner shape
       parameters:
         - $ref: "#/components/parameters/ShopSlug"
       responses:
@@ -787,7 +788,7 @@ paths:
       tags: [items]
       operationId: listShopItems
       summary: The shop's full catalog
-      description: Owner and staff read every item, inactive ones included, ordered by name.
+      description: Owner and staff read every item, inactive ones included, ordered by name. An unknown shop id is 404 for every caller; a donor on an existing shop gets 403.
       security:
         - bearer: []
       x-abilities: [merchant]
@@ -1397,7 +1398,7 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
     IdentityKeysUnavailable:
-      description: The identity provider's key set could not be fetched. The body carries the code `server_error` with status 503.
+      description: The identity provider's key set could not be fetched. The body carries the code `service_unavailable` with status 503.
       headers:
         X-Request-Id:
           $ref: "#/components/headers/RequestId"
