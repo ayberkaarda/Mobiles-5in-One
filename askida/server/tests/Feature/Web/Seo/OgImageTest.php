@@ -2,6 +2,7 @@
 
 use App\Domain\Web\Directory\OgImageRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Web\Directory\Support\DirectoryWorld;
 
@@ -40,6 +41,37 @@ it('serves the stored file on later requests instead of drawing again', function
     Storage::disk('public')->put($path, 'stored-bytes');
 
     expect($this->get('/og/dukkan/cinar-firini-kadikoy.png')->assertOk()->getContent())->toBe('stored-bytes');
+});
+
+it('keeps one image per shop: a new variant removes the older ones', function (): void {
+    $shop = DirectoryWorld::bakery();
+    $other = DirectoryWorld::listed(['slug' => 'cinar-firini-kadikoy-iki']);
+    $disk = Storage::disk('public');
+    $stale = 'og/shops/cinar-firini-kadikoy-'.sha1('old name').'.png';
+    $neighbour = 'og/shops/'.$other->slug.'-'.sha1('x').'.png';
+    $disk->put($stale, 'old');
+    $disk->put($neighbour, 'other shop');
+
+    $this->get('/og/dukkan/cinar-firini-kadikoy.png')->assertOk();
+
+    $files = $disk->files('og/shops');
+    sort($files);
+    $expected = [app(OgImageRenderer::class)->path($shop), $neighbour];
+    sort($expected);
+
+    expect($files)->toBe($expected);
+});
+
+it('keeps no file when the shop is unlisted while its image is drawn', function (): void {
+    $shop = DirectoryWorld::bakery();
+
+    // The request loaded the shop while it was listed; the unlisting lands before the write.
+    DB::table('shops')->where('id', $shop->id)->update(['listed_on_web' => false]);
+
+    $png = app(OgImageRenderer::class)->forShop($shop);
+
+    expect(getimagesizefromstring($png))->not->toBeFalse()
+        ->and(Storage::disk('public')->files('og/shops'))->toBe([]);
 });
 
 it('draws the brand frame: background, rail and the accent tag', function (): void {

@@ -77,3 +77,18 @@ it('reads the fingerprints from a comma list in the environment', function (): v
 
     expect($config['android_cert_sha256'])->toBe([$first, $second]);
 });
+
+it('reads the Apple team id from APPLE_TEAM_ID', function (): void {
+    $team = strtoupper(bin2hex(random_bytes(5)));
+    putenv('APPLE_TEAM_ID='.$team);
+    $_ENV['APPLE_TEAM_ID'] = $_SERVER['APPLE_TEAM_ID'] = $team;
+
+    try {
+        $config = require config_path('services.php');
+    } finally {
+        putenv('APPLE_TEAM_ID');
+        unset($_ENV['APPLE_TEAM_ID'], $_SERVER['APPLE_TEAM_ID']);
+    }
+
+    expect($config['apple']['team_id'])->toBe($team);
+});
