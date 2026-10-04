@@ -15,6 +15,10 @@ use App\Domain\Hooks\Services\HookIssuer;
 use App\Domain\Hooks\Services\HookRedemptionService;
 use App\Domain\Hooks\Services\HookReleaseService;
 use App\Domain\Hooks\Services\HookReservationService;
+use App\Domain\Payments\Contracts\PaymentGateway;
+use App\Domain\Payments\Contracts\SettlesPayments;
+use App\Domain\Payments\Data\ProviderPaymentStatus;
+use App\Domain\Payments\Gateways\FakeGateway;
 use App\Domain\Shops\Models\Shop;
 use App\Models\User;
 use App\Support\Problem\ProblemException;
@@ -30,6 +34,22 @@ $app->make(Kernel::class)->bootstrap();
 DB::select('select 1');
 
 fwrite(STDOUT, "ready\n");
+
+/**
+ * Settles one provider token through the payment settlement service. The fake gateway of
+ * this process answers what the job says (its state is per process), so every
+ * participant sees the same provider answer.
+ *
+ * @param  array<string, string>  $args
+ */
+function settleScenario(array $args): string
+{
+    $gateway = app(FakeGateway::class);
+    $gateway->scriptPayment($args['token'], ProviderPaymentStatus::from($args['status']), (int) $args['paid'], $args['currency'], $args['conversation']);
+    app()->instance(PaymentGateway::class, $gateway);
+
+    return app(SettlesPayments::class)->settle($args['token'])->value;
+}
 
 /**
  * @param  array{scenario: string, lock_key: int, pepper: string, now?: string|null, args: array<string, string>}  $job
@@ -59,6 +79,7 @@ function runJob(array $job): array
             )->hookId],
             'release' => ['released' => app(HookReleaseService::class)->releaseExpired()],
             'issue' => ['created' => app(HookIssuer::class)->issueForDonation(Donation::query()->findOrFail($args['donation_id']))],
+            'settle' => ['outcome' => settleScenario($args)],
             default => throw new InvalidArgumentException('Unknown scenario '.$job['scenario']),
         };
     } catch (ProblemException $e) {

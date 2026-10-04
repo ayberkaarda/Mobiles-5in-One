@@ -3,8 +3,14 @@
 namespace App\Providers;
 
 use App\Domain\Payments\Contracts\PaymentGateway;
+use App\Domain\Payments\Contracts\SettlesPayments;
 use App\Domain\Payments\Services\CommissionCalculator;
+use App\Domain\Payments\Services\PaymentSettlementService;
+use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use RuntimeException;
@@ -49,6 +55,7 @@ class PaymentsServiceProvider extends ServiceProvider
                 throw new InvalidArgumentException('Unknown payment provider (expected iyzico or fake).');
             }
 
+            /** @var mixed $gateway Resolved by name; checked below rather than trusted. */
             $gateway = $app->make($class);
 
             if (! $gateway instanceof PaymentGateway) {
@@ -57,6 +64,9 @@ class PaymentsServiceProvider extends ServiceProvider
 
             return $gateway;
         });
+
+        // The single settlement implementation (callback, webhook job, reconciliation).
+        $this->app->bind(SettlesPayments::class, PaymentSettlementService::class);
     }
 
     public function boot(): void
@@ -67,5 +77,19 @@ class PaymentsServiceProvider extends ServiceProvider
 
         // Rate limiters donations-create and pay-callback are added here by the payments
         // area; the webhooks limiter is owned by the webhook area.
+        $problem = RateLimitServiceProvider::problemResponse(...);
+
+        // 20 donation starts per hour per donor account.
+        RateLimiter::for('donations-create', static function (Request $request) use ($problem): Limit {
+            $user = $request->user();
+
+            return Limit::perHour(20)
+                ->by('donations-create:'.($user instanceof User ? $user->id : 'ip:'.(string) $request->ip()))
+                ->response($problem);
+        });
+
+        // 60 provider callbacks per minute per IP (web page: the generic 429 page).
+        RateLimiter::for('pay-callback', static fn (Request $request): Limit => Limit::perMinute(60)
+            ->by('pay-callback:'.(string) $request->ip()));
     }
 }
