@@ -71,7 +71,7 @@ final class DocumentUploadService
             $expiresAt = CarbonImmutable::now()->addMinutes(DocumentRules::URL_TTL_MINUTES);
 
             /** @var array{url: string, headers: array<array-key, mixed>} $upload */
-            $upload = $this->storage->disk()->temporaryUploadUrl($document->path, $expiresAt, ['ContentType' => $mime]);
+            $upload = $this->storage->presignDisk()->temporaryUploadUrl($document->path, $expiresAt, ['ContentType' => $mime]);
 
             $headers = ['Content-Type' => $mime];
 

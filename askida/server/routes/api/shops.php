@@ -12,11 +12,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('auth:sanctum')->group(function (): void {
-    Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
+    // Directory reads: donors, merchants and anonymous recipient devices (matrix 3.2).
+    Route::middleware('ability:donor,merchant,anon')->group(function (): void {
+        Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
+        Route::get('shops/{slug}', [ShopController::class, 'show'])
+            ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+            ->name('shops.show');
+    });
+
     Route::post('shops', [ShopController::class, 'store'])->name('shops.store');
-    Route::get('shops/{slug}', [ShopController::class, 'show'])
-        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
-        ->name('shops.show');
 
     Route::whereUuid(['id', 'itemId', 'documentId'])->group(function (): void {
         Route::patch('shops/{id}', [ShopController::class, 'update'])->name('shops.update');

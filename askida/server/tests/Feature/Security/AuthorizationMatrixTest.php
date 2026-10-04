@@ -107,7 +107,9 @@ function inspectMatrixCheck(AuthzScenario $scenario, string $principal, array $c
 }
 
 /**
- * Routes whose URI and one of whose methods match the matrix row key.
+ * Routes whose URI and one of whose methods match the matrix row key. Path parameter
+ * names are not compared (`shops/{id}/redeem` matches a route declared as
+ * `shops/{shop}/redeem`): the document names the parameter, the route binds it.
  *
  * @return list<RoutingRoute>
  */
@@ -116,10 +118,11 @@ function routesForMatrixKey(string $key, string $section): array
     [$methods, $path] = explode(' ', $key, 2);
     $path = explode('?', $path)[0];
     $uri = $section === '3.6' && str_starts_with($path, 'pay/') ? $path : 'api/v1/'.$path;
+    $shape = static fn (string $uri): string => (string) preg_replace('/\{[^}]+\}/', '{}', $uri);
 
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
-        static fn (RoutingRoute $route): bool => $route->uri() === $uri
+        static fn (RoutingRoute $route): bool => $shape($route->uri()) === $shape($uri)
             && array_intersect(explode('/', $methods), $route->methods()) !== [],
     ));
 }

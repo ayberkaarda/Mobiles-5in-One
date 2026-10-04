@@ -17,14 +17,16 @@ use Laravel\Sanctum\PersonalAccessToken;
  * - it has not expired (expires_at and sanctum.expiration);
  * - its device exists and is not banned (read from the database on each request);
  * - it carries exactly the `anon` ability;
- * - the current route explicitly demands the anon ability (`abilities:anon` or
- *   `ability:anon`). Every other route, including the user routes, refuses the token
- *   with the usual 401 `auth.unauthenticated`.
+ * - the current route explicitly admits the anon ability: `abilities:anon` (anon only)
+ *   or an any-of list that names it, such as `ability:anon` or
+ *   `ability:donor,merchant,anon` (the shop directory reads). Every other route,
+ *   including the user routes, refuses the token with the usual 401
+ *   `auth.unauthenticated`.
  */
 final class AnonTokenRule
 {
     /**
-     * Route middleware that marks an anon route.
+     * Route middleware that marks an anon-only route.
      */
     public const ROUTE_MIDDLEWARE = ['abilities:anon', 'ability:anon'];
 
@@ -44,7 +46,32 @@ final class AnonTokenRule
             return false;
         }
 
-        return $route !== null && array_intersect(self::ROUTE_MIDDLEWARE, $route->gatherMiddleware()) !== [];
+        return $route !== null && self::routeAdmitsAnon($route);
+    }
+
+    /**
+     * True for `abilities:anon` and for any `ability:` (any-of) list naming anon. An
+     * `abilities:` (all-of) list with more names never admits a device token, whose
+     * only ability is anon.
+     */
+    public static function routeAdmitsAnon(Route $route): bool
+    {
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (! is_string($middleware)) {
+                continue;
+            }
+
+            if (in_array($middleware, self::ROUTE_MIDDLEWARE, true)) {
+                return true;
+            }
+
+            if (str_starts_with($middleware, 'ability:')
+                && in_array(Ability::Anon->value, explode(',', substr($middleware, strlen('ability:'))), true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function unexpired(PersonalAccessToken $token): bool

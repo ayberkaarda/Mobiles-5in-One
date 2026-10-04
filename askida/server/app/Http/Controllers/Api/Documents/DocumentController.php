@@ -56,7 +56,7 @@ class DocumentController extends Controller
     {
         $shop = Shop::query()->findOrFail($id);
 
-        Gate::authorize('create', [ShopDocument::class, $shop]);
+        Gate::authorize('confirm', [ShopDocument::class, $shop]);
 
         $document = ShopDocument::query()
             ->whereKey($documentId)
