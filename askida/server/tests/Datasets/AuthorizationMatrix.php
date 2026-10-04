@@ -88,7 +88,7 @@ final class AuthorizationMatrix
             // 3.6 Payment web endpoints (no principal columns)
             'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
             'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment callback']]],
-            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
+            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['route', 'api.v1.webhooks.iyzico']]],
 
             // 4 Admin panel
             'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops']),
