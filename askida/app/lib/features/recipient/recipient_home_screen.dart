@@ -1,44 +1,57 @@
-import 'package:askida/design/theme.dart';
-import 'package:askida/design/tokens.dart';
-import 'package:askida/design/widgets/rail_counter.dart';
-import 'package:askida/l10n/l10n.dart';
+import 'package:askida/data/session.dart';
+import 'package:askida/features/discovery/presentation/coarse_location.dart';
+import 'package:askida/features/recipient/presentation/location_step.dart';
+import 'package:askida/features/recipient/presentation/nearby_shops_view.dart';
+import 'package:askida/features/recipient/presentation/onboarding_intro.dart';
+import 'package:askida/features/recipient/presentation/recipient_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class RecipientHomeScreen extends StatelessWidget {
+/// Home of "Askıdan al", reachable from the first screen with no account.
+///
+/// Three onboarding screens, no account wall: (1) the station rail and one
+/// sentence, (2) an approximate location or a district, (3) the nearby
+/// shops, which then stays the home. Screen 1 is skipped once this device
+/// has an anonymous identity; screens 1 and 2 are skipped when location
+/// permission is already granted (the position is read coarse and rounded).
+class RecipientHomeScreen extends ConsumerStatefulWidget {
   const new({super.key});
 
-  /// Sample value shown on the rail counter until real counts exist; it is
-  /// always rendered with the sample label.
-  static const int sampleRailCount = 12;
+  @override
+  ConsumerState<RecipientHomeScreen> createState() =>
+      _RecipientHomeScreenState();
+}
+
+class _RecipientHomeScreenState extends ConsumerState<RecipientHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkLocation());
+  }
+
+  Future<void> _checkLocation() async {
+    if (!mounted || ref.read(coarseLocationProvider).point != null) return;
+    try {
+      await ref.read(coarseLocationProvider.notifier).check();
+    } on Object {
+      // No location plugin on this platform: the location step offers the
+      // district picker.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(AskidaLayout.screenGutter),
-      children: [
-        RailCounter(
-          count: sampleRailCount,
-          lead: l10n.recipientCounterLead,
-          tail: l10n.recipientCounterTail,
-          sampleLabel: l10n.sampleLabel,
-        ),
-        const SizedBox(height: AskidaSpacing.s8),
-        Text(
-          l10n.recipientEmptyTitle,
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AskidaSpacing.s3),
-        Text(
-          l10n.recipientEmptyBody,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: AskidaColors.of(context).textMuted,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
+    final location = ref.watch(coarseLocationProvider);
+    final point = location.point;
+    if (point != null) return NearbyShopsView(point: point);
+
+    final introSeen = ref.watch(recipientIntroSeenProvider);
+    final returning = ref.watch(sessionProvider.select((s) => s.hasAnonToken));
+    if (!introSeen && !returning) {
+      return OnboardingIntro(
+        onStart: () => ref.read(recipientIntroSeenProvider.notifier).seen(),
+      );
+    }
+    return const LocationStep();
   }
 }
