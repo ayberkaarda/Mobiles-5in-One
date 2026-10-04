@@ -93,7 +93,7 @@ final class AuthorizationMatrix
             // `web` check proves the routes are public to Sanctum; PayPageTest proves behaviour.
             'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.show']]],
             'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.callback']]],
-            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
+            'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['route', 'api.v1.webhooks.iyzico']]],
 
             // 4 Admin panel
             'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops']),

@@ -189,6 +189,8 @@ it('serves the existing identity endpoint with the matrix authentication rule', 
 
     $middleware = $route?->gatherMiddleware() ?? [];
 
+    // Section 3.6 rows have no principal columns: they are reached without a bearer token
+    // (provider deliveries and payment pages authenticate by signature or token lookup).
     if (($row['cells']['guest'] ?? 'Y') === 'Y') {
         expect($middleware)->not->toContain('auth:sanctum');
     } else {
