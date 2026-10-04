@@ -6,7 +6,6 @@ use App\Domain\Payments\Contracts\SettlesPayments;
 use App\Domain\Payments\Data\ProviderPaymentStatus;
 use App\Domain\Payments\Data\SettlementOutcome;
 use App\Domain\Payments\Exceptions\GatewayUnavailable;
-use App\Domain\Payments\Gateways\FakeGateway;
 use App\Domain\Payments\Jobs\SendDonationReceipt;
 use App\Domain\Payments\Mail\DonationReceiptMail;
 use App\Domain\Payments\Mail\SettlementMismatchMail;

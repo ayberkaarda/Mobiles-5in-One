@@ -7,6 +7,7 @@ use App\Domain\Shops\Models\ShopVerificationState;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\Feature\Api\Donations\Support\PaymentWorld;
 use Tests\Feature\Api\Hooks\Support\HookWorld;
 
@@ -26,7 +27,7 @@ beforeEach(function (): void {
     $this->token = PaymentWorld::token($this->donor);
 });
 
-function donate(object $test, array $body, ?string $token = null): Illuminate\Testing\TestResponse
+function donate(object $test, array $body, ?string $token = null): TestResponse
 {
     return $test->withToken($token ?? $test->token)->postJson('/api/v1/donations', $body);
 }

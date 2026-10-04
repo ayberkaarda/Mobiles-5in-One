@@ -5,6 +5,7 @@ use App\Domain\Payments\Data\ProviderPaymentStatus;
 use App\Domain\Payments\Data\RefundRequest;
 use App\Domain\Payments\Data\SubMerchantData;
 use App\Domain\Payments\Exceptions\GatewayUnavailable;
+use App\Domain\Payments\Gateways\Iyzico\IyzicoMoney;
 use App\Domain\Payments\Gateways\IyzicoGateway;
 use App\Domain\Shops\Models\Shop;
 use Carbon\CarbonPeriod;
@@ -244,9 +245,9 @@ it('never writes keys, tokens or bodies to the log', function (): void {
 });
 
 it('checks the published amount format both ways', function (): void {
-    expect(App\Domain\Payments\Gateways\Iyzico\IyzicoMoney::format(150_050))->toBe('1500.50')
-        ->and(App\Domain\Payments\Gateways\Iyzico\IyzicoMoney::format(5))->toBe('0.05')
-        ->and(App\Domain\Payments\Gateways\Iyzico\IyzicoMoney::parse('1500.5'))->toBe(150_050)
-        ->and(App\Domain\Payments\Gateways\Iyzico\IyzicoMoney::parse(15.1))->toBe(1_510)
-        ->and(App\Domain\Payments\Gateways\Iyzico\IyzicoMoney::parse('0.995'))->toBe(100);
+    expect(IyzicoMoney::format(150_050))->toBe('1500.50')
+        ->and(IyzicoMoney::format(5))->toBe('0.05')
+        ->and(IyzicoMoney::parse('1500.5'))->toBe(150_050)
+        ->and(IyzicoMoney::parse(15.1))->toBe(1_510)
+        ->and(IyzicoMoney::parse('0.995'))->toBe(100);
 });
