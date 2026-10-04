@@ -1,8 +1,10 @@
 <?php
 
 use App\Domain\Web\Contracts\CountersReader;
+use App\Domain\Web\Directory\DirectoryQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Fakes\FakeCountersReader;
+use Tests\Feature\Web\Directory\Support\DirectoryWorld;
 use Tests\Feature\Web\Support\WebPage;
 
 uses(RefreshDatabase::class);
@@ -29,6 +31,29 @@ dataset('public pages within budget', [
     // endregion content
 
     // region directory
+    'shop page' => [function (): string {
+        $shop = DirectoryWorld::bakery();
+
+        for ($i = 1; $i <= 12; $i++) {
+            DirectoryWorld::item($shop, $i % 4, ['name' => 'Askı ürünü '.$i]);
+        }
+
+        return '/dukkan/'.$shop->slug;
+    }, WebPage::BUDGET, 'tr'],
+    'district page (full page of shops)' => [function (): string {
+        for ($i = 1; $i <= DirectoryQuery::PER_PAGE; $i++) {
+            DirectoryWorld::listed(['slug' => 'butce-firini-'.$i, 'name' => 'Mahalle Fırını ve Simitçisi '.$i]);
+        }
+
+        return '/dukkanlar/istanbul/kadikoy';
+    }, WebPage::BUDGET, 'tr'],
+    'province page' => [function (): string {
+        foreach (['Kadıköy', 'Beşiktaş', 'Üsküdar', 'Şişli', 'Fatih', 'Bakırköy', 'Sarıyer', 'Beyoğlu'] as $i => $ilce) {
+            DirectoryWorld::listed(['slug' => 'il-butcesi-'.$i, 'ilce' => $ilce]);
+        }
+
+        return '/dukkanlar/istanbul';
+    }, WebPage::BUDGET, 'tr'],
     // endregion directory
 
     // region impact
