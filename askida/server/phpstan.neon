@@ -1,5 +1,6 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    - phpstan/rules.php
 
 parameters:
     level: 8
@@ -9,4 +10,5 @@ parameters:
         - config
         - database
         - routes
+        - phpstan/Rules
     tmpDir: storage/framework/cache/phpstan
