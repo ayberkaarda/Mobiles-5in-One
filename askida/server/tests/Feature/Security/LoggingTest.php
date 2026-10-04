@@ -112,7 +112,10 @@ it('logs one line per request with the route pattern and never the URL or body',
     $item = (string) random_int(100000, 999999);
 
     $response = $this->getJson('/api/v1/test-log/items/'.$item.'?email='.urlencode($email));
+    // An auth request with credentials in the body (matched or not, depending on which
+    // routes exist) and a path that never matches a route.
     $this->postJson('/api/v1/auth/login', ['email' => $email, 'password' => 'pw-'.bin2hex(random_bytes(4))]);
+    $this->getJson('/api/v1/test-log/no-such-route');
 
     $log = logText($this->logPath);
     $requestId = (string) $response->headers->get('X-Request-Id');
@@ -127,9 +130,10 @@ it('logs one line per request with the route pattern and never the URL or body',
         ->and($log)->not->toContain($item)
         ->and($log)->not->toContain($email)
         ->and($log)->not->toContain('email=')
-        ->and($log)->not->toContain('password');
+        ->and($log)->not->toContain('password')
+        ->and($log)->not->toContain('no-such-route');
 
-    expect(substr_count($log, 'http.request'))->toBe(2);
+    expect(substr_count($log, 'http.request'))->toBe(3);
 });
 
 it('configures the daily channel with masking, level info and 30 days', function (): void {
