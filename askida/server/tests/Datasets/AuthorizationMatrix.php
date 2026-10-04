@@ -83,7 +83,7 @@ final class AuthorizationMatrix
 
             // 3.5 Payouts and impact
             'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']]),
-            'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['pending', 'public impact endpoint']),
+            'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
             'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
