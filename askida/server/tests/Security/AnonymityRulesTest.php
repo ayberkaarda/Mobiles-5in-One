@@ -204,7 +204,15 @@ it('AN-4: lets no admin role read anon data through any HTTP route', function ()
         foreach ($sessions as $admin) {
             app('auth')->forgetGuards();
             $response = $this->actingAs($admin, 'web')->get('/'.ltrim($route->uri(), '/'));
-            assertNoRecipientTrace((string) $response->getContent(), array_slice($traces, 0, 4));
+            $body = (string) $response->getContent();
+
+            // Horizon's jobs API reports the queue's own bookkeeping field `reserved_at` (false or an
+            // epoch float) for every job. That is not the hook column, whose value is an ISO date.
+            if (str_starts_with($route->uri(), 'horizon/api/')) {
+                $body = (string) preg_replace('/"reserved_at":(?:false|null|"?\d+(?:\.\d+)?"?)(?=[,}])/', '"queue_field":0', $body);
+            }
+
+            assertNoRecipientTrace($body, array_slice($traces, 0, 4));
             $checked++;
         }
     }
