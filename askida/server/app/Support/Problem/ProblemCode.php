@@ -21,6 +21,11 @@ enum ProblemCode: string
     case MethodNotAllowed = 'method_not_allowed';
     case HttpsRequired = 'https_required';
     case ServiceUnavailable = 'service_unavailable';
+    case AnonDailyCap = 'anon.daily_cap';
+    case AnonShopCap = 'anon.shop_cap';
+    case HookNoneAvailable = 'hook.none_available';
+    case HookCodeInvalid = 'hook.code_invalid';
+    case HookCodeExpired = 'hook.code_expired';
 
     public function title(): string
     {
@@ -42,6 +47,11 @@ enum ProblemCode: string
             self::MethodNotAllowed => 'The method is not allowed for this resource.',
             self::HttpsRequired => 'HTTPS is required.',
             self::ServiceUnavailable => 'The service is temporarily unavailable.',
+            self::AnonDailyCap => 'The daily limit of this device is reached.',
+            self::AnonShopCap => 'The daily limit of this device at this shop is reached.',
+            self::HookNoneAvailable => 'No unit of this item is available now.',
+            self::HookCodeInvalid => 'The code is not valid for this shop.',
+            self::HookCodeExpired => 'The code has expired.',
         };
     }
 
