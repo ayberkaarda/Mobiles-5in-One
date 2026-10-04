@@ -26,7 +26,10 @@ import 'package:askida/data/repositories/payouts_repository.dart';
 import 'package:askida/data/repositories/push_repository.dart';
 import 'package:askida/data/repositories/shops_repository.dart';
 import 'package:askida/data/session.dart';
+import 'package:askida/features/discovery/data/location_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart'
+    show NetworkTileProvider, TileProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Every seam the features use has a provider here; tests override them
@@ -134,6 +137,16 @@ final impactRepositoryProvider = Provider<ImpactRepository>(
 
 final pushRepositoryProvider = Provider<PushRepository>(
   (ref) => DioPushRepository(ref.watch(apiClientProvider)),
+);
+
+/// Map tiles (tests override with a fake provider; no network in tests).
+final tileProviderProvider = Provider<TileProvider>(
+  (ref) => NetworkTileProvider(),
+);
+
+/// Device location (tests override with a fake).
+final locationServiceProvider = Provider<LocationService>(
+  (ref) => const GeolocatorLocationService(),
 );
 
 /// Reads the secure store at launch and loads the account when a user

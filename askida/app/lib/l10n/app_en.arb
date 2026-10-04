@@ -63,5 +63,7 @@
   "problemNetworkTimeout": "The server did not answer in time. Please try again.",
   "problemBadResponse": "The server sent an unexpected answer. Please try again.",
   "problemCancelled": "The action was cancelled.",
-  "problemGeneric": "Something went wrong. Please try again."
+  "problemGeneric": "Something went wrong. Please try again.",
+  "mapAttribution": "OpenStreetMap contributors",
+  "mapShopMarkerLabel": "{name}, {count} on the hook"
 }

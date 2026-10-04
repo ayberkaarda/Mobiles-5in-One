@@ -285,5 +285,21 @@
   "problemGeneric": "Bir şeyler ters gitti. Yeniden dene.",
   "@problemGeneric": {
     "description": "Error copy for any problem code the app does not know."
+  },
+  "mapAttribution": "OpenStreetMap katkıda bulunanlar",
+  "@mapAttribution": {
+    "description": "Map data attribution shown on every map (the widget adds the copyright sign)."
+  },
+  "mapShopMarkerLabel": "{name}, askıda {count}",
+  "@mapShopMarkerLabel": {
+    "description": "Accessibility label of a shop marker on the map: shop name and the number of items on its rail.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
