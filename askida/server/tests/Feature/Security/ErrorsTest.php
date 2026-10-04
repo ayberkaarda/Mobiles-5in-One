@@ -2,10 +2,13 @@
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 
@@ -33,9 +36,18 @@ beforeEach(function (): void {
         Route::get('too-large', fn () => throw new PostTooLargeException);
         Route::get('media', fn () => throw new UnsupportedMediaTypeHttpException('media '.$this->leak));
         Route::get('throttled', fn () => ['ok' => true])->middleware('throttle:1,1');
+        Route::get('custom-throttled', fn () => ['ok' => true])->middleware('throttle:test-custom');
+        Route::get('ready-response', fn () => throw new HttpResponseException(response()->json(['ready' => true], 202)));
     });
 
     Route::middleware('web')->get('test-errors/boom', fn () => throw new RuntimeException($this->leak));
+    Route::middleware('web')->get('test-errors/ready-response', fn () => throw new HttpResponseException(response('ready', 202)));
+
+    // A limiter with its own response callback, like the auth limiter: the throttle
+    // middleware throws HttpResponseException carrying that response.
+    RateLimiter::for('test-custom', fn () => Limit::perMinute(1)->by('test')->response(
+        fn (Request $request, array $headers) => response()->json(['custom' => true], 429, $headers),
+    ));
 });
 
 function problemKeys(): array
@@ -159,4 +171,18 @@ it('renders unknown web pages with the generic page', function (): void {
     $this->get('/sayfa-yok')
         ->assertStatus(404)
         ->assertSee('Aradığınız sayfa bulunamadı', false);
+});
+
+it('returns the response carried by an HttpResponseException unchanged', function (): void {
+    $this->getJson('/api/v1/test-errors/ready-response')->assertStatus(202)->assertExactJson(['ready' => true]);
+    $this->get('/test-errors/ready-response')->assertStatus(202)->assertSee('ready');
+});
+
+it('keeps the response of a rate limiter response callback', function (): void {
+    $this->getJson('/api/v1/test-errors/custom-throttled')->assertOk();
+
+    $response = $this->getJson('/api/v1/test-errors/custom-throttled');
+
+    $response->assertStatus(429)->assertExactJson(['custom' => true]);
+    expect((int) $response->headers->get('Retry-After'))->toBeGreaterThan(0);
 });

@@ -4,6 +4,7 @@ namespace App\Support\Problem;
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,6 +35,12 @@ final class Handler
         $exceptions->dontReport([ProblemException::class]);
 
         $exceptions->render(static function (Throwable $e, Request $request): ?Response {
+            // A finished response (for example a rate limiter's response callback, thrown
+            // by the throttle middleware) is passed through as it is, never turned into 500.
+            if ($e instanceof HttpResponseException) {
+                return $e->getResponse();
+            }
+
             if (self::isApi($request)) {
                 return self::toProblem($e)->render();
             }
