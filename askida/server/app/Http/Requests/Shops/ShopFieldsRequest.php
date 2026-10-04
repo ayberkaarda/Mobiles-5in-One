@@ -32,7 +32,7 @@ abstract class ShopFieldsRequest extends ApiFormRequest
         if (is_string($phone)) {
             $digits = (string) preg_replace('/[\s().-]+/', '', $phone);
 
-            // Accepted shapes: +90XXXXXXXXXX, 90XXXXXXXXXX, 0XXXXXXXXXX, XXXXXXXXXX.
+            // Accepted shapes: +90 dddddddddd, 90 dddddddddd, 0 dddddddddd, dddddddddd (d = digit).
             if (preg_match('/^(?:\+?90|0)?([2-589]\d{9})$/', $digits, $matches) === 1) {
                 $digits = '+90'.$matches[1];
             }
