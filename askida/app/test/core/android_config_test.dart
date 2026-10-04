@@ -114,5 +114,47 @@ void main() {
       expect(custom.single.group(2), contains('android:host="donation"'));
       expect(xml, contains('flutter_deeplinking_enabled'));
     });
+
+    test('camera is declared but optional; https links are queryable', () {
+      expect(xml, contains('android.permission.CAMERA'));
+      expect(
+        xml,
+        contains(
+          '<uses-feature android:name="android.hardware.camera" '
+          'android:required="false"/>',
+        ),
+      );
+      final queries = _elements(xml, 'queries').single.group(2)!;
+      expect(queries, contains('android.intent.action.VIEW'));
+      expect(queries, contains('android:scheme="https"'));
+    });
+
+    test('no background location, storage or phone permissions', () {
+      for (final permission in [
+        'ACCESS_BACKGROUND_LOCATION',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'READ_PHONE_STATE',
+        'RECORD_AUDIO',
+      ]) {
+        expect(xml, isNot(contains(permission)), reason: permission);
+      }
+    });
+  });
+
+  test('iOS usage strings are present and Turkish', () {
+    final plist = File('ios/Runner/Info.plist').readAsStringSync();
+    for (final key in [
+      'NSCameraUsageDescription',
+      'NSPhotoLibraryUsageDescription',
+      'NSLocationWhenInUseUsageDescription',
+    ]) {
+      final value = RegExp('<key>$key</key>\\s*<string>([^<]+)</string>')
+          .firstMatch(plist)
+          ?.group(1);
+      expect(value, isNotNull, reason: key);
+      expect(value, matches(RegExp('[çğıöşüÇĞİÖŞÜ]')), reason: key);
+    }
+    expect(plist, isNot(contains('NSLocationAlwaysUsageDescription')));
   });
 }

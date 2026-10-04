@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!-- The API, tiles and the checkout page. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Merchant code scanner (mobile_scanner declares the same); devices
+         without a camera can still install and type codes by hand. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <!-- HTTPS only; the dev flavor's config adds plain HTTP to 10.0.2.2 and
          localhost for the local stack. -->
     <application
@@ -75,6 +79,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- External links (legal and store pages) open in a browser. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>
