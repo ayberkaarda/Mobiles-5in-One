@@ -3,7 +3,9 @@ import 'package:askida/core/attest/attestation_service.dart';
 import 'package:askida/core/env/app_env.dart';
 import 'package:askida/core/env/flavor.dart';
 import 'package:askida/core/http/api_client.dart';
+import 'package:askida/core/identity/identity_provider.dart';
 import 'package:askida/core/locale/app_locale.dart';
+import 'package:askida/core/push/push_service.dart';
 import 'package:askida/core/storage/secure_token_store.dart';
 import 'package:askida/core/time/clock.dart';
 import 'package:askida/data/db/app_database.dart';
@@ -137,6 +139,16 @@ final impactRepositoryProvider = Provider<ImpactRepository>(
 
 final pushRepositoryProvider = Provider<PushRepository>(
   (ref) => DioPushRepository(ref.watch(apiClientProvider)),
+);
+
+/// Push transport; Noop until a Firebase configuration exists (ADR-0004).
+final pushServiceProvider = Provider<PushService>(
+  (ref) => const NoopPushService(),
+);
+
+/// Apple / Google sign-in; unconfigured in this repository.
+final identityProviderProvider = Provider<IdentityProvider>(
+  (ref) => const UnconfiguredIdentityProvider(),
 );
 
 /// Map tiles (tests override with a fake provider; no network in tests).
