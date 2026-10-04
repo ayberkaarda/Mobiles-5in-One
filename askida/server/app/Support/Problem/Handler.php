@@ -35,10 +35,10 @@ final class Handler
         $exceptions->dontReport([ProblemException::class]);
 
         $exceptions->render(static function (Throwable $e, Request $request): ?Response {
-            // A response built by the application itself (for example a named rate
-            // limiter's problem response) is sent as it is.
+            // A finished response (for example a rate limiter's response callback, thrown
+            // by the throttle middleware) is passed through as it is, never turned into 500.
             if ($e instanceof HttpResponseException) {
-                return null;
+                return $e->getResponse();
             }
 
             if (self::isApi($request)) {
