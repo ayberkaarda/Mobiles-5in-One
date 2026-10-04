@@ -21,10 +21,7 @@ void main() {
   final owner = ownerShop(state: VerificationState.verified);
   final screens = <String, Widget>{
     'dashboard': MerchantDashboard(
-      shop: MerchantShop(
-        link: linkFor(owner, MerchantRole.owner),
-        owner: owner,
-      ),
+      shop: MerchantShop(mine: MyShop.fromOwnerShop(owner), owner: owner),
     ),
     'redeem_success': RedeemSuccessView(
       result: RedeemResult(

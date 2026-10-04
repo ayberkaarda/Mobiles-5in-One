@@ -1,8 +1,6 @@
-import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:askida/features/merchant/domain/redemption_code.dart';
 import 'package:askida/features/merchant/domain/redemption_days.dart';
 import 'package:askida/features/merchant/domain/shop_rules.dart';
-import 'package:askida/features/merchant/presentation/providers/merchant_shop_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'merchant_harness.dart';
@@ -106,37 +104,6 @@ void main() {
       expect(ItemRules.priceInput(100), '1,00');
       expect(ItemRules.parsePriceMinor(ItemRules.priceInput(98765)), 98765);
     });
-  });
-
-  group('ShopLink', () {
-    const link = ShopLink(
-      shopId: 'shop-1',
-      slug: 'kose-firini',
-      name: '[ÖRNEK] Köşe Fırını',
-      role: MerchantRole.staff,
-    );
-
-    test('encodes and decodes', () {
-      expect(ShopLink.decode(link.encode()), link);
-    });
-
-    test('unreadable values decode to null', () {
-      expect(ShopLink.decode(null), isNull);
-      expect(ShopLink.decode(''), isNull);
-      expect(ShopLink.decode('a\nb\nc\nboss'), isNull);
-      expect(ShopLink.decode('\nb\nc\nowner'), isNull);
-    });
-  });
-
-  test('slugFromInput accepts a slug or the shop address', () {
-    expect(slugFromInput('kose-firini'), 'kose-firini');
-    expect(slugFromInput('askida.app/dukkan/kose-firini'), 'kose-firini');
-    expect(
-      slugFromInput('https://askida.app/dukkan/kose-firini/?ref=x'),
-      'kose-firini',
-    );
-    expect(slugFromInput('Köşe Fırını'), isNull);
-    expect(slugFromInput(''), isNull);
   });
 
   test('the log covers today and the 29 days before', () {

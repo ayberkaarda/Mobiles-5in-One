@@ -4,7 +4,6 @@ import 'package:askida/design/theme.dart';
 import 'package:askida/design/tokens.dart';
 import 'package:askida/design/widgets/askida_tag.dart';
 import 'package:askida/design/widgets/shop_card.dart';
-import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:askida/features/merchant/merchant_paths.dart';
 import 'package:askida/features/merchant/presentation/providers/merchant_providers.dart';
 import 'package:askida/features/merchant/presentation/providers/merchant_shop_controller.dart';
@@ -30,8 +29,7 @@ class CatalogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final isOwner =
-        ref.watch(merchantShopProvider).value?.role == MerchantRole.owner;
+    final isOwner = ref.watch(merchantShopProvider).value?.isOwner ?? false;
     final catalog = ref.watch(catalogProvider);
     return MerchantPage(
       title: l10n.merchantCatalogTitle,

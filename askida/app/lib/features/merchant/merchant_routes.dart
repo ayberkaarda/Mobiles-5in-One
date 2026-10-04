@@ -1,10 +1,10 @@
+import 'package:askida/data/models/shop.dart';
 import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:askida/features/merchant/merchant_paths.dart';
 import 'package:askida/features/merchant/presentation/providers/merchant_shop_controller.dart';
 import 'package:askida/features/merchant/presentation/screens/catalog_screen.dart';
 import 'package:askida/features/merchant/presentation/screens/documents_screen.dart';
 import 'package:askida/features/merchant/presentation/screens/item_form_screen.dart';
-import 'package:askida/features/merchant/presentation/screens/link_shop_screen.dart';
 import 'package:askida/features/merchant/presentation/screens/payouts_screen.dart';
 import 'package:askida/features/merchant/presentation/screens/redeem_screen.dart';
 import 'package:askida/features/merchant/presentation/screens/redemptions_screen.dart';
@@ -25,7 +25,7 @@ String? ownerOnly(BuildContext context, GoRouterState state) {
     listen: false,
   ).read(merchantShopProvider);
   if (shop is! AsyncData<MerchantShop?>) return null;
-  return shop.value?.role == MerchantRole.owner ? null : MerchantPaths.home;
+  return shop.value?.role == ShopRole.owner ? null : MerchantPaths.home;
 }
 
 /// Screens that need a shop (owner or staff); same loading rule.
@@ -44,7 +44,6 @@ final List<RouteBase> merchantRoutes = <RouteBase>[
     path: 'register',
     builder: (context, state) => const ShopOnboardingScreen(),
   ),
-  GoRoute(path: 'link', builder: (context, state) => const LinkShopScreen()),
   GoRoute(
     path: 'redeem',
     redirect: shopKnown,

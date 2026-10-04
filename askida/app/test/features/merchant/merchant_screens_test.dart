@@ -3,7 +3,6 @@ import 'package:askida/data/models/api_problem.dart';
 import 'package:askida/data/models/shop.dart';
 import 'package:askida/data/session.dart';
 import 'package:askida/features/discovery/data/location_service.dart';
-import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:askida/features/merchant/merchant_home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,18 +84,29 @@ void main() {
       expect(h.shops.calls, isEmpty);
     });
 
-    testWidgets('a merchant without a shop can register or link one', (
+    testWidgets('a merchant without a shop can register one', (tester) async {
+      final h = MerchantHarness(role: null);
+      await _pump(tester, h);
+      expect(find.text('Dükkânını ekle'), findsOneWidget);
+      expect(find.textContaining('dükkâna eklendiğinde'), findsOneWidget);
+      await _tap(tester, find.text('Dükkânımı kaydet'));
+      expect(find.text('Adım 1 / 3'), findsOneWidget);
+    });
+
+    testWidgets('refresh shows a shop the account was added to meanwhile', (
       tester,
     ) async {
       final h = MerchantHarness(role: null);
-      final app = await _pump(tester, h);
+      await _pump(tester, h);
       expect(find.text('Dükkânını ekle'), findsOneWidget);
-      await _tap(tester, find.text('Bir dükkâna bağlan'));
-      expect(find.byKey(const ValueKey('link-input')), findsOneWidget);
-      app.router.go('/merchant');
-      await tester.pumpAndSettle();
-      await _tap(tester, find.text('Dükkânımı kaydet'));
-      expect(find.text('Adım 1 / 3'), findsOneWidget);
+      h.shops.staffShops = [myShopFor(ownerShop(), ShopRole.staff)];
+      await _tap(
+        tester,
+        find.byKey(const ValueKey('merchant-no-shop-refresh')),
+      );
+      expect(find.text('Çalışan'), findsOneWidget);
+      expect(find.text('Kod okut'), findsOneWidget);
+      expect(h.shops.calls.where((c) => c == 'myShops'), hasLength(2));
     });
 
     for (final (state, text) in [
@@ -120,7 +130,7 @@ void main() {
     testWidgets('staff see only scanning, the list and the catalog', (
       tester,
     ) async {
-      final h = MerchantHarness(role: MerchantRole.staff);
+      final h = MerchantHarness(role: ShopRole.staff);
       final app = await _pump(tester, h);
       expect(find.text('Çalışan'), findsOneWidget);
       expect(find.text('Ödemeler'), findsNothing);
@@ -151,7 +161,7 @@ void main() {
       expect(app.location, '/merchant');
     });
 
-    testWidgets('offline: the dashboard works from the stored link', (
+    testWidgets('offline owner shape: the dashboard still opens', (
       tester,
     ) async {
       final h = MerchantHarness()
@@ -218,7 +228,7 @@ void main() {
       expect(h.shops.calls, contains('create'));
       expect(h.shops.ownShop!.name, '[ÖRNEK] Köşe Fırını');
       expect(h.shops.ownShop!.type, ShopType.bakery);
-      expect(h.store.links[merchantUser.id]!.role, MerchantRole.owner);
+      expect(h.shops.ownShop!.verificationState, VerificationState.pending);
       expect(app.location, '/merchant/documents');
     });
 
@@ -279,37 +289,6 @@ void main() {
       await _tap(tester, find.text('Devam').last);
       expect(find.textContaining('Konum alınamadı'), findsOneWidget);
       expect(h.location.preciseCalls, isEmpty);
-    });
-  });
-
-  group('link a shop', () {
-    testWidgets('staff link by the shop address', (tester) async {
-      final h = MerchantHarness(role: null);
-      final app = await _pump(tester, h, location: '/merchant/link');
-      await _enter(tester, 'link-input', 'Köşe Fırını');
-      await _tap(tester, find.byKey(const ValueKey('link-submit')));
-      expect(find.textContaining('dükkân adresi gibi görünmüyor'), findsOne);
-
-      await _enter(
-        tester,
-        'link-input',
-        'askida.app/dukkan/${ownerShop().slug}',
-      );
-      await _tap(tester, find.byKey(const ValueKey('link-submit')));
-      expect(app.location, '/merchant');
-      expect(find.text('Çalışan'), findsOneWidget);
-    });
-
-    testWidgets('not a member of the shop', (tester) async {
-      final h = MerchantHarness(role: null)
-        ..shops.failNext(
-          'items',
-          const ApiProblem(code: 'forbidden', status: 403),
-        );
-      await _pump(tester, h, location: '/merchant/link');
-      await _enter(tester, 'link-input', ownerShop().slug);
-      await _tap(tester, find.byKey(const ValueKey('link-submit')));
-      expect(find.textContaining('çalışan olarak kayıtlı değilsin'), findsOne);
     });
   });
 
@@ -384,7 +363,7 @@ void main() {
     });
 
     testWidgets('staff see the list without editing', (tester) async {
-      final h = MerchantHarness(role: MerchantRole.staff);
+      final h = MerchantHarness(role: ShopRole.staff);
       await _pump(tester, h, location: '/merchant/catalog');
       expect(find.text('Ekmek'), findsWidgets);
       expect(find.byKey(const ValueKey('catalog-add')), findsNothing);
@@ -535,7 +514,6 @@ void main() {
     final screens = {
       'dashboard': '/merchant',
       'register': '/merchant/register',
-      'link': '/merchant/link',
       'documents': '/merchant/documents',
       'catalog': '/merchant/catalog',
       'item form': '/merchant/catalog/new',

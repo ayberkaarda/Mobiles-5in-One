@@ -7,7 +7,6 @@ import 'package:askida/routing/app_paths.dart';
 abstract final class MerchantPaths {
   static final String home = AppMode.merchant.path;
   static final String register = '$home/register';
-  static final String link = '$home/link';
   static final String profile = '$home/profile';
   static final String documents = '$home/documents';
   static final String catalog = '$home/catalog';

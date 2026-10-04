@@ -6,8 +6,6 @@ import 'package:askida/data/models/shop.dart';
 import 'package:askida/data/models/user.dart';
 import 'package:askida/data/providers.dart';
 import 'package:askida/data/session.dart';
-import 'package:askida/features/merchant/data/merchant_shop_store.dart';
-import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -53,19 +51,22 @@ class FixedSession extends SessionController {
 OwnerShop ownerShop({VerificationState state = VerificationState.pending}) =>
     FakeShopsRepository.sampleOwnerShop().copyWith(verificationState: state);
 
-ShopLink linkFor(OwnerShop shop, MerchantRole role) =>
-    ShopLink(shopId: shop.id, slug: shop.slug, name: shop.name, role: role);
+/// The `GET me/shops` row of [shop] for [role].
+MyShop myShopFor(OwnerShop shop, ShopRole role) =>
+    MyShop.fromOwnerShop(shop).copyWith(role: role);
 
 /// Every fake a merchant screen touches, wired into provider overrides.
 class MerchantHarness {
   new({
     this.session,
-    MerchantRole? role = MerchantRole.owner,
+    ShopRole? role = ShopRole.owner,
     VerificationState state = VerificationState.pending,
   }) {
     final shop = ownerShop(state: state);
-    if (role == MerchantRole.owner) shops.ownShop = shop;
-    if (role != null) store.links[merchantUser.id] = linkFor(shop, role);
+    if (role == ShopRole.owner) shops.ownShop = shop;
+    if (role == ShopRole.staff) {
+      shops.staffShops = [myShopFor(shop, ShopRole.staff)];
+    }
   }
 
   /// Defaults to the merchant session.
@@ -75,7 +76,6 @@ class MerchantHarness {
   final hooks = FakeHooksRepository();
   final payouts = FakePayoutsRepository();
   final picker = FakeMediaPicker();
-  final store = InMemoryMerchantShopStore();
   final tiles = FakeTileProvider();
   final location = FakeLocationService();
   final List<FakeQrScanner> scanners = [];
@@ -94,7 +94,6 @@ class MerchantHarness {
     hooksRepositoryProvider.overrideWithValue(hooks),
     payoutsRepositoryProvider.overrideWithValue(payouts),
     mediaPickerProvider.overrideWithValue(picker),
-    merchantShopStoreProvider.overrideWithValue(store),
     tileProviderProvider.overrideWithValue(tiles),
     locationServiceProvider.overrideWithValue(location),
     qrScannerFactoryProvider.overrideWithValue(() {

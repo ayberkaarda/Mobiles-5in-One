@@ -14,8 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 /// Merchant mode home. Without a merchant account it explains what the
-/// mode needs; with one it offers to register or link a shop, and once a
-/// shop is known it is the merchant's dashboard.
+/// mode needs; with one that has no shop yet it offers to register one,
+/// and once the account's shop is known it is the merchant's dashboard.
 class MerchantHomeScreen extends StatelessWidget {
   const new({super.key});
 
@@ -84,11 +84,11 @@ class _SignedOutView extends StatelessWidget {
   }
 }
 
-class _NoShopView extends StatelessWidget {
+class _NoShopView extends ConsumerWidget {
   const new();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     return _CenteredActions(
       title: l10n.merchantNoShopTitle,
@@ -98,9 +98,12 @@ class _NoShopView extends StatelessWidget {
           onPressed: () => context.push(MerchantPaths.register),
           child: Text(l10n.merchantRegisterShop),
         ),
+        // Staff are added to a shop on the server; the listing is read
+        // again here once that happened.
         FilledButton.tonal(
-          onPressed: () => context.push(MerchantPaths.link),
-          child: Text(l10n.merchantLinkShop),
+          key: const ValueKey('merchant-no-shop-refresh'),
+          onPressed: () => ref.read(merchantShopProvider.notifier).reload(),
+          child: Text(l10n.merchantNoShopRefresh),
         ),
       ],
     );
@@ -196,7 +199,8 @@ class MerchantDashboard extends ConsumerWidget {
                     ),
                   ),
                 ],
-                if (verification != null) ...[
+                // The banner speaks to the owner about their registration.
+                if (shop.isOwner) ...[
                   const SizedBox(height: AskidaSpacing.s4),
                   VerificationBanner(state: verification),
                 ],

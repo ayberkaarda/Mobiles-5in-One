@@ -1029,9 +1029,9 @@
   },
   "merchantNoShopTitle": "Dükkânını ekle",
   "@merchantNoShopTitle": {
-    "description": "Merchant home title when the account has no shop on this device."
+    "description": "Merchant home title when the account is not owner or staff of any shop."
   },
-  "merchantNoShopBody": "Dükkânını kaydet; doğrulandığında askıdaki ürünler burada görünür. Bir dükkânda çalışıyorsan dükkânın adresiyle bağlanabilirsin.",
+  "merchantNoShopBody": "Dükkânını kaydet; doğrulandığında askıdaki ürünler burada görünür. Bir dükkânda çalışıyorsan, dükkâna eklendiğinde burada görünür.",
   "@merchantNoShopBody": {
     "description": "Merchant home body when the account has no shop."
   },
@@ -1039,9 +1039,9 @@
   "@merchantRegisterShop": {
     "description": "Button and title of the shop registration."
   },
-  "merchantLinkShop": "Bir dükkâna bağlan",
-  "@merchantLinkShop": {
-    "description": "Button and title of linking an existing shop."
+  "merchantNoShopRefresh": "Yenile",
+  "@merchantNoShopRefresh": {
+    "description": "Button that reloads the account's shop list on the merchant home."
   },
   "merchantBack": "Geri",
   "@merchantBack": {
@@ -1342,30 +1342,6 @@
   "merchantLocationFailed": "Konum alınamadı. Haritaya dokunarak işaretleyebilirsin.",
   "@merchantLocationFailed": {
     "description": "Location error."
-  },
-  "merchantLinkBody": "Çalıştığın dükkânın adresini ya da kısa adını yaz. Dükkân sahibi seni çalışan olarak eklemiş olmalı.",
-  "@merchantLinkBody": {
-    "description": "Link screen body."
-  },
-  "merchantLinkField": "Dükkân adresi",
-  "@merchantLinkField": {
-    "description": "Link field label."
-  },
-  "merchantLinkFieldHint": "Örnek: askida.app/dukkan/kose-firini",
-  "@merchantLinkFieldHint": {
-    "description": "Link field hint."
-  },
-  "merchantLinkSubmit": "Bağlan",
-  "@merchantLinkSubmit": {
-    "description": "Link submit."
-  },
-  "merchantLinkInvalid": "Bu bir dükkân adresi gibi görünmüyor.",
-  "@merchantLinkInvalid": {
-    "description": "Link error: malformed."
-  },
-  "merchantLinkNotMember": "Bu dükkânda çalışan olarak kayıtlı değilsin. Dükkân sahibine danışabilirsin.",
-  "@merchantLinkNotMember": {
-    "description": "Link error: not a member."
   },
   "merchantDocumentsBody": "Doğrulama için en fazla üç belge yükleyebilirsin. Belgenin fotoğrafı net ve okunur olsun.",
   "@merchantDocumentsBody": {

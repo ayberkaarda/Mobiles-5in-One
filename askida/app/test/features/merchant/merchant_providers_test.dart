@@ -4,7 +4,6 @@ import 'package:askida/data/models/item.dart';
 import 'package:askida/data/models/shop.dart';
 import 'package:askida/data/models/shop_document.dart';
 import 'package:askida/data/session.dart';
-import 'package:askida/features/merchant/domain/merchant_shop.dart';
 import 'package:askida/features/merchant/domain/redemption_days.dart';
 import 'package:askida/features/merchant/presentation/providers/merchant_providers.dart';
 import 'package:askida/features/merchant/presentation/providers/merchant_shop_controller.dart';
@@ -21,7 +20,7 @@ const _notFound = ApiProblem(code: 'not_found', status: 404);
 
 void main() {
   group('merchantShopProvider', () {
-    test('nobody signed in: no shop and no store read', () async {
+    test('nobody signed in: no shop and no server call', () async {
       final h = MerchantHarness(session: const SessionState(restored: true));
       final c = h.container();
       expect(await c.read(merchantShopProvider.future), isNull);
@@ -31,119 +30,98 @@ void main() {
     test('a donor never gets a merchant shop', () async {
       final h = MerchantHarness(session: donorSession);
       expect(await h.container().read(merchantShopProvider.future), isNull);
-    });
-
-    test('merchant without a linked shop', () async {
-      final h = MerchantHarness(role: null);
-      expect(await h.container().read(merchantShopProvider.future), isNull);
       expect(h.shops.calls, isEmpty);
     });
 
-    test('owner: the owner shape with the verification state', () async {
+    test('merchant who is not in any shop', () async {
+      final h = MerchantHarness(role: null);
+      expect(await h.container().read(merchantShopProvider.future), isNull);
+      expect(h.shops.calls, ['myShops']);
+    });
+
+    test('owner: the listing, then the owner shape', () async {
       final h = MerchantHarness(state: VerificationState.verified);
       final shop = await h.container().read(merchantShopProvider.future);
-      expect(shop!.role, MerchantRole.owner);
+      expect(shop!.role, ShopRole.owner);
+      expect(shop.owner, isNotNull);
       expect(shop.verification, VerificationState.verified);
       expect(shop.offline, isFalse);
+      expect(h.shops.calls, ['myShops', 'bySlug']);
     });
 
-    test('staff: the public shape means staff', () async {
-      final h = MerchantHarness(role: MerchantRole.staff);
+    test('staff: the role comes from the listing, no owner shape', () async {
+      final h = MerchantHarness(role: ShopRole.staff);
       final shop = await h.container().read(merchantShopProvider.future);
-      expect(shop!.role, MerchantRole.staff);
+      expect(shop!.role, ShopRole.staff);
       expect(shop.owner, isNull);
-      expect(shop.verification, isNull);
+      expect(shop.id, ownerShop().id);
+      expect(shop.verification, VerificationState.pending);
+      expect(h.shops.calls, ['myShops']);
     });
 
-    test('a role change seen on the server updates the stored link', () async {
-      // Stored as staff, but the server answers the owner shape.
-      final h = MerchantHarness(role: MerchantRole.staff);
-      h.shops.ownShop = ownerShop();
+    test('an owned shop wins over a staff membership', () async {
+      final h = MerchantHarness();
+      h.shops.staffShops = [
+        myShopFor(ownerShop(), ShopRole.staff).copyWith(
+          id: 'other-shop',
+          slug: 'a-first-by-name',
+          name: 'A Lokantası',
+        ),
+      ];
       final shop = await h.container().read(merchantShopProvider.future);
-      expect(shop!.role, MerchantRole.owner);
-      expect(h.store.links[merchantUser.id]!.role, MerchantRole.owner);
+      expect(shop!.isOwner, isTrue);
+      expect(shop.id, ownerShop().id);
     });
 
-    test('a closed shop or a removed member forgets the link', () async {
-      for (final problem in [_notFound, _forbidden]) {
-        final h = MerchantHarness()..shops.failNext('bySlug', problem);
-        expect(await h.container().read(merchantShopProvider.future), isNull);
-        expect(h.store.links, isEmpty);
-      }
+    test('a removed membership is gone on the next load', () async {
+      final h = MerchantHarness(role: ShopRole.staff);
+      final c = h.container();
+      expect(await c.read(merchantShopProvider.future), isNotNull);
+      h.shops.staffShops = [];
+      await c.read(merchantShopProvider.notifier).reload();
+      expect(c.read(merchantShopProvider).value, isNull);
     });
 
-    test('offline: the stored link keeps the dashboard working', () async {
+    test('offline owner shape: the listing keeps the dashboard', () async {
       final h = MerchantHarness()..shops.failNext('bySlug', _offline);
       final shop = await h.container().read(merchantShopProvider.future);
       expect(shop!.offline, isTrue);
-      expect(shop.role, MerchantRole.owner);
-      expect(h.store.links, isNotEmpty);
+      expect(shop.role, ShopRole.owner);
+      expect(shop.name, ownerShop().name);
     });
 
-    test('other failures surface as errors', () async {
-      final h = MerchantHarness()
-        ..shops.failNext(
-          'bySlug',
-          const ApiProblem(code: 'server_error', status: 500),
+    test('a failing listing surfaces as an error', () async {
+      for (final problem in [_offline, _forbidden]) {
+        final h = MerchantHarness()..shops.failNext('myShops', problem);
+        await expectLater(
+          h.container().read(merchantShopProvider.future),
+          throwsA(isA<ApiProblem>()),
         );
-      final c = h.container();
-      await expectLater(
-        c.read(merchantShopProvider.future),
-        throwsA(isA<ApiProblem>()),
-      );
+      }
     });
 
-    test('registered stores the link and publishes the shop', () async {
+    test('other owner shape failures surface as errors', () async {
+      for (final problem in [
+        _notFound,
+        const ApiProblem(code: 'server_error', status: 500),
+      ]) {
+        final h = MerchantHarness()..shops.failNext('bySlug', problem);
+        await expectLater(
+          h.container().read(merchantShopProvider.future),
+          throwsA(isA<ApiProblem>()),
+        );
+      }
+    });
+
+    test('registered publishes the new shop as its owner', () async {
       final h = MerchantHarness(role: null);
       final c = h.container();
       expect(await c.read(merchantShopProvider.future), isNull);
       await c.read(merchantShopProvider.notifier).registered(ownerShop());
-      expect(c.read(merchantShopProvider).value!.isOwner, isTrue);
-      expect(h.store.links[merchantUser.id]!.slug, ownerShop().slug);
-    });
-
-    test('link as staff checks membership through the catalog', () async {
-      final h = MerchantHarness(role: null);
-      final c = h.container();
-      await c.read(merchantShopProvider.future);
-      final shop = await c
-          .read(merchantShopProvider.notifier)
-          .link('https://askida.app/dukkan/${ownerShop().slug}');
-      expect(shop.role, MerchantRole.staff);
-      expect(h.shops.calls, containsAllInOrder(['bySlug', 'items']));
-      expect(h.store.links[merchantUser.id]!.role, MerchantRole.staff);
-    });
-
-    test('link to a shop the account is not a member of', () async {
-      final h = MerchantHarness(role: null)
-        ..shops.failNext('items', _forbidden);
-      final c = h.container();
-      await c.read(merchantShopProvider.future);
-      await expectLater(
-        c.read(merchantShopProvider.notifier).link(ownerShop().slug),
-        throwsA(isA<NotShopMember>()),
-      );
-      expect(h.store.links, isEmpty);
-    });
-
-    test('link as owner needs no membership check', () async {
-      final h = MerchantHarness(role: null)..shops.ownShop = ownerShop();
-      final c = h.container();
-      await c.read(merchantShopProvider.future);
-      final shop = await c
-          .read(merchantShopProvider.notifier)
-          .link(ownerShop().slug);
+      final shop = c.read(merchantShopProvider).value!;
       expect(shop.isOwner, isTrue);
-      expect(h.shops.calls, isNot(contains('items')));
-    });
-
-    test('unlink forgets the shop on this device only', () async {
-      final h = MerchantHarness();
-      final c = h.container();
-      await c.read(merchantShopProvider.future);
-      await c.read(merchantShopProvider.notifier).unlink();
-      expect(c.read(merchantShopProvider).value, isNull);
-      expect(h.store.links, isEmpty);
+      expect(shop.slug, ownerShop().slug);
+      expect(shop.owner, ownerShop());
     });
   });
 
@@ -312,6 +290,7 @@ void main() {
       expect(state.uploaded.single.kind, DocumentKind.isletmeBelgesi);
       expect(state.uploaded.single.state, DocumentState.uploaded);
       expect(h.shops.calls, [
+        'myShops',
         'bySlug',
         'presignDocument',
         'uploadDocument',
@@ -331,7 +310,7 @@ void main() {
           .read(documentsControllerProvider.notifier)
           .upload(DocumentKind.vergiLevhasi, DocumentSource.gallery);
       expect(c.read(documentsControllerProvider).uploaded, isEmpty);
-      expect(h.shops.calls, ['bySlug']);
+      expect(h.shops.calls, ['myShops', 'bySlug']);
     });
 
     test('unsupported files and server refusals are reported', () async {
