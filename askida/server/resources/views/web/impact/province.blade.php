@@ -34,7 +34,7 @@
 <thead><tr><th scope="col">İlçe</th><th scope="col" class="num">Bırakılan ürün</th><th scope="col" class="num">Alınan ürün</th><th scope="col" class="num">Dükkân</th></tr></thead>
 <tbody>
 @foreach ($province->rows as $row)
-<tr><th scope="row">{{ $row->name }}</th><td class="num">{{ Format::count($row->donated) }}</td><td class="num">{{ Format::count($row->redeemed) }}</td><td class="num">{{ Format::count($row->shops) }}</td></tr>
+<tr><td>{{ $row->name }}</td><td class="num">{{ Format::count($row->donated) }}</td><td class="num">{{ Format::count($row->redeemed) }}</td><td class="num">{{ Format::count($row->shops) }}</td></tr>
 @endforeach
 </tbody>
 </table>
