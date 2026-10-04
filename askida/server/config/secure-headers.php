@@ -18,6 +18,8 @@ $list = static fn (mixed $value): array => array_values(array_filter(
 ));
 
 $payFrameHosts = $list(env('SECURITY_CSP_FRAME_SRC_PAY'));
+$payScriptHosts = $list(env('SECURITY_CSP_SCRIPT_SRC_PAY'));
+$payConnectHosts = $list(env('SECURITY_CSP_CONNECT_SRC_PAY'));
 
 return [
 
@@ -101,12 +103,19 @@ return [
         ],
 
         /*
-         * Payment pages (/pay/*): only frame-src opens, to the provider hosts listed in
-         * SECURITY_CSP_FRAME_SRC_PAY. With an empty list no frame may load.
+         * Payment pages (/pay/*): the provider's checkout form needs its own hosts. Each list
+         * is a comma list in the environment; an empty list leaves that directive as in the
+         * strict policy (frame-src 'none'). The host values are not verified against a real
+         * gateway (no sandbox account): the hosted-link fallback is the proven path.
+         * - frame-src: SECURITY_CSP_FRAME_SRC_PAY
+         * - script-src (keeps 'self' and the nonce): SECURITY_CSP_SCRIPT_SRC_PAY
+         * - connect-src (keeps 'self'): SECURITY_CSP_CONNECT_SRC_PAY
          */
-        'pay' => [
+        'pay' => array_filter([
             'frame-src' => $payFrameHosts === [] ? ['none' => true] : ['allow' => $payFrameHosts],
-        ],
+            'script-src' => $payScriptHosts === [] ? null : ['self' => true, 'use-nonce' => true, 'allow' => $payScriptHosts],
+            'connect-src' => $payConnectHosts === [] ? null : ['self' => true, 'allow' => $payConnectHosts],
+        ]),
 
         /*
          * JSON API: nothing may load, submit to or frame a response.
