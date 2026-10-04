@@ -8,6 +8,14 @@ use App\Domain\Items\Models\Item;
 use App\Domain\Payments\Models\Payout;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
+use App\Filament\Resources\AbuseFlagResource;
+use App\Filament\Resources\ActivityLogResource;
+use App\Filament\Resources\DonationResource;
+use App\Filament\Resources\PaymentMismatchResource;
+use App\Filament\Resources\PayoutResource;
+use App\Filament\Resources\ShopResource;
+use App\Filament\Resources\ShopResource\RelationManagers\DocumentsRelationManager;
+use App\Filament\Resources\UserResource;
 use App\Policies\DonationPolicy;
 use App\Policies\HookPolicy;
 use App\Policies\ItemPolicy;
@@ -29,9 +37,12 @@ use App\Policies\ShopPolicy;
  * - ['route', route name]: the endpoint exists; its authentication middleware is checked;
  * - ['pending', reason]: the endpoint or principal does not exist yet; the test proves
  *   that it is still absent, so building it forces this row to be upgraded;
- * - ['absent', reason]: the operation must not exist for anyone.
+ * - ['absent', reason]: the operation must not exist for anyone;
+ * - ['panel', ResourceClass, 'viewAny'], ['panel', ResourceClass, 'action', name] or
+ *   ['panel', RelationManagerClass, 'relation']: the admin panel screen or action that
+ *   carries the row, checked per admin principal by tests/Feature/Admin/MatrixPanelRowsTest.php.
  *
- * @phpstan-type Check array{0: string, 1: string, 2?: string, 3?: list<string>}
+ * @phpstan-type Check array{0: string, 1: string, 2?: string, 3?: list<string>|string}
  * @phpstan-type Row array{section: string, cells: array<string, string>, checks: list<Check>}
  */
 final class AuthorizationMatrix
@@ -91,18 +102,18 @@ final class AuthorizationMatrix
             'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
 
             // 4 Admin panel
-            'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops']),
-            'Approve or reject a shop' => self::admin('Y - Y', ['gate', 'manage-shops']),
-            'Open a shop document' => self::admin('Y - Y', ['gate', 'view-documents'], ['policy', ShopDocumentPolicy::class, 'view', ['document']]),
-            'Suspend a shop or hold new reservations' => self::admin('Y Y Y', ['gate', 'suspend-shops']),
+            'View verification queue and shop details' => self::admin('Y - Y', ['gate', 'review-shops'], ['panel', ShopResource::class, 'viewAny']),
+            'Approve or reject a shop' => self::admin('Y - Y', ['gate', 'manage-shops'], ['panel', ShopResource::class, 'action', 'approve'], ['panel', ShopResource::class, 'action', 'reject']),
+            'Open a shop document' => self::admin('Y - Y', ['gate', 'view-documents'], ['policy', ShopDocumentPolicy::class, 'view', ['document']], ['panel', DocumentsRelationManager::class, 'relation']),
+            'Suspend a shop or hold new reservations' => self::admin('Y Y Y', ['gate', 'suspend-shops'], ['panel', AbuseFlagResource::class, 'viewAny'], ['panel', AbuseFlagResource::class, 'action', 'review']),
             'Ban or unban an `anon_id`' => self::admin('Y - Y', ['gate', 'ban-anon-devices']),
-            'View donations and payment events' => self::admin('- Y Y', ['gate', 'view-donations']),
-            'View payouts and reconciliation results' => self::admin('- Y Y', ['gate', 'view-payouts']),
-            'Place or release an automatic payout hold' => self::admin('- Y Y', ['gate', 'manage-payouts']),
-            'Trigger a refund or a manual reconciliation' => self::admin('- Y Y', ['gate', 'refund-payments']),
+            'View donations and payment events' => self::admin('- Y Y', ['gate', 'view-donations'], ['panel', DonationResource::class, 'viewAny']),
+            'View payouts and reconciliation results' => self::admin('- Y Y', ['gate', 'view-payouts'], ['panel', PayoutResource::class, 'viewAny'], ['panel', PaymentMismatchResource::class, 'viewAny']),
+            'Place or release an automatic payout hold' => self::admin('- Y Y', ['gate', 'manage-payouts'], ['panel', PayoutResource::class, 'action', 'hold']),
+            'Trigger a refund or a manual reconciliation' => self::admin('- Y Y', ['gate', 'refund-payments'], ['panel', DonationResource::class, 'action', 'refund'], ['panel', PaymentMismatchResource::class, 'action', 'resolve']),
             'Reveal a decrypted tax number or IBAN' => self::admin('- Y Y', ['gate', 'reveal-shop-financials']),
-            'Manage admin users and roles' => self::admin('- - Y', ['gate', 'admin']),
-            'View activity log' => self::admin('- - Y', ['gate', 'view-activity-log']),
+            'Manage admin users and roles' => self::admin('- - Y', ['gate', 'admin'], ['panel', UserResource::class, 'viewAny'], ['panel', UserResource::class, 'action', 'assignRole']),
+            'View activity log' => self::admin('- - Y', ['gate', 'view-activity-log'], ['panel', ActivityLogResource::class, 'viewAny']),
             'Open the Horizon dashboard' => self::admin('- - Y', ['gate', 'viewHorizon'], ['gate', 'view-horizon']),
             "Edit a hook's status or code by hand" => self::admin('- - -', ['policy', HookPolicy::class, 'update', ['hook']]),
             'Impersonate another user' => self::admin('- - -', ['gate', 'impersonate']),
