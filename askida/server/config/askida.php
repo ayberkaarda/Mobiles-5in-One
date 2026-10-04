@@ -14,6 +14,9 @@ return [
 
     'hook_code_pepper' => env('HOOK_CODE_PEPPER'),
 
+    // Sample (`is_sample`) shops appear in listings only outside production and only when on.
+    'allow_sample_shops' => (bool) env('ALLOW_SAMPLE_SHOPS', false),
+
     'payment' => [
         'provider' => env('PAYMENT_PROVIDER', 'fake'),
 
