@@ -10,6 +10,7 @@ use App\Domain\Donations\Models\Donation;
 use App\Domain\Hooks\Models\Hook;
 use App\Domain\Hooks\Models\HookStatus;
 use App\Domain\Items\Models\Item;
+use App\Domain\Shops\Models\GeoPoint;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
 use App\Domain\Shops\Models\ShopMember;
@@ -17,9 +18,13 @@ use App\Domain\Shops\Models\ShopMemberRole;
 use App\Models\User;
 use App\Support\Problem\ProblemException;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -128,6 +133,91 @@ function residualHits(array $needles): array
     return $hits;
 }
 
+function payoutFor(Shop $shop, string $status): void
+{
+    DB::table('payouts')->insert([
+        'id' => (string) Str::uuid7(),
+        'shop_id' => $shop->id,
+        'provider_settlement_id' => 'settlement-'.bin2hex(random_bytes(4)),
+        'amount_minor' => 1_500,
+        'status' => $status,
+        'period' => Carbon::now()->toDateString(),
+        'created_at' => Carbon::now()->toIso8601String(),
+        'updated_at' => Carbon::now()->toIso8601String(),
+    ]);
+}
+
+/**
+ * "table.column" of every attribute that a domain model or the user model stores through
+ * an encrypted cast.
+ *
+ * @return list<string>
+ */
+function encryptedColumns(): array
+{
+    $classes = [User::class];
+
+    foreach (File::allFiles(app_path('Domain')) as $file) {
+        $relative = str_replace('\\', '/', Str::after($file->getPathname(), app_path().DIRECTORY_SEPARATOR));
+
+        if (str_contains($relative, '/Models/')) {
+            $classes[] = 'App\\'.str_replace(['/', '.php'], ['\\', ''], $relative);
+        }
+    }
+
+    $columns = [];
+
+    foreach ($classes as $class) {
+        if (! class_exists($class) || ! is_subclass_of($class, Model::class) || (new ReflectionClass($class))->isAbstract()) {
+            continue;
+        }
+
+        $model = new $class;
+
+        foreach ($model->getCasts() as $attribute => $cast) {
+            if (str_starts_with((string) $cast, 'encrypted')) {
+                $columns[] = $model->getTable().'.'.$attribute;
+            }
+        }
+    }
+
+    return array_values(array_unique($columns));
+}
+
+/**
+ * Decrypts every non-empty value of every encrypted column and returns the columns whose
+ * value equals one of the given secrets.
+ *
+ * @param  list<string>  $secrets
+ * @return list<string>
+ */
+function decryptedMatches(array $secrets): array
+{
+    $matches = [];
+
+    foreach (encryptedColumns() as $qualified) {
+        [$table, $column] = explode('.', $qualified, 2);
+
+        foreach (DB::table($table)->whereNotNull($column)->pluck($column) as $value) {
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            try {
+                $plain = Crypt::decryptString($value);
+            } catch (DecryptException) {
+                continue;
+            }
+
+            if (in_array($plain, $secrets, true)) {
+                $matches[] = $qualified;
+            }
+        }
+    }
+
+    return $matches;
+}
+
 function requestAndExpire(User $user): DeletionRequest
 {
     $deletion = app(AccountDeletionService::class)->request($user, DeletionChannel::App);
@@ -185,11 +275,38 @@ it('leaves no residual PII for a merchant and releases the shops', function (): 
     $emptyDocument = AccountsWorld::document($empty);
     AccountsWorld::member($empty, User::factory()->merchant()->create(), ShopMemberRole::Staff);
 
-    // A shop with retained donations: stays as an ownerless closed anchor.
-    $anchor = AccountsWorld::shop($merchant, ['tax_number_enc' => $needles['tax_number'], 'iban_enc' => $needles['iban']]);
+    // A shop with retained donations and a settled payout: stays as an ownerless closed
+    // anchor without any merchant identifier.
+    $mark = bin2hex(random_bytes(4));
+    $anchor = AccountsWorld::shop($merchant, [
+        'tax_number_enc' => $needles['tax_number'],
+        'iban_enc' => $needles['iban'],
+        'name' => 'Residual Bakery '.$mark,
+        'slug' => 'residual-bakery-'.$mark,
+        'address' => 'Residual Home Street '.$mark,
+        'phone' => '+90 216 555 '.random_int(10, 99).' '.random_int(10, 99),
+        'sub_merchant_key' => 'submerchant-settled-'.$mark,
+        'location' => new GeoPoint(40.98765, 29.03456),
+    ]);
+    $needles += [
+        'shop_name' => $anchor->name,
+        'shop_slug' => $anchor->slug,
+        'shop_address' => $anchor->address,
+        'shop_phone' => $anchor->phone,
+        'sub_merchant_key' => (string) $anchor->sub_merchant_key,
+    ];
     $anchorDocument = AccountsWorld::document($anchor);
     $donation = AccountsWorld::donation(User::factory()->create(), AccountsWorld::item($anchor));
     AccountsWorld::hook($donation, HookStatus::Redeemed, $merchant);
+    payoutFor($anchor, 'settled');
+
+    // A second anchor whose payout is still pending keeps only the provider key.
+    $pendingTax = AccountsWorld::taxNumber();
+    $pendingIban = AccountsWorld::iban();
+    $pendingAnchor = AccountsWorld::shop($merchant, ['tax_number_enc' => $pendingTax, 'iban_enc' => $pendingIban, 'sub_merchant_key' => 'submerchant-pending-'.$mark]);
+    AccountsWorld::donation(null, AccountsWorld::item($pendingAnchor));
+    payoutFor($pendingAnchor, 'pending');
+    $deletedSecrets = [$needles['tax_number'], $needles['iban'], $pendingTax, $pendingIban];
 
     // A co-owned shop passes to the other owner.
     $partner = User::factory()->merchant()->create();
@@ -219,12 +336,33 @@ it('leaves no residual PII for a merchant and releases the shops', function (): 
         ->and($anchor->verification_state->value)->toBe('rejected')
         ->and($anchor->listed_on_web)->toBeFalse()
         ->and($anchor->phone)->toBe('')
+        ->and($anchor->name)->toBe(AccountDeletionService::CLOSED_SHOP_NAME)
+        ->and($anchor->address)->toBe(AccountDeletionService::CLOSED_SHOP_ADDRESS)
+        ->and($anchor->slug)->toBe('kapanmis-esnaf-'.$anchor->id)
+        ->and($anchor->sub_merchant_key)->toBeNull()
+        ->and($anchor->location->latitude)->toBe(41.0)
+        ->and($anchor->location->longitude)->toBe(29.0)
+        ->and($anchor->il)->toBe('İstanbul')
+        ->and($anchor->ilce)->toBe('Kadıköy')
         ->and(ShopMember::query()->where('shop_id', $anchor->id)->count())->toBe(0)
         ->and(Donation::query()->whereKey($donation->id)->exists())->toBeTrue()
         ->and(Hook::query()->where('donation_id', $donation->id)->value('redeemed_by_user_id'))->toBeNull();
 
     expect($coOwned->refresh()->owner_id)->toBe($partner->id)
-        ->and(Shop::query()->whereKey($foreign->id)->exists())->toBeTrue();
+        ->and(Shop::query()->whereKey($foreign->id)->exists())->toBeTrue()
+        ->and($pendingAnchor->refresh()->sub_merchant_key)->toBe('submerchant-pending-'.$mark)
+        ->and($pendingAnchor->name)->toBe(AccountDeletionService::CLOSED_SHOP_NAME);
+
+    // Ciphertext cannot be found by the plaintext walk: the encrypted columns of the
+    // released shops must be empty, and no encrypted value left anywhere may decrypt to
+    // the deleted account's tax numbers or IBANs.
+    foreach ([$anchor, $pendingAnchor] as $closed) {
+        $raw = DB::table('shops')->where('id', $closed->id)->first(['tax_number_enc', 'iban_enc']);
+        expect($raw->tax_number_enc ?? null)->toBeNull()->and($raw->iban_enc ?? null)->toBeNull();
+    }
+
+    expect(encryptedColumns())->toContain('shops.tax_number_enc', 'shops.iban_enc')
+        ->and(decryptedMatches($deletedSecrets))->toBe([]);
 });
 
 it('refuses the hard delete while a solely owned shop has open units and retries later', function (HookStatus $status): void {

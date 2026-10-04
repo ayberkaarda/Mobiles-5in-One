@@ -11,6 +11,8 @@ use App\Domain\Donations\Models\Donation;
 use App\Domain\Hooks\Models\Hook;
 use App\Domain\Hooks\Models\HookStatus;
 use App\Domain\Payments\Models\Payout;
+use App\Domain\Payments\Models\PayoutStatus;
+use App\Domain\Shops\Models\GeoPoint;
 use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
 use App\Domain\Shops\Models\ShopMember;
@@ -50,6 +52,10 @@ class AccountDeletionService
     public const GRACE_DAYS = 7;
 
     public const LOG_NAME = 'accounts';
+
+    public const CLOSED_SHOP_NAME = 'Kapanmış esnaf';
+
+    public const CLOSED_SHOP_ADDRESS = 'Kapanmış esnaf';
 
     public function __construct(private readonly PushTokenRegistry $pushTokens) {}
 
@@ -327,12 +333,41 @@ class AccountDeletionService
                 continue;
             }
 
-            $shop->owner_id = null;
-            $shop->phone = '';
-            $shop->verification_state = ShopVerificationState::Rejected;
-            $shop->listed_on_web = false;
-            $shop->save();
+            $this->closeAnchorShop($shop);
         }
+    }
+
+    /**
+     * Keeps the row that retained donations and payouts point at, without anything that
+     * identifies the former merchant: name, slug, address, phone, tax number and IBAN are
+     * replaced or cleared and the location is coarsened to one decimal degree (about
+     * 10 km), so a home address cannot be recovered. il/ilce stay for the impact
+     * counters. The provider sub-merchant key is kept only while a payout of the shop is
+     * still pending or held (the provider settles against it); otherwise it is cleared.
+     */
+    private function closeAnchorShop(Shop $shop): void
+    {
+        $payoutInFlight = Payout::query()
+            ->where('shop_id', $shop->id)
+            ->whereIn('status', [PayoutStatus::Pending->value, PayoutStatus::Held->value])
+            ->exists();
+
+        $shop->owner_id = null;
+        $shop->name = self::CLOSED_SHOP_NAME;
+        $shop->slug = 'kapanmis-esnaf-'.$shop->id;
+        $shop->address = self::CLOSED_SHOP_ADDRESS;
+        $shop->phone = '';
+        $shop->tax_number_enc = null;
+        $shop->iban_enc = null;
+        $shop->location = new GeoPoint(round($shop->location->latitude, 1), round($shop->location->longitude, 1));
+        $shop->verification_state = ShopVerificationState::Rejected;
+        $shop->listed_on_web = false;
+
+        if (! $payoutInFlight) {
+            $shop->sub_merchant_key = null;
+        }
+
+        $shop->save();
     }
 
     private function deleteDocuments(Shop $shop): void
