@@ -41,6 +41,10 @@ class FakeShopsRepository with Scriptable implements ShopsRepository {
   /// The merchant's own shop once created.
   OwnerShop? ownShop;
 
+  /// Shops where the merchant is staff (listed by [myShops] after the own
+  /// shop).
+  List<MyShop> staffShops = [];
+
   /// Arguments of the last [nearby] call.
   ({double lat, double lng, int radiusM, bool hasAvailable, String? cursor})?
   lastNearby;
@@ -82,6 +86,13 @@ class FakeShopsRepository with Scriptable implements ShopsRepository {
     final own = ownShop;
     if (own != null && own.slug == slug) return OwnerShopDetails(own);
     return details[slug] ?? (throw _notFound);
+  }
+
+  @override
+  Future<List<MyShop>> myShops() async {
+    record('myShops');
+    final own = ownShop;
+    return [if (own != null) MyShop.fromOwnerShop(own), ...staffShops];
   }
 
   @override

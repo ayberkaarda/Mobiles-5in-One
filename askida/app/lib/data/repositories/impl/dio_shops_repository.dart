@@ -58,6 +58,14 @@ class DioShopsRepository implements ShopsRepository {
   }
 
   @override
+  Future<List<MyShop>> myShops() async {
+    final answer = await _api.get('me/shops');
+    return parse<List<MyShop>>(
+      () => listOf(answer).map(MyShop.fromJson).toList(),
+    );
+  }
+
+  @override
   Future<List<Item>> items(String shopId) async {
     final answer = await _api.get('shops/$shopId/items');
     return parse<List<Item>>(() => listOf(answer).map(Item.fromJson).toList());

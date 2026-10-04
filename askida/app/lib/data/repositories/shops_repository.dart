@@ -21,6 +21,10 @@ abstract interface class ShopsRepository {
   /// `GET shops/{slug}`: public detail, or the owner shape for the owner.
   Future<ShopDetails> bySlug(String slug);
 
+  /// `GET me/shops` (merchant): every shop where the account is owner or
+  /// staff, with its role, ordered by name; empty when it has none.
+  Future<List<MyShop>> myShops();
+
   /// `POST shops` (merchant): the new shop starts `pending`.
   Future<OwnerShop> create(ShopDraft draft);
 

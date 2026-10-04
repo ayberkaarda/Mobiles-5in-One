@@ -234,4 +234,92 @@ void main() {
       ),
     );
   });
+
+  group('me/shops', () {
+    // `MyShop` in docs/api/openapi.yaml: required keys, no others.
+    const myShopKeys = {
+      'id',
+      'slug',
+      'name',
+      'type',
+      'type_label',
+      'il',
+      'ilce',
+      'verification_state',
+      'role',
+    };
+
+    test('the fixture rows carry exactly the documented keys', () {
+      for (final row in fixtureList('my_shops')) {
+        expect(row.keys.toSet(), myShopKeys);
+        expect(['owner', 'staff'], contains(row['role']));
+        expect([
+          'pending',
+          'verified',
+          'rejected',
+        ], contains(row['verification_state']));
+      }
+    });
+
+    test('lists owner and staff shops with the role', () async {
+      api.adapter.onGet('me/shops', (s) => s.reply(200, fixture('my_shops')));
+
+      final shops = await repo.myShops();
+
+      expect(api.last.path, 'me/shops');
+      expect(shops, hasLength(2));
+      final owner = shops.first;
+      expect(owner.id, shopId);
+      expect(owner.slug, 'ornek-kose-firini-sisli');
+      expect(owner.type, ShopType.bakery);
+      expect(owner.typeLabel, 'Fırın');
+      expect(owner.verificationState, VerificationState.pending);
+      expect(owner.role, ShopRole.owner);
+      final staff = shops.last;
+      expect(staff.role, ShopRole.staff);
+      expect(staff.typeLabel, isNull);
+      expect(staff.verificationState, VerificationState.verified);
+    });
+
+    test('an empty list means no shop yet', () async {
+      api.adapter.onGet('me/shops', (s) => s.reply(200, {'data': <Object>[]}));
+      expect(await repo.myShops(), isEmpty);
+    });
+
+    test('an unknown role is a bad response, not a guess', () async {
+      final row = {...fixtureList('my_shops').first, 'role': 'manager'};
+      api.adapter.onGet(
+        'me/shops',
+        (s) => s.reply(200, {
+          'data': [row],
+        }),
+      );
+      await expectLater(
+        repo.myShops(),
+        throwsA(
+          isA<ApiProblem>().having(
+            (p) => p.code,
+            'code',
+            ApiProblem.badResponse,
+          ),
+        ),
+      );
+    });
+
+    test('a donor gets forbidden', () async {
+      api.adapter.onGet(
+        'me/shops',
+        (s) => s.reply(
+          403,
+          '{"type":"https://askida.app/problems/forbidden","title":"x",'
+          '"status":403,"code":"forbidden","request_id":"req-403-1"}',
+          headers: FakeApi.problemHeaders(),
+        ),
+      );
+      await expectLater(
+        repo.myShops(),
+        throwsA(isA<ApiProblem>().having((p) => p.code, 'code', 'forbidden')),
+      );
+    });
+  });
 }

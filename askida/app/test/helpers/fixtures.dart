@@ -57,6 +57,7 @@ const fixtureNames = <String>[
   'impact',
   'item_owner',
   'items_owner',
+  'my_shops',
   'payouts',
   'problem_anon_daily_cap',
   'problem_rate_limited',

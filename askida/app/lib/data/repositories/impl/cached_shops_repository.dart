@@ -109,6 +109,9 @@ class CachedShopsRepository implements ShopsRepository {
   }
 
   @override
+  Future<List<MyShop>> myShops() => _remote.myShops();
+
+  @override
   Future<OwnerShop> create(ShopDraft draft) => _remote.create(draft);
 
   @override

@@ -139,6 +139,44 @@ abstract class OwnerShop with _$OwnerShop {
   factory fromJson(Map<String, dynamic> json) => _$OwnerShopFromJson(json);
 }
 
+/// The account's role in a shop it belongs to: the owner manages the shop,
+/// catalog, documents and payouts; staff redeem codes and read the
+/// redemption list.
+enum ShopRole { owner, staff }
+
+/// A row of `GET me/shops`: a shop where the calling merchant is owner or
+/// staff, with the role. No contact, tax or bank data (those stay on the
+/// owner shape of `GET shops/{slug}`).
+@freezed
+abstract class MyShop with _$MyShop {
+  const factory({
+    required String id,
+    required String slug,
+    required String name,
+    @JsonKey(unknownEnumValue: ShopType.other) required ShopType type,
+    required String il,
+    required String ilce,
+    required VerificationState verificationState,
+    required ShopRole role,
+    String? typeLabel,
+  }) = _MyShop;
+
+  factory fromJson(Map<String, dynamic> json) => _$MyShopFromJson(json);
+
+  /// The row the listing would send for [shop], seen by its owner.
+  factory fromOwnerShop(OwnerShop shop) => MyShop(
+    id: shop.id,
+    slug: shop.slug,
+    name: shop.name,
+    type: shop.type,
+    il: shop.il,
+    ilce: shop.ilce,
+    verificationState: shop.verificationState,
+    role: ShopRole.owner,
+    typeLabel: shop.typeLabel,
+  );
+}
+
 /// Body of `POST shops` and (any subset) `PATCH shops/{id}`. `lat` and `lng`
 /// travel together.
 @freezed
