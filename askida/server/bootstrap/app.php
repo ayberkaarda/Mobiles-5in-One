@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminSessionCookie;
 use App\Http\Middleware\EnforceHttps;
+use App\Http\Middleware\LimitRequestBody;
 use App\Http\Middleware\LogRequest;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\SecurityHeaders;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // After TrustProxies, so that isSecure() reflects only trusted forwarded headers.
         $middleware->append([
             EnforceHttps::class,
+            LimitRequestBody::class,
             AdminSessionCookie::class,
         ]);
     })
