@@ -10,8 +10,10 @@ use App\Domain\Admin\Services\AdminAudit;
 use App\Domain\Admin\Services\TotpService;
 use App\Domain\Admin\Services\TwoFactorManager;
 use App\Domain\Admin\Support\TwoFactorSession;
+use App\Filament\AvatarProviders\InitialsAvatarProvider;
 use App\Filament\Pages\Auth\Login;
 use App\Models\User;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -105,6 +107,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(Login::class)
+            ->font('system-ui', provider: LocalFontProvider::class)
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->colors([
                 'primary' => Color::Amber,
             ])

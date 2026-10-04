@@ -89,15 +89,15 @@ return [
          * - script-src 'unsafe-eval': Alpine.js (bundled with Livewire) evaluates x-data and
          *   event expressions with the Function constructor.
          * - style-src 'unsafe-inline': inline <style> blocks and style="" attributes.
-         * - style-src and font-src https://fonts.bunny.net: the default font provider (Inter).
-         * - img-src https://ui-avatars.com: the default avatar provider after login.
+         * - font-src and img-src data: only: the panel uses the system font stack and an
+         *   inline initials avatar, so no third-party host is allowed on this surface.
          * No nonce is added here: a nonce would make browsers ignore 'unsafe-inline'.
          */
         'admin' => [
             'script-src' => ['self' => true, 'unsafe-inline' => true, 'unsafe-eval' => true],
-            'style-src' => ['self' => true, 'unsafe-inline' => true, 'allow' => ['https://fonts.bunny.net']],
-            'font-src' => ['self' => true, 'schemes' => ['data:'], 'allow' => ['https://fonts.bunny.net']],
-            'img-src' => ['self' => true, 'schemes' => ['data:'], 'allow' => ['https://ui-avatars.com']],
+            'style-src' => ['self' => true, 'unsafe-inline' => true],
+            'font-src' => ['self' => true, 'schemes' => ['data:']],
+            'img-src' => ['self' => true, 'schemes' => ['data:']],
         ],
 
         /*

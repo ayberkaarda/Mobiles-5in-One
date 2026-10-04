@@ -100,7 +100,9 @@ it('relaxes the policy on the admin panel only as far as the real login page nee
     $csp = cspDirectives($response);
 
     expect($csp['script-src'])->toBe("'self' 'unsafe-inline' 'unsafe-eval'")
-        ->and($csp['style-src'])->toBe("'self' 'unsafe-inline' https://fonts.bunny.net")
+        ->and($csp['style-src'])->toBe("'self' 'unsafe-inline'")
+        ->and($csp['font-src'])->toBe("'self' data:")
+        ->and($csp['img-src'])->toBe("'self' data:")
         ->and($csp['default-src'])->toBe("'self'")
         ->and($csp['connect-src'])->toBe("'self'")
         ->and($csp)->not->toHaveKey('frame-src');
@@ -112,11 +114,9 @@ it('relaxes the policy on the admin panel only as far as the real login page nee
         static fn (string $origin): bool => ! str_contains($origin, 'localhost'),
     )));
 
-    expect($hosts)->toBe(['https://fonts.bunny.net']);
-
-    foreach ($hosts as $host) {
-        expect($csp['style-src'])->toContain($host)->and($csp['font-src'])->toContain($host);
-    }
+    // No third-party host: not in the header and not referenced by the page.
+    expect($hosts)->toBe([])
+        ->and((string) $response->headers->get('Content-Security-Policy'))->not->toContain('https://');
 });
 
 it('opens frame-src on payment pages to the configured hosts only', function (): void {
