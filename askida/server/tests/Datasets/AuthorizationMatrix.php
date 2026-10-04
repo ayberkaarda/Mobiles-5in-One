@@ -57,8 +57,8 @@ final class AuthorizationMatrix
             'POST auth/reset' => self::api('3.1', 'Y - - - -', ['route', 'api.v1.auth.reset']),
             'GET me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.show']),
             'PATCH me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.update']),
-            'DELETE me' => self::api('3.1', '- own own own -', ['pending', 'account deletion flow (spec item 21)']),
-            'PUT me/push-token' => self::api('3.1', '- own own own -', ['pending', 'push tokens']),
+            'DELETE me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.destroy']),
+            'PUT me/push-token' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.push-token']),
             'POST anon/attest' => self::api('3.1', 'Y - - - -', ['pending', 'device attestation and anon tokens']),
             'DELETE anon/me' => self::api('3.1', '- - - - own', ['pending', 'device attestation and anon tokens']),
 
@@ -83,7 +83,7 @@ final class AuthorizationMatrix
 
             // 3.5 Payouts and impact
             'GET shops/{id}/payouts' => self::api('3.5', '- - member - -', ['policy', PayoutPolicy::class, 'viewAny', [Payout::class, 'shop']]),
-            'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['pending', 'public impact endpoint']),
+            'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
             'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
