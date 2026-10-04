@@ -107,12 +107,14 @@ void main() {
     addTearDown(push.close);
     push.onMessage.listen((message) => openPush(router, message));
     await tester.pumpWidget(
-      MaterialApp.router(
-        theme: AskidaTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('tr', 'TR'),
-        routerConfig: router,
+      ProviderScope(
+        child: MaterialApp.router(
+          theme: AskidaTheme.light(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('tr', 'TR'),
+          routerConfig: router,
+        ),
       ),
     );
 

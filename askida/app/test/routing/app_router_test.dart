@@ -11,6 +11,7 @@ import 'package:askida/routing/app_mode.dart';
 import 'package:askida/routing/app_router.dart';
 import 'package:askida/routing/feature_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -57,13 +58,17 @@ GoRouter _routerWith({
 
 Future<void> _pumpRouter(WidgetTester tester, GoRouter router) async {
   addTearDown(router.dispose);
+  // Mode homes read providers (the recipient home does), so the router
+  // runs inside a scope.
   await tester.pumpWidget(
-    MaterialApp.router(
-      theme: AskidaTheme.light(),
-      locale: const Locale('tr', 'TR'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      routerConfig: router,
+    ProviderScope(
+      child: MaterialApp.router(
+        theme: AskidaTheme.light(),
+        locale: const Locale('tr', 'TR'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
