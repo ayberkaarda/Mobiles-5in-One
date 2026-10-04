@@ -14,6 +14,45 @@ import '../helpers/fixtures.dart';
 
 void main() {
   group('request headers', () {
+    test('directory reads send the user token when one exists', () async {
+      final userToken = dummyToken();
+      final api = FakeApi(userToken: userToken, anonToken: dummyToken('anon'));
+      api.adapter.onGet(
+        'shops/x',
+        (s) => s.reply(200, {'data': <String, Object?>{}}),
+      );
+
+      await api.client.get('shops/x', auth: AuthScope.directory);
+
+      expect(api.last.headers['Authorization'], 'Bearer $userToken');
+    });
+
+    test('directory reads fall back to the anon token', () async {
+      final anonToken = dummyToken('anon');
+      final api = FakeApi(anonToken: anonToken);
+      api.adapter.onGet(
+        'shops/x',
+        (s) => s.reply(200, {'data': <String, Object?>{}}),
+      );
+
+      await api.client.get('shops/x', auth: AuthScope.directory);
+
+      expect(api.last.headers['Authorization'], 'Bearer $anonToken');
+    });
+
+    test('a 401 on a directory read clears only the token it sent', () async {
+      final api = FakeApi(anonToken: dummyToken('anon'))
+        ..replyProblem('GET', 'shops/x', 'problem_unauthenticated');
+
+      await expectLater(
+        api.client.get('shops/x', auth: AuthScope.directory),
+        throwsA(isA<ApiProblem>()),
+      );
+
+      expect(await api.tokens.readAnon(), isNull);
+      expect(api.unauthenticated, [AuthScope.anon]);
+    });
+
     test('user routes carry the user token and the standard headers', () async {
       final userToken = dummyToken();
       final api = FakeApi(userToken: userToken, anonToken: dummyToken('anon'));

@@ -18,6 +18,11 @@ enum AuthScope {
 
   /// Anonymous recipient device token (`hooks/reserve`, `anon/me`).
   anon,
+
+  /// Shop directory reads (`GET shops`, `GET shops/{slug}`), open to donors,
+  /// merchants and anonymous recipient devices: the account token when one
+  /// is stored, otherwise the anon token.
+  directory,
 }
 
 /// Called after a `401 auth.unauthenticated` cleared the token of [scope].
@@ -192,8 +197,15 @@ class _ApiInterceptor extends Interceptor {
       ..['Accept-Language'] = languageTag()
       ..['X-Request-Id'] = requestId()
       ..remove('Authorization');
-    final token = switch (_scopeOf(options)) {
-      AuthScope.none => null,
+    var scope = _scopeOf(options);
+    if (scope == AuthScope.directory) {
+      // Record the token actually sent, so a 401 clears that one only.
+      final user = await tokens.readUser();
+      scope = user != null && user.isNotEmpty ? AuthScope.user : AuthScope.anon;
+      options.extra[ApiClient.authScopeKey] = scope;
+    }
+    final token = switch (scope) {
+      AuthScope.none || AuthScope.directory => null,
       AuthScope.user => await tokens.readUser(),
       AuthScope.anon => await tokens.readAnon(),
     };
