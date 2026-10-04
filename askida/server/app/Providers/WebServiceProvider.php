@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Web\Contracts\CountersReader;
+use App\Domain\Web\Impact\DbCountersReader;
 use App\Support\Web\ResponseCache\CacheResponse;
 use App\Support\Web\ResponseCache\PageCache;
 use App\Support\Web\ZeroCountersReader;
@@ -23,6 +24,7 @@ class WebServiceProvider extends ServiceProvider
         $this->app->bind(CountersReader::class, ZeroCountersReader::class);
 
         // region impact register (append only)
+        $this->app->bind(CountersReader::class, DbCountersReader::class);
         // endregion impact register
 
         // region directory register (append only)
