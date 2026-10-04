@@ -12,6 +12,7 @@ use Carbon\CarbonImmutable;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -105,15 +106,30 @@ class Shop extends Model
     }
 
     /**
-     * Keeps the URL slugs of the province and district (`/dukkanlar/{il}/{ilce}`) in sync
-     * with the names on every save.
+     * Setting the province also sets its URL slug (`/dukkanlar/{il}`). A mutator rather
+     * than a model event, so seeders that mute events keep the slug in sync too.
+     *
+     * @return Attribute<string, string>
      */
-    protected static function booted(): void
+    protected function il(): Attribute
     {
-        static::saving(static function (Shop $shop): void {
-            $shop->setAttribute('il_slug', mb_substr(TurkishSlug::make((string) $shop->getAttribute('il')), 0, 64));
-            $shop->setAttribute('ilce_slug', mb_substr(TurkishSlug::make((string) $shop->getAttribute('ilce')), 0, 64));
-        });
+        return Attribute::make(set: static fn (mixed $value): array => [
+            'il' => (string) $value,
+            'il_slug' => mb_substr(TurkishSlug::make((string) $value), 0, 64),
+        ]);
+    }
+
+    /**
+     * Setting the district also sets its URL slug (`/dukkanlar/{il}/{ilce}`).
+     *
+     * @return Attribute<string, string>
+     */
+    protected function ilce(): Attribute
+    {
+        return Attribute::make(set: static fn (mixed $value): array => [
+            'ilce' => (string) $value,
+            'ilce_slug' => mb_substr(TurkishSlug::make((string) $value), 0, 64),
+        ]);
     }
 
     /**
