@@ -12,3 +12,6 @@ Route::get('/hesap-silme', [AccountDeletionController::class, 'show'])->name('we
 Route::post('/hesap-silme', [AccountDeletionController::class, 'store'])
     ->middleware('throttle:auth')
     ->name('web.account-deletion.store');
+
+// region payments (pay page and provider callback; filled by the payments area)
+// endregion payments

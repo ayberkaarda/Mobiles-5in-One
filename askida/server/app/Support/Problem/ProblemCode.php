@@ -22,6 +22,10 @@ enum ProblemCode: string
     case HttpsRequired = 'https_required';
     case ServiceUnavailable = 'service_unavailable';
     case ShopHasOpenHooks = 'shop.has_open_hooks';
+    case ShopNotPayable = 'shop.not_payable';
+    case PaymentMismatch = 'payment.mismatch';
+    case DonationCapExceeded = 'donation.cap_exceeded';
+    case DonationTxCapExceeded = 'donation.tx_cap_exceeded';
 
     public function title(): string
     {
@@ -44,6 +48,10 @@ enum ProblemCode: string
             self::HttpsRequired => 'HTTPS is required.',
             self::ServiceUnavailable => 'The service is temporarily unavailable.',
             self::ShopHasOpenHooks => 'A shop of this account still has open units.',
+            self::ShopNotPayable => 'This shop cannot receive donations yet.',
+            self::PaymentMismatch => 'The payment does not match the donation.',
+            self::DonationCapExceeded => 'The daily donation limit has been reached.',
+            self::DonationTxCapExceeded => 'The donation exceeds the per-donation limit.',
         };
     }
 
