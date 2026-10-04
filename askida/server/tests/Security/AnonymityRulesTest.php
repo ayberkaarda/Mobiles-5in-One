@@ -134,8 +134,9 @@ it('AN-1, AN-7: tells the donor that the unit was taken and nothing about who or
     expect($this->push->sent)->toHaveCount(1);
     $message = $this->push->sent[0]['message'];
     expect($message->title)->toBe('Askın alındı')
-        ->and(array_keys($message->data))->toBe(['item', 'shop']);
-    assertNoRecipientTrace(json_encode($message->toArray(), JSON_THROW_ON_ERROR), array_merge($traces, [$this->staff->name, $this->staff->email]));
+        ->and(array_keys($message->data))->toBe(['type', 'donation_id', 'shop_id', 'item', 'shop'])
+        ->and($message->data['donation_id'])->toBe($this->hook->donation_id);
+    assertNoRecipientTrace(json_encode($message->toArray(), JSON_THROW_ON_ERROR), array_merge($traces, [$this->staff->name, $this->staff->email, $this->staff->id, $this->hook->id]));
 
     // Everything a donor can call today.
     $donorToken = IdorHarness::bearer($this->donor, 'donor-phone');
