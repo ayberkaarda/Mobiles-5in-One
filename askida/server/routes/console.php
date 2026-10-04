@@ -2,8 +2,10 @@
 
 use App\Domain\Accounts\Jobs\HardDeleteAccounts;
 use App\Domain\Anon\Jobs\PurgeOldAnonData;
+use App\Domain\Fraud\Jobs\ScanFraud;
 use App\Domain\Hooks\Jobs\ReleaseExpiredHooks;
 use App\Domain\Impact\Jobs\TakeImpactSnapshot;
+use App\Domain\Payouts\Jobs\SyncPayouts;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -31,3 +33,19 @@ Schedule::job(new PurgeOldAnonData)
     ->dailyAt('03:15')
     ->timezone('Europe/Istanbul')
     ->onOneServer();
+
+// region payouts
+// Provider settlements of the last 14 days mirrored into payouts.
+Schedule::job(new SyncPayouts)
+    ->name(SyncPayouts::NAME)
+    ->everySixHours()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Fraud budget: hold the pending payouts of shops above the anomaly thresholds.
+Schedule::job(new ScanFraud)
+    ->name(ScanFraud::NAME)
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer();
+// endregion payouts
