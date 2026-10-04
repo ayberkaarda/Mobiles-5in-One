@@ -110,3 +110,28 @@ it('gives a different id to a different signed field', function (string $field, 
     ['iyziPaymentId', '9989'],
     ['token', 'tok-webhook-5678'],
 ]);
+
+it('gives the same dedup id to a body whose fields were shifted under the same signature', function (string $gateway): void {
+    [$body, $headers] = signedWebhook(['iyziEventType' => 'CHECKOUT_FORM_AUTH', 'iyziPaymentId' => '28157797']);
+    [$shifted, $shiftedHeaders] = signedWebhook(['iyziEventType' => 'CHECKOUT_FORM_AUTH2', 'iyziPaymentId' => '8157797']);
+
+    // The signed concatenation is identical, so the captured signature still verifies.
+    expect($shiftedHeaders)->toBe($headers)
+        ->and(app($gateway)->verifyWebhook($shifted, $headers)->eventId)
+        ->toBe(app($gateway)->verifyWebhook($body, $headers)->eventId);
+})->with('gateways');
+
+it('rejects a signed event whose fields do not have the documented shape', function (string $field, mixed $value): void {
+    [$body, $headers] = signedWebhook([$field => $value]);
+
+    expect(fn () => (new IyzicoGateway)->verifyWebhook($body, $headers))->toThrow(InvalidWebhookSignature::class);
+})->with([
+    'event type with spaces' => ['iyziEventType', 'checkout form auth'],
+    'event type too long' => ['iyziEventType', str_repeat('A', 65)],
+    'payment id not numeric' => ['iyziPaymentId', '81a57797'],
+    'payment id too long' => ['iyziPaymentId', str_repeat('9', 21)],
+    'token with spaces' => ['token', 'tok webhook'],
+    'token too long' => ['token', str_repeat('t', 129)],
+    'conversation id with a pipe' => ['paymentConversationId', 'conv|1'],
+    'status lower case' => ['status', 'success'],
+]);

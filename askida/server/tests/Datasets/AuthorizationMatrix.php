@@ -72,6 +72,7 @@ final class AuthorizationMatrix
             'PATCH me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.update']),
             'DELETE me' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.destroy']),
             'PUT me/push-token' => self::api('3.1', '- own own own -', ['route', 'api.v1.me.push-token']),
+            'GET me/shops' => self::api('3.1', '- - own own -', ['policy', ShopPolicy::class, 'viewMine', [Shop::class]], ['route', 'api.v1.me.shops']),
             'POST anon/attest' => self::api('3.1', 'Y - - - -', ['route', 'api.v1.anon.attest']),
             'DELETE anon/me' => self::api('3.1', '- - - - own', ['route', 'api.v1.anon.me.destroy']),
 

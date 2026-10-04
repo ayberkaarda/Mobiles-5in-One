@@ -34,6 +34,12 @@ use Illuminate\Support\Str;
  *    any disagreement -> status unchanged, one `payment_mismatches` row per kind (unique
  *    while unresolved), an activity log entry and a finance alert queued after commit.
  *
+ * A verified success settles however late it is reported (a lost callback and webhook
+ * leave only reconciliation to find it): the donor was charged, so the units are issued.
+ * The donor day cap is enforced separately: when the settled payment takes the donor's
+ * paid total for that day above the cap, a `donor_cap_exceeded` mismatch goes to finance,
+ * who may refund it.
+ *
  * The row lock is held while the provider is asked (contract decision): it bounds the
  * provider call to one per token at a time. GatewayUnavailable propagates (the
  * transaction rolls back, nothing changes) so callers can retry.
@@ -50,7 +56,10 @@ final class PaymentSettlementService implements SettlesPayments
 
     public const KIND_PAID_AFTER_FAILURE = 'provider_paid_ours_failed';
 
-    public const KIND_EXPIRED = 'paid_after_window';
+    public const KIND_CAP_EXCEEDED = 'donor_cap_exceeded';
+
+    /** Days of the donor cap are Europe/Istanbul calendar days (as at checkout). */
+    public const CAP_TIMEZONE = 'Europe/Istanbul';
 
     public const KIND_NO_PAYMENT_ID = 'missing_payment_id';
 
@@ -98,14 +107,6 @@ final class PaymentSettlementService implements SettlesPayments
             $kinds[] = self::KIND_PAID_AFTER_FAILURE;
         }
 
-        // The donor-cap counts an initiated donation only inside this window, so settling one
-        // after it would let a donor exceed the cap. Such a payment goes to the register.
-        $window = max(1, (int) config('payments.caps.initiated_window_minutes', 30));
-
-        if ($donation->status === DonationStatus::Initiated && $donation->created_at?->lt(CarbonImmutable::now()->subMinutes($window)) === true) {
-            $kinds[] = self::KIND_EXPIRED;
-        }
-
         if (! $this->sameConversation($donation, $payment)) {
             $kinds[] = self::KIND_CONVERSATION;
         }
@@ -124,7 +125,9 @@ final class PaymentSettlementService implements SettlesPayments
         }
 
         if ($kinds !== []) {
-            return $this->mismatch($donation, $payment, $kinds);
+            $this->recordMismatches($donation, $payment, $kinds);
+
+            return SettlementOutcome::Mismatch;
         }
 
         $donation->forceFill([
@@ -137,13 +140,19 @@ final class PaymentSettlementService implements SettlesPayments
 
         SendDonationReceipt::dispatch($donation->id)->afterCommit();
 
+        if ($this->exceedsDonorDayCap($donation)) {
+            $this->recordMismatches($donation, $payment, [self::KIND_CAP_EXCEEDED]);
+        }
+
         return SettlementOutcome::Paid;
     }
 
     private function failure(Donation $donation, ProviderPayment $payment): SettlementOutcome
     {
         if (! $this->sameConversation($donation, $payment)) {
-            return $this->mismatch($donation, $payment, [self::KIND_CONVERSATION]);
+            $this->recordMismatches($donation, $payment, [self::KIND_CONVERSATION]);
+
+            return SettlementOutcome::Mismatch;
         }
 
         if ($donation->status === DonationStatus::Initiated) {
@@ -151,6 +160,29 @@ final class PaymentSettlementService implements SettlesPayments
         }
 
         return SettlementOutcome::Failed;
+    }
+
+    /**
+     * The donor's paid donations created on the Istanbul day of this one (the same count
+     * the checkout cap uses for paid donations) above `payments.caps.donor_day_minor`.
+     */
+    private function exceedsDonorDayCap(Donation $donation): bool
+    {
+        if ($donation->donor_id === null || $donation->created_at === null) {
+            return false;
+        }
+
+        $start = $donation->created_at->setTimezone(self::CAP_TIMEZONE)->startOfDay();
+        $format = 'Y-m-d H:i:s.uP';
+
+        $paid = (int) Donation::query()
+            ->where('donor_id', $donation->donor_id)
+            ->where('status', DonationStatus::Paid->value)
+            ->where('created_at', '>=', $start->format($format))
+            ->where('created_at', '<', $start->addDay()->format($format))
+            ->sum('amount_minor');
+
+        return $paid > (int) config('payments.caps.donor_day_minor', 500_000);
     }
 
     private function sameConversation(Donation $donation, ProviderPayment $payment): bool
@@ -167,7 +199,7 @@ final class PaymentSettlementService implements SettlesPayments
      *
      * @param  list<string>  $kinds
      */
-    private function mismatch(Donation $donation, ProviderPayment $payment, array $kinds): SettlementOutcome
+    private function recordMismatches(Donation $donation, ProviderPayment $payment, array $kinds): void
     {
         $now = CarbonImmutable::now();
         $stamp = $now->format('Y-m-d H:i:s.uP');
@@ -214,7 +246,5 @@ final class PaymentSettlementService implements SettlesPayments
                 Mail::to($address)->queue(new SettlementMismatchMail($donation->id, $recorded));
             }
         }
-
-        return SettlementOutcome::Mismatch;
     }
 }

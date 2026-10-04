@@ -23,8 +23,12 @@ use Illuminate\Support\Facades\Log;
  *   vocabulary says `settled` for the provider's `paid`); anything else is skipped;
  * - a record must be a SettlementRecord of this shop's sub-merchant key, TRY, with a
  *   non-negative amount and a settlement id of at most 191 characters;
- * - upsert by (shop_id, provider_settlement_id); a `settled` payout is never changed
+ * - upsert by (shop_id, provider_settlement_id); a `settled` payout never changes status
  *   again (no downgrade), a held payout is never overwritten (finance releases it);
+ * - a provider settlement id may name a daily aggregate (the provider gateway reports one
+ *   completed-payout total per sub-merchant and day): a later report of a higher total
+ *   for a `settled` payout raises its amount, because completed payouts only add up
+ *   during a day; a lower total is refused and logged (ids only);
  * - a payout that is (or becomes) pending while its shop has an unreviewed fraud flag is
  *   put on hold; the shop row is locked first, like the fraud scan does;
  * - repeating a sync with the same provider data changes nothing.
@@ -174,8 +178,12 @@ final class PayoutSynchronizer
                     return 'created';
                 }
 
-                if ($existing->hold || $existing->status === PayoutStatus::Held || $existing->status === PayoutStatus::Settled) {
+                if ($existing->hold || $existing->status === PayoutStatus::Held) {
                     return 'protected';
+                }
+
+                if ($existing->status === PayoutStatus::Settled) {
+                    return $this->raiseSettledTotal($shop, $existing, $record, $status);
                 }
 
                 $existing->forceFill([
@@ -206,6 +214,31 @@ final class PayoutSynchronizer
 
             throw $e;
         }
+    }
+
+    /**
+     * A settled daily aggregate only grows: the same settled status with a higher amount
+     * updates it; anything else leaves it as it is.
+     *
+     * @return 'updated'|'unchanged'|'protected'
+     */
+    private function raiseSettledTotal(Shop $shop, Payout $existing, SettlementRecord $record, PayoutStatus $status): string
+    {
+        if ($status !== PayoutStatus::Settled || $record->amountMinor < $existing->amount_minor) {
+            if ($status === PayoutStatus::Settled) {
+                Log::warning(self::NAME.'.settled_total_decreased', ['shop_id' => $shop->id, 'payout_id' => $existing->id]);
+            }
+
+            return 'protected';
+        }
+
+        if ($record->amountMinor === $existing->amount_minor) {
+            return 'unchanged';
+        }
+
+        $existing->forceFill(['amount_minor' => $record->amountMinor])->save();
+
+        return 'updated';
     }
 
     /**

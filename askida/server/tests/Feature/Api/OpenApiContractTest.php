@@ -3,6 +3,8 @@
 use App\Domain\Auth\Codes\OneTimeCodeService;
 use App\Domain\Auth\Enums\IdentityProvider;
 use App\Domain\Auth\Enums\OneTimeCodePurpose;
+use App\Domain\Hooks\Listeners\NotifyDonorRedeemed;
+use App\Domain\Hooks\Listeners\NotifyShopNewHooks;
 use App\Domain\Impact\Services\ImpactSnapshotService;
 use App\Domain\Payments\Gateways\Iyzico\IyzicoSigner;
 use App\Domain\Shops\Models\ShopVerificationState;
@@ -269,6 +271,52 @@ describe('me', function (): void {
         Spec::assertProblem('PUT', '/me/push-token', $missing, 422, 'validation.failed');
 
         Spec::assertProblem('PUT', '/me/push-token', W::call('PUT', '/api/v1/me/push-token', $body, W::anonToken()), 401, 'auth.unauthenticated');
+    });
+
+    it('push data', function (): void {
+        $validator = new SchemaValidator(SchemaValidator::VALIDATE_AS_RESPONSE);
+        $schemas = Spec::spec()->components->schemas ?? [];
+        $messages = [
+            'PushDataHooksIssued' => NotifyShopNewHooks::message(2, 'Ekmek', (string) Str::uuid7()),
+            'PushDataHookRedeemed' => NotifyDonorRedeemed::message('Ekmek', 'Çınar Fırını', (string) Str::uuid7(), (string) Str::uuid7()),
+        ];
+        $union = $schemas['PushData'] ?? null;
+        expect($union)->toBeInstanceOf(Schema::class);
+        assert($union instanceof Schema);
+
+        foreach ($messages as $name => $message) {
+            $schema = $schemas[$name] ?? null;
+            expect($schema)->toBeInstanceOf(Schema::class);
+            assert($schema instanceof Schema);
+
+            try {
+                $validator->validate($message->data, $schema);
+            } catch (SchemaMismatch $e) {
+                Assert::fail("{$name}: ".$e->getMessage());
+            }
+
+            expect($union->discriminator->mapping[$message->data['type']] ?? null)->toBe("#/components/schemas/{$name}");
+        }
+    });
+
+    it('shops', function (): void {
+        $shop = W::shop();
+        $owner = W::owner($shop);
+        W::shop($owner, ShopVerificationState::Pending);
+        $staff = W::staff(W::shop());
+
+        $owned = W::send('GET', '/api/v1/me/shops', null, W::token($owner))->assertOk();
+        Spec::assertResponse('GET', '/me/shops', $owned);
+        expect($owned->json('data'))->toHaveCount(2);
+
+        $staffed = W::send('GET', '/api/v1/me/shops', null, W::token($staff))->assertOk();
+        Spec::assertResponse('GET', '/me/shops', $staffed);
+        expect($staffed->json('data.0.role'))->toBe('staff');
+
+        Spec::assertResponse('GET', '/me/shops', W::send('GET', '/api/v1/me/shops', null, W::token(W::merchant()))->assertOk());
+        Spec::assertProblem('GET', '/me/shops', W::call('GET', '/api/v1/me/shops', null, W::token(W::donor())), 403, 'forbidden');
+        Spec::assertProblem('GET', '/me/shops', W::call('GET', '/api/v1/me/shops', null, W::anonToken()), 401, 'auth.unauthenticated');
+        Spec::assertProblem('GET', '/me/shops', W::call('GET', '/api/v1/me/shops'), 401, 'auth.unauthenticated');
     });
 });
 

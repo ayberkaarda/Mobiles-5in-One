@@ -7,10 +7,12 @@ use App\Domain\Admin\Services\AdminAudit;
 use App\Domain\Auth\Abilities\AdminPermission;
 use App\Domain\Donations\Models\Donation;
 use App\Domain\Donations\Models\DonationStatus;
+use App\Domain\Payments\Services\RefundService;
 use App\Filament\Concerns\GatedByAdminAbilities;
 use App\Filament\Resources\DonationResource\Pages;
 use App\Filament\Support\Money;
 use App\Filament\Support\PanelActor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -21,7 +23,8 @@ use Filament\Tables\Table;
  * Donations, read-only (matrix: finance and admin). Columns are the shop, item, amounts
  * and status: no donor identity, no provider token, payment id or payload, and no
  * recipient data (none exists). A refund goes through the payments domain
- * (RefundsDonations); the panel never edits the status itself.
+ * (RefundsDonations); the outcome of an open refund is recorded through RefundService.
+ * The panel never edits the status itself.
  */
 class DonationResource extends Resource
 {
@@ -79,14 +82,48 @@ class DonationResource extends Resource
                     ->form([
                         Textarea::make('reason')->label('İade gerekçesi')->required()->minLength(5)->maxLength(500),
                     ])
-                    ->visible(fn (Donation $record): bool => $record->status === DonationStatus::Paid && app()->bound(RefundsDonations::class))
+                    ->visible(fn (Donation $record): bool => $record->status === DonationStatus::Paid
+                        && app()->bound(RefundsDonations::class)
+                        && ! app(RefundService::class)->hasUnresolved($record))
                     ->authorize(fn (): bool => PanelActor::allows(AdminPermission::RefundPayments->gate()))
                     ->action(function (Donation $record, array $data): void {
                         $actor = PanelActor::user();
-                        app(RefundsDonations::class)->refund($record, $actor, (string) $data['reason']);
+                        $after = app(RefundsDonations::class)->refund($record, $actor, (string) $data['reason']);
                         AdminAudit::log('admin.refund_requested', $actor, $record, ['reason' => (string) $data['reason']]);
 
-                        Notification::make()->success()->title('İade talebi işlendi.')->send();
+                        if ($after->status === DonationStatus::Refunded) {
+                            Notification::make()->success()->title('İade tamamlandı.')->send();
+                        } else {
+                            Notification::make()->warning()->title('İade tamamlanamadı.')
+                                ->body('Durum değişmedi; ayrıntı ödeme uyumsuzlukları listesinde.')->send();
+                        }
+                    }),
+                // An open refund (outage or another amount at the provider): finance records
+                // what the provider shows; nothing is sent to the provider again before that.
+                Tables\Actions\Action::make('resolve_refund')
+                    ->label('İade sonucunu kaydet')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('warning')
+                    ->form([
+                        Select::make('refunded')->label('Sağlayıcıdaki durum')->required()->options([
+                            '1' => 'İade sağlayıcıda yapılmış',
+                            '0' => 'Sağlayıcıda iade yok',
+                        ]),
+                        Textarea::make('note')->label('Not')->required()->minLength(5)->maxLength(RefundService::NOTE_MAX),
+                    ])
+                    ->visible(fn (Donation $record): bool => $record->status === DonationStatus::Paid
+                        && app(RefundService::class)->hasUnresolved($record))
+                    ->authorize(fn (): bool => PanelActor::allows(AdminPermission::RefundPayments->gate()))
+                    ->action(function (Donation $record, array $data): void {
+                        $actor = PanelActor::user();
+                        $refunded = (string) $data['refunded'] === '1';
+                        app(RefundService::class)->resolveUnresolved($record, $actor, $refunded, (string) $data['note']);
+                        AdminAudit::log('admin.refund_outcome_recorded', $actor, $record, [
+                            'to' => $refunded ? 'refunded' : 'not_refunded',
+                            'note' => (string) $data['note'],
+                        ]);
+
+                        Notification::make()->success()->title('İade sonucu kaydedildi.')->send();
                     }),
             ])
             ->bulkActions([]);

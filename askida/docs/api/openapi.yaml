@@ -489,6 +489,13 @@ paths:
         One row per token value (a token registered by another account moves to
         this one); at most 10 per account, the least recently registered is
         dropped. The answer is empty so the token never travels back.
+
+        Messages delivered to a registered token carry a Turkish title and body
+        plus string data described by the `PushData` schema: a `type` the app
+        routes on (`hooks.issued` opens the redemptions of `shop_id` for the shop's
+        owner and staff, "Yeni askı"; `hook.redeemed` opens the donor's own
+        donation `donation_id`, "Askın alındı") and display values. No push ever
+        carries recipient data: no anon id, device, code, hook id or time.
       security:
         - bearer: []
       x-abilities: [donor, merchant]
@@ -511,6 +518,34 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/ValidationFailed"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /me/shops:
+    get:
+      tags: [me]
+      operationId: listMyShops
+      summary: The shops of the calling merchant
+      description: |
+        Every shop where the account is owner or staff, read from the shop
+        membership on each request, with the account's role in it. Unverified
+        shops are included with their state; sample shops follow the directory's
+        sample setting. Ordered by name; no pagination. Contact, tax and bank data
+        stay on `GET /shops/{shop}` (owner view).
+      security:
+        - bearer: []
+      x-abilities: [merchant]
+      x-roles: owner or staff of each listed shop (donor 403)
+      responses:
+        "200":
+          description: The shops of the account; empty when it has none.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyShopListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/ServerError"
   /anon/attest:
@@ -2383,6 +2418,103 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/ShopOwner"
+    MyShop:
+      type: object
+      additionalProperties: false
+      description: A shop of the calling merchant with the caller's role in it.
+      required:
+        [id, slug, name, type, type_label, il, ilce, verification_state, role]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        slug:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        type_label:
+          type: [string, "null"]
+        il:
+          type: string
+        ilce:
+          type: string
+        verification_state:
+          type: string
+          enum: [pending, verified, rejected]
+        role:
+          type: string
+          enum: [owner, staff]
+    MyShopListResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyShop"
+    PushData:
+      description: |
+        String data of a push message (not an HTTP body). `type` selects the
+        screen the app opens; ids are UUIDs, `count` is a decimal string. No
+        variant carries recipient data.
+      oneOf:
+        - $ref: "#/components/schemas/PushDataHooksIssued"
+        - $ref: "#/components/schemas/PushDataHookRedeemed"
+      discriminator:
+        propertyName: type
+        mapping:
+          hooks.issued: "#/components/schemas/PushDataHooksIssued"
+          hook.redeemed: "#/components/schemas/PushDataHookRedeemed"
+    PushDataHooksIssued:
+      type: object
+      additionalProperties: false
+      description: '"Yeni askı" to every owner and staff device of the shop: opens the redemptions of `shop_id`. No donation id and no donor data.'
+      required: [type, shop_id, item, count]
+      properties:
+        type:
+          type: string
+          enum: [hooks.issued]
+        shop_id:
+          $ref: "#/components/schemas/Uuid"
+        item:
+          type: string
+          description: Item name.
+        count:
+          type: string
+          pattern: "^[1-9][0-9]*$"
+          description: Units issued, as a decimal string.
+      example:
+        type: hooks.issued
+        shop_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+        item: Ekmek
+        count: "2"
+    PushDataHookRedeemed:
+      type: object
+      additionalProperties: false
+      description: '"Askın alındı" to the donor''s devices when one unit of their donation is redeemed: opens the donation `donation_id`. Never the hook id, a code, a time or anything about the recipient.'
+      required: [type, donation_id, shop_id, item, shop]
+      properties:
+        type:
+          type: string
+          enum: [hook.redeemed]
+        donation_id:
+          $ref: "#/components/schemas/Uuid"
+        shop_id:
+          $ref: "#/components/schemas/Uuid"
+        item:
+          type: string
+          description: Item name.
+        shop:
+          type: string
+          description: Shop name.
+      example:
+        type: hook.redeemed
+        donation_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c91
+        shop_id: 0199b3c2-7a10-7c3e-9f41-2d5e8a6b1c90
+        item: Ekmek
+        shop: Çınar Fırını
     Item:
       type: object
       additionalProperties: false

@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Domain\Admin\Contracts\RefundsDonations;
 use App\Domain\Payments\Console\ReconcileCommand;
 use App\Domain\Payments\Contracts\PaymentGateway;
 use App\Domain\Payments\Contracts\SettlesPayments;
 use App\Domain\Payments\Listeners\OnShopRejectedRefund;
 use App\Domain\Payments\Services\CommissionCalculator;
+use App\Domain\Payments\Services\PanelRefunds;
 use App\Domain\Payments\Services\PaymentSettlementService;
 use App\Domain\Shops\Events\ShopRejected;
 use App\Models\User;
@@ -71,6 +73,9 @@ class PaymentsServiceProvider extends ServiceProvider
 
         // The single settlement implementation (callback, webhook job, reconciliation).
         $this->app->bind(SettlesPayments::class, PaymentSettlementService::class);
+
+        // The panel's refund action (authorized, through RefundService).
+        $this->app->bind(RefundsDonations::class, PanelRefunds::class);
     }
 
     public function boot(): void

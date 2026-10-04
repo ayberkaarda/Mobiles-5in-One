@@ -22,11 +22,29 @@ use SensitiveParameter;
  * signature, so the age window limits replays only together with the event id
  * uniqueness of `payment_events`.
  *
- * The event id is derived from the signed fields plus the event time, so a redelivery of
- * the same event maps to the same id.
+ * The event id is the hash of the exact message the signature authenticated (the
+ * concatenation of the signed fields), so a redelivery of the same event maps to the
+ * same id, and so does a body whose field boundaries were moved without changing the
+ * signed bytes (for example a character shifted from the payment id to the event type).
+ * The fields must also have their documented shape (provider format, not verified):
+ * event type upper-case letters, digits and underscores; payment id digits; token and
+ * conversation id letters, digits, `-` and `_`; status upper-case letters and underscores.
  */
 final class IyzicoWebhookVerifier
 {
+    /**
+     * Field name => pattern a signed field must match (an empty optional field passes).
+     *
+     * @var array<string, array{0: string, 1: bool}> pattern, required
+     */
+    public const FIELD_FORMATS = [
+        'iyziEventType' => ['/^[A-Z][A-Z0-9_]{0,63}$/', true],
+        'iyziPaymentId' => ['/^[0-9]{1,20}$/', false],
+        'token' => ['/^[A-Za-z0-9_-]{1,128}$/', true],
+        'paymentConversationId' => ['/^[A-Za-z0-9_-]{1,64}$/', false],
+        'status' => ['/^[A-Z_]{1,32}$/', false],
+    ];
+
     public function __construct(
         #[SensitiveParameter]
         private readonly string $secretKey,
@@ -65,13 +83,17 @@ final class IyzicoWebhookVerifier
             throw new InvalidWebhookSignature;
         }
 
+        foreach (self::FIELD_FORMATS as $field => [$pattern, $required]) {
+            $value = self::text($payload, $field);
+
+            // Correctly signed but not a well-formed checkout form event: nothing to settle.
+            if (($value === '' && $required) || ($value !== '' && preg_match($pattern, $value) !== 1)) {
+                throw new InvalidWebhookSignature;
+            }
+        }
+
         $eventType = self::text($payload, 'iyziEventType');
         $token = self::text($payload, 'token');
-
-        if ($eventType === '' || $token === '') {
-            // Correctly signed but not a checkout form event: nothing to settle.
-            throw new InvalidWebhookSignature;
-        }
 
         $eventTime = $payload['iyziEventTime'] ?? null;
 
@@ -91,9 +113,9 @@ final class IyzicoWebhookVerifier
         // type, payment id, token, conversation id and status, but NOT `iyziEventTime`. The
         // age check therefore reads an unsigned value, so a holder of a valid payload can
         // move the timestamp to pass it; the replay is harmless because the dedup id below
-        // is built from signed fields only and settlement re-reads the payment itself.
+        // is the hash of the authenticated message only and settlement re-reads the payment.
         return new VerifiedWebhook(
-            eventId: hash('sha256', implode('|', [$eventType, $paymentId, $token, self::text($payload, 'paymentConversationId'), self::text($payload, 'status')])),
+            eventId: hash('sha256', 'v3|'.IyzicoSigner::webhookMessage($payload)),
             eventType: $eventType,
             providerToken: $token,
             providerPaymentId: $paymentId === '' ? null : $paymentId,
