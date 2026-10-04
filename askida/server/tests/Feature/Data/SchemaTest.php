@@ -11,7 +11,7 @@ uses(RefreshDatabase::class);
  */
 dataset('domain tables', [
     'shops' => ['shops', ['id', 'owner_id', 'name', 'slug', 'type', 'address', 'il', 'ilce', 'location', 'phone', 'tax_number_enc', 'iban_enc', 'sub_merchant_key', 'verification_state', 'verified_at', 'listed_on_web', 'is_sample', 'created_at', 'updated_at']],
-    'shop_documents' => ['shop_documents', ['id', 'shop_id', 'kind', 'path', 'mime', 'size', 'reviewed_at', 'created_at', 'updated_at']],
+    'shop_documents' => ['shop_documents', ['id', 'shop_id', 'kind', 'path', 'mime', 'size', 'reviewed_at', 'uploaded_at', 'created_at', 'updated_at']],
     'shop_members' => ['shop_members', ['id', 'shop_id', 'user_id', 'role', 'created_at', 'updated_at']],
     'items' => ['items', ['id', 'shop_id', 'name', 'category', 'price_minor', 'currency', 'daily_cap', 'active', 'created_at', 'updated_at']],
     'donations' => ['donations', ['id', 'donor_id', 'shop_id', 'item_id', 'qty', 'amount_minor', 'commission_minor', 'currency', 'provider', 'provider_payment_id', 'provider_token', 'status', 'paid_at', 'anonymized_at', 'created_at', 'updated_at']],
