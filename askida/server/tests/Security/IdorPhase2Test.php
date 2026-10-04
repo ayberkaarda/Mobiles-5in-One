@@ -14,6 +14,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\Feature\Api\Auth\Support\AuthTestKit;
 use Tests\Feature\Api\Hooks\Support\HookWorld;
 use Tests\Feature\Api\Shops\Support\ShopTestKit;
@@ -168,8 +169,8 @@ describe('documents', function (): void {
         $signer = app(DocumentUrlSigner::class);
 
         foreach ([AuthTestKit::token($w['a']), AuthTestKit::token($w['b'])] as $plain) {
-            $user = User::query()->findOrFail(Laravel\Sanctum\PersonalAccessToken::findToken($plain)?->tokenable_id);
-            $user->withAccessToken(Laravel\Sanctum\PersonalAccessToken::findToken($plain));
+            $user = User::query()->findOrFail(PersonalAccessToken::findToken($plain)?->tokenable_id);
+            $user->withAccessToken(PersonalAccessToken::findToken($plain));
 
             try {
                 $signer->temporaryUrl($w['docA'], $user);

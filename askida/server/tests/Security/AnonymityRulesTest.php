@@ -11,6 +11,7 @@ use App\Domain\Items\Models\Item;
 use App\Domain\Push\Contracts\PushTransport;
 use App\Domain\Push\PushMessage;
 use App\Domain\Shops\Models\Shop;
+use App\Domain\Shops\Models\ShopMemberRole;
 use App\Models\User;
 use Database\Seeders\RolesSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -95,7 +96,7 @@ beforeEach(function (): void {
     $this->owner = ShopTestKit::merchant();
     $this->shop = ShopTestKit::shop($this->owner);
     $this->staff = ShopTestKit::merchant();
-    ShopTestKit::join($this->shop, $this->staff, App\Domain\Shops\Models\ShopMemberRole::Staff);
+    ShopTestKit::join($this->shop, $this->staff, ShopMemberRole::Staff);
     $this->item = ShopTestKit::item($this->shop);
     $this->donor = ShopTestKit::donor();
     (new DevicePushToken)->forceFill(['user_id' => $this->donor->id, 'platform' => 'android', 'token' => 'device-'.bin2hex(random_bytes(16))])->save();
