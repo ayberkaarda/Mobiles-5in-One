@@ -10,6 +10,7 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 
 import '../fakes/fake_auth_repository.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/test_database.dart';
 
 void main() {
   test('session flags follow sign-in, sign-out and anon changes', () {
@@ -84,6 +85,7 @@ void main() {
           AppEnv.parse('http://10.0.2.2:58080/api/v1'),
         ),
         tokenStoreProvider.overrideWithValue(tokens),
+        appDatabaseProvider.overrideWithValue(testDatabase()),
       ],
     );
     addTearDown(container.dispose);

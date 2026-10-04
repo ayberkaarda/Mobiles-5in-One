@@ -5,6 +5,8 @@ import 'package:askida/core/env/flavor.dart';
 import 'package:askida/core/http/api_client.dart';
 import 'package:askida/core/locale/app_locale.dart';
 import 'package:askida/core/storage/secure_token_store.dart';
+import 'package:askida/core/time/clock.dart';
+import 'package:askida/data/db/app_database.dart';
 import 'package:askida/data/models/api_problem.dart';
 import 'package:askida/data/models/user.dart';
 import 'package:askida/data/repositories/anon_repository.dart';
@@ -12,6 +14,7 @@ import 'package:askida/data/repositories/auth_repository.dart';
 import 'package:askida/data/repositories/donations_repository.dart';
 import 'package:askida/data/repositories/hooks_repository.dart';
 import 'package:askida/data/repositories/impact_repository.dart';
+import 'package:askida/data/repositories/impl/cached_shops_repository.dart';
 import 'package:askida/data/repositories/impl/dio_anon_repository.dart';
 import 'package:askida/data/repositories/impl/dio_auth_repository.dart';
 import 'package:askida/data/repositories/impl/dio_donations_repository.dart';
@@ -53,8 +56,18 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   );
 });
 
+/// The offline cache (tests override with an in-memory database).
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase.open();
+  ref.onDispose(db.close);
+  return db;
+});
+
 /// Wipes the offline database after an account or anon identity is erased.
-final localDataEraserProvider = Provider<LocalDataEraser>((ref) => () async {});
+final localDataEraserProvider = Provider<LocalDataEraser>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return db.clearAll;
+});
 
 /// Device attestation for the anon identity (dev flavor fallback inside).
 final attestationServiceProvider = Provider<AttestationService>(
@@ -88,8 +101,19 @@ final remoteShopsRepositoryProvider = Provider<ShopsRepository>(
   (ref) => DioShopsRepository(ref.watch(apiClientProvider)),
 );
 
+/// The cache decorator, for screens that want [CachedShopsRepository.
+/// watchNearby] (cached list first, then the network list).
+final cachedShopsRepositoryProvider = Provider<CachedShopsRepository>(
+  (ref) => CachedShopsRepository(
+    ref.watch(remoteShopsRepositoryProvider),
+    ref.watch(appDatabaseProvider),
+    clock: ref.watch(clockProvider),
+  ),
+);
+
+/// What features use for shops: read-through cached (24 h TTL).
 final shopsRepositoryProvider = Provider<ShopsRepository>(
-  (ref) => ref.watch(remoteShopsRepositoryProvider),
+  (ref) => ref.watch(cachedShopsRepositoryProvider),
 );
 
 final hooksRepositoryProvider = Provider<HooksRepository>(
