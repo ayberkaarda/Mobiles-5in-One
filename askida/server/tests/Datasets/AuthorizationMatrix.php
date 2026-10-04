@@ -63,13 +63,13 @@ final class AuthorizationMatrix
             'DELETE anon/me' => self::api('3.1', '- - - - own', ['pending', 'device attestation and anon tokens']),
 
             // 3.2 Shops and catalog
-            'GET shops' => self::api('3.2', '- Y Y Y Y', ['policy', ShopPolicy::class, 'viewAny', [Shop::class]]),
-            'GET shops/{slug}' => self::api('3.2', '- Y Y Y Y', ['policy', ShopPolicy::class, 'view', ['shop']]),
-            'POST shops' => self::api('3.2', '- - Y - -', ['policy', ShopPolicy::class, 'create', [Shop::class]]),
-            'PATCH shops/{id}' => self::api('3.2', '- - member - -', ['policy', ShopPolicy::class, 'update', ['shop']]),
-            'POST shops/{id}/documents/presign' => self::api('3.2', '- - member - -', ['policy', ShopDocumentPolicy::class, 'create', [ShopDocument::class, 'shop']]),
-            'POST shops/{id}/items' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'create', [Item::class, 'shop']]),
-            'PATCH shops/{id}/items/{itemId}' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'update', ['item', 'shop']]),
+            'GET shops' => self::api('3.2', '- Y Y Y Y', ['policy', ShopPolicy::class, 'viewAny', [Shop::class]], ['route', 'api.v1.shops.index']),
+            'GET shops/{slug}' => self::api('3.2', '- Y Y Y Y', ['policy', ShopPolicy::class, 'view', ['shop']], ['route', 'api.v1.shops.show']),
+            'POST shops' => self::api('3.2', '- - Y - -', ['policy', ShopPolicy::class, 'create', [Shop::class]], ['route', 'api.v1.shops.store']),
+            'PATCH shops/{id}' => self::api('3.2', '- - member - -', ['policy', ShopPolicy::class, 'update', ['shop']], ['route', 'api.v1.shops.update']),
+            'POST shops/{id}/documents/presign' => self::api('3.2', '- - member - -', ['policy', ShopDocumentPolicy::class, 'create', [ShopDocument::class, 'shop']], ['route', 'api.v1.shops.documents.presign']),
+            'POST shops/{id}/items' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'create', [Item::class, 'shop']], ['route', 'api.v1.shops.items.store']),
+            'PATCH shops/{id}/items/{itemId}' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'update', ['item', 'shop']], ['route', 'api.v1.shops.items.update']),
 
             // 3.3 Donations
             'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]]),

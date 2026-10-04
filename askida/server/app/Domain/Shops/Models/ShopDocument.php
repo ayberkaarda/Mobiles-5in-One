@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A verification document stored on the private disk; `path` is the object key.
+ * `uploaded_at` is null while the upload URL is outstanding and set once the stored
+ * object passed the server-side checks.
  *
  * @property string $id
  * @property string $shop_id
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $mime
  * @property int $size
  * @property CarbonImmutable|null $reviewed_at
+ * @property CarbonImmutable|null $uploaded_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -54,6 +57,7 @@ class ShopDocument extends Model
             'kind' => ShopDocumentKind::class,
             'size' => 'integer',
             'reviewed_at' => 'immutable_datetime',
+            'uploaded_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
