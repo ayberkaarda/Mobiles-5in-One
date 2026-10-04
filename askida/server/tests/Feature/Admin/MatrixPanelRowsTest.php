@@ -2,6 +2,7 @@
 
 use App\Domain\Admin\Contracts\HoldsPayouts;
 use App\Domain\Admin\Contracts\RefundsDonations;
+use App\Domain\Anon\Models\AnonDevice;
 use App\Domain\Auth\Abilities\AdminRole;
 use App\Domain\Donations\Models\Donation;
 use App\Domain\Fraud\Models\AbuseFlag;
@@ -60,7 +61,7 @@ function matrixPanelCells(): array
 /**
  * A record on which the action is applicable.
  */
-function matrixPanelRecord(string $resource): Model
+function matrixPanelRecord(string $resource, string $action = ''): Model
 {
     return match (class_basename($resource)) {
         'ShopResource' => ShopTestKit::shop(state: ShopVerificationState::Pending),
@@ -69,12 +70,13 @@ function matrixPanelRecord(string $resource): Model
         'PaymentMismatchResource' => PaymentMismatch::factory()->create(),
         'AbuseFlagResource' => AbuseFlag::factory()->create(),
         'UserResource' => AdminTestKit::staff(AdminRole::Moderator),
+        'AnonDeviceResource' => $action === 'unban' ? AnonDevice::factory()->banned()->create() : AnonDevice::factory()->create(),
         default => throw new LogicException('No record for '.$resource),
     };
 }
 
 it('has panel checks on the admin rows', function (): void {
-    expect(count(matrixPanelCells()))->toBe(3 * 15);
+    expect(count(matrixPanelCells()))->toBe(3 * 19);
 });
 
 it('enforces the admin panel cell', function (string $key, AdminRole $role, bool $allowed, array $check): void {
@@ -94,7 +96,7 @@ it('enforces the admin panel cell', function (string $key, AdminRole $role, bool
         return;
     }
 
-    $record = matrixPanelRecord($resource);
+    $record = matrixPanelRecord($resource, (string) ($check[3] ?? ''));
 
     if (! $resource::canViewAny()) {
         expect($allowed)->toBeFalse();

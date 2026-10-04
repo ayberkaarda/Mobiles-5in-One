@@ -149,8 +149,9 @@ it('offers no impersonation: no route, no panel action, gate always denied', fun
     expect(Gate::forUser(AdminTestKit::staff(AdminRole::Admin))->allows('impersonate'))->toBeFalse();
 });
 
-it('shows no anonymous-device data on any panel resource or navigation item', function (): void {
-    $anonTables = ['anon_devices', 'anon_daily_counters', 'hooks'];
+it('shows no anonymous data beyond the device ban screen on any panel resource', function (): void {
+    // The device ban screen (anon_devices) is the one allowed exception; counters and hooks never.
+    $anonTables = ['anon_daily_counters', 'hooks'];
     $panel = Filament::getPanel('admin');
 
     foreach ($panel->getResources() as $resource) {
@@ -166,5 +167,5 @@ it('shows no anonymous-device data on any panel resource or navigation item', fu
 
     AdminTestKit::httpSession(AdminTestKit::staff(AdminRole::Admin));
     $html = $this->get('/admin')->assertOk()->getContent();
-    expect(strtolower((string) $html))->not->toContain('anon_id')->not->toContain('anon-devices');
+    expect(strtolower((string) $html))->not->toContain('anon_daily_counters');
 });

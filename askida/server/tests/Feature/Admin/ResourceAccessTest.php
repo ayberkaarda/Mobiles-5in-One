@@ -3,6 +3,7 @@
 use App\Domain\Auth\Abilities\AdminRole;
 use App\Filament\Resources\AbuseFlagResource;
 use App\Filament\Resources\ActivityLogResource;
+use App\Filament\Resources\AnonDeviceResource;
 use App\Filament\Resources\DonationResource;
 use App\Filament\Resources\PaymentMismatchResource;
 use App\Filament\Resources\PayoutResource;
@@ -33,6 +34,7 @@ function panelResourceRoles(): array
     return [
         ShopResource::class => [AdminRole::Moderator, AdminRole::Admin],
         AbuseFlagResource::class => [AdminRole::Moderator, AdminRole::Finance, AdminRole::Admin],
+        AnonDeviceResource::class => [AdminRole::Moderator, AdminRole::Admin],
         DonationResource::class => [AdminRole::Finance, AdminRole::Admin],
         PayoutResource::class => [AdminRole::Finance, AdminRole::Admin],
         PaymentMismatchResource::class => [AdminRole::Finance, AdminRole::Admin],

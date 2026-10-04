@@ -10,6 +10,7 @@ use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopDocument;
 use App\Filament\Resources\AbuseFlagResource;
 use App\Filament\Resources\ActivityLogResource;
+use App\Filament\Resources\AnonDeviceResource;
 use App\Filament\Resources\DonationResource;
 use App\Filament\Resources\PaymentMismatchResource;
 use App\Filament\Resources\PayoutResource;
@@ -106,12 +107,12 @@ final class AuthorizationMatrix
             'Approve or reject a shop' => self::admin('Y - Y', ['gate', 'manage-shops'], ['panel', ShopResource::class, 'action', 'approve'], ['panel', ShopResource::class, 'action', 'reject']),
             'Open a shop document' => self::admin('Y - Y', ['gate', 'view-documents'], ['policy', ShopDocumentPolicy::class, 'view', ['document']], ['panel', DocumentsRelationManager::class, 'relation']),
             'Suspend a shop or hold new reservations' => self::admin('Y Y Y', ['gate', 'suspend-shops'], ['panel', AbuseFlagResource::class, 'viewAny'], ['panel', AbuseFlagResource::class, 'action', 'review']),
-            'Ban or unban an `anon_id`' => self::admin('Y - Y', ['gate', 'ban-anon-devices']),
+            'Ban or unban an `anon_id`' => self::admin('Y - Y', ['gate', 'ban-anon-devices'], ['panel', AnonDeviceResource::class, 'viewAny'], ['panel', AnonDeviceResource::class, 'action', 'ban'], ['panel', AnonDeviceResource::class, 'action', 'unban']),
             'View donations and payment events' => self::admin('- Y Y', ['gate', 'view-donations'], ['panel', DonationResource::class, 'viewAny']),
             'View payouts and reconciliation results' => self::admin('- Y Y', ['gate', 'view-payouts'], ['panel', PayoutResource::class, 'viewAny'], ['panel', PaymentMismatchResource::class, 'viewAny']),
             'Place or release an automatic payout hold' => self::admin('- Y Y', ['gate', 'manage-payouts'], ['panel', PayoutResource::class, 'action', 'hold']),
             'Trigger a refund or a manual reconciliation' => self::admin('- Y Y', ['gate', 'refund-payments'], ['panel', DonationResource::class, 'action', 'refund'], ['panel', PaymentMismatchResource::class, 'action', 'resolve']),
-            'Reveal a decrypted tax number or IBAN' => self::admin('- Y Y', ['gate', 'reveal-shop-financials']),
+            'Reveal a decrypted tax number or IBAN' => self::admin('- Y Y', ['gate', 'reveal-shop-financials'], ['panel', PayoutResource::class, 'action', 'reveal_financials']),
             'Manage admin users and roles' => self::admin('- - Y', ['gate', 'admin'], ['panel', UserResource::class, 'viewAny'], ['panel', UserResource::class, 'action', 'assignRole']),
             'View activity log' => self::admin('- - Y', ['gate', 'view-activity-log'], ['panel', ActivityLogResource::class, 'viewAny']),
             'Open the Horizon dashboard' => self::admin('- - Y', ['gate', 'viewHorizon'], ['gate', 'view-horizon']),
