@@ -4,7 +4,9 @@ use App\Domain\Shops\Models\ShopType;
 use App\Domain\Web\Content\GuideRepository;
 use App\Support\Web\Facts;
 use App\Support\Web\Origin;
+use Database\Seeders\SampleDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\ExpectationFailedException;
 use Tests\Feature\Web\Directory\Support\DirectoryWorld;
 use Tests\Feature\Web\Seo\Support\PublicSite;
 use Tests\Feature\Web\Support\WebPage;
@@ -309,7 +311,7 @@ it('describes the open data set without a licence grant', function (): void {
 
 it('keeps the sample shops valid for the Lighthouse world', function (): void {
     config(['askida.allow_sample_shops' => true]);
-    $this->seed(Database\Seeders\SampleDataSeeder::class);
+    $this->seed(SampleDataSeeder::class);
 
     $blocks = validatedJsonLd((string) $this->get('/dukkan/ornek-moda-firini')->assertOk()->getContent(), 'sample bakery');
 
@@ -318,7 +320,7 @@ it('keeps the sample shops valid for the Lighthouse world', function (): void {
 });
 
 it('rejects a block that breaks the rules', function (array $block): void {
-    expect(fn () => assertJsonLdNode($block, 'fixture'))->toThrow(PHPUnit\Framework\ExpectationFailedException::class);
+    expect(fn () => assertJsonLdNode($block, 'fixture'))->toThrow(ExpectationFailedException::class);
 })->with([
     'unknown type' => [['@type' => 'Thing', 'name' => 'x']],
     'missing property' => [['@type' => 'Organization', 'name' => 'x', 'url' => 'https://askida.app/']],

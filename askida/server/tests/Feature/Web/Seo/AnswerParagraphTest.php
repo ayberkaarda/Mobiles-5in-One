@@ -1,6 +1,8 @@
 <?php
 
+use App\Domain\Impact\Models\ImpactSnapshot;
 use App\Support\Web\Format;
+use Database\Seeders\SampleDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Web\Seo\Support\PublicSite;
 use Tests\Feature\Web\Support\WebPage;
@@ -51,7 +53,7 @@ it('puts one 40-60 word answer paragraph directly under the H1 of every public p
 });
 
 it('keeps the answer paragraph on a province impact page below the small-cell threshold', function (): void {
-    $row = new App\Domain\Impact\Models\ImpactSnapshot;
+    $row = new ImpactSnapshot;
     $row->forceFill(['il' => 'Muğla', 'ilce' => 'Bodrum', 'day' => now()->toDateString(), 'donated' => 2, 'redeemed' => 1, 'shops' => 1])->save();
 
     $html = WebPage::assertPublicPage($this->get('/etki/mugla'), 'tr', WebPage::BUDGET_LONG);
@@ -61,7 +63,7 @@ it('keeps the answer paragraph on a province impact page below the small-cell th
 
 it('keeps the answer paragraph on the sample home page', function (): void {
     config(['askida.allow_sample_shops' => true]);
-    $this->seed(Database\Seeders\SampleDataSeeder::class);
+    $this->seed(SampleDataSeeder::class);
 
     WebPage::assertPublicPage($this->get('/'));
     WebPage::assertPublicPage($this->get('/etki'));
