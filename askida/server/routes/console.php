@@ -1,9 +1,9 @@
 <?php
 
 use App\Domain\Accounts\Jobs\HardDeleteAccounts;
-use App\Domain\Impact\Jobs\TakeImpactSnapshot;
 use App\Domain\Anon\Jobs\PurgeOldAnonData;
 use App\Domain\Hooks\Jobs\ReleaseExpiredHooks;
+use App\Domain\Impact\Jobs\TakeImpactSnapshot;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
