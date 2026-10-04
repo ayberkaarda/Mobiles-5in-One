@@ -116,6 +116,8 @@ These routes are reached by the in-app WebView and by the payment provider, not 
 | POST     | `pay/callback`    | browser redirect | provider token in the payload                                                  | Never trusts a posted status or amount: always calls the provider `retrieve` API and only then transitions the donation (spec section 6 item 17).                                                                             |
 | POST     | `webhooks/iyzico` | provider         | signature over the raw body, verified per the provider's current specification | Reject on missing or invalid signature or a stale timestamp. Idempotent on `event_id` through the unique index on `payment_events`. Returns 200 fast, then a queued job re-fetches the payment and only then creates `hooks`. |
 
+The two pay rows carry a `web` check in the table-driven suite: the named route exists, has no `auth:sanctum` or `ability:*` middleware, and a donor token changes nothing about the response. The behavioural proof of the rules above is `tests/Feature/Web/PayPageTest.php`.
+
 ## 4. Admin panel (Filament, `/admin`, not JSON)
 
 Spec section 6 item 18. All three roles require a completed TOTP login, a `strict` session and an activity-log entry for every login and model change. An optional IP allowlist is a switch, not a role.

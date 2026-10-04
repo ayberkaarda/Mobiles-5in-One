@@ -89,8 +89,10 @@ final class AuthorizationMatrix
             'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
-            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
-            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment callback']]],
+            // No principal columns: a bound token in the URL or payload is the credential. The
+            // `web` check proves the routes are public to Sanctum; PayPageTest proves behaviour.
+            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.show']]],
+            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['web', 'web.pay.callback']]],
             'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
 
             // 4 Admin panel

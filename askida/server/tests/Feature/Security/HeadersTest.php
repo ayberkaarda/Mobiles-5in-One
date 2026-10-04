@@ -146,6 +146,51 @@ it('reads the payment frame hosts from the environment list', function (): void 
         ->toBe(['allow' => ['https://a.payments.test', 'https://b.payments.test']]);
 });
 
+it('opens script-src and connect-src on payment pages to the configured hosts and changes no other profile', function (): void {
+    $emptyConfig = TemporaryEnv::run(
+        ['SECURITY_CSP_SCRIPT_SRC_PAY' => '', 'SECURITY_CSP_CONNECT_SRC_PAY' => '', 'SECURITY_CSP_FRAME_SRC_PAY' => ''],
+        fn (): array => require config_path('secure-headers.php'),
+    );
+    $configured = TemporaryEnv::run(
+        [
+            'SECURITY_CSP_SCRIPT_SRC_PAY' => 'https://scripts.payments.test, ,https://more.payments.test',
+            'SECURITY_CSP_CONNECT_SRC_PAY' => 'https://api.payments.test',
+            'SECURITY_CSP_FRAME_SRC_PAY' => '',
+        ],
+        fn (): array => require config_path('secure-headers.php'),
+    );
+
+    expect(array_keys($emptyConfig['csp_profiles']['pay']))->toBe(['frame-src'])
+        ->and($configured['csp_profiles']['pay']['script-src'])
+        ->toBe(['self' => true, 'use-nonce' => true, 'allow' => ['https://scripts.payments.test', 'https://more.payments.test']])
+        ->and($configured['csp_profiles']['pay']['connect-src'])->toBe(['self' => true, 'allow' => ['https://api.payments.test']])
+        ->and($configured['csp_profiles']['pay']['frame-src'])->toBe(['none' => true])
+        ->and(array_diff_key($configured['csp_profiles'], ['pay' => 1]))->toBe(array_diff_key($emptyConfig['csp_profiles'], ['pay' => 1]))
+        ->and($configured['csp'])->toBe($emptyConfig['csp']);
+
+    $before = [
+        'pay' => cspDirectives($this->get('/pay/test-headers')),
+        'web' => cspDirectives($this->get('/test-headers/inline')),
+        'api' => cspDirectives($this->getJson('/api/v1/test-headers/probe')),
+    ];
+    config(['secure-headers.csp_profiles' => $configured['csp_profiles']]);
+    $after = [
+        'pay' => cspDirectives($this->get('/pay/test-headers')),
+        'web' => cspDirectives($this->get('/test-headers/inline')),
+        'api' => cspDirectives($this->getJson('/api/v1/test-headers/probe')),
+    ];
+
+    expect($before['pay']['script-src'])->toMatch("/^'self' 'nonce-[^ ']+'$/")
+        ->and($after['pay']['script-src'])->toMatch("/^'self' 'nonce-[^ ']+' https:\/\/scripts\.payments\.test https:\/\/more\.payments\.test$/")
+        ->and($after['pay']['connect-src'])->toContain('https://api.payments.test')
+        ->and($before['pay']['connect-src'])->toBe("'self'")
+        ->and($after['pay']['frame-src'])->toBe("'none'")
+        ->and(preg_replace("/'nonce-[^']+'/", "'nonce'", implode(';', $after['web'])))->toBe(preg_replace("/'nonce-[^']+'/", "'nonce'", implode(';', $before['web'])))
+        ->and($after['api'])->toBe($before['api'])
+        ->and($after['web']['script-src'])->not->toContain('payments.test')
+        ->and($after['web']['connect-src'])->toBe("'self'");
+});
+
 it('locks API responses down and disables caching', function (): void {
     $response = $this->getJson('/api/v1/test-headers/probe');
 
