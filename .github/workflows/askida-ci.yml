@@ -425,9 +425,119 @@ jobs:
       - name: Scan history
         run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
 
+  # Lighthouse CI on the public web (spec section 8): home, how it works, a province, a sample
+  # shop and the impact page, three runs each, median >= 0.9 in every category
+  # (askida/server/lighthouserc.cjs). Informational: NOT part of "Askida CI gate" (not in its
+  # "needs") and not a required check, so a slow or noisy runner cannot block a merge.
+  # @lhci/cli comes from npx at a pinned version; nothing is added to the repository
+  # dependencies. The database is seeded with the [ÖRNEK] sample shops (APP_ENV=local is the
+  # environment the sample seeder accepts). `php artisan serve` has no gzip and no static
+  # cache headers, unlike the nginx of askida/docker, so scores here can sit below a local run.
+  lighthouse:
+    name: Askida Lighthouse (informational)
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: askida/server
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: askida
+          POSTGRES_USER: askida
+          POSTGRES_PASSWORD: askida_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U askida -d askida"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    # Real environment variables win over .env, so every value the pages depend on is set here.
+    env:
+      APP_ENV: local
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_DATABASE: askida
+      DB_USERNAME: askida
+      DB_PASSWORD: askida_ci_only
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      CACHE_STORE: redis
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      ALLOW_SAMPLE_SHOPS: "true"
+      PAYMENT_PROVIDER: fake
+      CHROME_PATH: /usr/bin/google-chrome
+      LHCI_CHROME_FLAGS: --headless=new --no-sandbox
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, bcmath, pdo_pgsql, pgsql, redis, pcntl, gd
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment and sample data
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          php artisan migrate --seed --force --no-interaction
+
+      # Started in the background; waits at most 60 s for the health route.
+      - name: Start the web server
+        run: |
+          nohup php artisan serve --host=127.0.0.1 --port=8000 > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8000/up; then
+              echo "Web server ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Web server NOT ready after 60 s"
+          cat "$RUNNER_TEMP/serve.log" || true
+          exit 1
+
+      - name: Lighthouse CI
+        env:
+          LHCI_URLS: >-
+            http://127.0.0.1:8000/,http://127.0.0.1:8000/nasil-calisir,http://127.0.0.1:8000/dukkanlar/istanbul,http://127.0.0.1:8000/dukkan/ornek-moda-firini,http://127.0.0.1:8000/etki
+        run: npx --yes @lhci/cli@0.15.1 autorun --config=lighthouserc.cjs
+
   # The only check to mark as required on main. "changes" must succeed and report askida=true
   # or askida=false. true: server, app, brand and placeholder-grep must all succeed. false: all four
   # must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # Exception: the informational "lighthouse" job is deliberately left out of "needs".
   # When a job is added to this workflow, add it to "needs" and to the checks below.
   gate:
     name: Askida CI gate
