@@ -16,6 +16,8 @@ x-server-image: &server-image
     - ./server:/var/www/html
     # Read-only: the authorization matrix test cross-checks docs/security against its dataset.
     - ./docs:/var/www/docs:ro
+    # Read-only: the public web tests compare the stylesheet and fonts with the brand sources.
+    - ./brand:/var/www/brand:ro
   restart: unless-stopped
 
 services:

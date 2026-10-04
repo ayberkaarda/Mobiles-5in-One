@@ -46,6 +46,22 @@ class SampleDataSeeder extends Seeder
     ];
 
     /**
+     * Opening hours of every sample shop (the public shop page and its LocalBusiness JSON-LD
+     * show them): `{mon..sun: {open, close} | null}`, null = closed that day.
+     *
+     * @var array<string, array{open: string, close: string}|null>
+     */
+    public const OPENING_HOURS = [
+        'mon' => ['open' => '08:00', 'close' => '20:00'],
+        'tue' => ['open' => '08:00', 'close' => '20:00'],
+        'wed' => ['open' => '08:00', 'close' => '20:00'],
+        'thu' => ['open' => '08:00', 'close' => '20:00'],
+        'fri' => ['open' => '08:00', 'close' => '20:00'],
+        'sat' => ['open' => '09:00', 'close' => '18:00'],
+        'sun' => null,
+    ];
+
+    /**
      * slug, name, type, ilce, address, latitude, longitude, items (name, category, kuruş, daily cap).
      *
      * @var list<array{slug: string, name: string, type: string, ilce: string, address: string, lat: float, lng: float, items: list<array{0: string, 1: ItemCategory, 2: int, 3: int}>}>
@@ -178,8 +194,14 @@ class SampleDataSeeder extends Seeder
                     'verification_state' => ShopVerificationState::Verified,
                     'verified_at' => now(),
                     'listed_on_web' => true,
+                    'opening_hours' => self::OPENING_HOURS,
                     'is_sample' => true,
                 ]);
+            }
+
+            // Sample shops seeded before opening hours existed get them on the next run.
+            if ($shop->opening_hours === null) {
+                $shop->forceFill(['opening_hours' => self::OPENING_HOURS])->save();
             }
 
             if ($merchant !== null) {

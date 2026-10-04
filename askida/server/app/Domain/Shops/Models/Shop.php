@@ -7,10 +7,12 @@ use App\Domain\Hooks\Models\Hook;
 use App\Domain\Items\Models\Item;
 use App\Domain\Payments\Models\Payout;
 use App\Models\User;
+use App\Support\Web\TurkishSlug;
 use Carbon\CarbonImmutable;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +28,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $address
  * @property string $il
  * @property string $ilce
+ * @property string $il_slug
+ * @property string $ilce_slug
+ * @property array<string, array{open: string, close: string}|null>|null $opening_hours
  * @property GeoPoint $location
  * @property string $phone
  * @property string|null $tax_number_enc
@@ -60,6 +65,7 @@ class Shop extends Model
         'phone',
         'tax_number_enc',
         'iban_enc',
+        'opening_hours',
     ];
 
     /**
@@ -93,9 +99,37 @@ class Shop extends Model
             'verified_at' => 'immutable_datetime',
             'listed_on_web' => 'boolean',
             'is_sample' => 'boolean',
+            'opening_hours' => 'array',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * Setting the province also sets its URL slug (`/dukkanlar/{il}`). A mutator rather
+     * than a model event, so seeders that mute events keep the slug in sync too.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function il(): Attribute
+    {
+        return Attribute::make(set: static fn (mixed $value): array => [
+            'il' => (string) $value,
+            'il_slug' => mb_substr(TurkishSlug::make((string) $value), 0, 64),
+        ]);
+    }
+
+    /**
+     * Setting the district also sets its URL slug (`/dukkanlar/{il}/{ilce}`).
+     *
+     * @return Attribute<string, string>
+     */
+    protected function ilce(): Attribute
+    {
+        return Attribute::make(set: static fn (mixed $value): array => [
+            'ilce' => (string) $value,
+            'ilce_slug' => mb_substr(TurkishSlug::make((string) $value), 0, 64),
+        ]);
     }
 
     /**

@@ -5,10 +5,6 @@ use App\Http\Controllers\Web\PayController;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
 // Account deletion for email and password accounts (security checklist item 21).
 Route::get('/hesap-silme', [AccountDeletionController::class, 'show'])->name('web.account-deletion.show');
 Route::post('/hesap-silme', [AccountDeletionController::class, 'store'])
@@ -24,3 +20,10 @@ Route::post('/pay/callback', [PayController::class, 'callback'])
     ->name('web.pay.callback');
 Route::get('/pay/{token}', [PayController::class, 'show'])->name('web.pay.show');
 // endregion payments
+
+// Public web areas (each file is owned by one area; see the file headers).
+require __DIR__.'/web/pages.php';
+require __DIR__.'/web/directory.php';
+require __DIR__.'/web/impact.php';
+require __DIR__.'/web/content.php';
+require __DIR__.'/web/seo.php';
