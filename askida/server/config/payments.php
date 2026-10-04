@@ -53,8 +53,22 @@ return [
     'fraud' => [
         'max_redeems_per_hour' => (int) env('FRAUD_MAX_REDEEMS_PER_HOUR', 30),
         'max_self_redeem_ratio' => (float) env('FRAUD_MAX_SELF_REDEEM_RATIO', 0.5),
-        // Number of `suspicious_self_redeem` entries that triggers a hold.
+        // The ratio rule is only evaluated once the window holds at least this many
+        // redemptions (a floor, not a maximum: equal counts), so one self-redemption out of
+        // one cannot fire it.
+        'min_redemptions_for_ratio' => (int) env('FRAUD_MIN_REDEMPTIONS_FOR_RATIO', 5),
+        // More `suspicious_self_redeem` entries than this within the scan window trigger a
+        // hold (every threshold is a maximum: only a value above it counts).
         'max_suspicious_self_redeems' => 3,
+    ],
+
+    /*
+    | Sub-merchant onboarding after a shop is verified. A provider outage is retried with
+    | these waits (seconds); after `max_attempts` finance is flagged.
+    */
+    'onboarding' => [
+        'max_attempts' => 5,
+        'backoff_seconds' => [60, 300, 900, 3600],
     ],
 
 ];
