@@ -134,12 +134,34 @@ it('counts only the last hour', function (): void {
 it('does not flag a self-redemption share at exactly the maximum ratio', function (): void {
     config(['payments.fraud.max_suspicious_self_redeems' => 100]);
     $shop = HookWorld::shop();
-    PayoutWorld::redeemed($shop, minutesAgo(5), 4);
-    PayoutWorld::selfRedeems($shop, 2, minutesAgo(5));
+    PayoutWorld::redeemed($shop, minutesAgo(5), 6);
+    PayoutWorld::selfRedeems($shop, 3, minutesAgo(5));
 
     scanNow();
 
     expect(flagKinds($shop))->toBe([]);
+});
+
+it('does not judge the ratio below the redemption floor', function (): void {
+    config(['payments.fraud.max_suspicious_self_redeems' => 100, 'payments.fraud.min_redemptions_for_ratio' => 5]);
+    $shop = HookWorld::shop();
+    PayoutWorld::redeemed($shop, minutesAgo(5), 4);
+    PayoutWorld::selfRedeems($shop, 4, minutesAgo(5));
+
+    scanNow();
+
+    expect(flagKinds($shop))->toBe([]);
+});
+
+it('judges the ratio at exactly the redemption floor', function (): void {
+    config(['payments.fraud.max_suspicious_self_redeems' => 100, 'payments.fraud.min_redemptions_for_ratio' => 5]);
+    $shop = HookWorld::shop();
+    PayoutWorld::redeemed($shop, minutesAgo(5), 5);
+    PayoutWorld::selfRedeems($shop, 3, minutesAgo(5));
+
+    scanNow();
+
+    expect(flagKinds($shop))->toBe(['self_redeem_ratio']);
 });
 
 it('flags a self-redemption share above the maximum ratio', function (): void {

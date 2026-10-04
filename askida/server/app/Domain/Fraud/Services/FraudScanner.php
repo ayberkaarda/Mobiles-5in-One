@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
  *
  * - redemptions > payments.fraud.max_redeems_per_hour         -> `redeem_rate`
  * - self entries / redemptions > payments.fraud.max_self_redeem_ratio -> `self_redeem_ratio`
+ *   (only once redemptions >= payments.fraud.min_redemptions_for_ratio, a floor)
  * - self entries > payments.fraud.max_suspicious_self_redeems -> `self_redeem_count`
  *
  * gets its pending payouts held, and per kind (only while no unreviewed flag of that kind
@@ -94,6 +95,7 @@ final class FraudScanner
         $maxRedeems = (int) config('payments.fraud.max_redeems_per_hour', 30);
         $maxRatio = (float) config('payments.fraud.max_self_redeem_ratio', 0.5);
         $maxSelf = (int) config('payments.fraud.max_suspicious_self_redeems', 3);
+        $minForRatio = (int) config('payments.fraud.min_redemptions_for_ratio', 5);
         $kinds = [];
 
         if ($redeemed > $maxRedeems) {
@@ -102,7 +104,7 @@ final class FraudScanner
 
         // Integer comparison of self/redeemed > ratio, so an exact boundary never flips
         // through floating point rounding.
-        if ($redeemed > 0 && $self * self::RATIO_SCALE > (int) round($maxRatio * self::RATIO_SCALE) * $redeemed) {
+        if ($redeemed > 0 && $redeemed >= $minForRatio && $self * self::RATIO_SCALE > (int) round($maxRatio * self::RATIO_SCALE) * $redeemed) {
             $kinds[AbuseFlagKind::SelfRedeemRatio->value] = $maxRatio;
         }
 
