@@ -85,3 +85,28 @@ it('rejects a signed event without a timestamp as stale', function (): void {
 
     expect(fn () => (new IyzicoGateway)->verifyWebhook($body, $headers))->toThrow(StaleWebhook::class);
 });
+
+it('builds the dedup id from signed fields only, so a changed timestamp mints no new id', function (string $gateway): void {
+    [$body, $headers] = signedWebhook();
+    $payload = json_decode($body, true);
+    $payload['iyziEventTime'] = CarbonImmutable::now()->subSeconds(10)->getTimestampMs();
+    $moved = json_encode($payload, JSON_THROW_ON_ERROR);
+
+    $first = app($gateway)->verifyWebhook($body, $headers);
+    $second = app($gateway)->verifyWebhook($moved, $headers);
+
+    expect($second->eventId)->toBe($first->eventId);
+})->with('gateways');
+
+it('gives a different id to a different signed field', function (string $field, string $value): void {
+    [$body, $headers] = signedWebhook();
+    [$otherBody, $otherHeaders] = signedWebhook([$field => $value]);
+
+    expect((new IyzicoGateway)->verifyWebhook($otherBody, $otherHeaders)->eventId)
+        ->not->toBe((new IyzicoGateway)->verifyWebhook($body, $headers)->eventId);
+})->with([
+    ['status', 'FAILURE'],
+    ['paymentConversationId', 'conv-2'],
+    ['iyziPaymentId', '9989'],
+    ['token', 'tok-webhook-5678'],
+]);

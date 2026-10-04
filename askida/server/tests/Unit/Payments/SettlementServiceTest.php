@@ -115,6 +115,34 @@ it('records a mismatch instead of paying, once while unresolved, with an alert a
     'failure of another conversation' => [fn (object $t) => $t->fake->scriptPayment($t->token, ProviderPaymentStatus::Failure, 0, 'TRY', 'someone-else'), 'conversation_mismatch'],
 ]);
 
+it('does not settle a success that arrives after the cap window and registers it instead', function (): void {
+    scriptExact($this);
+    $this->travel(31)->minutes();
+
+    expect(settle($this->token))->toBe(SettlementOutcome::Mismatch)
+        ->and($this->donation->refresh()->status)->toBe(DonationStatus::Initiated)
+        ->and(PaymentMismatch::query()->pluck('kind')->all())->toBe(['paid_after_window'])
+        ->and(Hook::query()->count())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
+it('still settles a success inside the cap window', function (): void {
+    scriptExact($this);
+    $this->travel(29)->minutes();
+
+    expect(settle($this->token))->toBe(SettlementOutcome::Paid);
+});
+
+it('does not settle a success without a provider payment id and registers it', function (): void {
+    $this->fake->scriptPayment($this->token, ProviderPaymentStatus::Success, $this->donation->amount_minor, 'TRY', $this->donation->conversation_id, withoutPaymentId: true);
+
+    expect(settle($this->token))->toBe(SettlementOutcome::Mismatch)
+        ->and($this->donation->refresh()->status)->toBe(DonationStatus::Initiated)
+        ->and($this->donation->provider_payment_id)->toBeNull()
+        ->and(PaymentMismatch::query()->pluck('kind')->all())->toBe(['missing_payment_id'])
+        ->and(Hook::query()->count())->toBe(0);
+});
+
 it('flags a provider success for a donation we already failed, without reviving it', function (): void {
     scriptExact($this, ProviderPaymentStatus::Failure);
     settle($this->token);
