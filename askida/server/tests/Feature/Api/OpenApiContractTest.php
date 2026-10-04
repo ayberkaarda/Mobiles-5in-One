@@ -3,6 +3,7 @@
 use App\Domain\Auth\Codes\OneTimeCodeService;
 use App\Domain\Auth\Enums\IdentityProvider;
 use App\Domain\Auth\Enums\OneTimeCodePurpose;
+use App\Domain\Payments\Gateways\Iyzico\IyzicoSigner;
 use App\Domain\Impact\Services\ImpactSnapshotService;
 use App\Domain\Shops\Models\ShopVerificationState;
 use App\Models\User;
@@ -12,10 +13,12 @@ use cebe\openapi\spec\Schema;
 use Database\Factories\UserFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use League\OpenAPIValidation\Schema\Exception\SchemaMismatch;
 use League\OpenAPIValidation\Schema\SchemaValidator;
 use PHPUnit\Framework\Assert;
+use Tests\Feature\Api\Donations\Support\PaymentWorld;
 use Tests\Feature\Api\Shops\Support\ShopTestKit;
 use Tests\Support\OpenApi\ContractWorld as W;
 use Tests\Support\OpenApi\OpenApiContract as Spec;
@@ -591,6 +594,119 @@ describe('impact', function (): void {
     });
 });
 
+describe('donations', function (): void {
+    it('creates, lists and shows a donation of the calling donor', function (): void {
+        PaymentWorld::useFakeGateway();
+        $shop = W::shop();
+        $shop->forceFill(['sub_merchant_key' => 'test-sm-'.bin2hex(random_bytes(6))])->save();
+        $item = W::item($shop);
+        $donor = W::donor();
+        $token = W::token($donor);
+
+        $created = W::send('POST', '/api/v1/donations', ['shop_id' => $shop->id, 'item_id' => $item->id, 'qty' => 2], $token)->assertCreated();
+        Spec::assertResponse('POST', '/donations', $created);
+        $id = (string) $created->json('donation_id');
+
+        $list = W::send('GET', '/api/v1/donations?limit=5', null, $token)->assertOk();
+        Spec::assertResponse('GET', '/donations', $list);
+        expect($list->json('data.0.id'))->toBe($id)
+            ->and($list->json('data.0.status'))->toBe('initiated')
+            ->and($list->json('data.0.amount_minor'))->toBe($item->price_minor * 2);
+
+        $shown = W::send('GET', "/api/v1/donations/{$id}", null, $token)->assertOk();
+        Spec::assertResponse('GET', '/donations/{donation}', $shown);
+        expect($shown->json('data.id'))->toBe($id);
+
+        Spec::assertProblem('GET', '/donations/{donation}', W::call('GET', "/api/v1/donations/{$id}", null, W::token(W::donor())), 404, 'not_found');
+    });
+
+    it('denies and refuses donation calls', function (): void {
+        PaymentWorld::useFakeGateway();
+        $shop = W::shop();
+        $item = W::item($shop);
+        $body = ['shop_id' => $shop->id, 'item_id' => $item->id, 'qty' => 1];
+        $donor = W::token(W::donor());
+        $merchant = W::token(W::merchant());
+
+        Spec::assertProblem('POST', '/donations', W::call('POST', '/api/v1/donations', $body), 401, 'auth.unauthenticated');
+        Spec::assertProblem('POST', '/donations', W::call('POST', '/api/v1/donations', $body, $merchant), 403, 'forbidden');
+        Spec::assertProblem('GET', '/donations', W::call('GET', '/api/v1/donations', null, $merchant), 403, 'forbidden');
+        Spec::assertProblem('GET', '/donations/{donation}', W::call('GET', '/api/v1/donations/'.Str::uuid(), null, $merchant), 403, 'forbidden');
+        Spec::assertProblem('GET', '/donations/{donation}', W::call('GET', '/api/v1/donations/'.Str::uuid(), null, $donor), 404, 'not_found');
+        Spec::assertProblem('POST', '/donations', W::call('POST', '/api/v1/donations', $body, $donor), 409, 'shop.not_payable');
+
+        $invalid = W::call('POST', '/api/v1/donations', [...$body, 'amount_minor' => 1], $donor);
+        Spec::assertProblem('POST', '/donations', $invalid, 422, 'validation.failed');
+        expect($invalid->json('errors'))->toBe([['field' => 'amount_minor', 'code' => 'prohibited']]);
+
+        $shop->forceFill(['sub_merchant_key' => 'test-sm-'.bin2hex(random_bytes(6))])->save();
+        $item->forceFill(['price_minor' => 15_000])->save();
+        $big = W::call('POST', '/api/v1/donations', [...$body, 'qty' => 20], $donor);
+        Spec::assertProblem('POST', '/donations', $big, 422, 'donation.tx_cap_exceeded');
+
+        Spec::assertProblem('GET', '/donations', W::call('GET', '/api/v1/donations?limit=0', null, $donor), 422, 'validation.failed');
+    });
+});
+
+describe('payouts', function (): void {
+    it('lists the ledger for the owner and refuses everyone else', function (): void {
+        $shop = W::shop();
+        $path = "/api/v1/shops/{$shop->id}/payouts";
+
+        $ledger = W::send('GET', $path, null, W::token(W::owner($shop)))->assertOk();
+        Spec::assertResponse('GET', '/shops/{shop}/payouts', $ledger);
+        expect($ledger->json('meta.currency'))->toBe('TRY')
+            ->and($ledger->json('meta.commission.text_key'))->toBe('payouts.commission.transparent');
+
+        Spec::assertProblem('GET', '/shops/{shop}/payouts', W::call('GET', $path), 401, 'auth.unauthenticated');
+        Spec::assertProblem('GET', '/shops/{shop}/payouts', W::call('GET', $path, null, W::token(W::staff($shop))), 403, 'forbidden');
+        Spec::assertProblem('GET', '/shops/{shop}/payouts', W::call('GET', $path, null, W::token(W::donor())), 403, 'forbidden');
+        Spec::assertProblem('GET', '/shops/{shop}/payouts', W::call('GET', $path, null, W::token(W::merchant())), 404, 'not_found');
+        Spec::assertProblem('GET', '/shops/{shop}/payouts', W::call('GET', $path.'?limit=0', null, W::token(W::owner($shop))), 422, 'validation.failed');
+    });
+});
+
+describe('webhooks', function (): void {
+    it('accepts a signed delivery once and refuses a bad signature', function (): void {
+        Queue::fake();
+        PaymentWorld::useFakeGateway();
+        PaymentWorld::providerKeys();
+
+        $payload = [
+            'iyziEventType' => 'CHECKOUT_FORM_AUTH',
+            'iyziEventTime' => (int) (microtime(true) * 1000),
+            'iyziPaymentId' => (string) random_int(100000, 999999),
+            'token' => 'tok-'.bin2hex(random_bytes(8)),
+            'paymentConversationId' => (string) Str::uuid(),
+            'status' => 'SUCCESS',
+        ];
+        $signature = IyzicoSigner::webhookSignature((string) config('services.iyzico.secret_key'), $payload);
+        $headers = ['X-IYZ-SIGNATURE-V3' => $signature];
+        $deliver = static function (array $headers) use ($payload) {
+            W::case()->flushHeaders();
+            app('auth')->forgetGuards();
+
+            return W::case()->postJson('/api/v1/webhooks/iyzico', $payload, $headers);
+        };
+
+        Spec::assertRequest('POST', '/api/v1/webhooks/iyzico', null, $headers);
+
+        $first = $deliver($headers)->assertOk();
+        Spec::assertResponse('POST', '/webhooks/iyzico', $first);
+        expect($first->json('status'))->toBe('accepted');
+
+        $again = $deliver($headers)->assertOk();
+        Spec::assertResponse('POST', '/webhooks/iyzico', $again);
+        expect($again->json('status'))->toBe('duplicate');
+
+        $forged = $deliver(['X-IYZ-SIGNATURE-V3' => str_repeat('0', 64)]);
+        Spec::assertProblem('POST', '/webhooks/iyzico', $forged, 401, 'auth.token_invalid');
+
+        $unsigned = $deliver([]);
+        Spec::assertProblem('POST', '/webhooks/iyzico', $unsigned, 401, 'auth.token_invalid');
+    });
+});
+
 /*
 | Request examples against the real Form Requests: each documented example passes
 | validation (the answer is never a validation.failed problem), and removing any field
@@ -598,7 +714,7 @@ describe('impact', function (): void {
 */
 
 const OPENAPI_BODY_OPERATIONS = [
-    'attestDevice', 'createShop', 'createShopItem', 'deleteMe', 'forgotPassword', 'login', 'presignShopDocument',
+    'attestDevice', 'createDonation', 'createShop', 'createShopItem', 'deleteMe', 'forgotPassword', 'login', 'presignShopDocument',
     'putPushToken', 'redeemHook', 'register', 'reserveHook', 'resetPassword', 'signInWithApple', 'signInWithGoogle',
     'updateMe', 'updateShop', 'updateShopItem', 'verifyEmail',
 ];
@@ -615,6 +731,7 @@ function openApiRequestContext(string $operationId): array
 
     return match ($operationId) {
         'attestDevice' => ['uri' => '/api/v1/anon/attest', 'token' => null],
+        'createDonation' => ['uri' => '/api/v1/donations', 'token' => W::token(W::donor())],
         'createShop' => ['uri' => '/api/v1/shops', 'token' => W::token(W::merchant())],
         'createShopItem' => ['uri' => "/api/v1/shops/{$shop->id}/items", 'token' => $owner()],
         'deleteMe' => ['uri' => '/api/v1/me', 'token' => W::token(W::donor())],
