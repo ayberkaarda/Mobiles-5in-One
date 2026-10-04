@@ -72,9 +72,9 @@ final class AuthorizationMatrix
             'PATCH shops/{id}/items/{itemId}' => self::api('3.2', '- - member - -', ['policy', ItemPolicy::class, 'update', ['item', 'shop']], ['route', 'api.v1.shops.items.update']),
 
             // 3.3 Donations
-            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]]),
-            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]]),
-            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']]),
+            'POST donations' => self::api('3.3', '- Y - - -', ['policy', DonationPolicy::class, 'create', [Donation::class]], ['route', 'api.v1.donations.store']),
+            'GET donations' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'viewAny', [Donation::class]], ['route', 'api.v1.donations.index']),
+            'GET donations/{id}' => self::api('3.3', '- own - - -', ['policy', DonationPolicy::class, 'view', ['donation']], ['route', 'api.v1.donations.show']),
 
             // 3.4 Reservation and redemption
             'POST hooks/reserve' => self::api('3.4', '- - - - own', ['policy', HookPolicy::class, 'reserve', [Hook::class]], ['route', 'api.v1.hooks.reserve']),
@@ -86,8 +86,10 @@ final class AuthorizationMatrix
             'GET impact?il=&ilce=' => self::api('3.5', 'Y Y Y Y Y', ['route', 'api.v1.impact.show']),
 
             // 3.6 Payment web endpoints (no principal columns)
-            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment pages']]],
-            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment callback']]],
+            // The pay routes exist now; they have no principal columns, so the route check (which
+            // reads the guest cell) does not apply. They are proven by tests/Feature/Web/PayPageTest.php.
+            'GET/POST pay/{token}' => ['section' => '3.6', 'cells' => [], 'checks' => []],
+            'POST pay/callback' => ['section' => '3.6', 'cells' => [], 'checks' => []],
             'POST webhooks/iyzico' => ['section' => '3.6', 'cells' => [], 'checks' => [['pending', 'payment webhook']]],
 
             // 4 Admin panel
