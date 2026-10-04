@@ -21,6 +21,7 @@ enum ProblemCode: string
     case MethodNotAllowed = 'method_not_allowed';
     case HttpsRequired = 'https_required';
     case ServiceUnavailable = 'service_unavailable';
+    case ShopHasOpenHooks = 'shop.has_open_hooks';
 
     public function title(): string
     {
@@ -42,6 +43,7 @@ enum ProblemCode: string
             self::MethodNotAllowed => 'The method is not allowed for this resource.',
             self::HttpsRequired => 'HTTPS is required.',
             self::ServiceUnavailable => 'The service is temporarily unavailable.',
+            self::ShopHasOpenHooks => 'A shop of this account still has open units.',
         };
     }
 
