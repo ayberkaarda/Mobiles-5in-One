@@ -10,13 +10,13 @@ const String kTileUrlTemplate =
     'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 /// Identifies the app to the tile server (its usage policy asks for it).
-const String kTileUserAgentPackage = 'app.askida.mobile';
+const String kTileClientPackageName = 'app.askida.mobile';
 
 /// The ONE tile-layer factory. [provider] is the test seam
 /// (`tileProviderProvider` in `lib/data/providers.dart`).
 TileLayer buildTileLayer(TileProvider provider) => TileLayer(
   urlTemplate: kTileUrlTemplate,
-  userAgentPackageName: kTileUserAgentPackage,
+  userAgentPackageName: kTileClientPackageName,
   tileProvider: provider,
 );
 
