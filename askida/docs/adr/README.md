@@ -37,5 +37,14 @@ documented here, so a gap in the numbering is always explained.
 | [0024](0024-openapi-contract-test.md)                               | OpenAPI document and contract test                        | Accepted                |
 | 0025-0032                                                           | Phase 3 decisions (payments, admin)                       | Reserved                |
 | 0033-0042                                                           | Phase 4 decisions (Flutter app)                           | Reserved                |
-| 0043-0052                                                           | Phase 5 decisions (web, SEO and GEO, impact pages)        | Reserved                |
+| [0043](0043-rendering-and-asset-pipeline.md)                        | Rendering and asset pipeline of the public web            | Accepted                |
+| [0044](0044-page-metadata-and-hreflang.md)                          | Page metadata and hreflang policy                         | Accepted                |
+| [0045](0045-json-ld-coverage-and-validation.md)                     | JSON-LD coverage and test-based validation                | Accepted                |
+| [0046](0046-shop-directory.md)                                      | Shop directory, listing rules and opening hours           | Accepted                |
+| [0047](0047-share-images.md)                                        | Share images rendering and caching                        | Accepted                |
+| [0048](0048-sitemap-and-robots.md)                                  | Sitemap and robots.txt                                    | Accepted                |
+| [0049](0049-impact-pages-and-open-data.md)                          | Impact pages and the open data CSV                        | Accepted                |
+| [0050](0050-guides-content-pipeline.md)                             | Guides and content pipeline                               | Accepted                |
+| [0051](0051-legal-and-contact-pages-as-samples.md)                  | Legal and contact pages as labelled samples               | Accepted                |
+| [0052](0052-app-linking-files.md)                                   | App linking files and Smart App Banner                    | Accepted                |
 | 0053-0062                                                           | Phase 6 decisions (hardening and release readiness)       | Reserved                |
