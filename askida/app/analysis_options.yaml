@@ -6,6 +6,14 @@ analyzer:
     - android/**
     - ios/**
     - lib/l10n/gen/**
+    # Built by build_runner (tool/codegen.sh), never committed.
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.drift.dart"
+    - "**/*.mocks.dart"
+  errors:
+    # freezed puts json_serializable annotations on factory parameters.
+    invalid_annotation_target: ignore
 
 linter:
   rules:
