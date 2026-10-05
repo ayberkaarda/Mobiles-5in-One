@@ -1,5 +1,6 @@
 package app.cetele.server.auth.otp
 
+import app.cetele.server.auth.AuthLocks
 import app.cetele.server.auth.sms.SmsGateway
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -27,6 +28,7 @@ sealed interface OtpCheck {
 @Service
 class OtpService(
     private val codes: OtpCodeRepository,
+    private val locks: AuthLocks,
     private val hasher: OtpHasher,
     private val sms: SmsGateway,
     private val settings: OtpSettings,
@@ -41,6 +43,8 @@ class OtpService(
         deviceId: UUID,
         now: Instant,
     ): String {
+        // Serialised per phone: a concurrent issue must see and close this code, so one code stays open.
+        locks.otpPhone(phoneE164)
         codes.consumeOpen(phoneE164, OtpPurpose.LOGIN, now)
         val code = newCode()
         codes.save(

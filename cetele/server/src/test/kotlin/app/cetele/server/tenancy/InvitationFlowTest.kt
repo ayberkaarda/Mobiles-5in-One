@@ -6,6 +6,7 @@ import app.cetele.server.support.TestUsers
 import app.cetele.server.tenancy.TenancyFixtures.Companion.expectProblem
 import app.cetele.server.tenancy.TenancyFixtures.Companion.withoutTraceId
 import app.cetele.server.tenancy.invitation.InvitationCode
+import app.cetele.server.tenancy.invitation.InvitationCodeHasher
 import com.jayway.jsonpath.JsonPath
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -30,6 +31,7 @@ class InvitationFlowTest(
     @Autowired private val mvc: MockMvc,
     @Autowired auth: TestAuth,
     @Autowired private val jdbc: JdbcTemplate,
+    @Autowired private val hasher: InvitationCodeHasher,
 ) {
     private val fixtures = TenancyFixtures(mvc, auth, jdbc)
 
@@ -100,13 +102,15 @@ class InvitationFlowTest(
     }
 
     @Test
-    fun `only the SHA-256 of the code is stored`() {
+    fun `only a peppered hash of the code is stored`() {
         val owner = fixtures.actor()
         val shopId = fixtures.shop(owner)
         val code = issueCode(shopId, owner, TestUsers.phone())
         val row = jdbc.queryForMap("SELECT * FROM invitations WHERE shop_id = ?", shopId)
-        val expected = MessageDigest.getInstance("SHA-256").digest(code.toByteArray()).joinToString("") { "%02x".format(it) }
-        assertEquals(expected, row["code_hash"])
+        assertEquals(hasher.hash(code), row["code_hash"])
+        // Keyed: the unkeyed SHA-256 of the code (searchable offline from a database copy) is not what is stored.
+        val unkeyed = MessageDigest.getInstance("SHA-256").digest(code.toByteArray()).joinToString("") { "%02x".format(it) }
+        assertFalse(unkeyed == row["code_hash"], "the stored hash is not keyed")
         row.filterKeys { it != "phone_e164" }.values.forEach { value ->
             assertFalse(value.toString().contains(code), "the plain code is stored")
         }
@@ -124,7 +128,7 @@ class InvitationFlowTest(
         val expired = issueCode(shopId, owner, expiredHolder.phone)
         jdbc.update(
             "UPDATE invitations SET created_at = now() - interval '2 days', expires_at = now() - interval '1 day' WHERE code_hash = ?",
-            InvitationCode.hash(expired),
+            hasher.hash(expired),
         )
         val mismatchHolder = fixtures.actor()
         val mismatched = issueCode(shopId, owner, mismatchHolder.phone)
@@ -163,12 +167,69 @@ class InvitationFlowTest(
         invite(world.shopId, world.owner, world.staff.phone).expectProblem(409, "membership.already_member")
         invite(world.shopId, world.owner, world.owner.phone).expectProblem(409, "membership.already_member")
 
+        // Invited while not a member, then joined another way: the open code answers already_member.
         val joiner = fixtures.actor()
-        val first = issueCode(world.shopId, world.owner, joiner.phone)
-        val second = issueCode(world.shopId, world.owner, joiner.phone)
-        accept(first, joiner).andExpect { status { isCreated() } }
-        accept(second, joiner).expectProblem(409, "membership.already_member")
+        val code = issueCode(world.shopId, world.owner, joiner.phone)
+        fixtures.addStaff(world.shopId, joiner)
+        accept(code, joiner).expectProblem(409, "membership.already_member")
     }
+
+    @Test
+    fun `accepting one code spends every other open code of that shop for the same phone`() {
+        val owner = fixtures.actor()
+        val shopId = fixtures.shop(owner)
+        val joiner = fixtures.actor()
+        val first = issueCode(shopId, owner, joiner.phone)
+        val second = issueCode(shopId, owner, joiner.phone)
+        val otherPhone = issueCode(shopId, owner, TestUsers.phone())
+        val otherShopOwner = fixtures.actor()
+        val otherShop = fixtures.shop(otherShopOwner)
+        val otherShopCode = issueCode(otherShop, otherShopOwner, joiner.phone)
+
+        accept(first, joiner).andExpect { status { isCreated() } }
+        assertEquals(false, isOpen(second))
+        assertEquals(true, isOpen(otherPhone), "invitations for other phones stay open")
+        assertEquals(true, isOpen(otherShopCode), "invitations of other shops stay open")
+
+        // Even after the membership disappears without the removal endpoint, the spent code stays dead.
+        jdbc.update("DELETE FROM memberships WHERE shop_id = ? AND user_id = ?", shopId, joiner.id)
+        accept(second, joiner).expectProblem(404, "not_found")
+        assertNull(fixtures.roleOf(shopId, joiner.id))
+    }
+
+    @Test
+    fun `a removed member cannot rejoin with a second code issued earlier`() {
+        val owner = fixtures.actor()
+        val shopId = fixtures.shop(owner)
+        val joiner = fixtures.actor()
+        // A code still open while its phone holds a membership (here the membership came another way;
+        // before the fix, the second code of a double invitation was exactly this).
+        val second = issueCode(shopId, owner, joiner.phone)
+        fixtures.addStaff(shopId, joiner)
+        val unrelated = issueCode(shopId, owner, TestUsers.phone())
+
+        mvc
+            .delete("/v1/shops/$shopId/members/${joiner.id}") { header(AUTHORIZATION, owner.bearer) }
+            .andExpect { status { isNoContent() } }
+        assertEquals(false, isOpen(second))
+        assertEquals(true, isOpen(unrelated), "invitations for other phones stay open")
+
+        accept(second, joiner).expectProblem(404, "not_found")
+        assertNull(fixtures.roleOf(shopId, joiner.id))
+
+        // A fresh invitation after removal still works: removal closes old codes, it does not ban the phone.
+        val fresh = issueCode(shopId, owner, joiner.phone)
+        accept(fresh, joiner).andExpect { status { isCreated() } }
+    }
+
+    private fun isOpen(code: String): Boolean =
+        jdbc.queryForObject(
+            "SELECT accepted_at IS NULL AND expires_at > ? FROM invitations WHERE code_hash = ?",
+            Boolean::class.java,
+            // The application's clock decides expiry, so compare with it rather than the database clock.
+            java.sql.Timestamp.from(java.time.Instant.now()),
+            hasher.hash(code),
+        )!!
 
     @Test
     fun `at most five open invitations per shop`() {

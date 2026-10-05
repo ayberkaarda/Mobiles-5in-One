@@ -123,6 +123,32 @@ class RefreshRotationTest(
         assertEquals(429, api.refresh("unknown-" + UUID.randomUUID()).status)
     }
 
+    @Test
+    fun `an address over its unknown-token budget is refused before the token is looked at`() {
+        val token = api.signIn(TestUsers.phone())["refreshToken"].asString()
+        repeat(30) { assertInvalid(api.refresh("unknown-" + UUID.randomUUID())) }
+        val refused = api.refresh(token)
+        assertEquals(429, refused.status)
+        assertTrue(row(token)["revoked_at"] == null, "the valid token was not touched")
+        assertEquals(200, api.refresh(token, ip = AuthApi.randomIp()).status)
+    }
+
+    @Test
+    fun `a replay after the device budget is used up still revokes the family`() {
+        val stolen = api.signIn(TestUsers.phone())["refreshToken"].asString()
+        var token = stolen
+        repeat(30) {
+            val response = api.refresh(token, ip = AuthApi.randomIp())
+            assertEquals(200, response.status)
+            token = api.read(response)["refreshToken"].asString()
+        }
+        assertInvalid(api.refresh(stolen, ip = AuthApi.randomIp()))
+        val family = row(stolen)["family_id"]
+        val live =
+            jdbc.queryForObject("SELECT count(*) FROM refresh_tokens WHERE family_id = ? AND revoked_at IS NULL", Int::class.java, family)
+        assertEquals(0, live, "throttling must not shield a stolen family from reuse detection")
+    }
+
     private fun row(token: String): Map<String, Any?> =
         jdbc.queryForMap(
             "SELECT id, user_id, family_id, rotated_from, revoked_at FROM refresh_tokens WHERE token_hash = ?",

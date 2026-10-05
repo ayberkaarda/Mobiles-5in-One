@@ -8,7 +8,6 @@ import app.cetele.server.auth.ratelimit.RateLimit
 import app.cetele.server.auth.ratelimit.RateLimiter
 import app.cetele.server.auth.token.RefreshTokenService
 import app.cetele.server.auth.token.RotationResult
-import app.cetele.server.auth.user.UserAccounts
 import app.cetele.server.config.logging.Masking
 import app.cetele.server.security.CurrentUser
 import app.cetele.server.security.JwtCodec
@@ -45,7 +44,7 @@ class AuthService(
     private val integrity: IntegrityGate,
     private val limiter: RateLimiter,
     private val otp: OtpService,
-    private val users: UserAccounts,
+    private val users: UserStore,
     private val devices: DeviceService,
     private val refreshTokens: RefreshTokenService,
     private val jwt: JwtCodec,
@@ -118,26 +117,29 @@ class AuthService(
     }
 
     /**
-     * `POST /v1/auth/refresh`. Limited per device once the token is known, per IP otherwise. A
-     * reused token revokes its family (committed) and is answered like any invalid token.
+     * `POST /v1/auth/refresh`. An address whose unknown-token budget is used up is refused before
+     * any database work; unknown tokens are charged to that per-IP budget. A reused token revokes
+     * its family (committed) before any throttle applies, and is answered like any invalid token.
+     * Only rotations are charged to the per-device budget, so callers sharing an address
+     * (carrier NAT) are not throttled by each other's valid refreshes.
      */
     fun refresh(
         refreshToken: String,
         clientIp: String,
     ): SessionTokens {
+        limiter.requireAvailable(RateLimit.REFRESH_IP, clientIp)
         val now = clock.instant()
         val outcome =
             tx.execute {
-                val current = refreshTokens.lookup(refreshToken)
-                if (current == null) {
-                    RotationResult.Unknown
-                } else {
-                    limiter.consume(RateLimit.REFRESH_DEVICE, current.deviceId.toString())
-                    val active = users.findById(current.userId)?.active == true
-                    val rotation = refreshTokens.rotate(current, active, now)
-                    if (rotation is RotationResult.Rotated) devices.touch(current.userId, current.deviceId, now)
-                    rotation
-                }
+                val rotation =
+                    refreshTokens.present(
+                        refreshToken,
+                        now,
+                        isActive = { userId -> users.findById(userId)?.active == true },
+                        beforeRotation = { current -> limiter.consume(RateLimit.REFRESH_DEVICE, current.deviceId.toString()) },
+                    )
+                if (rotation is RotationResult.Rotated) devices.touch(rotation.issued.row.userId, rotation.issued.row.deviceId, now)
+                rotation
             }!!
         return when (outcome) {
             is RotationResult.Rotated -> {

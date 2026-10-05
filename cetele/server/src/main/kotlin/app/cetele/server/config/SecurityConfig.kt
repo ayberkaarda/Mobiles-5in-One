@@ -56,7 +56,7 @@ class SecurityConfig {
             if (apiDocsPublic) auth.requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**").permitAll()
             auth.anyRequest().authenticated()
         }
-        if (transport.requireHttps) {
+        if (LocalOnlyAdapterGuard.requireHttps(transport.requireHttps, environment.activeProfiles.toList())) {
             http.redirectToHttps(Customizer.withDefaults())
         }
         http.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }

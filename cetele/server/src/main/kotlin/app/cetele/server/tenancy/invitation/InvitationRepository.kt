@@ -12,6 +12,14 @@ interface InvitationRepository : TenantRepository<Invitation> {
         now: Instant,
     ): Long
 
+    /** Open invitations of one shop for one phone number, locked so they can be closed safely. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    fun findAllByShopIdAndPhoneE164AndAcceptedAtIsNullAndExpiresAtAfter(
+        shopId: UUID,
+        phoneE164: String,
+        now: Instant,
+    ): List<Invitation>
+
     /** Locks the row so one code is accepted at most once, even by concurrent requests. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findByShopIdAndCodeHash(
