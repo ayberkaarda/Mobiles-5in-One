@@ -52,7 +52,7 @@ class AttestChannel(
     }
 
     private fun requestToken(deviceNonce: String?, result: MethodChannel.Result) {
-        if (deviceNonce.isNullOrEmpty()) {
+        if (deviceNonce == null || deviceNonce.isEmpty()) {
             result.error(ERROR_UNKNOWN, "A device nonce is required.", null)
             return
         }

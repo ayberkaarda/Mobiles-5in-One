@@ -26,7 +26,7 @@ abstract final class ShopRules {
     return null;
   }
 
-  /// `+90XXXXXXXXXX` from the shapes the server accepts (`+90…`, `90…`,
+  /// The canonical `+90` plus ten digits from the shapes the server accepts (`+90…`, `90…`,
   /// `0…`, ten digits), or null.
   static String? normalisePhone(String input) {
     final digits = input.replaceAll(RegExp(r'[\s().\-]'), '');
