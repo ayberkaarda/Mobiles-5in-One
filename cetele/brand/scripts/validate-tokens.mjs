@@ -589,7 +589,9 @@ const arcPoints = (x1, y1, rx, ry, phi, fa, fs, x2, y2, n = 96) => {
 };
 const strokesOf = (s) => {
   const out = [];
+  let pi = -1;
   for (const [el] of s.matchAll(/<path [^>]*>/g)) {
+    pi++;
     const d = el.match(/\sd="([^"]+)"/)?.[1] ?? '';
     const stroked = /stroke="#/.test(el);
     const w = stroked ? Number(el.match(/stroke-width="([\d.]+)"/)?.[1] ?? 1) : 0;
@@ -597,12 +599,12 @@ const strokesOf = (s) => {
     if (/[a-z]/.test(d.replace(/e-?\d/g, ''))) fail('logo paths must use absolute commands');
     let x = 0;
     let y = 0;
-    for (const [, cmd, a] of d.matchAll(/([MLHVAZ])([^MLHVAZ]*)/g)) {
+    for (const [, cmd, a] of d.matchAll(/([MLHVACZ])([^MLHVACZ]*)/g)) {
       const n = num(a);
-      const seg = { cmd, w, col, pts: [[x, y]] };
+      const seg = { cmd, w, col, pi, pts: [[x, y]] };
       if (cmd === 'M') {
         [x, y] = n;
-        out.push({ cmd, w, col, pts: [[x, y]] });
+        out.push({ cmd, w, col, pi, pts: [[x, y]] });
         continue;
       }
       if (cmd === 'L') [x, y] = n;
@@ -611,7 +613,21 @@ const strokesOf = (s) => {
       else if (cmd === 'A') {
         const arc = arcPoints(x, y, n[0], n[1], n[2], n[3], n[4], n[5], n[6]);
         [x, y] = [n[5], n[6]];
-        out.push({ cmd, w, col, pts: arc.pts, arc });
+        out.push({ cmd, w, col, pi, pts: arc.pts, arc });
+        continue;
+      } else if (cmd === 'C') {
+        const [x0, y0] = [x, y];
+        const pts = [];
+        for (let i = 0; i <= 20; i++) {
+          const t = i / 20;
+          const u = 1 - t;
+          pts.push([
+            u ** 3 * x0 + 3 * u * u * t * n[0] + 3 * u * t * t * n[2] + t ** 3 * n[4],
+            u ** 3 * y0 + 3 * u * u * t * n[1] + 3 * u * t * t * n[3] + t ** 3 * n[5],
+          ]);
+        }
+        [x, y] = [n[4], n[5]];
+        out.push({ cmd, w, col, pi, pts });
         continue;
       } else continue;
       seg.pts.push([x, y]);
@@ -659,44 +675,52 @@ if (existsSync(logoDir)) {
 const src = {};
 for (const f of LOGO) src[f] = checkSvg(f);
 const viewOf = (s) => s?.match(/viewBox="([^"]+)"/)?.[1];
-// Concept: one C ring (a single large arc), four vertical bars, one diagonal cedilla below the ring.
+// Concept: one C ring (a single large arc), four vertical bars, one cedilla hook attached to the ring's bottom centre.
 for (const f of MARK_BEARING) {
   const s = src[f];
   if (!s) continue;
   const segs = strokesOf(s);
   const arcs = segs.filter((g) => g.cmd === 'A');
-  const bars = segs.filter((g) => g.cmd === 'V');
-  const diags = segs.filter(
-    (g) =>
-      g.cmd === 'L' &&
-      Math.abs(g.pts[1][0] - g.pts[0][0]) > 0.1 &&
-      Math.abs(g.pts[1][1] - g.pts[0][1]) > 0.1,
+  const bars = segs.filter((g) => g.cmd === 'V' && segs.filter((o) => o.pi === g.pi && o.cmd === 'M').length === 4);
+  const hookPaths = [...new Set(segs.map((g) => g.pi))].filter(
+    (pi) => !segs.some((g) => g.pi === pi && (g.cmd === 'A' || bars.includes(g))),
   );
+  const hook = hookPaths.length === 1 ? segs.filter((g) => g.pi === hookPaths[0]) : [];
   if (arcs.length !== 1 || arcs[0].arc.sweep < Math.PI * 1.3 || arcs[0].arc.sweep > Math.PI * 1.75)
     fail(`${f}: the C must be one open arc of 234 to 315 degrees`);
   if (bars.length !== 4)
     fail(`${f}: needs exactly four vertical tally strokes, found ${bars.length}`);
-  if (diags.length !== 1)
-    fail(`${f}: needs exactly one diagonal stroke (the cedilla), found ${diags.length}`);
-  if (arcs.length === 1 && bars.length === 4 && diags.length === 1) {
+  if (hook.length < 2) fail(`${f}: needs exactly one cedilla hook path, found ${hookPaths.length}`);
+  if (arcs.length === 1 && bars.length === 4 && hook.length >= 2) {
     const { cx, cy, r } = arcs[0].arc;
-    const inner = r - arcs[0].w / 2;
+    const rw = arcs[0].w;
+    const inner = r - rw / 2;
     for (const b of bars)
       for (const [x, y] of b.pts)
         if (Math.hypot(x - cx, y - cy) + b.w / 2 > inner + 0.01)
           fail(`${f}: tally stroke at x=${x} leaves the counter of the C`);
-    const [[ax, ay], [bx, by]] = diags[0].pts;
-    const top = Math.min(ay, by);
-    if (top < cy + r) fail(`${f}: the cedilla must sit below the C`);
-    const lowX = ay > by ? ax : bx;
-    const highX = ay > by ? bx : ax;
-    if (!(lowX < highX)) fail(`${f}: the cedilla runs from upper right to lower left`);
-    const widths = new Set(bars.map((b) => b.w));
     const bw = bars[0].w;
-    // The cedilla is the fifth notch: the bars' weight, up to 1.5x on the 20-grid favicon.
-    if (widths.size !== 1 || diags[0].w < bw || diags[0].w > bw * 1.5)
-      fail(`${f}: the cedilla must carry the weight of the tally strokes (1 to 1.5 times)`);
-    if (arcs[0].w <= bw) fail(`${f}: the C ring is heavier than the tally strokes`);
+    const hw = hook[0].w;
+    const pts = hook.flatMap((g) => g.pts);
+    const [sx, sy] = hook[0].pts[0];
+    const outerBottom = cy + r + rw / 2;
+    // Attached: the hook starts at the ring's bottom centre and its round cap sits half a notch inside the ring stroke.
+    if (Math.abs(sx - cx) > bw * 0.35 || Math.abs(sy - outerBottom) > bw * 0.35)
+      fail(`${f}: the cedilla hook must start at the ring's bottom centre, overlapping the stroke`);
+    if (Math.max(...pts.map((p) => p[1])) + hw / 2 <= outerBottom + bw)
+      fail(`${f}: the cedilla hook must reach below the ring`);
+    if (Math.min(...pts.map((p) => p[0])) >= sx - bw * 0.5)
+      fail(`${f}: the cedilla hook curls to the left`);
+    // Total height (cap tip to lowest ink) is 0.22 to 0.26 of the ring's outer diameter.
+    const height = Math.max(...pts.map((p) => p[1])) + hw / 2 - (sy - hw / 2);
+    const ratio = height / (2 * r + rw);
+    if (ratio < 0.215 || ratio > 0.265)
+      fail(`${f}: cedilla height is ${ratio.toFixed(3)} of the ring diameter, expected 0.22 to 0.26`);
+    // The hook is the fifth notch: the bars' weight, same colour as the ring.
+    const widths = new Set(bars.map((b) => b.w));
+    if (widths.size !== 1 || hw !== bw)
+      fail(`${f}: the cedilla hook must carry exactly the weight of the tally strokes`);
+    if (rw <= bw) fail(`${f}: the C ring is heavier than the tally strokes`);
   }
 }
 for (const f of LOGO.filter((x) => x.includes('wordmark'))) {
