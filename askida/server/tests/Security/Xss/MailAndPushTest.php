@@ -160,9 +160,12 @@ it('carries payloads in the push payload as JSON strings that round-trip unchang
     $item = $world['item'];
 
     // Native notification text is not HTML, so the contract here is lossless transport inside one JSON line.
+    // Fixed letter-only ids: the log masking processor rewrites digit runs of random UUIDs that look like phone numbers.
+    $shopRef = 'shop-ref';
+    $donationRef = 'donation-ref';
     $messages = [
-        NotifyShopNewHooks::message(2, $item->name, $shop->id),
-        NotifyDonorRedeemed::message($item->name, $shop->name, (string) Str::uuid7(), $shop->id),
+        NotifyShopNewHooks::message(2, $item->name, $shopRef),
+        NotifyDonorRedeemed::message($item->name, $shop->name, $donationRef, $shopRef),
     ];
 
     $path = storage_path('logs/xss-push-'.Str::random(8).'.log');
