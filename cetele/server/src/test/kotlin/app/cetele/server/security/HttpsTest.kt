@@ -1,5 +1,6 @@
 package app.cetele.server.security
 
+import app.cetele.server.config.LocalOnlyAdapterGuard
 import app.cetele.server.config.SecurityConfig
 import app.cetele.server.config.TransportSecurityProperties
 import app.cetele.server.web.problem.ProblemWriter
@@ -33,6 +34,7 @@ import java.security.interfaces.ECPublicKey
 import java.time.Clock
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -47,14 +49,23 @@ class HttpsTest {
 
     @BeforeAll
     fun start() {
-        context =
-            AnnotationConfigWebApplicationContext().apply {
-                servletContext = MockServletContext()
-                register(HttpsOnlyConfiguration::class.java)
-                refresh()
-            }
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity()).build()
+        context = webContext(requireHttps = true)
+        mvc = mockMvc(context)
     }
+
+    private fun webContext(
+        requireHttps: Boolean,
+        vararg profiles: String,
+    ) = AnnotationConfigWebApplicationContext().apply {
+        servletContext = MockServletContext()
+        environment.setActiveProfiles(*profiles)
+        register(HttpsOnlyConfiguration::class.java)
+        addBeanFactoryPostProcessor { it.registerSingleton("transportSecurityProperties", TransportSecurityProperties(requireHttps)) }
+        refresh()
+    }
+
+    private fun mockMvc(context: AnnotationConfigWebApplicationContext): MockMvc =
+        MockMvcBuilders.webAppContextSetup(context).apply<DefaultMockMvcBuilder>(springSecurity()).build()
 
     @AfterAll
     fun stop() {
@@ -70,6 +81,30 @@ class HttpsTest {
         }
         val otp = mvc.post("/v1/auth/otp/request").andReturn().response
         assertTrue(otp.status in 300..399)
+    }
+
+    @Test
+    fun `a production profile keeps https on even when local or test turned it off`() {
+        assertTrue(LocalOnlyAdapterGuard.requireHttps(false, listOf("prod", "local")))
+        assertTrue(LocalOnlyAdapterGuard.requireHttps(false, listOf("staging", "test")))
+        assertFalse(LocalOnlyAdapterGuard.requireHttps(false, listOf("local")))
+        assertTrue(LocalOnlyAdapterGuard.requireHttps(true, listOf("test")))
+        listOf(arrayOf("prod", "local"), arrayOf("staging", "test")).forEach { profiles ->
+            webContext(false, *profiles).use { mixed ->
+                val response = mockMvc(mixed).get("/v1/me").andReturn().response
+                assertTrue(response.status in 300..399, "${profiles.toList()} answered ${response.status}")
+                assertEquals("https://localhost/v1/me", response.getHeader(HttpHeaders.LOCATION))
+            }
+        }
+        webContext(false, "local").use { local ->
+            assertEquals(
+                401,
+                mockMvc(local)
+                    .get("/v1/me")
+                    .andReturn()
+                    .response.status,
+            )
+        }
     }
 
     @Test
@@ -107,9 +142,6 @@ class HttpsTest {
     @EnableWebSecurity
     @Import(SecurityConfig::class)
     class HttpsOnlyConfiguration {
-        @Bean
-        fun transportSecurityProperties() = TransportSecurityProperties(requireHttps = true)
-
         @Bean
         fun problemWriter() = ProblemWriter(JsonMapper())
 
