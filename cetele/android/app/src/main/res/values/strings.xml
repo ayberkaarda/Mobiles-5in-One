@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Çetele</string>
+  <string name="shell_title">Çetele</string>
+  <string name="shell_tagline">Veresiyeyi unutma, Çetele\'ye yaz.</string>
+  <string name="shell_status">Defteriniz hazırlanıyor. İnternet olmadan da çalışacak.</string>
+</resources>

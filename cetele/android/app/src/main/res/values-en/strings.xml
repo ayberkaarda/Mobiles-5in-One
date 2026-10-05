@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Çetele</string>
+  <string name="shell_title">Çetele</string>
+  <string name="shell_tagline">Never forget a tab, write it in Çetele.</string>
+  <string name="shell_status">Your ledger is being prepared. It will work offline too.</string>
+</resources>
