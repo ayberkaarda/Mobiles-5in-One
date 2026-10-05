@@ -11,7 +11,7 @@ Node 22, no dependencies.
 
 ## Concept
 
-A tally stick on ledger paper. The mark is a large `Ç`: an open ring for the C, four vertical tally notches in its counter, and a fifth, diagonal notch below it that is the cedilla. The cedilla has the weight of the notches (it is the fifth one); the ring is heavier. Defter Lacivert ink on Kâğıt; Çentik Turuncu ("notch orange") marks the one action that matters on a screen and the cedilla in the mark and wordmark.
+A tally stick on ledger paper. The mark is a large `Ç`: an open ring for the C, four vertical tally notches in its counter, and a fifth stroke below it, a hook attached to the ring, that is the cedilla. The cedilla has the weight of the notches (it is the fifth one); the ring is heavier. Defter Lacivert ink on Kâğıt; Çentik Turuncu ("notch orange") marks the one action that matters on a screen and the cedilla in the mark and wordmark.
 
 ## Colour roles (same names in `light` and `dark`)
 
@@ -104,7 +104,9 @@ Adaptive launcher icon: `cetele-adaptive-background.svg` (Defter Lacivert layer)
 
 Clear space around the mark and wordmark: at least the ring's stroke width on every side. Do not recolour the notches individually, add effects, outlines or shadows, or set the name in a typeface other than the wordmark outlines.
 
-Readability was checked by rendering every file through headless Chrome at 1024 px and reducing to 48 and 20 px: at 48 px the four notches, the ring and the cedilla are distinct on the app icon, the adaptive icon (circle mask) and the mark; at 20 px the large drawing merges the notches into one tone, which is why the 20-grid favicon exists (at a native 20 px its notches resolve).
+The cedilla is a true cedilla hook: the curl of the Manrope 700 `Ç` glyph that the wordmark already outlines, reduced to a centreline and drawn as a stroke of the notch weight (3.52 on the 48x64 mark grid). It is attached to the ring: it starts at the ring's bottom centre with its round cap half a notch inside the ring stroke (no gap), runs down and curls to the left as in the glyph, and is 0.22 to 0.26 of the ring's outer diameter tall. It still counts as the fifth stroke: same weight as the four notches, same colour (Çentik Turuncu in the mark and wordmarks, Kâğıt in the app icon and adaptive layers, Mürekkep in the monochrome layer). The favicon uses a 2-column pixel hook on its 20-unit grid. An earlier straight, detached diagonal read as a magnifier handle and was replaced.
+
+Readability was checked by rendering every file through headless Chrome at 1024 px and reducing to 48 and 20 px: at 48 px the four notches, the ring and the hooked cedilla are distinct on the app icon, the adaptive icon (circle mask) and the mark, and it reads as a `Ç`, not as a search icon; at 20 px the large drawing merges the notches into one tone, which is why the 20-grid favicon exists (at a native 20 px its notches and its two-column hook resolve).
 
 The 1024 px renders in `logo/png/` were made with headless Chrome and re-encoded with Pillow so they carry only the IHDR, IDAT and IEND chunks (no text, time, colour-profile or physical-size chunks).
 
