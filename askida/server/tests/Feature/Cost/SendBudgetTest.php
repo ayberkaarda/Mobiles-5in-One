@@ -13,6 +13,7 @@ use App\Domain\Push\PushMessage;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiter;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
@@ -238,4 +239,12 @@ it('skips the alert mail but still pauses when no finance address is configured'
     expect($this->budget->isPaused(Channel::Email))->toBeTrue()
         ->and(costFinanceAlerts())->toBe(0);
     Log::shouldHaveReceived('warning')->with('cost.alert_without_recipient', ['channel' => 'email'])->once();
+});
+
+it('runs the guard every 15 minutes on the schedule', function (): void {
+    $event = collect(app(Schedule::class)->events())
+        ->first(fn ($e) => $e->description === GuardDailySends::NAME);
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('*/15 * * * *');
 });
