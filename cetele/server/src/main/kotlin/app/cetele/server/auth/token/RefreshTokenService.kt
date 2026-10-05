@@ -1,5 +1,6 @@
 package app.cetele.server.auth.token
 
+import app.cetele.server.auth.AuthLocks
 import app.cetele.server.security.TraceIdFilter
 import org.springframework.stereotype.Service
 import java.security.MessageDigest
@@ -40,6 +41,7 @@ sealed interface RotationResult {
 @Service
 class RefreshTokenService(
     private val tokens: RefreshTokenRepository,
+    private val locks: AuthLocks,
 ) {
     private val random = SecureRandom()
 
@@ -50,37 +52,46 @@ class RefreshTokenService(
         now: Instant,
     ): IssuedRefreshToken = issue(userId, deviceId, TraceIdFilter.uuidV7(), rotatedFrom = null, now = now)
 
-    /** Looks the token up under a row lock; `null` when no row has its hash. */
-    fun lookup(token: String): RefreshToken? {
-        if (token.isEmpty() || token.length > MAX_TOKEN_LENGTH) return null
-        return tokens.findByTokenHash(hash(token))
-    }
-
     /**
-     * Rotates [current] (from [lookup]). [userActive] is checked after reuse detection, so a
-     * replayed token of a deactivated user still revokes its family.
+     * Handles a presented refresh token. The family is resolved by hash without loading the row,
+     * then locked ([AuthLocks.family]) before the row is read again under a row lock, so rotation,
+     * reuse revocation and logout of one family never interleave.
+     *
+     * Order: reuse detection (a revoked token revokes the whole family, never throttled), then
+     * expiry and [isActive], then [beforeRotation] (the device throttle; throwing there rolls the
+     * transaction back with nothing changed), then the rotation itself.
      */
-    fun rotate(
-        current: RefreshToken,
-        userActive: Boolean,
+    fun present(
+        token: String,
         now: Instant,
+        isActive: (UUID) -> Boolean,
+        beforeRotation: (RefreshToken) -> Unit,
     ): RotationResult {
+        if (token.isEmpty() || token.length > MAX_TOKEN_LENGTH) return RotationResult.Unknown
+        val hash = hash(token)
+        val familyId = tokens.findFamilyIdByTokenHash(hash) ?: return RotationResult.Unknown
+        locks.family(familyId)
+        val current = tokens.findByTokenHash(hash) ?: return RotationResult.Unknown
         if (current.revokedAt != null) {
             tokens.revokeFamily(current.familyId, now)
             return RotationResult.ReuseDetected
         }
-        if (!now.isBefore(current.expiresAt) || !userActive) return RotationResult.Rejected
+        if (!now.isBefore(current.expiresAt) || !isActive(current.userId)) return RotationResult.Rejected
+        beforeRotation(current)
         current.revokedAt = now
         tokens.save(current)
         return RotationResult.Rotated(issue(current.userId, current.deviceId, current.familyId, current.id, now))
     }
 
-    /** Logout: revokes every live token of the caller's device. */
+    /** Logout: revokes every live token of the caller's device, holding the locks of its families. */
     fun revokeDevice(
         userId: UUID,
         deviceId: UUID,
         now: Instant,
-    ): Int = tokens.revokeDevice(userId, deviceId, now)
+    ): Int {
+        locks.families(tokens.findLiveFamilyIds(userId, deviceId))
+        return tokens.revokeDevice(userId, deviceId, now)
+    }
 
     private fun issue(
         userId: UUID,

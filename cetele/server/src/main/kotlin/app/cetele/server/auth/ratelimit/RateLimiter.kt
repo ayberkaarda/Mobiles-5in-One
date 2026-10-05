@@ -58,9 +58,32 @@ class RateLimiter {
         limit: RateLimit,
         subject: String,
     ) {
-        val probe = buckets.builder().build(key(limit, subject)) { limit.configuration }.tryConsumeAndReturnRemaining(1)
-        if (probe.isConsumed) return
-        val seconds = maxOf(1L, Duration.ofNanos(probe.nanosToWaitForRefill).toSeconds() + 1)
+        val probe = bucket(limit, subject).tryConsumeAndReturnRemaining(1)
+        if (!probe.isConsumed) reject(limit, probe.nanosToWaitForRefill)
+    }
+
+    /**
+     * Throws 429 when the bucket is already empty, without taking a token. Used to refuse a call
+     * before any database work when only some outcomes of that work are charged.
+     */
+    fun requireAvailable(
+        limit: RateLimit,
+        subject: String,
+    ) {
+        val estimate = bucket(limit, subject).estimateAbilityToConsume(1)
+        if (!estimate.canBeConsumed()) reject(limit, estimate.nanosToWaitForRefill)
+    }
+
+    private fun bucket(
+        limit: RateLimit,
+        subject: String,
+    ) = buckets.builder().build(key(limit, subject)) { limit.configuration }
+
+    private fun reject(
+        limit: RateLimit,
+        nanosToWait: Long,
+    ): Nothing {
+        val seconds = maxOf(1L, Duration.ofNanos(nanosToWait).toSeconds() + 1)
         log.info("Rate limit outcome=rejected limit={}", limit.prefix)
         throw ProblemException(
             ProblemCode.RATE_LIMITED,
