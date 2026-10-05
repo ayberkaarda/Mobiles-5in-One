@@ -120,7 +120,7 @@ jobs:
           build-root-directory: cetele/android
 
       - name: Run checks
-        run: ./gradlew ktlintCheck detekt :app:testDebugUnitTest :app:assembleDebug
+        run: ./gradlew ktlintCheck detekt :app:testDebugUnitTest :core:domain:test :app:assembleDebug
 
   # Spring Boot server in cetele/server. check = ktlintCheck + test; the tests start PostgreSQL
   # through Testcontainers on the runner's Docker daemon, so no service container is declared.
