@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kartı hâlâ marka sistemini ve temeli gösterir; uygulama ekranları [`askida/docs/release/screenshots/`](askida/docs/release/screenshots/) altındadır. Diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
+Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kartı marka sistemini ve üç uygulama ekranını gösterir (Android emülatörü, örnek veri); tamamı [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) dosyasında. Diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
 
 <table>
   <tr>
@@ -27,7 +27,10 @@ Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kar
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı" width="100%"><br>
-      <sub><b>Askıda</b>: marka sistemi ve altyapı</sub>
+      <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda alan kişi modu: yakındaki dükkânlar, örnek veri" width="32%">
+      <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda bağışçı modu: ürün ve adet, örnek veri" width="32%">
+      <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda esnaf modu: dükkân paneli, örnek veri" width="32%"><br>
+      <sub><b>Askıda</b>: marka sistemi ve Android uygulama ekranları (örnek veri)</sub>
     </td>
   </tr>
   <tr>
