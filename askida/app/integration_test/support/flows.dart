@@ -56,6 +56,7 @@ Future<String> registerShop(
   required String address,
   required String ilce,
   required InMemoryPngPicker picker,
+  Shot? shot,
 }) async {
   await pumpUntil(tester, find.text(tr.merchantNoShopTitle));
 
@@ -84,6 +85,7 @@ Future<String> registerShop(
   await settleSoon(tester);
   await tester.tapAt(tester.getCenter(map));
   await pumpUntil(tester, byKey('shop-pin'), reason: 'map pin');
+  await shot?.call('14-merchant-onboarding');
   await tapOn(tester, byKey('wizard-next'));
 
   // Step 3: review and send.
@@ -170,7 +172,11 @@ Future<String> donate(
   await go(tester, '/donor');
   await tapOn(tester, byKey('donor-pick-district'));
   await tapOn(tester, byKey('district-$ilce'));
+  await reveal(tester, find.text(shopName));
+  await shot?.call('10-donor-discover');
   await tapOn(tester, find.text(shopName));
+  await reveal(tester, byKey('item-$itemId'));
+  await shot?.call('11-donor-shop');
   await tapOn(tester, byKey('item-$itemId'));
   for (var i = 1; i < qty; i++) {
     await tapOn(tester, byKey('qty-plus'));
@@ -239,6 +245,8 @@ Future<String> reserveAsRecipient(
   Shot? shot,
 }) async {
   await go(tester, '/recipient/start?from=%2Frecipient');
+  await reveal(tester, byKey('recipient-attest'));
+  await shot?.call('07-recipient-onboarding');
   await tapOn(tester, byKey('recipient-attest'));
   await pumpUntil(
     tester,
@@ -267,6 +275,19 @@ Future<String> reserveAsRecipient(
   final listed = find.textContaining(shopText);
   await reveal(tester, listed);
   await shot?.call('01-recipient-nearby');
+  if (shot != null) {
+    // Back to the top of the list, where the view switch is.
+    await tester.drag(listed.first, const Offset(0, 3000));
+    await settleSoon(tester, const Duration(seconds: 1));
+    await tapOn(tester, find.text(tr.recipientViewMap));
+    await settleSoon(tester, const Duration(seconds: 4));
+    // The map changes the list height; top again for the frame.
+    await tester.drag(byKey('recipient-view-switch'), const Offset(0, 1500));
+    await settleSoon(tester, const Duration(seconds: 1));
+    await shot('08-recipient-map');
+    await tapOn(tester, find.text(tr.recipientViewList));
+    await reveal(tester, listed);
+  }
   await tapOn(tester, listed);
   await reveal(tester, byKey('recipient-take-$itemId'));
   await shot?.call('02-recipient-shop');
@@ -287,8 +308,11 @@ Future<void> redeemByHand(
   Shot? shot,
 }) async {
   await go(tester, '/merchant');
+  await reveal(tester, byKey('merchant-redeem'));
+  await shot?.call('16-merchant-home');
   await tapOn(tester, byKey('merchant-redeem'));
   await enterInto(tester, byKey('manual-code'), code);
+  await shot?.call('17-merchant-redeem');
   await tapOn(tester, byKey('manual-submit'));
   await pumpUntil(tester, byKey('redeem-success'), reason: 'redeem result');
   expect(byKey('redeem-failure'), findsNothing);

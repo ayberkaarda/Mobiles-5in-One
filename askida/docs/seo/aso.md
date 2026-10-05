@@ -38,7 +38,8 @@ short and full descriptions.
 
 ## Screenshots and captions (Turkish, six, no recipient imagery)
 
-Raw 1080x2400 Android captures in `docs/release/screenshots/`. Every shop and address on
+The first six Android captures in `docs/release/screenshots/` (raw 1080x2400 frames, stored
+downscaled to 540x1200; the folder README lists the full set). Every shop and address on
 screen is a labelled sample (`[ÖRNEK]`). No screenshot shows a person, and the recipient screens
 show only the code tag, never an identity.
 

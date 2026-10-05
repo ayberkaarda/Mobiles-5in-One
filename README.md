@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro and Askıda have applications. The Askıda card still shows its brand system and foundation; its app screens are in [`askida/docs/release/screenshots/`](askida/docs/release/screenshots/). The other cards are placeholders for products that are still in the design stage.
+One card per project. Kadro and Askıda have applications. The Askıda card shows its brand system and three app screens (Android emulator, sample data); the full set is in [`askida/README.md`](askida/README.md#screenshots). The other cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
@@ -27,7 +27,10 @@ One card per project. Kadro and Askıda have applications. The Askıda card stil
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/askida.png" alt="Askıda: brand system and foundation" width="100%"><br>
-      <sub><b>Askıda</b>: brand system and foundation</sub>
+      <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda recipient mode: nearby shops, sample data" width="32%">
+      <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda donor mode: item and quantity, sample data" width="32%">
+      <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda merchant mode: shop home, sample data" width="32%"><br>
+      <sub><b>Askıda</b>: brand system and Android app screens (sample data)</sub>
     </td>
   </tr>
   <tr>

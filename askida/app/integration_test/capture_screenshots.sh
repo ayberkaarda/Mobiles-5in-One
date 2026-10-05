@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Captures the six release screenshots (askida/docs/release/screenshots) from
+# Captures the release screenshots (askida/docs/release/screenshots) from
 # integration_test/screenshots_test.dart on an Android emulator, against the
 # same local stack as run_e2e.sh (see its header for the stack and .env).
 # Raw `adb exec-out screencap -p` frames, light scheme, no frames or edits.
@@ -27,7 +27,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-E2E_APPROVE_LIKE='%Mahalle%' E2E_TEST=integration_test/screenshots_test.dart \
+E2E_APPROVE_LIKE='%Meydan%' E2E_TEST=integration_test/screenshots_test.dart \
   bash integration_test/run_e2e.sh >"$log" 2>&1 &
 runner=$!
 

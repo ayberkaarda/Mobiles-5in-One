@@ -52,14 +52,50 @@ Askıda, Türkiye'deki "askıda ekmek" geleneğinden doğan bir iyilik ağı. Ba
 
 İki ana kökü olan bir monorepo: Flutter istemcisi için `app/`, Laravel backend için `server/`; yanında `brand/` ve `docs/`. Flutter uygulaması tek kod tabanında bağışçı, esnaf ve alan modlarını barındırır. Backend, `/api/v1` altında sürümlü bir JSON API sunar, Blade web sitesini render eder ve Filament yönetim panelini barındırır. Para, TRY cinsinden kuruş (tam sayı) olarak tutulur; platform parayı elinde tutmaz, ödeme bağışçıdan ödeme sağlayıcı üzerinden esnafa akar. Alan kişinin anonimliği temel bir ilkedir: hesap yok, kimliği bağışçıya ya da esnafa gösterilmez, kesin konumu saklanmaz.
 
+## Ekran görüntüleri
+
+Android emülatöründe (`Pixel_8`) yerel sunucuya karşı alındı; iOS derlenmedi ve görüntüsü yok.
+Ekrandaki her dükkân, kişi ve tutar `[ÖRNEK]` etiketli örnek veridir; ödeme yerel sahte ödeme
+sayfasında yapıldı. Varsayılan dil Türkçe; bir ekran İngilizce. Esnafın ödemeler ekranı bu
+sürümde hata gösterdiği için alınmadı. Açıklamalar, çekim ayrıntıları ve çekim komutu
+[`docs/release/screenshots/README.md`](docs/release/screenshots/README.md) dosyasında.
+
+### Alan kişi (Askıdan al)
+
+| Başlangıç | Yakındakiler | Harita | Dükkân | Kod ve karekod | Ayarlar |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/07-recipient-onboarding.png" width="160" alt="Alan kişi başlangıcı: anonim kimlik, hesap yok"> | <img src="docs/release/screenshots/01-recipient-nearby.png" width="160" alt="Askıda ürünü olan yakın dükkânlar"> | <img src="docs/release/screenshots/08-recipient-map.png" width="160" alt="Yakın dükkânlar haritada"> | <img src="docs/release/screenshots/02-recipient-shop.png" width="160" alt="Askıdaki ürünleriyle dükkân sayfası"> | <img src="docs/release/screenshots/03-recipient-code.png" width="160" alt="Örnek bir rezervasyonun tek kullanımlık kodu ve karekodu"> | <img src="docs/release/screenshots/09-recipient-settings.png" width="160" alt="Hesapsız ayarlar ekranı"> |
+
+### Bağışçı (Askıya bırak)
+
+| Keşfet | Dükkân | Bağış | Makbuz | Geçmiş | Etki |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/10-donor-discover.png" width="160" alt="Bir ilçedeki doğrulanmış örnek dükkânlar"> | <img src="docs/release/screenshots/11-donor-shop.png" width="160" alt="Ürünleri ve fiyatlarıyla dükkân sayfası"> | <img src="docs/release/screenshots/04-donor-donate.png" width="160" alt="Ödemeden önce ürün ve adet"> | <img src="docs/release/screenshots/05-donor-receipt.png" width="160" alt="Yerel sahte ödeme sayfasından sonra bağış makbuzu"> | <img src="docs/release/screenshots/12-donor-history.png" width="160" alt="Bağış geçmişi"> | <img src="docs/release/screenshots/13-donor-impact.png" width="160" alt="Günün etki sayılarıyla ana ekran"> |
+
+### Esnaf
+
+| Dükkân kaydı | Ürünler | Panel | Kodla ver | Verildi | Verilenler |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/14-merchant-onboarding.png" width="160" alt="Dükkân kaydı: adres ve harita iğnesi"> | <img src="docs/release/screenshots/15-merchant-catalog.png" width="160" alt="Tek örnek ürünlü ürünler ekranı"> | <img src="docs/release/screenshots/16-merchant-home.png" width="160" alt="Doğrulanmış dükkânın paneli"> | <img src="docs/release/screenshots/17-merchant-redeem.png" width="160" alt="Kod okutma ekranında elle yazılmış kod"> | <img src="docs/release/screenshots/06-merchant-redeemed.png" width="160" alt="Kod onaylandı, ürün verildi"> | <img src="docs/release/screenshots/18-merchant-redemptions.png" width="160" alt="Günün verilenler kaydı"> |
+
+### Hesap, koyu görünüm ve İngilizce
+
+| Ayarlar | Hesabı sil | Koyu: panel | Koyu: verilenler | İngilizce |
+| --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/20-donor-settings.png" width="160" alt="Giriş yapmış bağışçının ayarları"> | <img src="docs/release/screenshots/21-donor-delete-account.png" width="160" alt="Hesap silme ekranı"> | <img src="docs/release/screenshots/22-merchant-home-dark.png" width="160" alt="Koyu görünümde esnaf paneli"> | <img src="docs/release/screenshots/23-merchant-redemptions-dark.png" width="160" alt="Koyu görünümde verilenler kaydı"> | <img src="docs/release/screenshots/24-merchant-catalog-en.png" width="160" alt="İngilizce arayüzde ürünler ekranı"> |
+
 ## Durum
 
-Phase 0 (temel) birleşti: Laravel sunucusu Docker'da çalışıyor (sağlık rotası, Filament yönetim
-paneli, Horizon, Sanctum), Flutter uygulaması tasarım sistemiyle bir iskelet; marka paketi,
-ADR-0001 ile ADR-0006, güvenlik matrisi taslakları ve bir CI iş akışı hazır. Henüz API uç noktası
-ve ödeme yok, mod kabuğu dışında ekran da yok. iOS projesi derlenmedi (macOS gerekir). Çözümlenen
-sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında
-kayıtlı.
+Phase 0 ile Phase 6 arası bir portfolyo projesi olarak uygulandı: Laravel sunucusu (kimlik doğrulama,
+dükkânlar ve doğrulama, askı ve kullanım, sahte sağlayıcıyla ödemeler, aktarımlar, yönetim paneli,
+herkese açık web sayfaları, açık veri, yedekler, maliyet korumaları), üç modlu Flutter uygulaması
+(Android emülatöründe doğrulandı, iOS için macOS gerektiğinden derlenmedi) ve güvenlik çalışmaları
+(saldırı paketi, kalıcı XSS taraması, ZAP ve MobSF taramaları, bağımlılık denetimleri). Nihai doğrulama
+matrisi 23 maddenin 14'ünü tamam, 9'unu kısmi olarak notlandırıyor, her birinin gerekçesiyle:
+[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Hiçbir şey yayınlanmadı:
+alan adı, mağaza kaydı veya ödeme sağlayıcı hesabı yok, hukuki metinler örnek olarak etiketli.
+Çözümlenen sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md)
+dosyasında kayıtlı.
 
 ## Kurulum
 

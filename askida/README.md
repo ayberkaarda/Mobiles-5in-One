@@ -52,13 +52,50 @@ Askıda is a pay-it-forward network built on the Turkish "askıda ekmek" (bread 
 
 A monorepo with two main roots: `app/` for the Flutter client and `server/` for the Laravel backend, plus `brand/` and `docs/`. The Flutter app is a single codebase with donor, merchant and recipient modes. The backend exposes a versioned JSON API under `/api/v1`, serves the Blade website and hosts the Filament admin. Money is stored as integer minor units (kuruş) in TRY; the platform never holds funds, since payments flow from the donor through the payment provider to the merchant. Recipient anonymity is a core invariant: no accounts, no recipient identity shown to donors or merchants, and no precise recipient location stored.
 
+## Screenshots
+
+Captured on the Android emulator (`Pixel_8`) against the local stack; iOS is not built or
+captured. Every shop, person and amount on screen is sample data labelled `[ÖRNEK]`, and the
+payment ran on the local fake checkout page. Turkish is the default language; one screen shows
+English. The merchant payouts screen is not captured because it shows an error on this build.
+Captions, capture details and the capture command are in
+[`docs/release/screenshots/README.md`](docs/release/screenshots/README.md).
+
+### Recipient (Askıdan al)
+
+| Onboarding | Nearby list | Map | Shop | Code and QR | Settings |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/07-recipient-onboarding.png" width="160" alt="Recipient onboarding: anonymous identity, no account"> | <img src="docs/release/screenshots/01-recipient-nearby.png" width="160" alt="Nearby shops with items on the hook"> | <img src="docs/release/screenshots/08-recipient-map.png" width="160" alt="Nearby shops on a map"> | <img src="docs/release/screenshots/02-recipient-shop.png" width="160" alt="Shop page with items on the hook"> | <img src="docs/release/screenshots/03-recipient-code.png" width="160" alt="One-time code and QR of a sample reservation"> | <img src="docs/release/screenshots/09-recipient-settings.png" width="160" alt="Settings without an account"> |
+
+### Donor (Askıya bırak)
+
+| Discover | Shop | Donate | Receipt | History | Impact |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/10-donor-discover.png" width="160" alt="Verified sample shops in a district"> | <img src="docs/release/screenshots/11-donor-shop.png" width="160" alt="Shop page with items and prices"> | <img src="docs/release/screenshots/04-donor-donate.png" width="160" alt="Item and quantity before payment"> | <img src="docs/release/screenshots/05-donor-receipt.png" width="160" alt="Donation receipt after the local fake checkout"> | <img src="docs/release/screenshots/12-donor-history.png" width="160" alt="Donation history"> | <img src="docs/release/screenshots/13-donor-impact.png" width="160" alt="Home with today's impact numbers"> |
+
+### Merchant (Esnaf)
+
+| Shop onboarding | Catalog | Home | Redeem by code | Redeemed | Redemptions |
+| --- | --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/14-merchant-onboarding.png" width="160" alt="Shop registration: address and map pin"> | <img src="docs/release/screenshots/15-merchant-catalog.png" width="160" alt="Catalog with one sample item"> | <img src="docs/release/screenshots/16-merchant-home.png" width="160" alt="Verified shop home"> | <img src="docs/release/screenshots/17-merchant-redeem.png" width="160" alt="Code typed on the redeem screen"> | <img src="docs/release/screenshots/06-merchant-redeemed.png" width="160" alt="Code confirmed, item handed over"> | <img src="docs/release/screenshots/18-merchant-redemptions.png" width="160" alt="Redemption log of the day"> |
+
+### Account, dark scheme and English
+
+| Settings | Delete account | Dark: home | Dark: redemptions | English |
+| --- | --- | --- | --- | --- |
+| <img src="docs/release/screenshots/20-donor-settings.png" width="160" alt="Settings of a signed-in donor"> | <img src="docs/release/screenshots/21-donor-delete-account.png" width="160" alt="Account deletion screen"> | <img src="docs/release/screenshots/22-merchant-home-dark.png" width="160" alt="Merchant home in the dark scheme"> | <img src="docs/release/screenshots/23-merchant-redemptions-dark.png" width="160" alt="Redemption log in the dark scheme"> | <img src="docs/release/screenshots/24-merchant-catalog-en.png" width="160" alt="Catalog screen in English"> |
+
 ## Status
 
-Phase 0 (foundation) is merged: the Laravel server runs in Docker (health route, Filament admin
-panel, Horizon, Sanctum), the Flutter app is a skeleton with a design system, and the brand package,
-ADR-0001 to ADR-0006, security matrix drafts and a CI workflow are in place. There are no API
-endpoints, no payments and no screens beyond a mode shell yet. The iOS project is not built
-(it needs macOS). Resolved versions are recorded in
+Phases 0 to 6 are implemented as a portfolio project: the Laravel server (authentication, shops and
+verification, hooks and redemption, payments with a fake provider, payouts, admin panel, public
+web pages, open data, backups, cost guards), the Flutter app for the three modes (Android emulator
+verified, iOS not built because it needs macOS) and the security work (attack suite, stored-XSS sweep,
+ZAP and MobSF scans, dependency audits). The final verification matrix grades 14 of 23 items done
+and 9 partial, each with its reason:
+[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Nothing is published:
+there is no domain, store listing or payment provider account, and the legal texts are labelled
+samples. Resolved versions are recorded in
 [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
 
 ## Getting started
