@@ -99,6 +99,15 @@ merged into `feat/askida-p6`; the final tree is covered by the whole-suite run.
 
 Items 8, 10, 13 and 15 keep their Phase 2 status.
 
+## Open follow-ups
+
+They change no status; each is tracked in `pentest-report.md`.
+
+| Id  | Follow-up                                                                                                                                                                                                                                                          | Item   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| F3  | `/hesap-silme` builds its form action as an absolute URL from the request `Host` (informational, not exploitable as found). Fix: `route('web.account-deletion.store', absolute: false)` in `server/resources/views/web/account-deletion.blade.php`.                | 12, 23 |
+| F4  | The expiry case of `server/tests/Feature/Documents/DocumentUrlSignerTest.php` accepts any 4xx and passes for the wrong reason (negative `X-Amz-Expires`, MinIO 400). It should assert 403 `AccessDenied` for a URL signed in the past, as `Attack/Threat07…` does. | 7      |
+
 ## Update rules
 
 1. A status moves only in the same change that adds the proof, and the Evidence cell names the file
