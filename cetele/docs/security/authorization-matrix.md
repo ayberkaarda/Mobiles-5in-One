@@ -1,12 +1,12 @@
 # Çetele — Authorization Matrix
 
-|                |                                                                                                                                                                                                                                                                                                                                                 |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status         | **DRAFT (Phase 0).** The role by action table (section 2) is the contract for `Permissions.kt` and `PermissionMatrix`. The endpoint rows (section 4) describe the intended rules; no endpoint exists yet. No enforcement run is recorded in this document (`not exercised: no endpoint or evaluator was verified when this draft was written`). |
-| Source         | Product spec section 3 (personas), section 5 (API surface and tables), section 6 items 3, 4, 5, 17, 18 and 21.                                                                                                                                                                                                                                  |
-| Normative for  | `server/src/main/kotlin/app/cetele/server/security/Permissions.kt`, the `PermissionEvaluator` bean (`@PreAuthorize("@perm.can(#shopId, 'LEDGER_WRITE')")`) and the table-driven `PermissionMatrixTest` over every role by action cell (spec section 6 item 3).                                                                                  |
-| Change rule    | A change to a cell here ships together with the matching change in `Permissions.kt` and its test row. Document and code must never disagree. A row for a new endpoint is added here first.                                                                                                                                                      |
-| Companion docs | [threat-model.md](threat-model.md) (outline), [verification-matrix.md](verification-matrix.md) (23 items), [ADR-0004](../adr/0004-portfolio-delivery-scope.md) (evidence limits).                                                                                                                                                               |
+|                |                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status         | **Role by action table is implemented (end of Phase 0); endpoint rows are a draft.** `PermissionMatrix.kt` holds the grants of section 2 and `PermissionMatrixTest` checks every cell (52 role by action cells plus 3 consistency tests). The endpoint rows (section 4) describe intended rules; no endpoint exists yet and no `PermissionEvaluator` bean exists yet (`not exercised: endpoint enforcement, Phase 1`). |
+| Source         | Product spec section 3 (personas), section 5 (API surface and tables), section 6 items 3, 4, 5, 17, 18 and 21.                                                                                                                                                                                                                                                                                                         |
+| Normative for  | `server/src/main/kotlin/app/cetele/server/security/Permissions.kt`, the `PermissionEvaluator` bean (`@PreAuthorize("@perm.can(#shopId, 'LEDGER_WRITE')")`) and the table-driven `PermissionMatrixTest` over every role by action cell (spec section 6 item 3).                                                                                                                                                         |
+| Change rule    | A change to a cell here ships together with the matching change in `Permissions.kt` and its test row. Document and code must never disagree. A row for a new endpoint is added here first.                                                                                                                                                                                                                             |
+| Companion docs | [threat-model.md](threat-model.md) (outline), [verification-matrix.md](verification-matrix.md) (23 items), [ADR-0004](../adr/0004-portfolio-delivery-scope.md) (evidence limits).                                                                                                                                                                                                                                      |
 
 ---
 
@@ -33,33 +33,34 @@ Rules that apply to every row:
 
 ## 2. Role by action
 
-These names are exactly the members of the sealed class in `Permissions.kt`.
+These names are exactly the `code` values of the objects of the sealed class `Permission` in `Permissions.kt`.
 
-Cell vocabulary: `Y` allowed, `-` denied, `meta` allowed only as a read of metadata and counts in the
-admin console (never ledger notes, photos, customer names or customer phones).
+Cell vocabulary: `Y` allowed, `-` denied. `SHOP_READ` for `ADMIN` and `SUPPORT` is shop metadata and
+counts in the admin console only, never ledger notes, photos, customer names or customer phones. The
+other admin capabilities (section 5) are separate admin-console rules, not members of `Permissions.kt`.
 
-| Action                  | OWNER | STAFF | ADMIN  | SUPPORT | guest | Meaning                                                                      |
-| ----------------------- | ----- | ----- | ------ | ------- | ----- | ---------------------------------------------------------------------------- |
-| `SHOP_READ`             | Y     | Y     | `meta` | `meta`  | -     | Read the shop record                                                         |
-| `SHOP_MANAGE`           | Y     | -     | -      | -       | -     | Change shop name, type, il and ilçe                                          |
-| `MEMBERS_MANAGE`        | Y     | -     | -      | -       | -     | Invite, list and remove members                                              |
-| `CUSTOMER_READ`         | Y     | Y     | -      | -       | -     | Read customers and their balances                                            |
-| `CUSTOMER_WRITE`        | Y     | Y     | -      | -       | -     | Create and update customers (name, phone, note, tag, SMS consent)            |
-| `CUSTOMER_DELETE`       | Y     | -     | -      | -       | -     | Delete (tombstone) a customer                                                |
-| `LEDGER_READ`           | Y     | Y     | -      | -       | -     | Read entries and statements                                                  |
-| `LEDGER_WRITE`          | Y     | Y     | -      | -       | -     | Create `DEBT` and `PAYMENT` entries and reversing entries                    |
-| `REMINDER_SEND`         | Y     | Y     | -      | -       | -     | Request an SMS reminder (consent and quota still apply)                      |
-| `EXPORT_ALL`            | Y     | -     | -      | -       | -     | Export all entries of the shop                                               |
-| `STATEMENT_LINK_CREATE` | Y     | Y     | -      | -       | -     | Create a signed statement link (needed by the WhatsApp share, see D-3)       |
-| `MEDIA_PRESIGN`         | Y     | Y     | -      | -       | -     | Obtain a presigned upload URL for an entry photo (see D-4)                   |
-| `BILLING_MANAGE`        | Y     | -     | `meta` | `meta`  | -     | Link a purchase and manage the subscription; admins read the plan state only |
+| Action                  | OWNER | STAFF | ADMIN | SUPPORT | guest | Meaning                                                                                       |
+| ----------------------- | ----- | ----- | ----- | ------- | ----- | --------------------------------------------------------------------------------------------- |
+| `SHOP_READ`             | Y     | Y     | Y     | Y       | -     | Read the shop record; for `ADMIN` and `SUPPORT` only metadata and counts in the admin console |
+| `SHOP_MANAGE`           | Y     | -     | -     | -       | -     | Change shop name, type, il and ilçe                                                           |
+| `MEMBERS_MANAGE`        | Y     | -     | -     | -       | -     | Invite, list and remove members                                                               |
+| `CUSTOMER_READ`         | Y     | Y     | -     | -       | -     | Read customers and their balances                                                             |
+| `CUSTOMER_WRITE`        | Y     | Y     | -     | -       | -     | Create and update customers (name, phone, note, tag, SMS consent)                             |
+| `CUSTOMER_DELETE`       | Y     | -     | -     | -       | -     | Delete (tombstone) a customer                                                                 |
+| `LEDGER_READ`           | Y     | Y     | -     | -       | -     | Read entries and statements                                                                   |
+| `LEDGER_WRITE`          | Y     | Y     | -     | -       | -     | Create `DEBT` and `PAYMENT` entries and reversing entries                                     |
+| `REMINDER_SEND`         | Y     | Y     | -     | -       | -     | Request an SMS reminder (consent and quota still apply)                                       |
+| `EXPORT_ALL`            | Y     | -     | -     | -       | -     | Export all entries of the shop                                                                |
+| `STATEMENT_LINK_CREATE` | Y     | Y     | -     | -       | -     | Create a signed statement link (needed by the WhatsApp share, see D-3)                        |
+| `MEDIA_PRESIGN`         | Y     | Y     | -     | -       | -     | Obtain a presigned upload URL for an entry photo (see D-4)                                    |
+| `BILLING_MANAGE`        | Y     | -     | -     | -       | -     | Link a purchase and manage the subscription                                                   |
 
 Notes:
 
 - No `ledger` write exists for `ADMIN` or `SUPPORT` in any form, and neither role can read ledger
-  notes or photos (spec item 18). The `meta` cells mean counts and metadata only.
+  notes or photos (spec item 18). The `SHOP_READ` cell of the admin roles means counts and metadata only.
 - `STAFF` has no `CUSTOMER_DELETE`, `EXPORT_ALL`, `MEMBERS_MANAGE` or `BILLING_MANAGE`, as the spec
-  states (item 3). `SHOP_MANAGE` is also withheld from `STAFF` (draft reading of "full control").
+  states (item 3). `SHOP_MANAGE` is also withheld from `STAFF`, as `PermissionMatrix.kt` does.
 - `guest` holds no action. Endpoints open to a guest are listed with their own credential in
   section 4.
 - `EXPORT_ALL` has no server endpoint in the Phase 0 API surface. The CSV export reads the local
