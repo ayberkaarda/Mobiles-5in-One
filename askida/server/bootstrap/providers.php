@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Cost\CostServiceProvider;
 use App\Domain\Payouts\PayoutsServiceProvider;
 use App\Providers\AccountsServiceProvider;
 use App\Providers\AnonServiceProvider;
@@ -26,4 +27,5 @@ return [
     PaymentsServiceProvider::class,
     PayoutsServiceProvider::class,
     WebServiceProvider::class,
+    CostServiceProvider::class,
 ];

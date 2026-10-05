@@ -112,6 +112,19 @@ return [
         'public_endpoint' => env('AWS_PUBLIC_ENDPOINT') ?: null,
     ],
 
+    /*
+    | Cost guards (security item 22). Daily send caps per channel, counted in Redis
+    | on the `timezone` day: once reached, non-critical sends (the "Yeni askı" and
+    | "Askın alındı" pushes) pause until the next day and finance gets one alert mail.
+    | Critical sends (verification, password reset, receipt, deletion confirmation,
+    | finance alerts) are never paused.
+    */
+    'cost' => [
+        'daily_email_cap' => (int) env('COST_DAILY_EMAIL_CAP', 2000),
+        'daily_push_cap' => (int) env('COST_DAILY_PUSH_CAP', 20000),
+        'timezone' => 'Europe/Istanbul',
+    ],
+
     'sentry_dsn' => env('SENTRY_LARAVEL_DSN'),
 
 ];

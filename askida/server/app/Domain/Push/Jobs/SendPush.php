@@ -3,6 +3,8 @@
 namespace App\Domain\Push\Jobs;
 
 use App\Domain\Auth\Models\DevicePushToken;
+use App\Domain\Cost\SendBudget;
+use App\Domain\Cost\SendKind;
 use App\Domain\Push\Contracts\PushTransport;
 use App\Domain\Push\PushMessage;
 use Illuminate\Bus\Queueable;
@@ -19,7 +21,8 @@ use Illuminate\Support\Facades\Log;
  * The payload holds the user id and the message only; device tokens are read at send
  * time and never enter the queue. Deliveries count against a global hourly fan-out cap
  * (askida.push.hourly_fanout_cap, security item 22): above it the remaining deliveries
- * are dropped with a warning instead of queued again.
+ * are dropped with a warning instead of queued again. The daily send budget
+ * (askida.cost.daily_push_cap) pauses these non-critical pushes for the rest of the day.
  */
 final class SendPush implements ShouldQueue
 {
@@ -36,12 +39,19 @@ final class SendPush implements ShouldQueue
         $this->onQueue((string) config('askida.push.queue', 'push'));
     }
 
-    public function handle(PushTransport $transport, RateLimiter $limiter): void
+    public function handle(PushTransport $transport, RateLimiter $limiter, ?SendBudget $budget = null): void
     {
+        $budget ??= app(SendBudget::class);
         $cap = max(0, (int) config('askida.push.hourly_fanout_cap', 2000));
         $tokens = DevicePushToken::query()->where('user_id', $this->userId)->orderBy('created_at')->get();
 
         foreach ($tokens as $token) {
+            if (! $budget->allows(SendKind::PushNonCritical)) {
+                Log::warning('cost.push_dropped', ['kind' => SendKind::PushNonCritical->value]);
+
+                return;
+            }
+
             if ($limiter->tooManyAttempts(self::FANOUT_KEY, $cap)) {
                 Log::warning('push.fanout_cap_reached', ['cap' => $cap]);
 
@@ -50,6 +60,7 @@ final class SendPush implements ShouldQueue
 
             $limiter->hit(self::FANOUT_KEY, 3600);
             $transport->send($token->platform, $token->token, $this->message);
+            $budget->record(SendKind::PushNonCritical);
         }
     }
 }
