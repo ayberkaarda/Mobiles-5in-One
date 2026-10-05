@@ -50,8 +50,14 @@ Earlier run by the docs worker on an exported copy of branch `feat/cetele-p1` at
 before the independent review fixes: `./gradlew check --rerun-tasks` with the JDK 21 toolchain
 finished `BUILD SUCCESSFUL in 50s` with 247 tests, 0 failures. That count is superseded: the
 review fixes added tests (race, guard, audience, invitation and log-route tests) and this document
-cites them by name. Final `./gradlew check` count on the merged tree: `pending lead run`. Not run:
-GitHub CI, gitleaks over the Phase 1 range, a compose smoke run.
+cites them by name. Final `./gradlew check --rerun-tasks` on the merged tree (JDK 21 toolchain,
+Testcontainers PostgreSQL 16): `BUILD SUCCESSFUL`, 32 test classes, 260 tests, 0 failures, 0 skipped,
+counted from the result files. Compose smoke on the rebuilt image (2026-10-05): health 200, `/v1/me`
+without token 401 problem body, `otp/request` without an integrity token 403, with
+`fake.unrecognized-app` 403, with `fake.ok` 202 (CSP nonce, `no-store`, `X-Trace-Id` present), a CORS
+preflight from a foreign origin carries no `Access-Control-*` header, and the submitted phone number
+does not appear in the container log. gitleaks over `feat/cetele-foundation..HEAD`: no leaks. Not
+run: GitHub CI.
 
 ## Phase map (where each missing proof is planned)
 
