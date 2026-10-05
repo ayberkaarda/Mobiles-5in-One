@@ -10,7 +10,8 @@ package app.cetele.server.config.logging
  * 2. values of `Authorization`, `Cookie`, `Set-Cookie` -> `***`;
  * 3. a run of 4-8 digits right after a word containing `code` or `otp` -> `******`;
  * 4. Turkish phone numbers -> `+90*******12` (last two digits kept), other E.164 numbers likewise;
- * 5. base64url runs of at least 32 characters that mix letters and digits (tokens, hashes) -> `***`.
+ * 5. the path segment after `/invitations/` (invitation codes) -> `***`;
+ * 6. base64url runs of at least 32 characters that mix letters and digits (tokens, hashes) -> `***`.
  *    UUIDs such as trace ids are kept.
  */
 object Masking {
@@ -22,6 +23,7 @@ object Masking {
     private val turkishPhone = Regex("""\+90\d{8}(\d{2})(?!\d)""")
     private val otherE164 = Regex("""\+(?!90)\d{6,13}(\d{2})(?!\d)""")
     private val bareTurkishMobile = Regex("""(?<![\w+-])(?:90|0)?5\d{7}(\d{2})(?![\w-])""")
+    private val invitationPath = Regex("""(?i)(/invitations/)(?!\{)[^/\s?#"']+""")
     private val longRun = Regex("""(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])""")
     private val uuid = Regex("""[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}""")
 
@@ -34,6 +36,7 @@ object Masking {
         masked = turkishPhone.replace(masked) { "+90*******" + it.groupValues[1] }
         masked = otherE164.replace(masked) { "+*******" + it.groupValues[1] }
         masked = bareTurkishMobile.replace(masked) { "*******" + it.groupValues[1] }
+        masked = invitationPath.replace(masked) { it.groupValues[1] + STARS }
         masked = longRun.replace(masked) { match -> if (isOpaqueToken(match.value)) STARS else match.value }
         return masked
     }

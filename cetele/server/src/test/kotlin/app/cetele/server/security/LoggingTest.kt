@@ -8,7 +8,9 @@ import app.cetele.server.support.TestAuth
 import app.cetele.server.support.TestUsers
 import app.cetele.server.support.assertContains
 import app.cetele.server.support.assertNoneOf
+import app.cetele.server.web.problem.ProblemHandler
 import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.spi.LoggingEvent
 import org.junit.jupiter.api.Test
@@ -19,6 +21,7 @@ import org.springframework.boot.test.system.CapturedOutput
 import org.springframework.http.HttpHeaders
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.security.SecureRandom
 import java.util.Base64
@@ -118,6 +121,40 @@ class LoggingTest(
         assertEquals(traceId, event["traceId"].asString())
         assertEquals("ERROR", event["log"]["level"].asString())
         assertFalse(line.contains("Bearer"))
+    }
+
+    @Test
+    fun `invitation codes in paths are masked`() {
+        val code = invitationCode()
+        assertEquals("POST /v1/invitations/***/accept", Masking.mask("POST /v1/invitations/$code/accept"))
+        assertEquals("route /v1/invitations/{code}/accept", Masking.mask("route /v1/invitations/{code}/accept"))
+    }
+
+    @Test
+    fun `failed invitation accept logs the route pattern, never the code`(output: CapturedOutput) {
+        val handlerLogger = LoggerFactory.getLogger(ProblemHandler::class.java) as Logger
+        val previous = handlerLogger.level
+        handlerLogger.level = Level.DEBUG
+        val code = invitationCode()
+        try {
+            val response =
+                mvc
+                    .post("/v1/invitations/$code/accept") {
+                        header(HttpHeaders.AUTHORIZATION, auth.bearer(auth.user()))
+                    }.andReturn()
+                    .response
+            assertEquals(404, response.status)
+        } finally {
+            handlerLogger.level = previous
+        }
+        output.assertContains("/v1/invitations/{code}/accept")
+        output.assertNoneOf(code)
+    }
+
+    /** Eight Crockford base32 characters, the shape of a real invitation code. */
+    private fun invitationCode(): String {
+        val alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+        return (1..8).joinToString("") { alphabet[random.nextInt(alphabet.length)].toString() }
     }
 
     private fun digits(count: Int): String = (1..count).joinToString("") { random.nextInt(10).toString() }

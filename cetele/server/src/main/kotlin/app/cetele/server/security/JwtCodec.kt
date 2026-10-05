@@ -22,9 +22,9 @@ import java.util.UUID
 /**
  * Issues and verifies the ES256 access tokens.
  *
- * Claims: `sub` (user id), `did` (device id), `jti`, `iat`, `exp`, `iss`. No roles: memberships
+ * Claims: `sub` (user id), `did` (device id), `jti`, `iat`, `exp`, `iss`, `aud` (`cetele-api`). No roles: memberships
  * are read on every request. Verification accepts only `alg=ES256` with the configured `kid`
- * and signature key; `none`, HMAC algorithms, foreign keys, a wrong issuer and expired tokens
+ * and signature key; `none`, HMAC algorithms, foreign keys, a wrong issuer or audience and expired tokens
  * (beyond [clockSkew]) are rejected with [ProblemCode.AUTH_UNAUTHENTICATED].
  */
 class JwtCodec(
@@ -51,6 +51,7 @@ class JwtCodec(
             JWTClaimsSet
                 .Builder()
                 .issuer(issuer)
+                .audience(AUDIENCE)
                 .subject(userId.toString())
                 .claim(DEVICE_CLAIM, deviceId.toString())
                 .jwtID(UUID.randomUUID().toString())
@@ -95,6 +96,7 @@ class JwtCodec(
             }
         val now = clock.instant()
         if (claims.issuer != issuer) throw invalid("issuer")
+        if (claims.audience != listOf(AUDIENCE)) throw invalid("audience")
         val expiresAt = claims.expirationTime?.toInstant() ?: throw invalid("missing exp")
         val issuedAt = claims.issueTime?.toInstant() ?: throw invalid("missing iat")
         if (now.isAfter(expiresAt.plus(clockSkew))) throw invalid("expired")
@@ -111,6 +113,7 @@ class JwtCodec(
 
     companion object {
         const val KEY_ID = "es256-1"
+        const val AUDIENCE = "cetele-api"
         const val DEVICE_CLAIM = "did"
         private const val MAX_TOKEN_LENGTH = 4096
     }

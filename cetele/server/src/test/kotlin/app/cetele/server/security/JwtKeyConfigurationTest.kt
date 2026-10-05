@@ -37,6 +37,12 @@ class JwtKeyConfigurationTest {
         val none = assertFailsWith<IllegalStateException> { LocalOnlyAdapterGuard.check("probe", emptyList()) }
         assertEquals("fake adapter probe is not allowed in profiles []", none.message)
         assertFailsWith<IllegalStateException> { LocalOnlyAdapterGuard.check("probe", listOf("prod", "localhost")) }
+        val mixedProfiles =
+            listOf(listOf("prod", "local"), listOf("staging", "test"), listOf("local", "production"), listOf("test", "stage"))
+        mixedProfiles.forEach { profiles ->
+            val mixed = assertFailsWith<IllegalStateException> { LocalOnlyAdapterGuard.check("probe", profiles) }
+            assertEquals("fake adapter probe is not allowed in profiles ${profiles.joinToString(", ", "[", "]")}", mixed.message)
+        }
     }
 
     @Test
@@ -44,6 +50,18 @@ class JwtKeyConfigurationTest {
         runner.profiles("staging").run { context ->
             assertThat(context).hasFailed()
             assertEquals("fake adapter ephemeral-jwt-keys is not allowed in profiles [staging]", rootMessage(context))
+        }
+    }
+
+    @Test
+    fun `a local or test profile mixed with a production profile does not allow ephemeral keys`() {
+        runner.profiles("prod", "local").run { context ->
+            assertThat(context).hasFailed()
+            assertEquals("fake adapter ephemeral-jwt-keys is not allowed in profiles [prod, local]", rootMessage(context))
+        }
+        runner.profiles("staging", "test").run { context ->
+            assertThat(context).hasFailed()
+            assertEquals("fake adapter ephemeral-jwt-keys is not allowed in profiles [staging, test]", rootMessage(context))
         }
     }
 
