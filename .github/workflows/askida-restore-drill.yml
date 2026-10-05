@@ -1,0 +1,233 @@
+name: Askida restore drill
+
+# Weekly backup and restore drill (security item 20, askida/docs/ops/backup-restore.md).
+# The job builds a small database (migrations, sample shops, paid donations with issued units),
+# writes an encrypted archive with `php artisan backup:run --only-db` to a job-local MinIO bucket
+# through the application identity, checks that this identity cannot read archives and that the
+# restore identity cannot write, then runs askida/scripts/ops/restore-drill.sh with the restore
+# identity: newest archive, decrypt, restore into a disposable PostGIS 16 container, hook
+# invariants. The drill output is kept as an artifact for 30 days.
+#
+# Scope: this proves the mechanics on every run. The production bucket is not touched: it needs
+# a real bucket, the restore key and the archive password, which do not exist in this
+# repository (owner tasks in the backup document). Every credential below is created at run
+# time and masked. Actions are pinned to full commit SHAs.
+
+on:
+  schedule:
+    - cron: "50 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: askida-restore-drill-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Askida restore drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: askida/server
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: askida_drill
+          POSTGRES_USER: askida
+          POSTGRES_PASSWORD: askida_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U askida -d askida_drill"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      APP_ENV: local
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_DATABASE: askida_drill
+      DB_USERNAME: askida
+      DB_PASSWORD: askida_ci_only
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: log
+      PAYMENT_PROVIDER: fake
+      MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+      MC_IMAGE: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+      BACKUP_AWS_ACCESS_KEY_ID: askida-backup-app
+      BACKUP_AWS_BUCKET: askida-backups
+      BACKUP_AWS_ENDPOINT: http://127.0.0.1:9000
+      BACKUP_AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      BACKUP_ALERT_EMAIL: ops@example.test
+      BACKUP_RESTORE_ACCESS_KEY_ID: askida-backup-restore
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Random values for this run only: MinIO root password, the two identities and the
+      # archive password. Masked before they reach any log.
+      - name: Generate run-time credentials
+        run: |
+          for name in MINIO_ROOT_PASSWORD BACKUP_AWS_SECRET_ACCESS_KEY BACKUP_RESTORE_SECRET_ACCESS_KEY BACKUP_ARCHIVE_PASSWORD; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::${value}"
+            echo "${name}=${value}" >> "$GITHUB_ENV"
+          done
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, bcmath, pdo_pgsql, pgsql, redis, pcntl, zip
+          tools: composer:v2
+          coverage: none
+
+      # The dump client must be PostgreSQL 16 (the server major): a newer pg_dump writes
+      # settings a 16 server rejects on restore, an older one refuses to dump.
+      - name: PostgreSQL 16 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/16/bin/pg_dump --version
+          php -r 'echo ZipArchive::isEncryptionMethodSupported(ZipArchive::EM_AES_256) ? "zip AES-256: supported\n" : exit(1);'
+
+      - name: Locate Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: askida-composer-${{ runner.os }}-${{ hashFiles('askida/server/composer.lock') }}
+          restore-keys: askida-composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+
+      # Same images, bucket, identities and sample policies as the minio and minio-init
+      # services of askida/docker-compose.yml.
+      - name: Start MinIO with the backup bucket and identities
+        working-directory: askida
+        run: |
+          docker run -d --name askida-drill-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=askida -e MINIO_ROOT_PASSWORD \
+            "$MINIO_IMAGE" server /data >/dev/null
+          ready=false
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "$BACKUP_AWS_ENDPOINT/minio/health/ready"; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            echo "MinIO NOT ready at $BACKUP_AWS_ENDPOINT after 60 s"
+            exit 1
+          fi
+          docker run --rm --network host --entrypoint /bin/sh \
+            -v "$PWD/docker/minio/policies:/policies:ro" \
+            -e MINIO_ROOT_PASSWORD -e BACKUP_AWS_SECRET_ACCESS_KEY -e BACKUP_RESTORE_SECRET_ACCESS_KEY \
+            -e ENDPOINT="$BACKUP_AWS_ENDPOINT" -e BUCKET="$BACKUP_AWS_BUCKET" \
+            "$MC_IMAGE" -c '
+              set -e
+              mc alias set local "$ENDPOINT" askida "$MINIO_ROOT_PASSWORD" >/dev/null
+              mc mb --ignore-existing "local/$BUCKET"
+              mc admin policy create local askida-backup-app /policies/askida-backup-app.json
+              mc admin user add local askida-backup-app "$BACKUP_AWS_SECRET_ACCESS_KEY" >/dev/null
+              mc admin policy attach local askida-backup-app --user askida-backup-app
+              mc admin policy create local askida-backup-restore /policies/askida-backup-restore.json
+              mc admin user add local askida-backup-restore "$BACKUP_RESTORE_SECRET_ACCESS_KEY" >/dev/null
+              mc admin policy attach local askida-backup-restore --user askida-backup-restore
+            '
+
+      # Sample shops from the seeder plus five paid donations whose units are issued and two
+      # unpaid ones, so the hook invariant is checked on real rows.
+      - name: Build the database
+        run: |
+          php artisan migrate --seed --force --no-interaction
+          # shellcheck disable=SC2016 # PHP code: PHP expands these variables, not the shell
+          php artisan tinker --execute '
+            $issuer = app(App\Domain\Hooks\Services\HookIssuer::class);
+            $units = 0;
+            foreach (App\Domain\Donations\Models\Donation::factory()->paid()->count(5)->create() as $donation) {
+                $units += $issuer->issueForDonation($donation);
+            }
+            App\Domain\Donations\Models\Donation::factory()->count(2)->create();
+            echo "issued units: {$units}\n";
+          '
+
+      - name: Back up with the application identity
+        run: |
+          php artisan backup:run --only-db --no-interaction
+          php artisan backup:list --no-interaction
+          php artisan backup:monitor --no-interaction
+
+      # The application key may put, list and delete but not read; the restore key may list and
+      # read but not write. Each denial is expected here.
+      # The application key may put, list and delete but not read; the restore key may list and
+      # read but not write. Each denial is expected here. Credentials reach the client container
+      # through the environment only (MC_HOST_<alias>), never as arguments.
+      - name: Check the backup identities
+        run: |
+          export MC_HOST_app="http://${BACKUP_AWS_ACCESS_KEY_ID}:${BACKUP_AWS_SECRET_ACCESS_KEY}@127.0.0.1:9000"
+          export MC_HOST_restore="http://${BACKUP_RESTORE_ACCESS_KEY_ID}:${BACKUP_RESTORE_SECRET_ACCESS_KEY}@127.0.0.1:9000"
+          mc() { docker run --rm -i --network host -e MC_HOST_app -e MC_HOST_restore "$MC_IMAGE" "$@"; }
+          key="$(mc ls --json "app/$BACKUP_AWS_BUCKET/askida/" | sed -n 's/.*"key":"\([^"]*\.zip\)".*/\1/p' | tail -n 1)"
+          test -n "$key" || { echo "application identity cannot list archives"; exit 1; }
+          echo "newest archive listed by the application identity: $key"
+          if mc cat "app/$BACKUP_AWS_BUCKET/askida/$key" > /dev/null; then
+            echo "FAIL: the application identity could read an archive"; exit 1
+          fi
+          echo "application identity: read denied (expected)"
+          if echo probe | mc pipe "restore/$BACKUP_AWS_BUCKET/askida/probe.txt"; then
+            echo "FAIL: the restore identity could write"; exit 1
+          fi
+          echo "restore identity: write denied (expected)"
+
+      - name: Drill script checks
+        env:
+          DRILL_PHP_IMAGE: ""
+        run: bash ../scripts/ops/restore-drill.test.sh
+
+      - name: Run restore drill
+        env:
+          DRILL_S3_ENDPOINT: http://127.0.0.1:9000
+          DRILL_DOCKER_NETWORK: host
+          DRILL_PHP_IMAGE: ""
+        run: |
+          set -o pipefail
+          {
+            echo "run: ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT}, commit ${GITHUB_SHA}"
+            echo "started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            docker --version
+            pg_dump --version
+          } | tee restore-drill-output.txt
+          bash ../scripts/ops/restore-drill.sh 2>&1 | tee -a restore-drill-output.txt
+          echo "finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a restore-drill-output.txt
+          grep -q '^RESULT: restore drill passed$' restore-drill-output.txt
+
+      - name: Upload drill output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: askida-restore-drill-output
+          path: askida/server/restore-drill-output.txt
+          retention-days: 30
+          if-no-files-found: error
