@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Kadro dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
+  "description": "Kadro and Askida dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
   "extends": ["config:recommended"],
-  "includePaths": ["kadro/**", ".github/**"],
+  "includePaths": ["kadro/**", "askida/**", ".github/**"],
   "timezone": "Europe/Istanbul",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
@@ -53,6 +53,39 @@
       "matchManagers": ["github-actions"],
       "groupName": "github actions",
       "pinDigests": true,
+      "automerge": false
+    },
+    {
+      "description": "Askida server: one weekly pull request for every minor and patch update of the Composer dependencies; the composer.json ranges stay, only composer.lock moves.",
+      "matchManagers": ["composer"],
+      "matchFileNames": ["askida/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "askida composer minor and patch",
+      "rangeStrategy": "update-lockfile",
+      "automerge": false
+    },
+    {
+      "description": "Askida app: one weekly pull request for every minor and patch update of the Flutter (pub) dependencies; the pubspec.yaml ranges stay, only pubspec.lock moves.",
+      "matchManagers": ["pub"],
+      "matchFileNames": ["askida/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "askida pub minor and patch",
+      "rangeStrategy": "update-lockfile",
+      "automerge": false
+    },
+    {
+      "description": "Askida app: Android Gradle dependencies (Play Integrity and the build plugins) in one weekly group.",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["askida/**"],
+      "groupName": "askida gradle",
+      "automerge": false
+    },
+    {
+      "description": "Askida: major updates of Composer, pub and Gradle dependencies open one pull request each so they can be reviewed on their own.",
+      "matchManagers": ["composer", "pub", "gradle"],
+      "matchFileNames": ["askida/**"],
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
       "automerge": false
     },
     {
