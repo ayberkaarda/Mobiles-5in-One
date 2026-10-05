@@ -19,30 +19,41 @@ class FlywayMigrationTest(
     @Autowired private val tx: TransactionTemplate,
 ) {
     @Test
-    fun `V1 is applied and nothing is pending`() {
+    fun `V1 to V3 are applied, the head is V3 and nothing is pending`() {
         val info = flyway.info()
-        assertEquals("1", info.current()?.version?.version)
+        assertEquals("3", info.current()?.version?.version)
         assertEquals(0, info.pending().size)
         val applied =
-            jdbc.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success",
-                Int::class.java,
+            jdbc.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
+                String::class.java,
             )
-        assertEquals(1, applied)
+        assertEquals(listOf("1", "2", "3"), applied)
     }
 
     @Test
-    fun `V1 creates exactly the identity and tenancy tables`() {
+    fun `the schema holds exactly the V1 to V3 tables and nothing unexpected`() {
         val tables =
             jdbc.queryForList(
                 """
                 SELECT table_name FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> 'flyway_schema_history'
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
                 ORDER BY table_name
                 """.trimIndent(),
                 String::class.java,
             )
-        assertEquals(listOf("memberships", "shops", "users"), tables)
+        val expected =
+            listOf(
+                "devices",
+                "flyway_schema_history",
+                "invitations",
+                "memberships",
+                "otp_codes",
+                "refresh_tokens",
+                "shops",
+                "users",
+            )
+        assertEquals(expected, tables, "unexpected or missing table in schema public")
     }
 
     @Test
