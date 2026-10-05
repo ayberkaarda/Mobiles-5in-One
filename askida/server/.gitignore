@@ -27,3 +27,10 @@ Thumbs.db
 # Admin panel assets, republished by `php artisan filament:upgrade` on every composer install
 /public/css/filament
 /public/js/filament
+
+# OWASP ZAP output (reports are summarised in docs/security/zap-report.md, never committed) and
+# the automation plan the baseline script writes next to its configuration
+/.zap/reports
+/.zap/zap.yaml
+# CycloneDX SBOM (built by the security workflow and uploaded as an artifact)
+/sbom.cdx.json

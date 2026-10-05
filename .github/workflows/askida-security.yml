@@ -1,0 +1,409 @@
+name: Askida Security
+
+# Security checklist item 19 (dependency audit, SBOM, secret scan) and the dynamic part of
+# item 23 (OWASP ZAP). Actions are pinned to full commit SHAs; downloaded binaries (gitleaks,
+# osv-scanner) are pinned to a release and checked against their SHA-256; the ZAP image is
+# pinned by digest. The workflow lives at the Git repository root; Askida is askida/.
+#
+# It runs on every pull request and every push to main, without a path filter, so the single
+# "Askida Security gate" check always reports and can be a required status check on main.
+# The "changes" job decides whether the Askida jobs have work to do (same pattern as
+# askida-ci.yml). The weekly schedule and manual runs always run every job.
+#
+# Informational jobs, NOT part of the gate: "pub-outdated" (a report of newer Flutter package
+# versions) and "zap" (only on the schedule and on manual runs; it starts the compose stack).
+# See askida/docs/security/dependency-audit.md and askida/docs/security/zap-report.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, so new advisories, new gitleaks rules and new ZAP rules surface without a change.
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: askida-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  OSV_SCANNER_VERSION: 2.6.0
+  OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+  FLUTTER_VERSION: 3.47.6
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef
+
+jobs:
+  changes:
+    name: Detect Askida changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      askida: ${{ steps.diff.outputs.askida }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # Scheduled and manual runs have no range and run everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Askida
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of askida/ as a deletion inside it. Exit 0 means
+      # no Askida change, 1 a change, anything else is an error and runs every Askida job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No diff range for $EVENT_NAME; running every Askida job."
+            askida=true
+          else
+            set -- askida/ ':(glob).github/workflows/askida-*.yml' .gitleaks.toml renovate.json
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) askida=false ;;
+              1) askida=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Askida job."
+                askida=true
+                ;;
+            esac
+          fi
+          echo "askida=$askida" >> "$GITHUB_OUTPUT"
+          echo "Askida jobs run: $askida"
+
+  gitleaks:
+    name: Gitleaks (full history)
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Every commit of every ref, from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  composer-audit:
+    name: Composer audit
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: askida/server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          coverage: none
+
+      # Reads composer.lock only (no install, no plugins, no scripts). Any advisory fails the
+      # job, and so does an abandoned package.
+      - name: composer audit
+        run: composer audit --locked --no-interaction --abandoned=fail
+
+  osv-scanner:
+    name: OSV scan (composer.lock, pubspec.lock)
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install osv-scanner
+        run: |
+          binary="osv-scanner_linux_amd64"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/${binary}"
+          echo "${OSV_SCANNER_SHA256}  $RUNNER_TEMP/osv-scanner" | sha256sum --check --strict
+          chmod 0755 "$RUNNER_TEMP/osv-scanner"
+          "$RUNNER_TEMP/osv-scanner" --version
+
+      # Exit code 1 means vulnerabilities were found; any non-zero exit fails the job.
+      - name: Scan lockfiles
+        run: |
+          "$RUNNER_TEMP/osv-scanner" scan \
+            --lockfile=askida/server/composer.lock \
+            --lockfile=askida/app/pubspec.lock
+
+  sbom:
+    name: SBOM (CycloneDX, server)
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: askida/server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, bcmath, pdo_pgsql, pgsql, redis, pcntl, gd
+          tools: composer:v2
+          coverage: none
+
+      # The CycloneDX plugin is a dev dependency, so the install includes dev packages; no
+      # application scripts run (the SBOM reads composer.json and composer.lock).
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts
+
+      - name: Make SBOM
+        run: |
+          composer CycloneDX:make-sbom --output-format=JSON --output-file=sbom.cdx.json
+          test -s sbom.cdx.json
+          ls -l sbom.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: askida-server-sbom
+          path: askida/server/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # Informational: the list of Flutter packages with newer versions. Never fails on content.
+  pub-outdated:
+    name: Flutter pub outdated (informational)
+    needs: changes
+    if: needs.changes.outputs.askida == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: askida/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Report
+        run: |
+          flutter pub get
+          flutter pub outdated --json > pub-outdated.json
+          test -s pub-outdated.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: askida-pub-outdated
+          path: askida/app/pub-outdated.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # Informational, schedule and manual runs only: ZAP baseline (public web) and API scan
+  # (OpenAPI document, donor token) against the compose stack with the seeded sample data.
+  # The stack runs with APP_ENV=local and APP_DEBUG=false over plain HTTP; the reasons are in
+  # askida/docs/security/zap-report.md (local relaxations). The token is minted at run time,
+  # masked in the log and passed to ZAP through the environment, never through argv or a file.
+  zap:
+    name: OWASP ZAP (informational)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: askida
+    env:
+      ASKIDA_WEB_PORT: "58080"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare environment file
+        run: |
+          cp server/.env.example server/.env
+          sed -i -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' \
+            -e 's/^LOG_LEVEL=.*/LOG_LEVEL=warning/' \
+            -e 's/^BREACHED_PASSWORD_CHECK=.*/BREACHED_PASSWORD_CHECK=false/' server/.env
+
+      # The first start installs the Composer dependencies inside the server container; waits
+      # at most 15 minutes for its health check.
+      - name: Start the stack
+        run: |
+          docker compose -p askida-zap up -d postgres redis minio minio-init server horizon
+          for _ in $(seq 1 180); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose -p askida-zap ps -q server)")
+            if [ "$status" = "healthy" ]; then
+              echo "Server healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Server NOT healthy after 15 minutes"
+          docker compose -p askida-zap logs --no-color --tail 200 server
+          exit 1
+
+      - name: Migrate and seed
+        run: docker compose -p askida-zap exec -T server php artisan migrate --seed --force --no-interaction
+
+      - name: Mint the donor token
+        id: token
+        run: |
+          token=$(docker compose -p askida-zap exec -T server php artisan tinker --execute="echo app(App\Domain\Auth\Tokens\DeviceTokenIssuer::class)->issue(App\Models\User::query()->where('email', 'ornek-bagisci@example.test')->firstOrFail(), 'zap-scan', 'android')->plainTextToken;" | tr -d '\r\n')
+          test -n "$token"
+          echo "::add-mask::$token"
+          echo "ZAP_AUTH_HEADER_VALUE=Bearer $token" >> "$GITHUB_ENV"
+
+      - name: Prepare report directory
+        run: |
+          mkdir -p server/.zap/reports
+          chmod 0777 server/.zap/reports
+
+      # The stack publishes its ports on 127.0.0.1 only, so ZAP shares the runner's network and
+      # reaches it under the same host name as on a developer machine (Docker Desktop), which
+      # keeps the context file and the URLs in the reports identical.
+      - name: ZAP baseline
+        run: |
+          docker run --rm --network host --add-host=host.docker.internal:127.0.0.1 \
+            -v "$PWD/server/.zap:/zap/wrk:rw" "$ZAP_IMAGE" \
+            zap-baseline.py -t "http://host.docker.internal:${ASKIDA_WEB_PORT}" -m 5 -I \
+            -c baseline.conf -r reports/zap-baseline.html -J reports/zap-baseline.json
+
+      # Active scan of the operations in docs/api/openapi.yaml with the donor token; at most
+      # 60 minutes of active scanning.
+      - name: ZAP API scan
+        run: |
+          docker run --rm --network host --add-host=host.docker.internal:127.0.0.1 \
+            -e ZAP_AUTH_HEADER_VALUE -e ZAP_AUTH_HEADER=Authorization \
+            -e ZAP_AUTH_HEADER_SITE=host.docker.internal \
+            -v "$PWD/server/.zap:/zap/wrk:rw" -v "$PWD/docs/api:/zap/api:ro" "$ZAP_IMAGE" \
+            zap-api-scan.py -t /zap/api/openapi.yaml -f openapi -I \
+            -O "http://host.docker.internal:${ASKIDA_WEB_PORT}" -n api-context.xml \
+            -c api-scan.conf -r reports/zap-api.html -J reports/zap-api.json \
+            -z "-config scanner.threadPerHost=4 -config scanner.maxScanDurationInMins=60"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: askida-zap-reports
+          path: askida/server/.zap/reports/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # The stack and its anonymous volumes belong to this runner only and are discarded with
+      # it; nothing is removed explicitly.
+      - name: Server log on failure
+        if: failure()
+        run: docker compose -p askida-zap logs --no-color --tail 200 server
+
+  # The only security check to mark as required on main. "changes" must succeed and report
+  # askida=true or askida=false. true: gitleaks, composer-audit, osv-scanner and sbom must all
+  # succeed. false: all four must be skipped. Any other result fails the gate.
+  # "pub-outdated" and "zap" are informational and deliberately left out of "needs".
+  # When a job is added to this workflow, add it to "needs" and to the checks below.
+  gate:
+    name: Askida Security gate
+    needs: [changes, gitleaks, composer-audit, osv-scanner, sbom]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          ASKIDA_CHANGED: ${{ needs.changes.outputs.askida }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          AUDIT_RESULT: ${{ needs.composer-audit.result }}
+          OSV_RESULT: ${{ needs.osv-scanner.result }}
+          SBOM_RESULT: ${{ needs.sbom.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (askida=${ASKIDA_CHANGED:-<none>})"
+          echo "gitleaks: ${GITLEAKS_RESULT:-<none>}"
+          echo "composer-audit: ${AUDIT_RESULT:-<none>}"
+          echo "osv-scanner: ${OSV_RESULT:-<none>}"
+          echo "sbom: ${SBOM_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Askida Security failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$ASKIDA_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Askida Security failed: change detection reported no valid askida output."
+              exit 1
+              ;;
+          esac
+          for result in "$GITLEAKS_RESULT" "$AUDIT_RESULT" "$OSV_RESULT" "$SBOM_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Askida Security failed: askida=$ASKIDA_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Askida Security passed (askida=$ASKIDA_CHANGED, all jobs $expected)."
