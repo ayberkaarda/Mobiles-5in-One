@@ -1,11 +1,10 @@
 package app.cetele.server.tenancy.invitation
 
-import java.security.MessageDigest
 import java.security.SecureRandom
 
 /**
  * Invitation codes: 8 characters of Crockford base32 (`0-9` and `A-Z` without `I L O U`), 40 bits
- * from [SecureRandom]. Only [hash] is stored. Input is read leniently the Crockford way: lowercase
+ * from [SecureRandom]. Only the keyed hash ([InvitationCodeHasher]) is stored. Input is read leniently the Crockford way: lowercase
  * is accepted and `I`/`L` read as `1`, `O` as `0`.
  */
 object InvitationCode {
@@ -34,11 +33,4 @@ object InvitationCode {
                 }.joinToString("")
         return canonical.takeIf { code -> code.all { it in ALPHABET } }
     }
-
-    /** Lowercase hex SHA-256 of a canonical code. */
-    fun hash(canonicalCode: String): String =
-        MessageDigest
-            .getInstance("SHA-256")
-            .digest(canonicalCode.toByteArray(Charsets.US_ASCII))
-            .joinToString("") { "%02x".format(it) }
 }
