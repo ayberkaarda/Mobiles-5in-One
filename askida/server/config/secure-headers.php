@@ -32,9 +32,13 @@ return [
     'x-powered-by' => '',
     'x-xss-protection' => '',
     'referrer-policy' => 'strict-origin-when-cross-origin',
+    // No COEP: `require-corp` would block the payment provider's checkout frame on /pay/*,
+    // which carries no CORP/COEP headers of ours to rely on; nothing on the site needs
+    // cross-origin isolation (docs/security/zap-report.md, ZAP 90004).
     'cross-origin-embedder-policy' => '',
     'cross-origin-opener-policy' => 'same-origin',
-    'cross-origin-resource-policy' => 'same-site',
+    // same-origin, not same-site: no other askida.app subdomain loads these responses.
+    'cross-origin-resource-policy' => 'same-origin',
 
     'clear-site-data' => ['enable' => false],
     'reporting' => [],
