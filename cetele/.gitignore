@@ -1,0 +1,9 @@
+# Secrets and machine-local files (spec section 6 item 1)
+.env
+.env.*
+!.env.example
+local.properties
+keystore.properties
+*.jks
+*.keystore
+service-account*.json
