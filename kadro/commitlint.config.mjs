@@ -17,6 +17,7 @@ export default {
         'auth',
         'emails',
         'app',
+        'android',
         'server',
         'admin',
         'adr',
