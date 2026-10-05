@@ -1,0 +1,105 @@
+# Cetele local development stack (project "cetele").
+# Host ports use the 60xxx block and bind to 127.0.0.1 only:
+#   postgres 60432, minio api 60900 / console 60901, mailpit smtp 60025 / ui 60825, server 60080.
+# The Android emulator reaches the server at http://10.0.2.2:60080.
+# Values come from cetele/.env when present (copy .env.example); the defaults below are local
+# development dummies only. Build the server image first: (cd server && ./gradlew jibDockerBuild).
+name: cetele
+
+services:
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: cetele
+      POSTGRES_USER: ${CETELE_DB_USERNAME:-cetele}
+      POSTGRES_PASSWORD: ${CETELE_DB_PASSWORD:-cetele_local_dev}
+    ports:
+      - "127.0.0.1:60432:5432"
+    volumes:
+      - cetele_pg:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d cetele"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${CETELE_S3_ACCESS_KEY:-cetele}
+      MINIO_ROOT_PASSWORD: ${CETELE_S3_SECRET_KEY:-cetele_local_dev}
+    ports:
+      - "127.0.0.1:60900:9000"
+      - "127.0.0.1:60901:9001"
+    volumes:
+      - cetele_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${CETELE_S3_ACCESS_KEY:-cetele}
+      MINIO_ROOT_PASSWORD: ${CETELE_S3_SECRET_KEY:-cetele_local_dev}
+      MEDIA_BUCKET: ${CETELE_S3_BUCKET_MEDIA:-cetele-media}
+    entrypoint: ["/bin/sh", "-c"]
+    # Private bucket: no anonymous policy, objects are reached through presigned URLs only.
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$MEDIA_BUCKET" &&
+        mc anonymous set none "local/$$MEDIA_BUCKET"
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:60025:1025"
+      - "127.0.0.1:60825:8025"
+    restart: unless-stopped
+
+  server:
+    image: cetele-server:local
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: "8080"
+      CETELE_PUBLIC_BASE_URL: ${CETELE_PUBLIC_BASE_URL:-http://127.0.0.1:60080}
+      CETELE_DB_URL: ${CETELE_DB_URL:-jdbc:postgresql://postgres:5432/cetele}
+      CETELE_DB_USERNAME: ${CETELE_DB_USERNAME:-cetele}
+      CETELE_DB_PASSWORD: ${CETELE_DB_PASSWORD:-cetele_local_dev}
+      CETELE_S3_ENDPOINT: ${CETELE_S3_ENDPOINT:-http://minio:9000}
+      CETELE_S3_REGION: ${CETELE_S3_REGION:-auto}
+      CETELE_S3_ACCESS_KEY: ${CETELE_S3_ACCESS_KEY:-cetele}
+      CETELE_S3_SECRET_KEY: ${CETELE_S3_SECRET_KEY:-cetele_local_dev}
+      CETELE_S3_BUCKET_MEDIA: ${CETELE_S3_BUCKET_MEDIA:-cetele-media}
+      CETELE_S3_PATH_STYLE: ${CETELE_S3_PATH_STYLE:-true}
+    ports:
+      - "127.0.0.1:60080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  cetele_pg:
+  cetele_minio:

@@ -1,0 +1,53 @@
+# Every deployment-specific value comes from the environment (see cetele/.env.example).
+# There is no production profile file in the repository.
+spring:
+  application:
+    name: cetele-server
+  datasource:
+    url: ${CETELE_DB_URL}
+    username: ${CETELE_DB_USERNAME}
+    password: ${CETELE_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  mvc:
+    problemdetails:
+      enabled: true
+  thymeleaf:
+    check-template-location: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+    whitelabel:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      # No liveness/readiness groups: the response stays exactly {"status":"UP"}.
+      probes:
+        enabled: false
+
+cetele:
+  s3:
+    endpoint: ${CETELE_S3_ENDPOINT:}
+    region: ${CETELE_S3_REGION:auto}
+    access-key: ${CETELE_S3_ACCESS_KEY:}
+    secret-key: ${CETELE_S3_SECRET_KEY:}
+    bucket-media: ${CETELE_S3_BUCKET_MEDIA:cetele-media}
+    path-style: ${CETELE_S3_PATH_STYLE:true}

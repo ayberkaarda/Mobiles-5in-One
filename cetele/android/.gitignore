@@ -1,0 +1,17 @@
+# Build output and local state
+.gradle/
+.kotlin/
+build/
+captures/
+.cxx/
+.externalNativeBuild/
+*.iml
+.idea/
+
+# Machine-specific and secret files (never committed)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+.env*
+service-account*.json

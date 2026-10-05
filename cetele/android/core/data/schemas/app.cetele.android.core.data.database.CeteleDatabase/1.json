@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "489ccfda86e80ffb6d72c8c4c9bcbb15",
+    "entities": [
+      {
+        "tableName": "sync_cursor",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`shop_id` TEXT NOT NULL, `last_pulled_seq` INTEGER NOT NULL, PRIMARY KEY(`shop_id`))",
+        "fields": [
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPulledSeq",
+            "columnName": "last_pulled_seq",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "shop_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '489ccfda86e80ffb6d72c8c4c9bcbb15')"
+    ]
+  }
+}
