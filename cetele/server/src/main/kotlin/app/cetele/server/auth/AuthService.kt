@@ -8,7 +8,6 @@ import app.cetele.server.auth.ratelimit.RateLimit
 import app.cetele.server.auth.ratelimit.RateLimiter
 import app.cetele.server.auth.token.RefreshTokenService
 import app.cetele.server.auth.token.RotationResult
-import app.cetele.server.auth.user.UserAccounts
 import app.cetele.server.config.logging.Masking
 import app.cetele.server.security.CurrentUser
 import app.cetele.server.security.JwtCodec
@@ -45,7 +44,7 @@ class AuthService(
     private val integrity: IntegrityGate,
     private val limiter: RateLimiter,
     private val otp: OtpService,
-    private val users: UserAccounts,
+    private val users: UserStore,
     private val devices: DeviceService,
     private val refreshTokens: RefreshTokenService,
     private val jwt: JwtCodec,

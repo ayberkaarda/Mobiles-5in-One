@@ -1,7 +1,10 @@
 package app.cetele.server.auth.user
 
+import app.cetele.server.auth.UserStore
 import app.cetele.server.config.logging.Masking
 import app.cetele.server.security.CurrentUser
+import app.cetele.server.tenancy.MembershipQuery
+import app.cetele.server.tenancy.MembershipSummary
 import app.cetele.server.web.problem.ProblemCode
 import app.cetele.server.web.problem.ProblemException
 import org.springframework.stereotype.Service
@@ -18,12 +21,13 @@ data class Me(
 
 @Service
 class MeService(
-    private val users: UserAccounts,
+    private val users: UserStore,
+    private val memberships: MembershipQuery,
 ) {
     @Transactional(readOnly = true)
     fun me(caller: CurrentUser): Me {
         val user = users.findById(caller.userId)?.takeIf { it.active } ?: throw ProblemException(ProblemCode.AUTH_UNAUTHENTICATED)
-        return Me(user.id, Masking.phone(user.phoneE164), user.displayName, users.memberships(user.id))
+        return Me(user.id, Masking.phone(user.phoneE164), user.displayName, memberships.membershipsOf(user.id))
     }
 
     @Transactional
