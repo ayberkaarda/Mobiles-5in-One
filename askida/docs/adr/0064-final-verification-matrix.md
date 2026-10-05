@@ -29,18 +29,19 @@ suite, the scans, backups and guards.
 
 ## Closing status
 
-**15 done, 8 partial, 0 not-started** (done: 1, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 18, 21).
+**14 done, 9 partial, 0 not-started** (done: 1, 3, 4, 5, 6, 7, 8, 9, 12, 13, 15, 16, 18, 21).
 
-| Item | Why it stays partial                                                                                                                 |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 2    | The history purge is documented and never executed without the owner; the CI history scan runs only after the push.                  |
-| 10   | No published origin with TLS, edge redirect or HSTS preload (no domain); iOS App Transport Security not exercised (no macOS).        |
-| 14   | Error tracking with scrubbing is not connected (no account); production must switch `LOG_STACK` to `daily`.                          |
-| 17   | The provider's real signature scheme and sandbox are not exercised (no iyzico account); fixtures prove our own consistency only.     |
-| 19   | The audit workflow and Renovate have not run on GitHub (need the push); `npm audit` has no lockfile to read; CocoaPods needs macOS.  |
-| 20   | Shop documents are not in the backup archive (owner-side bucket versioning and replication); no production bucket or credentials.    |
-| 22   | Provider billing and quota alerts are not set (no accounts).                                                                         |
-| 23   | The attack suite's own known gaps, the IPA scan (no macOS), the 60-minute cap on ZAP API run 2 and the GitHub `zap` job not yet run. |
+| Item | Why it stays partial                                                                                                                                       |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2    | The history purge is documented and never executed without the owner; the CI history scan runs only after the push.                                        |
+| 10   | No published origin with TLS, edge redirect or HSTS preload (no domain); iOS App Transport Security not exercised (no macOS).                              |
+| 11   | No scan of a database dump exists; the proof is the AN-8 column walk and record checks. A dump scan over the restore-drill dump is the recorded follow-up. |
+| 14   | Error tracking with scrubbing is not connected (no account); production must switch `LOG_STACK` to `daily`.                                                |
+| 17   | The provider's real signature scheme and sandbox are not exercised (no iyzico account); fixtures prove our own consistency only.                           |
+| 19   | The audit workflow and Renovate have not run on GitHub (need the push); `npm audit` has no lockfile to read; CocoaPods needs macOS.                        |
+| 20   | Shop documents are not in the backup archive (owner-side bucket versioning and replication); no production bucket or credentials.                          |
+| 22   | Provider billing and quota alerts are not set (no accounts).                                                                                               |
+| 23   | The attack suite's own known gaps, the IPA scan (no macOS), the 60-minute cap on ZAP API run 2 and the GitHub `zap` job not yet run.                       |
 
 Item 23 differs from the shape planned at the start of Phase 6 (which expected it `done`): its
 own report lists gaps that stay partial, and the specification's proof includes an IPA scan that
@@ -48,9 +49,14 @@ cannot run here. The planned shape is not forced.
 
 ## Consequences
 
-- "23/23 done" is not claimed. The remaining items are owner decisions or need accounts: the push
-  (CI and Renovate runs), approval of a history purge if ever needed, a domain and host, provider,
-  store and error-tracking accounts, a production backup bucket, a macOS machine.
+- "23/23 done" is not claimed. Two kinds of work remain:
+  - local verification work that can be done here: a scan of a database dump (item 11); forged
+    Livewire finance actions as a moderator against the panel (4.9); attack coverage on the device
+    and app side (WebView navigation and hostile deep links, 4.10); guard checks per test instead of
+    per attack file in `AttackSuiteTest.php`; the F4 test fix and the F3 view fix;
+  - owner decisions or accounts: the push (CI and Renovate runs), approval of a history purge if
+    ever needed, a domain and host, provider, store and error-tracking accounts, a production
+    backup bucket, a macOS machine.
 - Deviations recorded in Phase 6 and where they live: threat file names with the `Threat` prefix
   (ADR-0053); two `{!! !!}` sites instead of one, admin CSP relaxations and push text with shop
   names (ADR-0054); `APP_ENV=local` on the scan stack (ADR-0055); the `s3-backups` listing driver
