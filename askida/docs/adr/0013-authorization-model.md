@@ -77,8 +77,8 @@ policies and to the routes that exist (`/me` is self-only by construction).
 - Eight matrix rows are `PENDING` (DELETE me, PUT me/push-token, POST anon/attest, DELETE anon/me, GET
   impact, pay/{token}, pay/callback, webhooks/iyzico).
 - Anonymous device principals are exercised through policy objects, not through issued tokens.
-- Evidence: `tests/Feature/Security/AuthorizationMatrixTest.php` (272 tests in the authorization
-  worker's run), `tests/Security/IdorTest.php`, `AbilityMiddlewareTest.php`, `RolesSeederTest.php`.
+- Evidence: `tests/Feature/Security/AuthorizationMatrixTest.php` (272 tests in the run on the
+  delivering branch), `tests/Security/IdorTest.php`, `AbilityMiddlewareTest.php`, `RolesSeederTest.php`.
 
 ## Addendum (Phase 2, 2026-10-04)
 

@@ -12,11 +12,11 @@ choice itself (Docker Compose on one VPS behind Caddy) is ADR-0002.
 All three application roles run the same image, built from `docker/php/Dockerfile` (PHP-FPM 8.3
 and nginx in one container) through the `server-image` anchor in `docker-compose.yml`:
 
-| Role (compose service) | Command | Purpose | Health |
-| --- | --- | --- | --- |
-| `server` | `start-server` (PHP-FPM in the background, nginx in the foreground, port 80) | HTTP: API, public web, admin panel, payment pages | `curl -fsS http://127.0.0.1/up` (Laravel health route, `server/bootstrap/app.php`) |
-| `horizon` | `php artisan horizon` | Queue workers (Redis) | `php artisan horizon:status` |
-| `scheduler` | `php artisan schedule:work` | Scheduled jobs in `server/routes/console.php` (hook expiry, retention, reconciliation, payouts, fraud scan, impact snapshots) | none; run exactly one instance |
+| Role (compose service) | Command                                                                      | Purpose                                                                                                                       | Health                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `server`               | `start-server` (PHP-FPM in the background, nginx in the foreground, port 80) | HTTP: API, public web, admin panel, payment pages                                                                             | `curl -fsS http://127.0.0.1/up` (Laravel health route, `server/bootstrap/app.php`) |
+| `horizon`              | `php artisan horizon`                                                        | Queue workers (Redis)                                                                                                         | `php artisan horizon:status`                                                       |
+| `scheduler`            | `php artisan schedule:work`                                                  | Scheduled jobs in `server/routes/console.php` (hook expiry, retention, reconciliation, payouts, fraud scan, impact snapshots) | none; run exactly one instance                                                     |
 
 Supporting services in the same file: `postgres` (PostGIS 16), `redis`, `minio` and `minio-init`
 (S3-compatible storage; buckets `askida-private` and `askida-public`), `mailpit` (local mail
@@ -52,9 +52,12 @@ Two settings in `server/.env` make this work behind the proxy:
 - `SECURITY_HSTS_FORCE=false` while the proxy is trusted; `true` only for a terminator that cannot
   be listed in `TRUSTED_PROXIES`.
 
-The template has not met a real certificate authority: not exercised: no domain. The default
-nginx access log inside the application container still records the request line (see
-`docs/release/privacy-labels.md`, IP address row): the Caddyfile filter does not cover it.
+The template has not met a real certificate authority: not exercised: no domain. The nginx
+access log inside the application container uses the `askida_private` format (no client address,
+no query string, `/pay/<token>` written as `/pay/-`; check in `docs/security/zap-report.md`
+section 4); nginx error-log lines on failed requests still quote the client address and the
+request line. The application request log keeps 30 days only with `LOG_STACK=daily` (step 7 of
+the checklist); the local `single` channel has no rotation.
 
 ## Environment checklist
 
@@ -127,10 +130,10 @@ backward compatible, restore from backup per `docs/ops/backup-restore.md`. Do no
 
 ## Not exercised (summary)
 
-| Item | Reason |
-| --- | --- |
-| Public deployment, TLS issuance, HSTS preload | no domain, no host |
-| Production image build | not written (suggestion) |
-| Real payment, attestation, push and mail providers | no accounts |
-| Two-container rolling update | no host |
-| Backups and the restore drill against production | no bucket, no credentials |
+| Item                                               | Reason                    |
+| -------------------------------------------------- | ------------------------- |
+| Public deployment, TLS issuance, HSTS preload      | no domain, no host        |
+| Production image build                             | not written (suggestion)  |
+| Real payment, attestation, push and mail providers | no accounts               |
+| Two-container rolling update                       | no host                   |
+| Backups and the restore drill against production   | no bucket, no credentials |

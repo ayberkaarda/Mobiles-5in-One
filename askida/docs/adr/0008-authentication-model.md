@@ -103,4 +103,4 @@ The raw address is never stored. Rotating `APP_KEY` changes future hashes.
   fake key set. The real providers' key sets, client registrations and sign-in flows were not
   exercised (ADR-0006, gate G9).
 - Real mail delivery was not exercised; tests use mail fakes.
-- Evidence: `tests/Feature/Api/Auth/*` and `tests/Unit/Auth/*` (159 auth tests in the auth worker's run).
+- Evidence: `tests/Feature/Api/Auth/*` and `tests/Unit/Auth/*` (159 auth tests in the run on the delivering branch).

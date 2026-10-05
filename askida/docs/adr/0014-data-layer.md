@@ -99,8 +99,8 @@ The compose file no longer gives its volumes fixed names, so each compose projec
 ## Lessons: shared volume incident
 
 With fixed volume names, several parallel compose projects mounted the same PostgreSQL data
-directory. One start logged `PANIC: could not locate a valid checkpoint record`, and another worker saw
-32 unrelated test failures while a second stack wrote to the same directory. The workers moved to
+directory. One start logged `PANIC: could not locate a valid checkpoint record`, and another test run saw
+32 unrelated test failures while a second stack wrote to the same directory. The stacks moved to
 separate volumes and re-ran their checks, and the fixed names were then removed. Rule: never run two
 database servers on one data directory and never run two test processes on one database.
 
@@ -109,5 +109,5 @@ database servers on one data directory and never run two test processes on one d
 - Migrations were run up, down and up again, and `migrate:fresh --seed` twice, on a local PostgreSQL
   16 with PostGIS; no production data exists.
 - Cipher correction is open work; the retention period for financial rows is open (ADR-0005).
-- Evidence: `tests/Feature/Data/*` (209 tests with unit domain tests in the data worker's run),
+- Evidence: `tests/Feature/Data/*` (209 tests with unit domain tests in the run on the delivering branch),
   `tests/Feature/DatabaseTimezoneTest.php`.
