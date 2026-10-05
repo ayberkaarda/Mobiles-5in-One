@@ -1,0 +1,52 @@
+# Example edge configuration for a single host. Caddy terminates TLS, redirects HTTP to HTTPS and
+# forwards to the application container (nginx + PHP-FPM, port 80 inside the compose network).
+# Replace the site address with the real domain; none is registered for this project, so this
+# file has not been run against a live certificate authority.
+#
+# Laravel must be told that this proxy is trusted: set TRUSTED_PROXIES in server/.env to the
+# proxy address or network (see docs/ops/deploy.md). Without it the client address is the
+# proxy's and the forwarded protocol is ignored.
+
+{
+	# Contact address for the certificate authority; set a real mailbox before use.
+	email ops@example.test
+}
+
+askida.example.test {
+	encode zstd gzip
+
+	# Health endpoint for the uptime check, answered by Laravel (config: bootstrap/app.php).
+	# It is served without a redirect so a probe on the plain host name works.
+	@health path /up
+	handle @health {
+		reverse_proxy server:80
+	}
+
+	# HSTS is sent by the application (config/secure-headers.php: two years, subdomains, preload)
+	# on requests it sees as HTTPS. Caddy forwards the header untouched and adds no second one.
+	# Do not enable preload submission before every subdomain serves HTTPS.
+	handle {
+		reverse_proxy server:80 {
+			# Caddy sets X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host itself and
+			# replaces client-supplied values.
+			health_uri /up
+			health_interval 15s
+		}
+	}
+
+	# Plain HTTP on port 80 is redirected to HTTPS automatically by Caddy for this site address.
+
+	log {
+		output stdout
+		# The query string carries the approximate location of nearby-shop requests
+		# (`near=lat,lng`): keep it out of the edge log.
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete near
+				}
+			}
+		}
+	}
+}

@@ -73,16 +73,31 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    # Backup bucket identities (sample policies in docker/minio/policies): askida-backup-app is
+    # the application (put, list, delete; no get), askida-backup-restore is ops and the restore
+    # drill (get, list). The root user stays the bucket owner and is in no backup setting.
     environment:
       MINIO_ROOT_USER: askida
       MINIO_ROOT_PASSWORD: ${ASKIDA_MINIO_PASSWORD:-askida_local_dev}
+      BACKUP_APP_SECRET: ${ASKIDA_BACKUP_APP_SECRET:-askida_backup_app_local_dev}
+      BACKUP_RESTORE_SECRET: ${ASKIDA_BACKUP_RESTORE_SECRET:-askida_backup_restore_local_dev}
+    volumes:
+      - ./docker/minio/policies:/policies:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
         mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
         mc mb --ignore-existing local/askida-private &&
         mc mb --ignore-existing local/askida-public &&
-        mc anonymous set download local/askida-public
+        mc anonymous set download local/askida-public &&
+        mc mb --ignore-existing local/askida-backups &&
+        for role in app restore; do
+        name="askida-backup-$$role"; secret="$$BACKUP_APP_SECRET";
+        if [ "$$role" = restore ]; then secret="$$BACKUP_RESTORE_SECRET"; fi;
+        mc admin policy create local "$$name" "/policies/$$name.json" &&
+        mc admin user add local "$$name" "$$secret" &&
+        mc admin policy attach local "$$name" --user "$$name" || exit 1;
+        done
     restart: "no"
 
   mailpit:

@@ -42,6 +42,11 @@ android {
             // Until then release builds reuse the local debug key so that
             // `flutter run --release` works on a developer machine.
             signingConfig = signingConfigs.getByName("debug")
+            // Stated here rather than left to the Flutter Gradle plugin's
+            // defaults: no debuggable release, R8 code and resource shrinking on.
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

@@ -23,6 +23,7 @@
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
+        "cyclonedx/cyclonedx-php-composer": "^6.2",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.12",
         "laravel/pail": "^1.2.5",
@@ -93,7 +94,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "cyclonedx/cyclonedx-php-composer": true
         }
     },
     "minimum-stability": "stable",

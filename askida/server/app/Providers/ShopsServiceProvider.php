@@ -21,8 +21,10 @@ class ShopsServiceProvider extends ServiceProvider
         RateLimiter::for(DocumentRules::PRESIGN_LIMITER, static function (Request $request): Limit {
             $shop = $request->route('id');
 
+            // Lower-cased: the router and PostgreSQL accept a UUID in any letter case, and
+            // each spelling must not get a quota of its own.
             return Limit::perDay(DocumentRules::PRESIGNS_PER_SHOP_PER_DAY)
-                ->by('shop:'.(is_string($shop) ? $shop : 'unknown'));
+                ->by('shop:'.(is_string($shop) ? strtolower($shop) : 'unknown'));
         });
 
         if ($this->app->runningInConsole()) {

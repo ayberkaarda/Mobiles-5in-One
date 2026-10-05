@@ -10,14 +10,14 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 | Klasör                    | Ürün                                                                                                                                                      | Teknoloji                                                                      | Durum                                                              | İlerleme |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ | -------- |
 | [`kadro`](kadro/)         | Halı saha maç organizasyonu: kadro kur, eksik oyuncuyu bul, saha ücretini böl                                                                             | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
-| [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Sunucu birleşti (Phase 0-3); Flutter uygulaması henüz değil        | ~%57     |
+| [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
 | [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 | [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 | [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 
 ## Galeri
 
-Her proje için bir kart. Yalnızca Kadro'nun uygulaması var. Askıda kartı marka sistemini ve temeli gösterir; o uygulama henüz yok. Diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
+Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kartı hâlâ marka sistemini ve temeli gösterir; uygulama ekranları [`askida/docs/release/screenshots/`](askida/docs/release/screenshots/) altındadır. Diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
 
 <table>
   <tr>
@@ -26,8 +26,8 @@ Her proje için bir kart. Yalnızca Kadro'nun uygulaması var. Askıda kartı ma
       <sub><b>Kadro</b>: geliştirme aşamasında</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı, henüz uygulama ekranı yok" width="100%"><br>
-      <sub><b>Askıda</b>: marka sistemi ve altyapı, henüz uygulama ekranı yok</sub>
+      <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı" width="100%"><br>
+      <sub><b>Askıda</b>: marka sistemi ve altyapı</sub>
     </td>
   </tr>
   <tr>
@@ -67,26 +67,32 @@ hesaplarıyla denenmedi, yasal ve mağaza metinleri örnektir. Yeniden tasarım 
 emülatörde 11/11 geçiyor, ancak fiziksel cihazda koşu yok. Ayrıntı için
 [`kadro/README.tr.md`](kadro/README.tr.md) dosyasına bakın.
 
-Askıda'nın sunucu tarafı Phase 3'e kadar birleşti: Laravel sunucusu Docker'da çalışıyor; kimlik
-doğrulama, dükkânlar ve katalog, askı (rezervasyon ve teslim), iyzico ödeme akışıyla bağışlar,
-webhook'lar, ödemeler ve Filament yönetim paneli, ayrıca OpenAPI sözleşmesi, ADR'ler ve bir CI iş
-akışı hazır. Flutter uygulamasının tasarım sistemi ve mod kabuğu `main`'de; ürün ekranları dallarda
-hazırlanıyor, henüz birleşmedi. Gerçek ödeme ve cihaz doğrulaması denenmedi, iOS hiç derlenmedi. Bkz. [`askida/README.tr.md`](askida/README.tr.md).
+Askıda'nın planlanan yedi fazının tamamı hazır: Docker'da çalışan Laravel sunucusu (kimlik
+doğrulama, dükkânlar ve katalog, askı, iyzico ödeme akışıyla bağışlar, webhook'lar, esnaf
+ödemeleri, Filament yönetim paneli, OpenAPI sözleşmesi), bağışçı, esnaf ve anonim alıcılar için
+Flutter uygulaması, SEO ve GEO ile herkese açık web ve sertleştirme fazı (saldırı test takımı,
+kalıcı XSS taraması, ZAP ve MobSF taramaları, bağımlılık denetimleri, geri yükleme tatbikatlı
+şifreli yedekler, gönderim bütçesi, yayın ve mağaza dokümanları). Son güvenlik doğrulama
+matrisinde 23 maddenin 14'ü tamam, 9'u kısmi; kısmi olanlar burada bulunmayan sistemlere (ödeme
+sağlayıcı hesabı, mağaza hesapları, alan adı ve sunucu, hata izleme, üretim yedek kovası, macOS)
+bağlı ya da ancak push'tan sonra çalışır. Gerçek ödeme ve cihaz doğrulaması denenmedi, iOS hiç
+derlenmedi. Bkz. [`askida/README.tr.md`](askida/README.tr.md) ve
+[`askida/docs/security/verification-matrix.md`](askida/docs/security/verification-matrix.md).
 
 Cetele, Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
 uygulama kodu yok.
 
 ### İlerleme
 
-Son güncelleme: 2026-10-04 (Askıda Phase 1-3 birleştirildikten sonra). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
+Son güncelleme: 2026-10-05 (Askıda Phase 4-6 birleştirmesi için yazıldı). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
 
-| Proje       | İlerleme | Dayanak                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kadro`     | %100     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktının 11'i birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 11/11) / 7 = %100. Phase 6 portfolyo kapsamında tamamdır (11 çıktının 11'i birleşti); henüz var olmayan sistemlere bağlı kanıtlar kısmi olarak kayıtlı kalır (23 güvenlik maddesinin 10'u, barındırılan origin, EAS derlemeleri, sağlayıcı hesapları, iOS). Yani %100, planlanan işin birleştiği anlamına gelir; her kontrolün üretimde kanıtlandığı anlamına gelmez. |
-| `askida`    | ~%57     | Phase 0-3 birleşti: yedi fazın 4'ü, eşit ağırlıklı (temel; veri katmanı, kimlik doğrulama ve güvenlik tabanı; dükkânlar, hesaplar ve askı; ödeme akışı, webhook'lar, esnaf ödemeleri ve yönetim paneli). Phase 4 (Flutter uygulaması) dallarda sürüyor, Phase 5 (web, SEO) ve 6 (sertleştirme, yayın dokümanları) başlamadı; hiçbiri sayılmıyor. Gerçek ödeme, gerçek cihaz doğrulaması ve iOS denenmedi.                                                                                                              |
-| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Proje       | İlerleme | Dayanak                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kadro`     | %100     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktının 11'i birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 11/11) / 7 = %100. Phase 6 portfolyo kapsamında tamamdır (11 çıktının 11'i birleşti); henüz var olmayan sistemlere bağlı kanıtlar kısmi olarak kayıtlı kalır (23 güvenlik maddesinin 10'u, barındırılan origin, EAS derlemeleri, sağlayıcı hesapları, iOS). Yani %100, planlanan işin birleştiği anlamına gelir; her kontrolün üretimde kanıtlandığı anlamına gelmez.                                                                                                  |
+| `askida`    | %100     | Phase 0-6 birleşti: yedi fazın 7'si, eşit ağırlıklı (temel; veri katmanı, kimlik doğrulama ve güvenlik tabanı; dükkânlar, hesaplar ve askı; ödeme akışı, webhook'lar, esnaf ödemeleri ve yönetim paneli; Flutter uygulaması; herkese açık web, SEO ve GEO; sertleştirme ve yayına hazırlık): 7/7 = %100. %100 planlanan işin birleştiği anlamına gelir, her kontrolün üretimde kanıtlandığı anlamına gelmez: 23 güvenlik maddesinin 9'u kısmi kalır ([doğrulama matrisi](askida/docs/security/verification-matrix.md)); gerçek ödeme, gerçek cihaz doğrulaması, mağaza hesapları, barındırılan origin ve iOS denenmedi. |
+| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 İlerleme `main`'e birleştirilmiş işi ifade eder; yalnızca dalda duran ya da açık bir pull request'teki
 iş sayılmaz. %100, tüm fazların birleştiği anlamına gelir; gerçek dünya doğrulaması ayrıca izlenir.

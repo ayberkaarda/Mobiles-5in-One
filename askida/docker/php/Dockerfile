@@ -5,8 +5,12 @@ FROM php:8.3-fpm-bookworm
 COPY --from=mlocati/php-extension-installer:2 /usr/bin/install-php-extensions /usr/local/bin/
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# pg_dump must match the PostgreSQL 16 server (backup:run); Debian bookworm ships 15, so the
+# client comes from the PostgreSQL project's apt repository.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nginx curl unzip git postgresql-client \
+    && apt-get install -y --no-install-recommends nginx curl unzip git gnupg postgresql-common \
+    && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
     && rm -rf /var/lib/apt/lists/* \
     && install-php-extensions pdo_pgsql pgsql redis intl gd exif zip bcmath pcntl opcache \
     && rm -f /etc/nginx/sites-enabled/default \

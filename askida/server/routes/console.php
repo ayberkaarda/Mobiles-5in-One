@@ -2,6 +2,7 @@
 
 use App\Domain\Accounts\Jobs\HardDeleteAccounts;
 use App\Domain\Anon\Jobs\PurgeOldAnonData;
+use App\Domain\Cost\Jobs\GuardDailySends;
 use App\Domain\Fraud\Jobs\ScanFraud;
 use App\Domain\Hooks\Jobs\ReleaseExpiredHooks;
 use App\Domain\Impact\Jobs\TakeImpactSnapshot;
@@ -61,3 +62,33 @@ Schedule::job(new ScanFraud)
     ->withoutOverlapping()
     ->onOneServer();
 // endregion payouts
+
+// region cost
+// Pause non-critical mail and push when the daily send budget is spent (docs/ops/cost-alerts.md).
+Schedule::job(new GuardDailySends)
+    ->name(GuardDailySends::NAME)
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();
+// endregion cost
+
+// region backups
+// Security item 20 (config/backup.php, docs/ops/backup-restore.md): prune by the retention
+// rules, then write tonight's encrypted archive, then check that the newest one is fresh.
+Schedule::command('backup:clean')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Istanbul')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('backup:run')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Istanbul')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('backup:monitor')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Istanbul')
+    ->onOneServer();
+// endregion backups

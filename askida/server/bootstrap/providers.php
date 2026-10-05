@@ -1,10 +1,12 @@
 <?php
 
+use App\Domain\Cost\CostServiceProvider;
 use App\Domain\Payouts\PayoutsServiceProvider;
 use App\Providers\AccountsServiceProvider;
 use App\Providers\AnonServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
+use App\Providers\BackupServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
 use App\Providers\PaymentsServiceProvider;
@@ -26,4 +28,6 @@ return [
     PaymentsServiceProvider::class,
     PayoutsServiceProvider::class,
     WebServiceProvider::class,
+    CostServiceProvider::class,
+    BackupServiceProvider::class,
 ];

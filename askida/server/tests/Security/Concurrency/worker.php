@@ -6,7 +6,8 @@
 | "ready", then serves jobs: one JSON job per stdin line, one JSON result per stdout
 | line. For each job it waits at the start barrier (a shared advisory lock that the
 | harness holds exclusively until every participant waits on it), runs one engine
-| operation and reports the outcome. An empty line or end of input stops it.
+| operation or one request through the HTTP kernel (scenario `http`) and reports the
+| outcome. An empty line or end of input stops it.
 */
 
 use App\Domain\Anon\Models\AnonDevice;
@@ -24,6 +25,8 @@ use App\Models\User;
 use App\Support\Problem\ProblemException;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -52,6 +55,44 @@ function settleScenario(array $args): string
 }
 
 /**
+ * Sends one JSON request through the HTTP kernel of this process: the whole stack runs
+ * (routing, Sanctum, form requests, limiters, controllers), not only the engine call.
+ * Auth guards are reset first so no user of an earlier job is remembered.
+ *
+ * Args: method, uri, token (optional bearer), body (optional raw JSON), ip (optional).
+ *
+ * @param  array<string, string>  $args
+ * @return array<string, mixed> ok (status below 400), status, problem code (or null)
+ */
+function httpScenario(array $args): array
+{
+    app('auth')->forgetGuards();
+
+    $server = [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_ACCEPT' => 'application/json',
+        'REMOTE_ADDR' => $args['ip'] ?? '127.0.0.1',
+    ];
+
+    if (($args['token'] ?? '') !== '') {
+        $server['HTTP_AUTHORIZATION'] = 'Bearer '.$args['token'];
+    }
+
+    $request = Request::create($args['uri'], $args['method'], [], [], [], $server, $args['body'] ?? '');
+    $kernel = app(HttpKernel::class);
+    $response = $kernel->handle($request);
+    $kernel->terminate($request, $response);
+
+    $decoded = json_decode((string) $response->getContent(), true);
+
+    return [
+        'ok' => $response->getStatusCode() < 400,
+        'status' => $response->getStatusCode(),
+        'code' => is_array($decoded) && is_string($decoded['code'] ?? null) ? $decoded['code'] : null,
+    ];
+}
+
+/**
  * @param  array{scenario: string, lock_key: int, pepper: string, now?: string|null, args: array<string, string>}  $job
  * @return array<string, mixed>
  */
@@ -66,6 +107,10 @@ function runJob(array $job): array
     DB::select('select pg_advisory_lock_shared(?)', [$job['lock_key']]);
 
     try {
+        if ($job['scenario'] === 'http') {
+            return httpScenario($args);
+        }
+
         return ['ok' => true] + match ($job['scenario']) {
             'reserve' => ['hook_id' => app(HookReservationService::class)->reserve(
                 AnonDevice::query()->where('anon_id', $args['anon_id'])->firstOrFail(),

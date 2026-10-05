@@ -88,6 +88,24 @@ return [
             'report' => false,
         ],
 
+        // Encrypted backup archives (config/backup.php). Own bucket and own key pair: the
+        // application identity may put, list and delete objects but not read them; restores
+        // use a separate read identity outside the application (docs/ops/backup-restore.md).
+        // Driver `s3-backups` (App\Providers\BackupServiceProvider) is the S3 driver with
+        // metadata read from the bucket listing, since HeadObject needs s3:GetObject.
+        'backups' => [
+            'driver' => 's3-backups',
+            'key' => env('BACKUP_AWS_ACCESS_KEY_ID'),
+            'secret' => env('BACKUP_AWS_SECRET_ACCESS_KEY'),
+            'region' => env('BACKUP_AWS_DEFAULT_REGION', 'us-east-1'),
+            'bucket' => env('BACKUP_AWS_BUCKET', 'askida-backups'),
+            'endpoint' => env('BACKUP_AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('BACKUP_AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         // Re-encoded shop photos served to the public web and the app.
         's3_public' => [
             'driver' => 's3',

@@ -179,7 +179,9 @@ class AnonServiceProvider extends ServiceProvider
         // budget (their requests end in 404 anyway).
         RateLimiter::for('redeem', static function (Request $request) use ($problem): Limit {
             $shop = $request->route('shop');
-            $shopId = $shop instanceof Shop ? $shop->id : (is_string($shop) ? $shop : '');
+            // Lower-cased: the router and PostgreSQL accept a UUID in any letter case, and
+            // each spelling must not open a bucket of its own.
+            $shopId = strtolower($shop instanceof Shop ? $shop->id : (is_string($shop) ? $shop : ''));
             $user = $request->user();
             $member = $user instanceof User && $shopId !== ''
                 && ShopMember::query()->where('shop_id', $shopId)->where('user_id', $user->id)->exists();

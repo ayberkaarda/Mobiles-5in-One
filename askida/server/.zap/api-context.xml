@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ZAP context for the API scan (zap-api-scan.py -n api-context.xml). It holds no credential:
+  the Authorization header of the seeded donor is minted at run time and handed to ZAP through
+  the ZAP_AUTH_HEADER_VALUE environment variable (see docs/security/zap-report.md).
+  Scope: the scan host on any local port (zap-api-scan.py starts the active scan from the site
+  root, so the root must be in the context; only the URLs imported from the OpenAPI document
+  are in the site tree). Excluded: token logout, which would revoke the scan's own token half
+  way through the run.
+-->
+<configuration>
+    <context>
+        <name>askida-api</name>
+        <desc>Askida JSON API (/api/v1) on the local compose stack</desc>
+        <inscope>true</inscope>
+        <incregexes>http://host\.docker\.internal:[0-9]+.*</incregexes>
+        <excregexes>http://host\.docker\.internal:[0-9]+/api/v1/auth/logout.*</excregexes>
+        <tech>
+            <include>Db.PostgreSQL</include>
+            <include>Language.PHP</include>
+            <include>OS.Linux</include>
+            <include>WS.Nginx</include>
+            <exclude>Db.CouchDB</exclude>
+            <exclude>Db.Firebird</exclude>
+            <exclude>Db.HypersonicSQL</exclude>
+            <exclude>Db.IBM DB2</exclude>
+            <exclude>Db.MariaDB</exclude>
+            <exclude>Db.Microsoft Access</exclude>
+            <exclude>Db.Microsoft SQL Server</exclude>
+            <exclude>Db.MongoDB</exclude>
+            <exclude>Db.MySQL</exclude>
+            <exclude>Db.Oracle</exclude>
+            <exclude>Db.SAP MaxDB</exclude>
+            <exclude>Db.SQLite</exclude>
+            <exclude>Db.Sybase</exclude>
+            <exclude>Language.ASP</exclude>
+            <exclude>Language.C</exclude>
+            <exclude>Language.JSP/Servlet</exclude>
+            <exclude>Language.Python</exclude>
+            <exclude>Language.Ruby</exclude>
+            <exclude>OS.MacOS</exclude>
+            <exclude>OS.Windows</exclude>
+            <exclude>SCM.Git</exclude>
+            <exclude>SCM.SVN</exclude>
+            <exclude>WS.Apache</exclude>
+            <exclude>WS.IIS</exclude>
+            <exclude>WS.Tomcat</exclude>
+        </tech>
+        <urlparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </urlparser>
+        <postparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </postparser>
+        <authentication>
+            <type>0</type>
+        </authentication>
+        <forceduser>-1</forceduser>
+        <session>
+            <type>0</type>
+        </session>
+        <authorization>
+            <type>0</type>
+            <basic>
+                <header/>
+                <body/>
+                <logic>AND</logic>
+                <code>-1</code>
+            </basic>
+        </authorization>
+    </context>
+</configuration>
