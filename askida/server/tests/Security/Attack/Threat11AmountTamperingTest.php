@@ -148,5 +148,8 @@ it('treats another currency as a mismatch', function (): void {
 
     expect(app(SettlesPayments::class)->settle((string) $donation->provider_token))->toBe(SettlementOutcome::Mismatch)
         ->and($donation->fresh()?->status)->toBe(DonationStatus::Initiated)
+        ->and($donation->fresh()?->paid_at)->toBeNull()
+        ->and(Hook::query()->where('donation_id', $donation->id)->count())->toBe(0)
+        ->and(DB::table('payment_mismatches')->where('donation_id', $donation->id)->pluck('kind')->all())->toBe(['currency_mismatch'])
         ->and(FakeGateway::tokenFor((string) $donation->conversation_id))->toBe($donation->provider_token);
 });

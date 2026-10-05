@@ -72,13 +72,23 @@ it('has no impersonation route and answers guessed impersonation paths with 404'
     $this->get($path)->assertNotFound();
 })->with(['/admin/impersonate/1', '/impersonate/take/1', '/admin/users/1/impersonate']);
 
-it('closes the queue dashboard and tool consoles to guests and to non-panel accounts', function (string $path): void {
-    $guest = $this->get($path);
-    expect($guest->status())->toBeIn([403, 404]);
+it('closes the queue dashboard to guests and to non-panel accounts', function (string $path): void {
+    $this->get($path)->assertForbidden();
 
     $this->actingAs(User::factory()->donor()->create(), 'web');
-    expect($this->get($path)->status())->toBeIn([403, 404]);
-})->with(['/horizon', '/horizon/api/stats', '/horizon/api/jobs/pending', '/telescope', '/pulse', '/_debugbar/open', '/log-viewer']);
+    $this->get($path)->assertForbidden();
+})->with(['/horizon', '/horizon/api/stats', '/horizon/api/jobs/pending']);
+
+it('negative control: an admin who passed the second factor opens the queue dashboard', function (): void {
+    AdminTestKit::signIn(AdminTestKit::staff(AdminRole::Admin));
+
+    $this->get('/horizon/api/stats')->assertOk();
+});
+
+it('ships no other tool console', function (string $path): void {
+    expect(collect(Route::getRoutes()->getRoutes())->contains(fn (RouteDefinition $route): bool => str_starts_with($route->uri(), ltrim($path, '/'))))->toBeFalse();
+    $this->get($path)->assertNotFound();
+})->with(['/telescope', '/pulse', '/_debugbar', '/log-viewer']);
 
 it('never opens the panel for an admin\'s personal access token', function (): void {
     $admin = AdminTestKit::staff(AdminRole::Admin);
