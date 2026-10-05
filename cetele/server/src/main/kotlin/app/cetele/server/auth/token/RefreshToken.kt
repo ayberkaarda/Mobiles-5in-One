@@ -48,9 +48,22 @@ class RefreshToken(
 interface RefreshTokenRepository : Repository<RefreshToken, UUID> {
     fun save(token: RefreshToken): RefreshToken
 
-    /** Locked, so two concurrent uses of one token cannot both rotate it. */
+    /** Resolves the family of a token without loading (and caching) the row itself. */
+    @Query("SELECT t.familyId FROM RefreshToken t WHERE t.tokenHash = :hash")
+    fun findFamilyIdByTokenHash(
+        @Param("hash") tokenHash: ByteArray,
+    ): UUID?
+
+    /** Read after the family lock is held; the row lock is a second line of defence. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findByTokenHash(tokenHash: ByteArray): RefreshToken?
+
+    /** Families that still have a live token on this device (the ones logout must lock). */
+    @Query("SELECT DISTINCT t.familyId FROM RefreshToken t WHERE t.userId = :user AND t.deviceId = :device AND t.revokedAt IS NULL")
+    fun findLiveFamilyIds(
+        @Param("user") userId: UUID,
+        @Param("device") deviceId: UUID,
+    ): List<UUID>
 
     @Modifying
     @Query("UPDATE RefreshToken t SET t.revokedAt = :now WHERE t.familyId = :family AND t.revokedAt IS NULL")
