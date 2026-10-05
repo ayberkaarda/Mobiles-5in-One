@@ -61,3 +61,24 @@ Schedule::job(new ScanFraud)
     ->withoutOverlapping()
     ->onOneServer();
 // endregion payouts
+
+// region backups
+// Security item 20 (config/backup.php, docs/ops/backup-restore.md): prune by the retention
+// rules, then write tonight's encrypted archive, then check that the newest one is fresh.
+Schedule::command('backup:clean')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Istanbul')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('backup:run')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Istanbul')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('backup:monitor')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Istanbul')
+    ->onOneServer();
+// endregion backups
