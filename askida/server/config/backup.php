@@ -102,7 +102,11 @@ return [
         'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => env('BACKUP_ALERT_EMAIL'),
+            // The package validates this address whenever the configuration loads (also during
+            // composer's package:discover without any .env), so it needs a valid default. The
+            // default is a reserved, undeliverable domain that BackupServiceProvider refuses
+            // outside local and testing.
+            'to' => env('BACKUP_ALERT_EMAIL') ?: 'alerts@askida.invalid',
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'no-reply@askida.test'),

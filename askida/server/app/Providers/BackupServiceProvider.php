@@ -18,7 +18,8 @@ use RuntimeException;
  *   (ListingMetadataAdapter);
  * - configuration guard: outside `local` and `testing` the application refuses to boot when
  *   backups would be written unencrypted or nobody would hear about a failed backup
- *   (BACKUP_ARCHIVE_PASSWORD set and not the .env.example value, BACKUP_ALERT_EMAIL valid).
+ *   (BACKUP_ARCHIVE_PASSWORD set and not the .env.example value, BACKUP_ALERT_EMAIL valid and
+ *   not the undeliverable default).
  */
 class BackupServiceProvider extends ServiceProvider
 {
@@ -36,6 +37,12 @@ class BackupServiceProvider extends ServiceProvider
      * The plain-word local default shipped in .env.example.
      */
     public const EXAMPLE_PASSWORD = 'local-development-backup-password-not-a-secret';
+
+    /**
+     * Fallback alert address of config/backup.php when BACKUP_ALERT_EMAIL is unset (a reserved,
+     * undeliverable domain).
+     */
+    public const DEFAULT_ALERT_EMAIL = 'alerts@askida.invalid';
 
     public function boot(): void
     {
@@ -71,6 +78,10 @@ class BackupServiceProvider extends ServiceProvider
 
         if (! is_string($alert) || filter_var($alert, FILTER_VALIDATE_EMAIL) === false) {
             throw new RuntimeException('BACKUP_ALERT_EMAIL must be a valid address outside local and testing.');
+        }
+
+        if (strcasecmp(trim($alert), self::DEFAULT_ALERT_EMAIL) === 0) {
+            throw new RuntimeException('BACKUP_ALERT_EMAIL is unset (still the undeliverable default); set the address that receives backup failures.');
         }
     }
 }
