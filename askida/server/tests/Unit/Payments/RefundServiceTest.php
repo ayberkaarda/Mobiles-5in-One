@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Auth\Abilities\AdminRole;
 use App\Domain\Donations\Models\Donation;
 use App\Domain\Donations\Models\DonationStatus;
 use App\Domain\Hooks\Models\Hook;
@@ -11,12 +12,16 @@ use App\Domain\Payments\Exceptions\GatewayUnavailable;
 use App\Domain\Payments\Listeners\OnShopRejectedRefund;
 use App\Domain\Payments\Mail\DonationRefundedMail;
 use App\Domain\Payments\Mail\PaymentMismatchAlertMail;
+use App\Domain\Payments\Models\DonationRefund;
+use App\Domain\Payments\Models\DonationRefundStatus;
 use App\Domain\Payments\Models\PaymentMismatch;
 use App\Domain\Payments\Services\RefundOutcome;
 use App\Domain\Payments\Services\RefundService;
 use App\Domain\Shops\Events\ShopRejected;
 use App\Domain\Shops\Models\Shop;
 use App\Models\User;
+use Database\Seeders\RolesSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +88,15 @@ function hookStates(Donation $donation): array
 function refunds(): RefundService
 {
     return app(RefundService::class);
+}
+
+function refundFinance(): User
+{
+    (new RolesSeeder)->run();
+    $finance = User::factory()->create();
+    $finance->assignRole(AdminRole::Finance->value);
+
+    return $finance;
 }
 
 it('refunds only the unredeemed units of a mixed donation and expires the open ones', function (): void {
@@ -245,7 +259,7 @@ it('refunds the open donations of a rejected shop through the queued listener', 
         ->and(Activity::query()->where('event', 'donation.refunded')->sole()->causer_id)->toBe($moderator->id);
 });
 
-it('picks up a donation whose units an earlier failed attempt already expired', function (): void {
+it('picks up a donation whose units an earlier attempt already expired once finance recorded the outage outcome', function (): void {
     $donation = refundableDonation(['available', 'redeemed'], 2);
     $this->gateway->nextRefund = new GatewayUnavailable;
     $listener = app(OnShopRejectedRefund::class);
@@ -253,9 +267,82 @@ it('picks up a donation whose units an earlier failed attempt already expired', 
 
     expect(fn () => $listener->handle($event))->toThrow(GatewayUnavailable::class);
 
+    // The queue retries the listener: the outcome at the provider is unknown, so no call.
     $this->gateway->nextRefund = null;
+    $listener->handle($event);
+    expect($this->gateway->refunds)->toHaveCount(1)
+        ->and($donation->fresh()?->status)->toBe(DonationStatus::Paid);
+
+    // Finance checks the provider: nothing was refunded. The next run refunds the unit.
+    expect(refunds()->resolveUnresolved($donation, refundFinance(), false, 'Sağlayıcıda iade görünmüyor'))->toBe(RefundOutcome::Failed);
     $listener->handle($event);
 
     expect($donation->fresh()?->status)->toBe(DonationStatus::Refunded)
+        ->and($this->gateway->refunds)->toHaveCount(2)
         ->and(end($this->gateway->refunds)->amountMinor)->toBe(1500);
 });
+
+it('completes an open refund that finance found refunded at the provider, with the commission share', function (): void {
+    $donation = refundableDonation(['available', 'available', 'available', 'redeemed']);
+    $this->gateway->nextRefund = new GatewayUnavailable;
+    expect(fn () => refunds()->refundDonation($donation, 'finance', null))->toThrow(GatewayUnavailable::class);
+    $finance = refundFinance();
+
+    expect(refunds()->hasUnresolved($donation))->toBeTrue()
+        ->and(refunds()->resolveUnresolved($donation, $finance, true, 'Sağlayıcı panelinde iade var'))->toBe(RefundOutcome::Refunded)
+        ->and(refunds()->hasUnresolved($donation))->toBeFalse()
+        ->and($donation->fresh()?->status)->toBe(DonationStatus::Refunded)
+        ->and($this->gateway->refunds)->toHaveCount(1);
+
+    $claim = DonationRefund::query()->sole();
+    // 4 units, 300 commission: the platform keeps the commission of the redeemed unit (75).
+    expect($claim->status)->toBe(DonationRefundStatus::Succeeded)
+        ->and($claim->amount_minor)->toBe(4500)
+        ->and($claim->commission_minor)->toBe(225)
+        ->and(Activity::query()->where('event', 'donation.refunded')->sole()->causer_id)->toBe($finance->id);
+});
+
+it('refuses to record a refund outcome without the refund gate', function (): void {
+    $donation = refundableDonation(['available'], 1);
+
+    expect(fn () => refunds()->resolveUnresolved($donation, User::factory()->create(), true, 'not allowed'))
+        ->toThrow(AuthorizationException::class);
+});
+
+it('lets only one of two overlapping calls reach the provider', function (): void {
+    // A 4-unit donation with three redeemed units: one unit (1500 kuruş) is refundable.
+    $donation = refundableDonation(['redeemed', 'redeemed', 'redeemed', 'available']);
+    $overlapping = null;
+    $this->gateway->duringRefund = function () use ($donation, &$overlapping): void {
+        $overlapping = refunds()->refundDonation(Donation::query()->findOrFail($donation->id), 'finance', null);
+    };
+
+    $outcome = refunds()->refundDonation($donation, 'finance', null);
+
+    expect($this->gateway->refunds)->toHaveCount(1)
+        ->and(array_sum(array_map(fn ($request): int => $request->amountMinor, $this->gateway->refunds)))->toBe(1500)
+        ->and($outcome)->toBe(RefundOutcome::Refunded)
+        ->and($overlapping)->toBe(RefundOutcome::Unresolved)
+        ->and($donation->fresh()?->status)->toBe(DonationStatus::Refunded);
+});
+
+it('does not call the provider again after an uncertain outcome until finance records it', function (Closure $first, string $cause): void {
+    $donation = refundableDonation(['available', 'available']);
+    $first($this->gateway);
+
+    try {
+        refunds()->refundDonation($donation, 'finance', null);
+    } catch (GatewayUnavailable) {
+        // An outage after the request may have left: the provider outcome is unknown.
+    }
+
+    $this->gateway->nextRefund = null;
+
+    expect(refunds()->refundDonation($donation->fresh() ?? $donation, 'finance', null))->toBe(RefundOutcome::Unresolved)
+        ->and($this->gateway->refunds)->toHaveCount(1)
+        ->and($donation->fresh()?->status)->toBe(DonationStatus::Paid)
+        ->and(PaymentMismatch::query()->sole()->ours['cause'])->toBe($cause);
+})->with([
+    'outage' => [fn (ScriptedPaymentGateway $g) => $g->nextRefund = new GatewayUnavailable, 'provider_unavailable'],
+    'another amount' => [fn (ScriptedPaymentGateway $g) => $g->nextRefund = new RefundResult(true, 'sample-refund-x', 1500), 'amount_differs'],
+]);

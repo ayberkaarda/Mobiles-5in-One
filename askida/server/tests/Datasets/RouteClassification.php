@@ -53,6 +53,7 @@ final class RouteClassification
             'PATCH api/v1/me' => ['class' => 'user', 'abilities' => ['donor', 'merchant'], 'payload' => 'me'],
             'DELETE api/v1/me' => ['class' => 'user', 'abilities' => ['donor', 'merchant'], 'payload' => 'wrong-password'],
             'PUT api/v1/me/push-token' => ['class' => 'user', 'abilities' => ['donor', 'merchant'], 'payload' => 'push-token'],
+            'GET api/v1/me/shops' => ['class' => 'user', 'abilities' => ['merchant']],
             'POST api/v1/anon/attest' => self::open('empty'),
             'DELETE api/v1/anon/me' => ['class' => 'anon', 'abilities' => ['anon']],
 

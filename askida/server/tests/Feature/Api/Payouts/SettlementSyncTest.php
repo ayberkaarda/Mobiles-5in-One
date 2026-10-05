@@ -103,6 +103,31 @@ it('never downgrades a settled payout', function (string $providerStatus): void 
         ->amount_minor->toBe(7_000);
 })->with(['pending', 'failed']);
 
+it('raises a settled daily total when a later payout of the same day completes', function (): void {
+    $key = PayoutWorld::key();
+    PayoutWorld::shopWithFinancials(subMerchantKey: $key);
+    $this->gateway->settlements[$key] = [PayoutWorld::record('st-day', $key, 10_000, 'paid', '2026-10-04')];
+    syncNow();
+
+    // Later the same day another payout completes: the provider's day total grows.
+    $this->gateway->settlements[$key] = [PayoutWorld::record('st-day', $key, 15_000, 'paid', '2026-10-04')];
+
+    expect(syncNow()['updated'])->toBe(1)
+        ->and(payoutBySettlement('st-day'))
+        ->status->toBe(PayoutStatus::Settled)
+        ->amount_minor->toBe(15_000);
+});
+
+it('keeps a settled daily total that the provider reports lower', function (): void {
+    $key = PayoutWorld::key();
+    ['shop' => $shop] = PayoutWorld::shopWithFinancials(subMerchantKey: $key);
+    PayoutWorld::payout($shop, PayoutStatus::Settled, '2026-10-02', 7_000, settlementId: 'st-low');
+    $this->gateway->settlements[$key] = [PayoutWorld::record('st-low', $key, 6_000, 'paid', '2026-10-02')];
+
+    expect(syncNow()['protected'])->toBe(1)
+        ->and(payoutBySettlement('st-low')->amount_minor)->toBe(7_000);
+});
+
 it('never overwrites a held payout', function (): void {
     $key = PayoutWorld::key();
     ['shop' => $shop] = PayoutWorld::shopWithFinancials(subMerchantKey: $key);

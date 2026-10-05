@@ -21,4 +21,10 @@ enum RefundOutcome: string
 
     /** The provider refused the refund: status unchanged, mismatch recorded. */
     case Failed = 'failed';
+
+    /**
+     * Another call holds the refund claim, or the provider outcome of an earlier attempt is
+     * unknown (outage, other amount): no provider call was made; finance records the outcome.
+     */
+    case Unresolved = 'unresolved';
 }

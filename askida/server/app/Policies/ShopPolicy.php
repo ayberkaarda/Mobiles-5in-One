@@ -67,6 +67,15 @@ class ShopPolicy
     }
 
     /**
+     * GET me/shops: merchant ability; the list holds only the shops where the token's
+     * user has a `shop_members` row (owner or staff), so there is no target to scope.
+     */
+    public function viewMine(User|AnonDevice $actor): Response
+    {
+        return $this->allowWhen($actor instanceof User && $this->hasAbility($actor, Ability::Merchant));
+    }
+
+    /**
      * PATCH shops/{id}: owner of the shop.
      */
     public function update(User|AnonDevice $actor, Shop $shop): Response

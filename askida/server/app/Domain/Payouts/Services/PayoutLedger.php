@@ -2,7 +2,6 @@
 
 namespace App\Domain\Payouts\Services;
 
-use App\Domain\Donations\Models\DonationStatus;
 use App\Domain\Hooks\Models\HookStatus;
 use App\Domain\Payouts\Data\LedgerDay;
 use App\Domain\Shops\Models\Shop;
@@ -13,12 +12,29 @@ use Illuminate\Support\Facades\DB;
 /**
  * A shop's payout ledger, one row per Europe/Istanbul day that has a paid donation, a
  * redemption or a provider payout, newest first, with a keyset cursor over the day.
- * Aggregates only: no donor, recipient or redeemer identifier is ever selected.
+ * Aggregates only: no donor, recipient or redeemer identifier is ever selected. Amounts
+ * are what the shop and the platform keep: a partial refund removes only the refunded
+ * units and their commission share.
  */
 final class PayoutLedger
 {
     /** Ledger days are Europe/Istanbul calendar days (written literally in the SQL). */
     public const TIMEZONE = 'Europe/Istanbul';
+
+    /**
+     * Paid and refunded donations with their completed refund (if any). What the shop and
+     * the platform keep is the donation minus the refunded amount and refunded commission;
+     * a refunded donation without a refund record (written before refunds were recorded)
+     * counts as fully refunded.
+     */
+    private const KEPT_DONATIONS = <<<'SQL'
+        SELECT d.paid_at,
+               d.amount_minor - COALESCE(r.amount_minor, CASE WHEN d.status = 'refunded' THEN d.amount_minor ELSE 0 END) AS kept_amount,
+               d.commission_minor - COALESCE(r.commission_minor, CASE WHEN d.status = 'refunded' THEN d.commission_minor ELSE 0 END) AS kept_commission
+          FROM donations d
+          LEFT JOIN donation_refunds r ON r.donation_id = d.id AND r.status = 'succeeded'
+         WHERE d.shop_id = ? AND d.status IN ('paid', 'refunded') AND d.paid_at IS NOT NULL
+        SQL;
 
     /**
      * @return array{days: list<LedgerDay>, next_cursor: string|null}
@@ -67,10 +83,10 @@ final class PayoutLedger
      */
     private function dates(Shop $shop, int $limit, ?string $before): array
     {
-        $bindings = [$shop->id, DonationStatus::Paid->value, $shop->id, HookStatus::Redeemed->value, $shop->id];
+        $bindings = [$shop->id, $shop->id, HookStatus::Redeemed->value, $shop->id];
         $days = "SELECT d::text AS d FROM (
-                SELECT (paid_at AT TIME ZONE 'Europe/Istanbul')::date AS d FROM donations
-                    WHERE shop_id = ? AND status = ? AND paid_at IS NOT NULL
+                SELECT (paid_at AT TIME ZONE 'Europe/Istanbul')::date AS d FROM (".self::KEPT_DONATIONS.") kept
+                    WHERE kept_amount > 0
                 UNION
                 SELECT (redeemed_at AT TIME ZONE 'Europe/Istanbul')::date FROM hooks
                     WHERE shop_id = ? AND status = ? AND redeemed_at IS NOT NULL
@@ -99,18 +115,18 @@ final class PayoutLedger
      */
     private function donations(Shop $shop, string $from, string $to): array
     {
-        $rows = DB::table('donations')
-            ->where('shop_id', $shop->id)
-            ->where('status', DonationStatus::Paid->value)
-            ->whereNotNull('paid_at')
-            ->whereRaw("(paid_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN ?::date AND ?::date", [$from, $to])
-            ->groupByRaw("(paid_at AT TIME ZONE 'Europe/Istanbul')::date")
-            ->selectRaw("(paid_at AT TIME ZONE 'Europe/Istanbul')::date::text AS d, SUM(amount_minor) AS donated, SUM(commission_minor) AS commission")
-            ->get();
+        $rows = DB::select(
+            "SELECT (paid_at AT TIME ZONE 'Europe/Istanbul')::date::text AS d, SUM(kept_amount) AS donated, SUM(kept_commission) AS commission
+               FROM (".self::KEPT_DONATIONS.") kept
+              WHERE (paid_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN ?::date AND ?::date
+              GROUP BY 1",
+            [$shop->id, $from, $to],
+        );
 
         $out = [];
 
         foreach ($rows as $row) {
+            /** @var object{d: string, donated: int|string, commission: int|string} $row */
             $out[(string) $row->d] = ['donated' => (int) $row->donated, 'commission' => (int) $row->commission];
         }
 

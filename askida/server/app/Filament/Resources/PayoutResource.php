@@ -75,7 +75,7 @@ class PayoutResource extends Resource
                     ->icon('heroicon-o-pause-circle')
                     ->color('warning')
                     ->form([self::reasonField()])
-                    ->visible(fn (Payout $record): bool => ! $record->hold && app()->bound(HoldsPayouts::class))
+                    ->visible(fn (Payout $record): bool => ! $record->hold && $record->status === PayoutStatus::Pending && app()->bound(HoldsPayouts::class))
                     ->authorize(fn (): bool => PanelActor::allows(AdminPermission::HoldPayouts->gate()))
                     ->action(function (Payout $record, array $data): void {
                         $actor = PanelActor::user();

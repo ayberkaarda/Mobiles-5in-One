@@ -7,12 +7,14 @@ use App\Domain\Hooks\Events\HookRedeemed;
 use App\Domain\Items\Models\Item;
 use App\Domain\Push\Jobs\SendPush;
 use App\Domain\Push\PushMessage;
+use App\Domain\Push\PushType;
 use App\Domain\Shops\Models\Shop;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
  * Story 6: the donor gets "Askın alındı" when one of their units is redeemed. The
- * message names the item and the shop only: no recipient data, no code, no time.
+ * message names the item and the shop and carries the ids the app routes on: no
+ * recipient data, no code, no time.
  * Anonymised donations (donor deleted) send nothing.
  */
 final class NotifyDonorRedeemed implements ShouldQueue
@@ -33,15 +35,27 @@ final class NotifyDonorRedeemed implements ShouldQueue
         SendPush::dispatch($donorId, self::message(
             (string) Item::query()->whereKey($event->itemId)->value('name'),
             (string) Shop::query()->whereKey($event->shopId)->value('name'),
+            $event->donationId,
+            $event->shopId,
         ));
     }
 
-    public static function message(string $itemName, string $shopName): PushMessage
+    /**
+     * Data: `type` (hook.redeemed), the donor's own `donation_id`, the `shop_id`, and the
+     * item and shop names. Never the hook id, a code or anything about the recipient.
+     */
+    public static function message(string $itemName, string $shopName, string $donationId, string $shopId): PushMessage
     {
         return new PushMessage(
             'Askın alındı',
             "{$shopName} içindeki askından 1 {$itemName} alındı.",
-            ['item' => $itemName, 'shop' => $shopName],
+            [
+                'type' => PushType::HookRedeemed->value,
+                'donation_id' => $donationId,
+                'shop_id' => $shopId,
+                'item' => $itemName,
+                'shop' => $shopName,
+            ],
         );
     }
 }

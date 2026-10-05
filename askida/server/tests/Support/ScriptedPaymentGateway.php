@@ -17,6 +17,7 @@ use App\Domain\Payments\Exceptions\StaleWebhook;
 use App\Domain\Shops\Models\Shop;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
+use Closure;
 use LogicException;
 
 /**
@@ -46,6 +47,9 @@ final class ScriptedPaymentGateway implements PaymentGateway
     private array $refundResults = [];
 
     public RefundResult|GatewayUnavailable|null $nextRefund = null;
+
+    /** Runs once inside the next refund call, after it was recorded (to overlap a second caller). */
+    public ?Closure $duringRefund = null;
 
     public function scriptPayment(string $providerToken, ProviderPayment|GatewayUnavailable $payment): void
     {
@@ -122,6 +126,12 @@ final class ScriptedPaymentGateway implements PaymentGateway
     public function refund(RefundRequest $request): RefundResult
     {
         $this->refunds[] = $request;
+
+        if ($this->duringRefund !== null) {
+            $overlap = $this->duringRefund;
+            $this->duringRefund = null;
+            $overlap();
+        }
 
         if (isset($this->refundResults[$request->idempotencyKey])) {
             return $this->refundResults[$request->idempotencyKey];
