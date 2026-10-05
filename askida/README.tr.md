@@ -86,12 +86,16 @@ sürümde hata gösterdiği için alınmadı. Açıklamalar, çekim ayrıntılar
 
 ## Durum
 
-Phase 0 (temel) birleşti: Laravel sunucusu Docker'da çalışıyor (sağlık rotası, Filament yönetim
-paneli, Horizon, Sanctum), Flutter uygulaması tasarım sistemiyle bir iskelet; marka paketi,
-ADR-0001 ile ADR-0006, güvenlik matrisi taslakları ve bir CI iş akışı hazır. Henüz API uç noktası
-ve ödeme yok, mod kabuğu dışında ekran da yok. iOS projesi derlenmedi (macOS gerekir). Çözümlenen
-sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında
-kayıtlı.
+Phase 0 ile Phase 6 arası bir portfolyo projesi olarak uygulandı: Laravel sunucusu (kimlik doğrulama,
+dükkânlar ve doğrulama, askı ve kullanım, sahte sağlayıcıyla ödemeler, aktarımlar, yönetim paneli,
+herkese açık web sayfaları, açık veri, yedekler, maliyet korumaları), üç modlu Flutter uygulaması
+(Android emülatöründe doğrulandı, iOS için macOS gerektiğinden derlenmedi) ve güvenlik çalışmaları
+(saldırı paketi, kalıcı XSS taraması, ZAP ve MobSF taramaları, bağımlılık denetimleri). Nihai doğrulama
+matrisi 23 maddenin 14'ünü tamam, 9'unu kısmi olarak notlandırıyor, her birinin gerekçesiyle:
+[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Hiçbir şey yayınlanmadı:
+alan adı, mağaza kaydı veya ödeme sağlayıcı hesabı yok, hukuki metinler örnek olarak etiketli.
+Çözümlenen sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md)
+dosyasında kayıtlı.
 
 ## Kurulum
 

@@ -87,11 +87,15 @@ Captions, capture details and the capture command are in
 
 ## Status
 
-Phase 0 (foundation) is merged: the Laravel server runs in Docker (health route, Filament admin
-panel, Horizon, Sanctum), the Flutter app is a skeleton with a design system, and the brand package,
-ADR-0001 to ADR-0006, security matrix drafts and a CI workflow are in place. There are no API
-endpoints, no payments and no screens beyond a mode shell yet. The iOS project is not built
-(it needs macOS). Resolved versions are recorded in
+Phases 0 to 6 are implemented as a portfolio project: the Laravel server (authentication, shops and
+verification, hooks and redemption, payments with a fake provider, payouts, admin panel, public
+web pages, open data, backups, cost guards), the Flutter app for the three modes (Android emulator
+verified, iOS not built because it needs macOS) and the security work (attack suite, stored-XSS sweep,
+ZAP and MobSF scans, dependency audits). The final verification matrix grades 14 of 23 items done
+and 9 partial, each with its reason:
+[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Nothing is published:
+there is no domain, store listing or payment provider account, and the legal texts are labelled
+samples. Resolved versions are recorded in
 [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
 
 ## Getting started
