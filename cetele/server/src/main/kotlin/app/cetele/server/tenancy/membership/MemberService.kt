@@ -5,6 +5,7 @@ import app.cetele.server.security.CurrentUser
 import app.cetele.server.security.ShopRole
 import app.cetele.server.tenancy.MembershipResolver
 import app.cetele.server.tenancy.UserDirectory
+import app.cetele.server.tenancy.invitation.InvitationService
 import app.cetele.server.web.problem.ProblemCode
 import app.cetele.server.web.problem.ProblemException
 import org.springframework.stereotype.Service
@@ -26,6 +27,7 @@ class MemberService(
     private val memberships: MembershipRepository,
     private val resolver: MembershipResolver,
     private val users: UserDirectory,
+    private val invitations: InvitationService,
 ) {
     @Transactional(readOnly = true)
     fun list(
@@ -50,6 +52,8 @@ class MemberService(
     /**
      * Removes a member. The owner's own membership is locked (one owner per shop; ownership
      * transfer comes with account deletion), and a user who is not a member of this shop is 404.
+     * Open invitations of this shop for the removed member's phone are closed in the same
+     * transaction, so an earlier second code cannot bring them back.
      */
     @Transactional
     fun remove(
@@ -68,5 +72,6 @@ class MemberService(
             throw ProblemException(ProblemCode.MEMBERSHIP_OWNER_LOCKED, "owner membership cannot be removed")
         }
         memberships.delete(membership)
+        users.profileOf(userId)?.let { invitations.revokeOpen(tenant.shopId, it.phoneE164) }
     }
 }
