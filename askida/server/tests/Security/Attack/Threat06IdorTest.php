@@ -77,7 +77,12 @@ it('keeps a shop\'s payout ledger from other owners (404), its staff (403) and d
     AttackKit::assertProblem($foreign, 404, 'not_found');
     expect((string) $foreign->getContent())->not->toContain('12345')->not->toContain($shop->name);
 
-    AttackKit::assertProblem($this->harness->call('GET', strtoupper($uri), IdorHarness::bearer($otherOwner, 'upper')), 404, 'not_found');
+    // The shop id alone in upper case (the router and PostgreSQL accept it): the route is
+    // reached, as the owner's 200 shows, and authorization still refuses the intruder.
+    $upperUri = '/api/v1/shops/'.strtoupper($shop->id).'/payouts';
+    expect($upperUri)->not->toBe($uri);
+    AttackKit::assertProblem($this->harness->call('GET', $upperUri, IdorHarness::bearer($otherOwner, 'upper')), 404, 'not_found');
+    expect($this->harness->call('GET', $upperUri, IdorHarness::bearer($owner, 'owner-upper'))->status())->toBe(200);
     AttackKit::assertProblem($this->harness->call('GET', $uri, IdorHarness::bearer($staff)), 403, 'forbidden');
     AttackKit::assertProblem($this->harness->call('GET', $uri, IdorHarness::bearer(HookWorld::donor())), 403, 'forbidden');
 

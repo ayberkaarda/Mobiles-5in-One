@@ -143,10 +143,19 @@ it('rejects malformed codes before any lookup and never echoes them', function (
 ]);
 
 it('stores codes only as a keyed hash, so a database dump does not reveal or test them', function (): void {
-    $unit = attack01LiveUnit();
-    $row = (array) Hook::query()->toBase()->where('id', $unit['hook']->id)->first();
+    // The code comes from the production reserve endpoint, not from a fixture.
+    $shop = HookWorld::shop();
+    $item = HookWorld::item($shop);
+    [$hook] = HookWorld::availableHooks($item, 1);
+    $reserved = AttackKit::json('POST', '/api/v1/hooks/reserve', HookWorld::anonToken(HookWorld::anon()), ['shop_id' => $shop->id, 'item_id' => $item->id])
+        ->assertCreated();
+    $code = (string) $reserved->json('code');
+    expect($code)->toMatch(HookCode::PATTERN);
 
-    expect($row['code_hash'])->toBe(hash_hmac('sha256', $unit['code'], HookWorld::pepper()))
-        ->and($row['code_hash'])->not->toBe(hash('sha256', $unit['code']))
-        ->and(json_encode($row))->not->toContain($unit['code']);
+    $row = (array) Hook::query()->toBase()->where('id', $hook->id)->first();
+
+    expect($row['status'])->toBe(HookStatus::Reserved->value)
+        ->and($row['code_hash'])->toBe(hash_hmac('sha256', $code, HookWorld::pepper()))
+        ->and($row['code_hash'])->not->toBe(hash('sha256', $code))
+        ->and(json_encode($row))->not->toContain($code);
 });
