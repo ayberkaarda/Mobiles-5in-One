@@ -43,6 +43,9 @@ which keeps the local-echo line readable in `local`
   count (attempts, limit name, rejection reason). Never the code, a token or the full phone. A
   sample from `AuthLogSampleTest`: `OTP request phone=+90*******40 outcome=sent`,
   `OTP check outcome=mismatch attempts=1`, `Refresh outcome=reuse_detected family_revoked=true`.
+- Request failures are logged with the matched route pattern (for example
+  `/v1/invitations/{code}/accept`), or `<unmatched>`, never the request URL. As a second line of
+  defence the masking also masks the path segment after `/invitations/`.
 - Unhandled exceptions are logged once with their stack, masked, and answered with the generic
   `server_error` body ([ADR-0008](0008-problem-details-and-error-codes.md)).
 
@@ -50,7 +53,8 @@ which keeps the local-echo line readable in `local`
 
 - Masking is pattern based. A secret in a shape the rules do not know (a short token, a password
   in free text) would pass. The rules are tested; the guarantee is as strong as the tests.
-- Evidence: `LoggingTest` (each rule, the plain converter, the structured output over message,
+- Evidence: `LoggingTest` (including `invitation codes in paths are masked` and `failed invitation
+accept logs the route pattern, never the code`; each rule, the plain converter, the structured output over message,
   context, key-value pairs and stack trace, trace id on request logs), `AuthLogSampleTest` (the
   full OTP flow including refresh reuse and logout under output capture: no phone in three forms,
   no code, no wrong code, no access token, no refresh token of either generation).

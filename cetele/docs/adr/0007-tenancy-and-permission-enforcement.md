@@ -79,23 +79,31 @@ an outsider. `TenantIsolationTest` compares the bodies.
 ### Invitations
 
 Code of 8 characters from the Crockford base32 alphabet without `I L O U`, drawn with
-`SecureRandom`, stored as the hex SHA-256 of the canonical code, valid 24 hours, returned once, at
+`SecureRandom`, stored as the hex `HMAC-SHA256(CETELE_OTP_PEPPER, "cetele.invitation.v1|" + code)` of the canonical code (64 lowercase hex characters, so the column check is unchanged), valid 24 hours, returned once, at
 most 5 open invitations per shop (`409 conflict`), bound to the invited phone. Accepting needs the
 same phone as the invited one; a malformed, unknown, expired, used, foreign-phone or deleted-shop
 code is the same `404`. Accepting while already a member is `409 membership.already_member` and
 does not consume the code (the caller proved phone ownership, so nothing leaks). Accepting is
 limited to 10 attempts per 10 minutes per user ([ADR-0009](0009-rate-limiting-and-client-ip.md)).
 
+Open invitations are closed, in the same transaction, when they can no longer be honest: accepting
+a code closes every other open code of that phone in that shop, and removing a member closes every
+open invitation of that shop for the removed member's phone, so a removed member cannot rejoin
+with a second code issued earlier. Closing sets `expires_at` to now (never before `created_at`, so
+the schema check holds); other phones and other shops are untouched, and a fresh invitation after
+a removal works.
+
 ## Consequences
 
 - The shop filter lives in repositories and is checked by tests and four architecture rules, not by
   the database. A new query that ignores `shopId` is caught by rule 2 only when it is declared in a
-  tenant repository; raw SQL is covered by rule 3 for native queries, and `JdbcClient` is covered
+  tenant repository; raw SQL is covered by rule 3 for native queries, and plain JDBC is covered
   only by review ([ADR-0012](0012-architecture-rules-and-test-strategy.md)).
-- Known risk, accepted: invitation codes are stored as plain SHA-256 without a pepper. A leaked
-  table allows brute-forcing the 40-bit codes of open invitations offline; the code is still
-  useless without the invited phone's account and expires in 24 hours. Proposal for the owner, not
-  built: an HMAC with a server pepper like the OTP.
+- Invitation hashes are keyed with the OTP pepper, so an offline copy of `invitations` alone does
+  not allow brute-forcing the 40-bit codes. Consequences, accepted: the pepper must be present at
+  accept time, and rotating `CETELE_OTP_PEPPER` invalidates every open invitation (at most 24
+  hours of validity); in `local` and `test` the random startup pepper means open invitations die
+  on every restart. A leaked pepper together with a leaked table restores the brute-force risk.
 - Accepted residual: `STAFF` can read the whole ledger through sync (D-5). Timing differences
   between the 404 of a missing and a foreign shop are not measured.
 - Evidence: `TenantIsolationTest`, `PermissionEnforcementTest`, `InvitationFlowTest`,

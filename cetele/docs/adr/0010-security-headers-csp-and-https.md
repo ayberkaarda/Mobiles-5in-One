@@ -42,7 +42,9 @@ not need CORS; the web pages of later phases are same origin.
 ### HTTPS only
 
 - `cetele.security.require-https` defaults to `true` and is `false` only in the profiles `local`
-  and `test` (`application.yml`). When on, `requiresSecure()` applies to every request and a plain
+  and `test` (`application.yml`). It cannot be turned off while a production-like profile (`prod`,
+  `production`, `staging`, `stage`) is active, whatever else is listed
+  ([ADR-0006](0006-integrity-verifier-and-local-adapters.md)). When on, `requiresSecure()` applies to every request and a plain
   HTTP request is redirected to HTTPS before anything else, including the health endpoint.
 - Whether a request is secure is decided by the scheme after the trusted proxy rewrite
   ([ADR-0009](0009-rate-limiting-and-client-ip.md)). A production deployment without

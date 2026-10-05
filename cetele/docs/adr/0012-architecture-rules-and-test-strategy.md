@@ -38,13 +38,14 @@ reports it, in addition to the single test that runs all rules on production cla
 ### Known gap: `JdbcClient` and `JdbcTemplate`
 
 Rule 3 covers JPA native queries and Spring Data native annotations. Plain JDBC access is used in
-three classes: `auth.UserStore` (the only `JdbcClient` user of the auth module: user upsert with
-`ON CONFLICT`, no second JPA entity on a table another module owns), `tenancy.UserDirectory`
-(read-only user lookups through `NamedParameterJdbcTemplate`) and the `JdbcTemplate` that
-`SecurityConfig` hands to the authentication filter (the deactivated-user check). All use bound or
-named parameters and no string-built SQL, but no architecture rule enforces that. Decision: this
-use is accepted as is; allowlisting exactly these three classes, or extending rule 3 to forbid
-string-built SQL in them, is a proposal for Phase 2. Until then item 15 of the
+four classes: in auth two `JdbcClient` classes, `auth.UserStore` (user upsert with `ON CONFLICT`,
+no second JPA entity on a table another module owns) and `auth.AuthLocks` (the advisory locks of
+[ADR-0005](0005-session-model.md)); `tenancy.UserDirectory` (read-only user lookups through
+`NamedParameterJdbcTemplate`); and the `JdbcTemplate` that `SecurityConfig` hands to the
+authentication filter (the deactivated-user check). All use bound or named parameters and no
+string-built SQL, but no architecture rule enforces that, and the rule 3 allowlist is still empty.
+Decision: this use is accepted as is; allowlisting exactly these classes, or extending rule 3 to
+forbid string-built SQL in them, is a proposal for Phase 2. Until then item 15 of the
 [verification matrix](../security/verification-matrix.md) is `partial`.
 
 ### Test strategy
@@ -62,6 +63,9 @@ string-built SQL in them, is a proposal for Phase 2. Until then item 15 of the
   invited-phone check, removed family revoke, 6 attempts instead of 5, constant HMAC key, removed
   phone bucket). This is a one-time check recorded in the phase report, not an automated mutation
   run.
+- Concurrency tests (`RefreshRaceTest`, `OtpIssueRaceTest`) force the interleaving by holding a row
+  lock and polling `pg_stat_activity` for lock waiters, with no sleeps; each failed against the
+  code before the locks were added.
 - `TrustedProxyTest` starts a second context on a random port (about 5 seconds more per run).
 - `/v1/me` reads memberships through `tenancy.MembershipQuery`, so the auth module holds no
   membership SQL (`MeTest`, `MembershipQueryTest`).

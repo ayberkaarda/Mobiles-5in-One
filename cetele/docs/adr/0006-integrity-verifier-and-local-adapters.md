@@ -62,11 +62,17 @@ One object, `LocalOnlyAdapterGuard` in the `config` package, gates every stand-i
 | `otp-local-echo`          | `CETELE_OTP_LOCAL_ECHO=true`                       |
 | `ephemeral-jwt-keys`      | empty JWT key pair, ephemeral P-256 pair per start |
 
-A stand-in is allowed only when the active profiles contain `local` or `test`. Otherwise the
-context fails with `fake adapter <name> is not allowed in profiles [...]`. Two kinds of test are
+A stand-in is allowed only when the active profiles contain `local` or `test` and none of
+`prod`, `production`, `staging` or `stage` is active: a mixed list such as `prod,local` or
+`staging,test` is refused too. Otherwise the context fails with `fake adapter <name> is not allowed in profiles [...]`. Two kinds of test are
 required and exist: a pure-function test of `LocalOnlyAdapterGuard.check` and an
 `ApplicationContextRunner` test that starts the integrity configuration with mode `fake` in profile
-`staging` and asserts `context.hasFailed()` with that message (`IntegrityGuardTest`).
+`staging` and asserts `context.hasFailed()` with that message (`IntegrityGuardTest`). Mixed profile lists are tested in `JwtKeyConfigurationTest` (`a local or test
+profile mixed with a production profile does not allow ephemeral keys`) and in `HttpsTest`.
+
+`LocalOnlyAdapterGuard.requireHttps(configured, profiles)` keeps HTTPS-only mode on whenever a
+production-like profile is active, even if `local` or `test` is listed and turned it off
+(`HttpsTest`: `a production profile keeps https on even when local or test turned it off`).
 
 ### SMS and OTP echo
 
