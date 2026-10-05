@@ -1,0 +1,35 @@
+{
+  "data": {
+    "id": "0192a4c1-7000-7a10-9b3c-000000000001",
+    "slug": "ornek-kose-firini-sisli",
+    "name": "[ÖRNEK] Köşe Fırını",
+    "type": "bakery",
+    "type_label": "Fırın",
+    "address": "Halaskargazi Cd. 1",
+    "il": "İstanbul",
+    "ilce": "Şişli",
+    "location": {"lat": 41.0602, "lng": 28.9877},
+    "is_sample": true,
+    "available_count": 12,
+    "items": [
+      {
+        "id": "0192a4c1-8000-7a10-9b3c-000000000011",
+        "name": "Ekmek",
+        "category": "ekmek",
+        "category_label": "Ekmek",
+        "price_minor": 1500,
+        "currency": "TRY",
+        "available_count": 9
+      },
+      {
+        "id": "0192a4c1-8000-7a10-9b3c-000000000012",
+        "name": "Mercimek çorbası",
+        "category": "corba",
+        "category_label": "Çorba",
+        "price_minor": 4500,
+        "currency": "TRY",
+        "available_count": 3
+      }
+    ]
+  }
+}

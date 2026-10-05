@@ -149,5 +149,1862 @@
   "categoryDiger": "Diğer",
   "@categoryDiger": {
     "description": "Item category."
+  },
+  "problemValidationFailed": "Bazı bilgiler eksik ya da hatalı. İşaretli alanlara bir göz at.",
+  "@problemValidationFailed": {
+    "description": "Error copy for problem code validation.failed."
+  },
+  "problemAuthInvalidCredentials": "E-posta ya da şifre eşleşmedi.",
+  "@problemAuthInvalidCredentials": {
+    "description": "Error copy for problem code auth.invalid_credentials."
+  },
+  "problemAuthLocked": "Çok fazla deneme oldu. Biraz bekleyip yeniden dene.",
+  "@problemAuthLocked": {
+    "description": "Error copy for problem code auth.locked."
+  },
+  "problemAuthUnauthenticated": "Oturumun sona erdi. Yeniden giriş yapabilirsin.",
+  "@problemAuthUnauthenticated": {
+    "description": "Error copy for problem code auth.unauthenticated."
+  },
+  "problemAuthEmailUnverified": "Bu işlem için önce e-posta adresini doğrulaman gerekiyor.",
+  "@problemAuthEmailUnverified": {
+    "description": "Error copy for problem code auth.email_unverified."
+  },
+  "problemAuthTokenInvalid": "Kod geçersiz ya da süresi dolmuş. Yeni bir kod isteyebilirsin.",
+  "@problemAuthTokenInvalid": {
+    "description": "Error copy for problem code auth.token_invalid."
+  },
+  "problemForbidden": "Bu işlem için yetkin yok.",
+  "@problemForbidden": {
+    "description": "Error copy for problem code forbidden."
+  },
+  "problemNotFound": "Aradığın kayıt bulunamadı.",
+  "@problemNotFound": {
+    "description": "Error copy for problem code not_found."
+  },
+  "problemConflict": "Bu işlem şu anki durumla çakışıyor. Sayfayı yenileyip yeniden dene.",
+  "@problemConflict": {
+    "description": "Error copy for problem code conflict."
+  },
+  "problemRateLimited": "Kısa sürede çok fazla istek gönderildi. Biraz sonra yeniden dene.",
+  "@problemRateLimited": {
+    "description": "Error copy for problem code rate_limited."
+  },
+  "problemPayloadTooLarge": "Dosya çok büyük. En fazla 5 MB yükleyebilirsin.",
+  "@problemPayloadTooLarge": {
+    "description": "Error copy for problem code payload_too_large."
+  },
+  "problemUnsupportedMediaType": "Bu dosya türü desteklenmiyor. PDF, JPEG ya da PNG yükleyebilirsin.",
+  "@problemUnsupportedMediaType": {
+    "description": "Error copy for problem code unsupported_media_type."
+  },
+  "problemServerError": "Bir şeyler ters gitti. Biraz sonra yeniden dene.",
+  "@problemServerError": {
+    "description": "Error copy for problem code server_error."
+  },
+  "problemBadRequest": "İstek işlenemedi. Yeniden dene.",
+  "@problemBadRequest": {
+    "description": "Error copy for problem code bad_request."
+  },
+  "problemMethodNotAllowed": "Bu işlem şu an yapılamıyor.",
+  "@problemMethodNotAllowed": {
+    "description": "Error copy for problem code method_not_allowed."
+  },
+  "problemHttpsRequired": "Güvenli bağlantı kurulamadı.",
+  "@problemHttpsRequired": {
+    "description": "Error copy for problem code https_required."
+  },
+  "problemServiceUnavailable": "Hizmet şu an yanıt vermiyor. Biraz sonra yeniden dene.",
+  "@problemServiceUnavailable": {
+    "description": "Error copy for problem code service_unavailable."
+  },
+  "problemShopHasOpenHooks": "Dükkânında bekleyen askılar var. Hepsi verildikten ya da iade edildikten sonra hesabını silebilirsin.",
+  "@problemShopHasOpenHooks": {
+    "description": "Error copy for problem code shop.has_open_hooks (account deletion of a merchant)."
+  },
+  "problemShopNotVerified": "Bu dükkân henüz doğrulanmadı.",
+  "@problemShopNotVerified": {
+    "description": "Error copy for problem code shop.not_verified."
+  },
+  "problemShopNotPayable": "Bu dükkâna şu an askı bırakılamıyor. Başka bir dükkân seçebilirsin.",
+  "@problemShopNotPayable": {
+    "description": "Error copy for problem code shop.not_payable."
+  },
+  "problemAnonDailyCap": "Bugün için alabileceğin kadarını aldın. Yarın yeniden bakabilirsin.",
+  "@problemAnonDailyCap": {
+    "description": "Error copy for problem code anon.daily_cap. Calm, no judgement."
+  },
+  "problemAnonShopCap": "Bu dükkândan bugün bir askı aldın. Yarın yeniden alabilirsin.",
+  "@problemAnonShopCap": {
+    "description": "Error copy for problem code anon.shop_cap."
+  },
+  "problemHookNoneAvailable": "Bu üründen şu an askıda kalmadı. Yakındaki başka bir dükkâna bakabilirsin.",
+  "@problemHookNoneAvailable": {
+    "description": "Error copy for problem code hook.none_available."
+  },
+  "problemHookCodeInvalid": "Bu kod geçerli değil. Kodu yeniden okutmayı ya da elle yazmayı dene.",
+  "@problemHookCodeInvalid": {
+    "description": "Error copy for problem code hook.code_invalid (merchant side)."
+  },
+  "problemHookCodeExpired": "Bu kodun süresi dolmuş. Yeni bir kod alınabilir.",
+  "@problemHookCodeExpired": {
+    "description": "Error copy for problem code hook.code_expired."
+  },
+  "problemHookWrongShop": "Bu kod başka bir dükkâna ait.",
+  "@problemHookWrongShop": {
+    "description": "Error copy for problem code hook.wrong_shop."
+  },
+  "problemDonationCapExceeded": "Bugünkü askı bırakma sınırına ulaştın. Yarın yeniden bırakabilirsin.",
+  "@problemDonationCapExceeded": {
+    "description": "Error copy for problem code donation.cap_exceeded (daily donor cap)."
+  },
+  "problemDonationTxCapExceeded": "Tek seferde bırakılabilecek tutarın üstüne çıktın. Adedi azaltabilirsin.",
+  "@problemDonationTxCapExceeded": {
+    "description": "Error copy for problem code donation.tx_cap_exceeded (per transaction cap)."
+  },
+  "problemPaymentMismatch": "Ödeme doğrulanamadı. Kayıt incelenecek ve sonucu sana bildirilecek.",
+  "@problemPaymentMismatch": {
+    "description": "Error copy for problem code payment.mismatch."
+  },
+  "problemNetworkOffline": "İnternet bağlantısı yok. Bağlantını kontrol edip yeniden dene.",
+  "@problemNetworkOffline": {
+    "description": "Error copy when the device cannot reach the server."
+  },
+  "problemNetworkTimeout": "Sunucu zamanında yanıt vermedi. Yeniden dene.",
+  "@problemNetworkTimeout": {
+    "description": "Error copy when a request timed out."
+  },
+  "problemBadResponse": "Sunucudan beklenmeyen bir yanıt geldi. Yeniden dene.",
+  "@problemBadResponse": {
+    "description": "Error copy when the server answer cannot be read."
+  },
+  "problemCancelled": "İşlem iptal edildi.",
+  "@problemCancelled": {
+    "description": "Error copy when the app cancelled a request."
+  },
+  "problemGeneric": "Bir şeyler ters gitti. Yeniden dene.",
+  "@problemGeneric": {
+    "description": "Error copy for any problem code the app does not know."
+  },
+  "mapAttribution": "OpenStreetMap katkıda bulunanlar",
+  "@mapAttribution": {
+    "description": "Map data attribution shown on every map (the widget adds the copyright sign)."
+  },
+  "mapShopMarkerLabel": "{name}, askıda {count}",
+  "@mapShopMarkerLabel": {
+    "description": "Accessibility label of a shop marker on the map: shop name and the number of items on its rail.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "authSignInTitle": "Giriş yap",
+  "@authSignInTitle": {
+    "description": "Donor block (auth, donor, impact, settings) starts here. Title of the sign-in screen."
+  },
+  "authSignInLead": "Askıya bırakmak ya da dükkânını yönetmek için hesabınla giriş yap.",
+  "@authSignInLead": {
+    "description": "Lead text on the sign-in screen."
+  },
+  "authEmailLabel": "E-posta",
+  "@authEmailLabel": {
+    "description": "E-mail field label."
+  },
+  "authPasswordLabel": "Şifre",
+  "@authPasswordLabel": {
+    "description": "Password field label."
+  },
+  "authNewPasswordLabel": "Yeni şifre",
+  "@authNewPasswordLabel": {
+    "description": "New password field label on the reset screen."
+  },
+  "authPasswordHelper": "En az {min} karakter.",
+  "@authPasswordHelper": {
+    "description": "Password rule under the field.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "authNameLabel": "Adın",
+  "@authNameLabel": {
+    "description": "Name field label at registration."
+  },
+  "authNameHelper": "Yalnızca sana yazdığımız e-postalarda kullanılır.",
+  "@authNameHelper": {
+    "description": "Helper under the name field."
+  },
+  "authSignInAction": "Giriş yap",
+  "@authSignInAction": {
+    "description": "Primary sign-in button."
+  },
+  "authForgotLink": "Şifremi unuttum",
+  "@authForgotLink": {
+    "description": "Link to the password reset request."
+  },
+  "authOr": "ya da",
+  "@authOr": {
+    "description": "Separator between e-mail sign-in and provider buttons."
+  },
+  "authContinueWithApple": "Apple ile devam et",
+  "@authContinueWithApple": {
+    "description": "Sign in with Apple button."
+  },
+  "authContinueWithGoogle": "Google ile devam et",
+  "@authContinueWithGoogle": {
+    "description": "Sign in with Google button."
+  },
+  "authProviderConsentNote": "Apple ya da Google ile ilk kez devam edersen bağışçı hesabın açılır ve KVKK aydınlatma metnini (örnek metin) kabul etmiş olursun.",
+  "@authProviderConsentNote": {
+    "description": "Consent note under the provider buttons."
+  },
+  "authProviderUnavailable": "Bu giriş yöntemi bu sürümde kullanılamıyor. E-posta ve şifreyle devam edebilirsin.",
+  "@authProviderUnavailable": {
+    "description": "Shown when Apple or Google sign-in is not configured."
+  },
+  "authNoAccount": "Hesabın yok mu?",
+  "@authNoAccount": {
+    "description": "Text above the create-account button."
+  },
+  "authCreateAccountAction": "Hesap oluştur",
+  "@authCreateAccountAction": {
+    "description": "Button to the registration screen."
+  },
+  "authHaveAccount": "Zaten hesabım var",
+  "@authHaveAccount": {
+    "description": "Link from registration back to sign-in."
+  },
+  "authRegisterTitle": "Hesap oluştur",
+  "@authRegisterTitle": {
+    "description": "Title of the registration screen."
+  },
+  "authRegisterLead": "Hesap, askıya bırakmak ya da dükkânını listelemek için gerekir. Askıdan almak için hesap gerekmez.",
+  "@authRegisterLead": {
+    "description": "Lead text of the registration screen."
+  },
+  "authKindTitle": "Hesap türü",
+  "@authKindTitle": {
+    "description": "Heading of the account kind choice."
+  },
+  "authKindDonor": "Bağışçı",
+  "@authKindDonor": {
+    "description": "Donor account choice."
+  },
+  "authKindDonorBody": "Mahalle esnafında ekmek, çorba ya da defter askıya bırakırım.",
+  "@authKindDonorBody": {
+    "description": "Explanation of the donor account."
+  },
+  "authKindMerchant": "Esnaf",
+  "@authKindMerchant": {
+    "description": "Merchant account choice."
+  },
+  "authKindMerchantBody": "Dükkânımı listeler, askıdaki ürünleri veririm.",
+  "@authKindMerchantBody": {
+    "description": "Explanation of the merchant account."
+  },
+  "authKvkkConsent": "KVKK aydınlatma metnini (örnek metin) okudum, kabul ediyorum.",
+  "@authKvkkConsent": {
+    "description": "Consent checkbox at registration."
+  },
+  "authKvkkRequired": "Devam etmek için aydınlatma metnini kabul etmelisin.",
+  "@authKvkkRequired": {
+    "description": "Error when the consent box is not ticked."
+  },
+  "authRegisterAction": "Hesabı oluştur",
+  "@authRegisterAction": {
+    "description": "Primary registration button."
+  },
+  "authFieldRequired": "Bu alan gerekli.",
+  "@authFieldRequired": {
+    "description": "Field error: required."
+  },
+  "authFieldEmailInvalid": "Geçerli bir e-posta adresi yaz.",
+  "@authFieldEmailInvalid": {
+    "description": "Field error: e-mail format."
+  },
+  "authFieldEmailTaken": "Bu e-postayla bir hesap zaten var. Giriş yapabilirsin.",
+  "@authFieldEmailTaken": {
+    "description": "Field error: e-mail already registered."
+  },
+  "authFieldPasswordShort": "Şifre en az 10 karakter olmalı.",
+  "@authFieldPasswordShort": {
+    "description": "Field error: password too short."
+  },
+  "authFieldPasswordBreached": "Bu şifre sızdırılmış şifre listelerinde geçiyor. Başka bir şifre seç.",
+  "@authFieldPasswordBreached": {
+    "description": "Field error: password found in breach lists."
+  },
+  "authFieldInvalid": "Bu değer geçerli değil.",
+  "@authFieldInvalid": {
+    "description": "Field error: other validation codes."
+  },
+  "authForgotTitle": "Şifre sıfırlama",
+  "@authForgotTitle": {
+    "description": "Title of the reset request screen."
+  },
+  "authForgotLead": "E-posta adresini yaz; hesabın varsa 6 haneli bir kod göndereceğiz.",
+  "@authForgotLead": {
+    "description": "Lead of the reset request screen."
+  },
+  "authForgotAction": "Kod gönder",
+  "@authForgotAction": {
+    "description": "Button sending the reset code."
+  },
+  "authResetTitle": "Yeni şifre",
+  "@authResetTitle": {
+    "description": "Title of the reset screen."
+  },
+  "authResetLead": "{email} adresine gönderdiğimiz kodu ve yeni şifreni yaz.",
+  "@authResetLead": {
+    "description": "Lead of the reset screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResetAction": "Şifreyi değiştir",
+  "@authResetAction": {
+    "description": "Button of the reset screen."
+  },
+  "authResetDone": "Şifren değişti. Güvenliğin için tüm cihazlardaki oturumlar kapandı; yeni şifrenle giriş yapabilirsin.",
+  "@authResetDone": {
+    "description": "Shown after a successful reset."
+  },
+  "authCodeLabel": "Kod",
+  "@authCodeLabel": {
+    "description": "Label of the 6-digit code field."
+  },
+  "authCodeHelper": "E-postadaki 6 haneli kod.",
+  "@authCodeHelper": {
+    "description": "Helper of the code field."
+  },
+  "authCodeInvalid": "Kod 6 rakamdan oluşur.",
+  "@authCodeInvalid": {
+    "description": "Error of the code field."
+  },
+  "authVerifyTitle": "E-postanı doğrula",
+  "@authVerifyTitle": {
+    "description": "Title of the verification screen."
+  },
+  "authVerifyLead": "{email} adresine 6 haneli bir kod gönderdik.",
+  "@authVerifyLead": {
+    "description": "Lead of the verification screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authVerifyAction": "Doğrula",
+  "@authVerifyAction": {
+    "description": "Verification button."
+  },
+  "authVerifyLater": "Şimdilik geç",
+  "@authVerifyLater": {
+    "description": "Link that skips verification."
+  },
+  "authVerifyDone": "E-posta adresin doğrulandı.",
+  "@authVerifyDone": {
+    "description": "Snackbar after verification."
+  },
+  "donorNeedsDonorAccount": "Bu hesap bir esnaf hesabı. Askıya bırakmak için bağışçı hesabıyla giriş yapabilirsin; dükkânlara yine de göz atabilirsin.",
+  "@donorNeedsDonorAccount": {
+    "description": "Donor home when a merchant account is signed in."
+  },
+  "donorHistoryLink": "Bağış geçmişi",
+  "@donorHistoryLink": {
+    "description": "Link to the donation history."
+  },
+  "donorLocationTitle": "Yakındaki dükkânlar",
+  "@donorLocationTitle": {
+    "description": "Title of the location prompt."
+  },
+  "donorLocationRationale": "Dükkânları uzaklığa göre sıralamak için konumunu kullanabiliriz. Konumun yalnızca liste için kullanılır, kaydedilmez. İstersen bir ilçe de seçebilirsin.",
+  "@donorLocationRationale": {
+    "description": "Why the donor home asks for the location."
+  },
+  "donorLocationUnavailable": "Konum şu an kullanılamıyor. Bir ilçe seçerek dükkânları görebilirsin.",
+  "@donorLocationUnavailable": {
+    "description": "Shown when the location is refused or off."
+  },
+  "donorUseLocation": "Konumu kullan",
+  "@donorUseLocation": {
+    "description": "Button asking for the location."
+  },
+  "donorPickDistrict": "İlçe seç",
+  "@donorPickDistrict": {
+    "description": "Button opening the district picker."
+  },
+  "donorNearYou": "Konumuna yakın",
+  "@donorNearYou": {
+    "description": "Area label when the device location is used."
+  },
+  "donorChangeArea": "Değiştir",
+  "@donorChangeArea": {
+    "description": "Button changing the area."
+  },
+  "donorShopsTitle": "Doğrulanmış dükkânlar",
+  "@donorShopsTitle": {
+    "description": "Heading of the shop list."
+  },
+  "donorViewList": "Liste",
+  "@donorViewList": {
+    "description": "List view segment."
+  },
+  "donorViewMap": "Harita",
+  "@donorViewMap": {
+    "description": "Map view segment."
+  },
+  "donorNoShops": "Bu bölgede henüz doğrulanmış dükkân yok. Başka bir ilçe seçebilirsin.",
+  "@donorNoShops": {
+    "description": "Empty shop list."
+  },
+  "donorRetry": "Yeniden dene",
+  "@donorRetry": {
+    "description": "Retry button."
+  },
+  "donorShopTitle": "Dükkân",
+  "@donorShopTitle": {
+    "description": "Shop screen title while loading."
+  },
+  "donorOwnShop": "Bu senin dükkânın. Ürünlerini Esnaf bölümünden yönetebilirsin.",
+  "@donorOwnShop": {
+    "description": "Shown when a merchant opens their own shop."
+  },
+  "donorShopItemsTitle": "Askıya bırakabileceklerin",
+  "@donorShopItemsTitle": {
+    "description": "Heading of the item list."
+  },
+  "donorShopNoItems": "Bu dükkânda şu an askıya bırakılabilecek ürün yok.",
+  "@donorShopNoItems": {
+    "description": "Empty item list."
+  },
+  "donorShopFootnote": "Ödediğin ürün dükkânın askısına asılır. Kimin aldığını kimse bilmez, sen de bilmezsin.",
+  "@donorShopFootnote": {
+    "description": "Footnote on the shop screen."
+  },
+  "donorItemLabel": "{name}, {price}, askıda {count}",
+  "@donorItemLabel": {
+    "description": "Accessibility label of an item row.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "donateTitle": "Askıya bırak",
+  "@donateTitle": {
+    "description": "Title of the donation form."
+  },
+  "donateItemGone": "Bu ürün artık dükkânın listesinde değil.",
+  "@donateItemGone": {
+    "description": "Shown when the item is missing."
+  },
+  "donateQtyLabel": "Adet",
+  "@donateQtyLabel": {
+    "description": "Quantity heading."
+  },
+  "donateQtyValue": "{qty} adet",
+  "@donateQtyValue": {
+    "description": "Accessibility value of the quantity.",
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      }
+    }
+  },
+  "donateQtyLess": "Bir azalt",
+  "@donateQtyLess": {
+    "description": "Tooltip of the minus button."
+  },
+  "donateQtyMore": "Bir artır",
+  "@donateQtyMore": {
+    "description": "Tooltip of the plus button."
+  },
+  "donateMaxUnits": "Bir bağışta en fazla {max} adet bırakılabilir.",
+  "@donateMaxUnits": {
+    "description": "Hint at the 20-item maximum.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "donateTxCap": "Tek ödemede en fazla {amount} bırakılabilir.",
+  "@donateTxCap": {
+    "description": "Hint at the per-payment limit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateTotal": "Toplam",
+  "@donateTotal": {
+    "description": "Total label."
+  },
+  "donateTotalLabel": "Toplam {amount}",
+  "@donateTotalLabel": {
+    "description": "Accessibility label of the total.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateDailyCapNote": "Günlük toplam sınır {amount}.",
+  "@donateDailyCapNote": {
+    "description": "Note on the daily limit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "donateHowItWorks": "Ödeme, ödeme kuruluşunun güvenli sayfasında yapılır. Ödeme onaylanınca ürünler dükkânın askısına asılır ve e-postana makbuz gelir.",
+  "@donateHowItWorks": {
+    "description": "How the payment works."
+  },
+  "donatePayAction": "Ödemeye geç",
+  "@donatePayAction": {
+    "description": "Primary button starting the payment."
+  },
+  "donateCheckoutTitle": "Ödeme",
+  "@donateCheckoutTitle": {
+    "description": "Title of the payment page."
+  },
+  "donateCheckoutBlocked": "Ödeme sayfası güvenli adres listesinde olmadığı için açılmadı. Ödeme alınmadı.",
+  "@donateCheckoutBlocked": {
+    "description": "Shown when the checkout URL is not allowed."
+  },
+  "donateSeeStatus": "Bağışın durumunu gör",
+  "@donateSeeStatus": {
+    "description": "Button to the receipt."
+  },
+  "donateLeaveTitle": "Ödemeden çıkılsın mı?",
+  "@donateLeaveTitle": {
+    "description": "Dialog title when closing the payment page."
+  },
+  "donateLeaveBody": "Ödemeyi tamamlamadıysan ücret alınmaz. Bağışın durumunu geçmişte görebilirsin.",
+  "@donateLeaveBody": {
+    "description": "Dialog body when closing the payment page."
+  },
+  "donateLeaveStay": "Ödemeye dön",
+  "@donateLeaveStay": {
+    "description": "Dialog button staying on the payment page."
+  },
+  "donateLeaveConfirm": "Çık",
+  "@donateLeaveConfirm": {
+    "description": "Dialog button leaving the payment page."
+  },
+  "donationStatusInitiated": "Ödeme bekleniyor",
+  "@donationStatusInitiated": {
+    "description": "Donation status initiated."
+  },
+  "donationStatusPaid": "Askıda",
+  "@donationStatusPaid": {
+    "description": "Donation status paid."
+  },
+  "donationStatusFailed": "Ödeme tamamlanmadı",
+  "@donationStatusFailed": {
+    "description": "Donation status failed."
+  },
+  "donationStatusRefunded": "İade edildi",
+  "@donationStatusRefunded": {
+    "description": "Donation status refunded."
+  },
+  "donationLine": "{qty} × {item}",
+  "@donationLine": {
+    "description": "Quantity and item of a donation.",
+    "placeholders": {
+      "qty": {
+        "type": "int"
+      },
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "donationItemFallback": "ürün",
+  "@donationItemFallback": {
+    "description": "Item word when the name is missing."
+  },
+  "receiptTitle": "Bağış",
+  "@receiptTitle": {
+    "description": "Title of the receipt screen."
+  },
+  "receiptPaidTitle": "Askıya asıldı",
+  "@receiptPaidTitle": {
+    "description": "Receipt heading when paid."
+  },
+  "receiptPaidBody": "Teşekkürler. Ürünler dükkânın askısında; makbuz e-postana gönderildi.",
+  "@receiptPaidBody": {
+    "description": "Receipt text when paid."
+  },
+  "receiptPendingTitle": "Ödeme henüz onaylanmadı",
+  "@receiptPendingTitle": {
+    "description": "Receipt heading while initiated."
+  },
+  "receiptPendingBody": "Ödemeyi tamamlamadıysan ücret alınmaz. Tamamladıysan onay birkaç dakika sürebilir.",
+  "@receiptPendingBody": {
+    "description": "Receipt text while initiated."
+  },
+  "receiptPendingConfirming": "Ödeme sayfası işlemin tamamlandığını bildirdi; onay kaydedilince ürünler askıya asılır. Birazdan yenileyebilirsin.",
+  "@receiptPendingConfirming": {
+    "description": "Receipt text when the link said paid but the server has not confirmed yet."
+  },
+  "receiptFailedTitle": "Ödeme tamamlanmadı",
+  "@receiptFailedTitle": {
+    "description": "Receipt heading when failed."
+  },
+  "receiptFailedBody": "Ücret alınmadı. İstersen dükkândan yeniden deneyebilirsin.",
+  "@receiptFailedBody": {
+    "description": "Receipt text when failed."
+  },
+  "receiptRefundedTitle": "İade edildi",
+  "@receiptRefundedTitle": {
+    "description": "Receipt heading when refunded."
+  },
+  "receiptRefundedBody": "Ödemen iade edildi; ayrıntılar e-postana gönderildi.",
+  "@receiptRefundedBody": {
+    "description": "Receipt text when refunded."
+  },
+  "receiptAmount": "Tutar",
+  "@receiptAmount": {
+    "description": "Receipt row: amount."
+  },
+  "receiptToShop": "Esnafa giden",
+  "@receiptToShop": {
+    "description": "Receipt row: net to the shop."
+  },
+  "receiptCommission": "Platform komisyonu",
+  "@receiptCommission": {
+    "description": "Receipt row: commission."
+  },
+  "receiptDate": "Tarih",
+  "@receiptDate": {
+    "description": "Receipt row: date."
+  },
+  "receiptStatus": "Durum",
+  "@receiptStatus": {
+    "description": "Receipt row: status."
+  },
+  "receiptAnonymityNote": "Askıdan kimin aldığı kaydedilmez; alındığında yalnızca \"Askın alındı\" bildirimi gelir.",
+  "@receiptAnonymityNote": {
+    "description": "Anonymity note on the receipt."
+  },
+  "receiptRefresh": "Yenile",
+  "@receiptRefresh": {
+    "description": "Button re-reading the donation."
+  },
+  "receiptBackToShops": "Dükkânlara dön",
+  "@receiptBackToShops": {
+    "description": "Button back to the donor home."
+  },
+  "historyTitle": "Bağış geçmişi",
+  "@historyTitle": {
+    "description": "Title of the history screen."
+  },
+  "historyEmptyBody": "Askıya bıraktıkların burada listelenir.",
+  "@historyEmptyBody": {
+    "description": "Empty history."
+  },
+  "historyMore": "Daha fazla göster",
+  "@historyMore": {
+    "description": "Button loading the next page."
+  },
+  "impactCardTitle": "Askıda: {area}",
+  "@impactCardTitle": {
+    "description": "Title of the impact card with the area name.",
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "impactAreaCountry": "Türkiye",
+  "@impactAreaCountry": {
+    "description": "Area name for the country level."
+  },
+  "impactCounterLead": "Bugün",
+  "@impactCounterLead": {
+    "description": "Words before the number on the impact rail counter."
+  },
+  "impactCounterTail": "askıya bırakıldı",
+  "@impactCounterTail": {
+    "description": "Words after the number on the impact rail counter."
+  },
+  "impactRedeemed": "askıdan alındı",
+  "@impactRedeemed": {
+    "description": "Caption of the taken count."
+  },
+  "impactShops": "dükkân",
+  "@impactShops": {
+    "description": "Caption of the shop count."
+  },
+  "impactMine": "Bıraktıkların: {units} ürün, {shops} dükkân",
+  "@impactMine": {
+    "description": "Accessibility label of the donor numbers.",
+    "placeholders": {
+      "units": {
+        "type": "int"
+      },
+      "shops": {
+        "type": "int"
+      }
+    }
+  },
+  "impactMineTail": "ürün askıya bıraktın, {shops} dükkânda.",
+  "@impactMineTail": {
+    "description": "Text after the donor unit count (the count is shown before it).",
+    "placeholders": {
+      "units": {
+        "type": "int"
+      },
+      "shops": {
+        "type": "int"
+      }
+    }
+  },
+  "impactMethodologyDailyUnits": "Günlük ürün sayıları, saatlik güncellenir",
+  "@impactMethodologyDailyUnits": {
+    "description": "Methodology line for impact.v1.daily_units."
+  },
+  "impactMethodologyGeneric": "Ürün sayıları, düzenli güncellenir",
+  "@impactMethodologyGeneric": {
+    "description": "Methodology line for an unknown method key."
+  },
+  "impactLoading": "Sayılar yükleniyor",
+  "@impactLoading": {
+    "description": "Accessibility label while impact loads."
+  },
+  "impactUnavailable": "Askı sayıları şu an yüklenemedi.",
+  "@impactUnavailable": {
+    "description": "Shown when impact fails."
+  },
+  "settingsTitle": "Ayarlar",
+  "@settingsTitle": {
+    "description": "Settings title and link."
+  },
+  "settingsAccountSection": "Hesap",
+  "@settingsAccountSection": {
+    "description": "Settings section: account."
+  },
+  "settingsSignedOutBody": "Askıdan almak için hesap gerekmez. Askıya bırakmak ya da dükkân yönetmek için giriş yapabilirsin.",
+  "@settingsSignedOutBody": {
+    "description": "Account section when signed out."
+  },
+  "settingsSignOut": "Çıkış yap",
+  "@settingsSignOut": {
+    "description": "Sign-out button."
+  },
+  "settingsSignedOut": "Çıkış yapıldı.",
+  "@settingsSignedOut": {
+    "description": "Snackbar after sign-out."
+  },
+  "settingsDeleteAccount": "Hesabımı sil",
+  "@settingsDeleteAccount": {
+    "description": "Link to account deletion."
+  },
+  "settingsLanguageSection": "Dil",
+  "@settingsLanguageSection": {
+    "description": "Settings section: language."
+  },
+  "settingsThemeSection": "Görünüm",
+  "@settingsThemeSection": {
+    "description": "Settings section: theme."
+  },
+  "settingsThemeSystem": "Sistem ayarı",
+  "@settingsThemeSystem": {
+    "description": "Theme option: system."
+  },
+  "settingsThemeLight": "Açık",
+  "@settingsThemeLight": {
+    "description": "Theme option: light."
+  },
+  "settingsThemeDark": "Koyu",
+  "@settingsThemeDark": {
+    "description": "Theme option: dark."
+  },
+  "settingsNotificationsSection": "Bildirimler",
+  "@settingsNotificationsSection": {
+    "description": "Settings section: push."
+  },
+  "settingsPushUnavailable": "Bu sürümde bildirim servisi yapılandırılmadı; bildirim gönderilmez.",
+  "@settingsPushUnavailable": {
+    "description": "Push state: no transport or no token."
+  },
+  "settingsPushWaiting": "Bildirimler giriş yaptığında bu cihaza açılır.",
+  "@settingsPushWaiting": {
+    "description": "Push state: token waits for an account."
+  },
+  "settingsPushRegistered": "Bu cihaz bildirim alıyor (\"Yeni askı\", \"Askın alındı\").",
+  "@settingsPushRegistered": {
+    "description": "Push state: registered."
+  },
+  "settingsPushFailed": "Bildirim kaydı şu an yapılamadı; bir sonraki açılışta yeniden denenecek.",
+  "@settingsPushFailed": {
+    "description": "Push state: registration failed."
+  },
+  "settingsPrivacySection": "Gizlilik",
+  "@settingsPrivacySection": {
+    "description": "Settings section: privacy."
+  },
+  "settingsPrivacyBody": "Uygulamada reklam ve analiz aracı yok. Askıdan alanlar hakkında hiçbir bilgi tutulmaz.",
+  "@settingsPrivacyBody": {
+    "description": "Privacy statement."
+  },
+  "deleteTitle": "Hesabı sil",
+  "@deleteTitle": {
+    "description": "Title of the deletion screen."
+  },
+  "deleteLead": "Hesabın hemen kapanır ve 7 gün sonra kalıcı olarak silinir. Bu sürede giriş yaparsan silme iptal olur. Bağışlarının tutarları muhasebe için adsız olarak saklanır. Güvenliğin için şifreni yaz.",
+  "@deleteLead": {
+    "description": "Explanation of the deletion."
+  },
+  "deleteAction": "Hesabımı sil",
+  "@deleteAction": {
+    "description": "Destructive delete button."
+  },
+  "deleteProviderLead": "Apple ya da Google ile giriş yapıyorsan, şifre yerine yeniden doğrula:",
+  "@deleteProviderLead": {
+    "description": "Lead above the provider re-auth buttons."
+  },
+  "deleteConfirmTitle": "Hesap silinsin mi?",
+  "@deleteConfirmTitle": {
+    "description": "Confirmation dialog title."
+  },
+  "deleteConfirmBody": "Hesabın hemen kapanır. 7 gün içinde giriş yapmazsan kalıcı olarak silinir.",
+  "@deleteConfirmBody": {
+    "description": "Confirmation dialog body."
+  },
+  "deleteConfirmCancel": "Vazgeç",
+  "@deleteConfirmCancel": {
+    "description": "Confirmation dialog cancel."
+  },
+  "deleteConfirmAction": "Sil",
+  "@deleteConfirmAction": {
+    "description": "Confirmation dialog confirm."
+  },
+  "deleteDone": "Hesabın kapandı ve {date} tarihinde kalıcı olarak silinecek. Bu cihazdaki oturum ve kayıtlı veriler silindi.",
+  "@deleteDone": {
+    "description": "Shown after deletion with the grace date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteDoneAction": "Tamam",
+  "@deleteDoneAction": {
+    "description": "Button after deletion."
+  },
+  "deleteSignInFirst": "Hesabını silmek için önce giriş yap.",
+  "@deleteSignInFirst": {
+    "description": "Deletion screen opened without an account."
+  },
+  "merchantSignedOutBody": "Dükkânını kaydetmek, ürünlerini eklemek ve askıdaki kodları okutmak için esnaf hesabınla giriş yap.",
+  "@merchantSignedOutBody": {
+    "description": "Merchant home body for a guest."
+  },
+  "merchantWrongAccountBody": "Bu bölüm esnaf hesapları için. Bağışçı hesabınla giriş yaptın; dükkân için esnaf hesabıyla giriş yapabilirsin.",
+  "@merchantWrongAccountBody": {
+    "description": "Merchant home body when a donor is signed in."
+  },
+  "merchantSignIn": "Giriş yap",
+  "@merchantSignIn": {
+    "description": "Button to the sign-in screen."
+  },
+  "merchantNoShopTitle": "Dükkânını ekle",
+  "@merchantNoShopTitle": {
+    "description": "Merchant home title when the account is not owner or staff of any shop."
+  },
+  "merchantNoShopBody": "Dükkânını kaydet; doğrulandığında askıdaki ürünler burada görünür. Bir dükkânda çalışıyorsan, dükkâna eklendiğinde burada görünür.",
+  "@merchantNoShopBody": {
+    "description": "Merchant home body when the account has no shop."
+  },
+  "merchantRegisterShop": "Dükkânımı kaydet",
+  "@merchantRegisterShop": {
+    "description": "Button and title of the shop registration."
+  },
+  "merchantNoShopRefresh": "Yenile",
+  "@merchantNoShopRefresh": {
+    "description": "Button that reloads the account's shop list on the merchant home."
+  },
+  "merchantBack": "Geri",
+  "@merchantBack": {
+    "description": "Back control."
+  },
+  "merchantRetry": "Yeniden dene",
+  "@merchantRetry": {
+    "description": "Retry button."
+  },
+  "merchantCancel": "Vazgeç",
+  "@merchantCancel": {
+    "description": "Cancel button."
+  },
+  "merchantContinue": "Devam",
+  "@merchantContinue": {
+    "description": "Continue button."
+  },
+  "merchantSave": "Kaydet",
+  "@merchantSave": {
+    "description": "Save button."
+  },
+  "merchantSending": "Gönderiliyor…",
+  "@merchantSending": {
+    "description": "Button label while a request is in flight."
+  },
+  "merchantYes": "Evet",
+  "@merchantYes": {
+    "description": "Yes."
+  },
+  "merchantNo": "Hayır",
+  "@merchantNo": {
+    "description": "No."
+  },
+  "merchantRoleOwner": "Dükkân sahibi",
+  "@merchantRoleOwner": {
+    "description": "Role chip: shop owner."
+  },
+  "merchantRoleStaff": "Çalışan",
+  "@merchantRoleStaff": {
+    "description": "Role chip: shop staff."
+  },
+  "merchantOfflineNote": "Bağlantı yok. Kod okutma bağlantı gelince çalışır; kayıtlı liste görünür.",
+  "@merchantOfflineNote": {
+    "description": "Dashboard note when the shop could not be loaded."
+  },
+  "merchantStaffNote": "Çalışan olarak kod okutabilir ve verilenleri görebilirsin. Ürünleri, belgeleri ve ödemeleri dükkân sahibi yönetir.",
+  "@merchantStaffNote": {
+    "description": "Dashboard note for staff."
+  },
+  "merchantStatePendingTitle": "Kaydın inceleniyor",
+  "@merchantStatePendingTitle": {
+    "description": "Verification banner: pending."
+  },
+  "merchantStatePendingBody": "Belgelerini yükle; kontrol edildikten sonra dükkânın listede görünür.",
+  "@merchantStatePendingBody": {
+    "description": "Verification banner body: pending."
+  },
+  "merchantStateVerifiedTitle": "Doğrulanmış",
+  "@merchantStateVerifiedTitle": {
+    "description": "Verification banner: verified."
+  },
+  "merchantStateVerifiedBody": "Dükkânın listede. Askıya bırakılanlar burada görünür.",
+  "@merchantStateVerifiedBody": {
+    "description": "Verification banner body: verified."
+  },
+  "merchantStateRejectedTitle": "Kaydın onaylanmadı",
+  "@merchantStateRejectedTitle": {
+    "description": "Verification banner: rejected."
+  },
+  "merchantStateRejectedBody": "Dükkân bilgilerini ve belgelerini güncelleyip yeniden gönderebilirsin.",
+  "@merchantStateRejectedBody": {
+    "description": "Verification banner body: rejected."
+  },
+  "merchantRedeemAction": "Kod okut",
+  "@merchantRedeemAction": {
+    "description": "Primary dashboard action to the redemption scanner."
+  },
+  "merchantRedemptionsTitle": "Verilenler",
+  "@merchantRedemptionsTitle": {
+    "description": "Redemption list title."
+  },
+  "merchantRedemptionsSubtitle": "Son 30 günde askıdan verilenler",
+  "@merchantRedemptionsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantCatalogTitle": "Ürünler",
+  "@merchantCatalogTitle": {
+    "description": "Catalog title."
+  },
+  "merchantCatalogSubtitleOwner": "Askıya bırakılabilecek ürünler, fiyatlar ve günlük sınırlar",
+  "@merchantCatalogSubtitleOwner": {
+    "description": "Dashboard row subtitle (owner)."
+  },
+  "merchantCatalogSubtitleStaff": "Dükkânın ürün listesi",
+  "@merchantCatalogSubtitleStaff": {
+    "description": "Dashboard row subtitle (staff)."
+  },
+  "merchantPayoutsTitle": "Ödemeler",
+  "@merchantPayoutsTitle": {
+    "description": "Payouts title."
+  },
+  "merchantPayoutsSubtitle": "Bağışlar, komisyon ve aktarım durumu",
+  "@merchantPayoutsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantDocumentsTitle": "Belgeler",
+  "@merchantDocumentsTitle": {
+    "description": "Documents title."
+  },
+  "merchantDocumentsSubtitle": "Vergi levhası ve işletme belgesi",
+  "@merchantDocumentsSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantProfileTitle": "Dükkân bilgileri",
+  "@merchantProfileTitle": {
+    "description": "Shop profile title."
+  },
+  "merchantProfileSubtitle": "Ad, adres, telefon ve görünürlük",
+  "@merchantProfileSubtitle": {
+    "description": "Dashboard row subtitle."
+  },
+  "merchantFieldRequired": "Bu alan gerekli.",
+  "@merchantFieldRequired": {
+    "description": "Form error: required."
+  },
+  "merchantFieldTooShort": "Biraz daha uzun yaz.",
+  "@merchantFieldTooShort": {
+    "description": "Form error: too short."
+  },
+  "merchantFieldTooLong": "Bu alan çok uzun.",
+  "@merchantFieldTooLong": {
+    "description": "Form error: too long."
+  },
+  "merchantFieldInvalid": "Bu değer geçerli görünmüyor.",
+  "@merchantFieldInvalid": {
+    "description": "Form error: invalid."
+  },
+  "merchantFieldOutOfRange": "Bu değer izin verilen aralıkta değil.",
+  "@merchantFieldOutOfRange": {
+    "description": "Form error: out of range."
+  },
+  "merchantFieldShopName": "Dükkân adı",
+  "@merchantFieldShopName": {
+    "description": "Field label."
+  },
+  "merchantFieldShopType": "Dükkân türü",
+  "@merchantFieldShopType": {
+    "description": "Field label."
+  },
+  "merchantFieldPhone": "Telefon",
+  "@merchantFieldPhone": {
+    "description": "Field label."
+  },
+  "merchantFieldPhoneHint": "Örnek: 0212 555 00 00",
+  "@merchantFieldPhoneHint": {
+    "description": "Field hint."
+  },
+  "merchantFieldTaxNumber": "Vergi numarası",
+  "@merchantFieldTaxNumber": {
+    "description": "Field label."
+  },
+  "merchantFieldIban": "IBAN",
+  "@merchantFieldIban": {
+    "description": "Field label."
+  },
+  "merchantFieldIbanHint": "Ödemeler bu hesaba aktarılır; TR ile başlar.",
+  "@merchantFieldIbanHint": {
+    "description": "Field hint."
+  },
+  "merchantFieldListedOnWeb": "Web sitesinde listelensin",
+  "@merchantFieldListedOnWeb": {
+    "description": "Switch label."
+  },
+  "merchantFieldListedOnWebHint": "Doğrulandıktan sonra dükkânın askida.app dükkân listesinde görünür.",
+  "@merchantFieldListedOnWebHint": {
+    "description": "Switch hint."
+  },
+  "merchantFieldAddress": "Adres",
+  "@merchantFieldAddress": {
+    "description": "Field label."
+  },
+  "merchantFieldIl": "İl",
+  "@merchantFieldIl": {
+    "description": "Field label."
+  },
+  "merchantFieldIlce": "İlçe",
+  "@merchantFieldIlce": {
+    "description": "Field label."
+  },
+  "merchantFieldNewTaxNumber": "Yeni vergi numarası",
+  "@merchantFieldNewTaxNumber": {
+    "description": "Field label (profile)."
+  },
+  "merchantFieldNewIban": "Yeni IBAN",
+  "@merchantFieldNewIban": {
+    "description": "Field label (profile)."
+  },
+  "merchantFieldKeepBlank": "Değiştirmeyeceksen boş bırak.",
+  "@merchantFieldKeepBlank": {
+    "description": "Field hint (profile)."
+  },
+  "merchantShopTypeBakery": "Fırın",
+  "@merchantShopTypeBakery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeRestaurant": "Lokanta",
+  "@merchantShopTypeRestaurant": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeGrocery": "Bakkal / manav",
+  "@merchantShopTypeGrocery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeStationery": "Kırtasiye",
+  "@merchantShopTypeStationery": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeCafe": "Kahvehane",
+  "@merchantShopTypeCafe": {
+    "description": "Shop type."
+  },
+  "merchantShopTypeOther": "Diğer",
+  "@merchantShopTypeOther": {
+    "description": "Shop type."
+  },
+  "merchantWizardStep": "Adım {current} / {total}",
+  "@merchantWizardStep": {
+    "description": "Wizard progress.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantWizardDetailsTitle": "Dükkân bilgileri",
+  "@merchantWizardDetailsTitle": {
+    "description": "Wizard step 1 title."
+  },
+  "merchantWizardLocationTitle": "Adres ve konum",
+  "@merchantWizardLocationTitle": {
+    "description": "Wizard step 2 title."
+  },
+  "merchantWizardReviewTitle": "Kontrol et ve gönder",
+  "@merchantWizardReviewTitle": {
+    "description": "Wizard step 3 title."
+  },
+  "merchantWizardReviewNote": "Gönderdikten sonra kaydın incelenir. Doğrulanana kadar dükkânın listede görünmez.",
+  "@merchantWizardReviewNote": {
+    "description": "Wizard review note."
+  },
+  "merchantWizardSubmit": "Kaydı gönder",
+  "@merchantWizardSubmit": {
+    "description": "Wizard submit."
+  },
+  "merchantMapLabel": "Dükkânın konumunu seçmek için harita",
+  "@merchantMapLabel": {
+    "description": "Accessibility label of the pin map."
+  },
+  "merchantMapHint": "Dükkânın yerini işaretlemek için haritaya dokun.",
+  "@merchantMapHint": {
+    "description": "Map hint."
+  },
+  "merchantMapPinned": "İşaretlenen konum: {lat}, {lng}",
+  "@merchantMapPinned": {
+    "description": "Map pin coordinates.",
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantMapPinRequired": "Devam etmek için haritada dükkânın yerini işaretle.",
+  "@merchantMapPinRequired": {
+    "description": "Map error: no pin."
+  },
+  "merchantMapPinOutside": "İşaretlenen konum kabul edilmedi. Türkiye içinde bir nokta seç.",
+  "@merchantMapPinOutside": {
+    "description": "Map error from the server."
+  },
+  "merchantUseMyLocation": "Konumumu kullan",
+  "@merchantUseMyLocation": {
+    "description": "Button: use device location for the pin."
+  },
+  "merchantLocationRationaleTitle": "Konumun neden gerekli?",
+  "@merchantLocationRationaleTitle": {
+    "description": "Location rationale title."
+  },
+  "merchantLocationRationaleBody": "Konumun yalnızca dükkânının haritadaki yerini işaretlemek için bir kez okunur.",
+  "@merchantLocationRationaleBody": {
+    "description": "Location rationale body."
+  },
+  "merchantLocationFailed": "Konum alınamadı. Haritaya dokunarak işaretleyebilirsin.",
+  "@merchantLocationFailed": {
+    "description": "Location error."
+  },
+  "merchantDocumentsBody": "Doğrulama için en fazla üç belge yükleyebilirsin. Belgenin fotoğrafı net ve okunur olsun.",
+  "@merchantDocumentsBody": {
+    "description": "Documents body."
+  },
+  "merchantDocumentKind": "Belge türü",
+  "@merchantDocumentKind": {
+    "description": "Documents: kind label."
+  },
+  "merchantDocumentVergiLevhasi": "Vergi levhası",
+  "@merchantDocumentVergiLevhasi": {
+    "description": "Document kind."
+  },
+  "merchantDocumentIsletmeBelgesi": "İşletme belgesi",
+  "@merchantDocumentIsletmeBelgesi": {
+    "description": "Document kind."
+  },
+  "merchantDocumentCamera": "Fotoğraf çek",
+  "@merchantDocumentCamera": {
+    "description": "Documents: camera."
+  },
+  "merchantDocumentGallery": "Galeriden seç",
+  "@merchantDocumentGallery": {
+    "description": "Documents: gallery."
+  },
+  "merchantDocumentUploading": "Belge gönderiliyor…",
+  "@merchantDocumentUploading": {
+    "description": "Documents: uploading."
+  },
+  "merchantDocumentWrongType": "Yalnızca JPEG ya da PNG fotoğraf yüklenebilir.",
+  "@merchantDocumentWrongType": {
+    "description": "Documents error: type."
+  },
+  "merchantDocumentTooLarge": "Fotoğraf en fazla 5 MB olabilir.",
+  "@merchantDocumentTooLarge": {
+    "description": "Documents error: size."
+  },
+  "merchantDocumentPickerFailed": "Fotoğraf seçilemedi. Kamera ya da galeri iznini kontrol et.",
+  "@merchantDocumentPickerFailed": {
+    "description": "Documents error: picker."
+  },
+  "merchantDocumentLimit": "En fazla üç belge yükleyebilirsin.",
+  "@merchantDocumentLimit": {
+    "description": "Documents error: limit."
+  },
+  "merchantDocumentsSent": "Gönderilen belgeler",
+  "@merchantDocumentsSent": {
+    "description": "Documents: list title."
+  },
+  "merchantDocumentReceived": "Alındı, incelenecek",
+  "@merchantDocumentReceived": {
+    "description": "Documents: row state."
+  },
+  "merchantDocumentsDone": "Tamam, ana sayfaya dön",
+  "@merchantDocumentsDone": {
+    "description": "Documents: finish."
+  },
+  "merchantCatalogAdd": "Ürün ekle",
+  "@merchantCatalogAdd": {
+    "description": "Catalog: add."
+  },
+  "merchantCatalogEmptyOwner": "Henüz ürün yok. Askıya bırakılabilecek ilk ürününü ekle.",
+  "@merchantCatalogEmptyOwner": {
+    "description": "Catalog empty (owner)."
+  },
+  "merchantCatalogEmptyStaff": "Henüz ürün yok.",
+  "@merchantCatalogEmptyStaff": {
+    "description": "Catalog empty (staff)."
+  },
+  "merchantCatalogDailyCap": "günde en çok {count}",
+  "@merchantCatalogDailyCap": {
+    "description": "Catalog row: daily cap.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCatalogInactive": "Pasif",
+  "@merchantCatalogInactive": {
+    "description": "Catalog row: inactive."
+  },
+  "merchantCatalogActiveToggle": "{name} askıda olsun",
+  "@merchantCatalogActiveToggle": {
+    "description": "Accessibility label of the active switch.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantItemNewTitle": "Yeni ürün",
+  "@merchantItemNewTitle": {
+    "description": "Item form title (new)."
+  },
+  "merchantItemEditTitle": "Ürünü düzenle",
+  "@merchantItemEditTitle": {
+    "description": "Item form title (edit)."
+  },
+  "merchantItemName": "Ürün adı",
+  "@merchantItemName": {
+    "description": "Field label."
+  },
+  "merchantItemNameHint": "Örnek: Ekmek, Mercimek çorbası, Defter",
+  "@merchantItemNameHint": {
+    "description": "Field hint."
+  },
+  "merchantItemCategory": "Kategori",
+  "@merchantItemCategory": {
+    "description": "Field label."
+  },
+  "merchantItemPrice": "Fiyat (₺)",
+  "@merchantItemPrice": {
+    "description": "Field label."
+  },
+  "merchantItemPriceHint": "Örnek: 15,50",
+  "@merchantItemPriceHint": {
+    "description": "Field hint."
+  },
+  "merchantItemDailyCap": "Günlük sınır",
+  "@merchantItemDailyCap": {
+    "description": "Field label."
+  },
+  "merchantItemDailyCapHint": "Bu üründen bir günde en çok kaç tane verilebilir.",
+  "@merchantItemDailyCapHint": {
+    "description": "Field hint."
+  },
+  "merchantItemActive": "Askıya bırakılabilir",
+  "@merchantItemActive": {
+    "description": "Switch label."
+  },
+  "merchantItemActiveHint": "Kapalıyken ürün bağışçılara görünmez.",
+  "@merchantItemActiveHint": {
+    "description": "Switch hint."
+  },
+  "merchantRedeemTitle": "Kod okut",
+  "@merchantRedeemTitle": {
+    "description": "Redeem screen title."
+  },
+  "merchantScannerLabel": "Kamera görüntüsü: kodun karekodunu çerçeveye getir",
+  "@merchantScannerLabel": {
+    "description": "Accessibility label of the scanner."
+  },
+  "merchantScannerHint": "Karekodu çerçeveye getir; okununca kendiliğinden kontrol edilir.",
+  "@merchantScannerHint": {
+    "description": "Scanner hint."
+  },
+  "merchantCameraFailed": "Kamera açılamadı. Kodu aşağıya elle yazabilirsin.",
+  "@merchantCameraFailed": {
+    "description": "Scanner error."
+  },
+  "merchantTorchOn": "Feneri aç",
+  "@merchantTorchOn": {
+    "description": "Torch button."
+  },
+  "merchantTorchOff": "Feneri kapat",
+  "@merchantTorchOff": {
+    "description": "Torch button."
+  },
+  "merchantManualTitle": "Ya da kodu yaz",
+  "@merchantManualTitle": {
+    "description": "Manual entry title."
+  },
+  "merchantManualField": "8 karakterlik kod",
+  "@merchantManualField": {
+    "description": "Manual entry label."
+  },
+  "merchantManualSubmit": "Kodu onayla",
+  "@merchantManualSubmit": {
+    "description": "Manual entry submit."
+  },
+  "merchantRedeemChecking": "Kod kontrol ediliyor…",
+  "@merchantRedeemChecking": {
+    "description": "Redeem busy."
+  },
+  "merchantRedeemApproved": "Kod onaylandı",
+  "@merchantRedeemApproved": {
+    "description": "Redeem success title."
+  },
+  "merchantRedeemGiven": "1 {item} verildi",
+  "@merchantRedeemGiven": {
+    "description": "What was handed over (item name as the shop wrote it).",
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantRedeemAt": "Saat {time}",
+  "@merchantRedeemAt": {
+    "description": "Redeem time.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantRedeemNext": "Sıradaki kodu okut",
+  "@merchantRedeemNext": {
+    "description": "Redeem success button."
+  },
+  "merchantRedeemRetry": "Yeniden dene",
+  "@merchantRedeemRetry": {
+    "description": "Redeem failure button."
+  },
+  "merchantRedeemMalformed": "Bu bir Askıda kodu değil. Kod 8 karakterdir; yeniden okutmayı ya da elle yazmayı dene.",
+  "@merchantRedeemMalformed": {
+    "description": "Redeem error: malformed input."
+  },
+  "merchantDayToday": "Bugün",
+  "@merchantDayToday": {
+    "description": "Day chip."
+  },
+  "merchantDayYesterday": "Dün",
+  "@merchantDayYesterday": {
+    "description": "Day chip."
+  },
+  "merchantRedemptionsCount": "{day}: {count} ürün verildi",
+  "@merchantRedemptionsCount": {
+    "description": "Accessibility summary of a day.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantRedemptionsCountTail": "ürün verildi",
+  "@merchantRedemptionsCountTail": {
+    "description": "Text next to the day count."
+  },
+  "merchantRedemptionsEmpty": "Bu gün askıdan bir şey verilmedi.",
+  "@merchantRedemptionsEmpty": {
+    "description": "Redemptions empty."
+  },
+  "merchantRedemptionsOffline": "Bağlantı yok: bu cihazda kayıtlı liste gösteriliyor.",
+  "@merchantRedemptionsOffline": {
+    "description": "Redemptions offline note."
+  },
+  "merchantPayoutsBody": "Her gün için askıya bırakılan tutar, platform komisyonu ve sana aktarılacak net tutar.",
+  "@merchantPayoutsBody": {
+    "description": "Payouts intro."
+  },
+  "merchantPayoutsEmpty": "Henüz ödeme kaydı yok.",
+  "@merchantPayoutsEmpty": {
+    "description": "Payouts empty."
+  },
+  "merchantPayoutNet": "Net {amount}",
+  "@merchantPayoutNet": {
+    "description": "Accessibility label of the net amount.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantPayoutBreakdown": "Bağış {donated} · Komisyon {commission}",
+  "@merchantPayoutBreakdown": {
+    "description": "Payout row breakdown.",
+    "placeholders": {
+      "donated": {
+        "type": "String"
+      },
+      "commission": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantPayoutRedeemed": "{count} ürün verildi",
+  "@merchantPayoutRedeemed": {
+    "description": "Payout row redeemed count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantPayoutPending": "Bekliyor",
+  "@merchantPayoutPending": {
+    "description": "Payout status."
+  },
+  "merchantPayoutPaid": "Aktarıldı",
+  "@merchantPayoutPaid": {
+    "description": "Payout status."
+  },
+  "merchantPayoutHeld": "Bekletiliyor",
+  "@merchantPayoutHeld": {
+    "description": "Payout status."
+  },
+  "merchantPayoutFailed": "Aktarılamadı",
+  "@merchantPayoutFailed": {
+    "description": "Payout status."
+  },
+  "merchantProfileMasked": "Vergi no: {tax} · IBAN: {iban}",
+  "@merchantProfileMasked": {
+    "description": "Masked identifiers on the profile.",
+    "placeholders": {
+      "tax": {
+        "type": "String"
+      },
+      "iban": {
+        "type": "String"
+      }
+    }
+  },
+  "merchantProfileReviewNote": "Ad, adres, vergi numarası ya da IBAN değişikliği kaydını yeniden incelemeye gönderebilir.",
+  "@merchantProfileReviewNote": {
+    "description": "Profile note."
+  },
+  "merchantProfileSaved": "Kaydedildi.",
+  "@merchantProfileSaved": {
+    "description": "Profile saved."
+  },
+  "recipientStationLeave": "Bırak",
+  "@recipientStationLeave": {
+    "description": "Station rail, first tag: someone leaves an item."
+  },
+  "recipientStationHang": "Askıda",
+  "@recipientStationHang": {
+    "description": "Station rail, middle tag: the item waits on the hook."
+  },
+  "recipientStationTake": "Al",
+  "@recipientStationTake": {
+    "description": "Station rail, last tag: anyone takes it."
+  },
+  "recipientStationLabel": "Bırak, askıda, al: biri askıya bırakır, askıda bekler, isteyen alır.",
+  "@recipientStationLabel": {
+    "description": "Accessibility label of the station rail graphic."
+  },
+  "recipientIntroTitle": "Askıda bekleyeni al, soru sorulmaz.",
+  "@recipientIntroTitle": {
+    "description": "Recipient onboarding screen 1 title."
+  },
+  "recipientIntroBody": "Mahalle esnafında birilerinin önceden ödediği ekmek, çorba ya da defter askıda bekler. Hesap açman, adını vermen gerekmez.",
+  "@recipientIntroBody": {
+    "description": "Recipient onboarding screen 1 body."
+  },
+  "recipientIntroStart": "Başla",
+  "@recipientIntroStart": {
+    "description": "Recipient onboarding screen 1 button."
+  },
+  "recipientIntroOtherModes": "Askıya bırakmak ya da dükkânını eklemek için yukarıdan kullanım biçimini değiştirebilirsin.",
+  "@recipientIntroOtherModes": {
+    "description": "Recipient onboarding screen 1 footnote pointing to the mode switcher."
+  },
+  "recipientLocationTitle": "Yakındaki askılar için yaklaşık konum",
+  "@recipientLocationTitle": {
+    "description": "Recipient onboarding screen 2 title."
+  },
+  "recipientLocationBody": "Konumun yaklaşık bir kilometreye yuvarlanır ve hiçbir yerde saklanmaz. İstersen konum yerine ilçe seçebilirsin.",
+  "@recipientLocationBody": {
+    "description": "Recipient onboarding screen 2 body."
+  },
+  "recipientLocationFailed": "Konum şu an okunamadı. İlçe seçerek devam edebilirsin.",
+  "@recipientLocationFailed": {
+    "description": "Shown when permission exists but no position could be read."
+  },
+  "recipientLocationBlocked": "Konum izni kapalı. İlçe seçerek devam edebilirsin.",
+  "@recipientLocationBlocked": {
+    "description": "Shown when the system will not ask for location again."
+  },
+  "recipientUseLocation": "Konumu kullan",
+  "@recipientUseLocation": {
+    "description": "Button: use the approximate device location."
+  },
+  "recipientPickDistrict": "İlçe seç",
+  "@recipientPickDistrict": {
+    "description": "Button: pick a district instead of the location."
+  },
+  "recipientDistrictSheetTitle": "İlçe seç",
+  "@recipientDistrictSheetTitle": {
+    "description": "Title of the district picker sheet."
+  },
+  "recipientAreaApproximate": "Yaklaşık konumun",
+  "@recipientAreaApproximate": {
+    "description": "Area chip when the device location is used."
+  },
+  "recipientChangeArea": "Değiştir",
+  "@recipientChangeArea": {
+    "description": "Button next to the area chip."
+  },
+  "recipientChangeAreaLabel": "Bölgeyi değiştir",
+  "@recipientChangeAreaLabel": {
+    "description": "Accessibility label of the change area button."
+  },
+  "recipientViewList": "Liste",
+  "@recipientViewList": {
+    "description": "Segment: shop list."
+  },
+  "recipientViewMap": "Harita",
+  "@recipientViewMap": {
+    "description": "Segment: shop map."
+  },
+  "recipientNearbyLead": "Yakında",
+  "@recipientNearbyLead": {
+    "description": "Rail counter on the recipient list: words before the number."
+  },
+  "recipientNearbyTail": "ürün askıda",
+  "@recipientNearbyTail": {
+    "description": "Rail counter on the recipient list: words after the number. Counts items, never people."
+  },
+  "recipientRadiusNote": "{km} km içindeki, askıda ürünü olan dükkânlar.",
+  "@recipientRadiusNote": {
+    "description": "Footnote under the shop list.",
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientWiden": "5 km'ye kadar bak",
+  "@recipientWiden": {
+    "description": "Button: widen the search radius to the 5 km maximum."
+  },
+  "recipientActiveCodeTitle": "Aktif bir kodun var",
+  "@recipientActiveCodeTitle": {
+    "description": "Banner on the list while a code is valid."
+  },
+  "recipientActiveCodeOpen": "Kodu göster",
+  "@recipientActiveCodeOpen": {
+    "description": "Button: open the active code."
+  },
+  "recipientImpactTitle": "Bugün {area}",
+  "@recipientImpactTitle": {
+    "description": "Impact card title with the area name.",
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientImpactTr": "Türkiye",
+  "@recipientImpactTr": {
+    "description": "Impact area name for the whole country."
+  },
+  "recipientImpactDonated": "askıya bırakıldı",
+  "@recipientImpactDonated": {
+    "description": "Impact card: caption under the number of items left today."
+  },
+  "recipientImpactRedeemed": "askıdan alındı",
+  "@recipientImpactRedeemed": {
+    "description": "Impact card: caption under the number of items taken today."
+  },
+  "recipientImpactShops": "esnaf",
+  "@recipientImpactShops": {
+    "description": "Impact card: caption under the number of shops."
+  },
+  "recipientImpactNote": "{day} tarihli sayılar, saatte bir güncellenir.",
+  "@recipientImpactNote": {
+    "description": "Impact card footnote with the date of the figures.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientShopTitle": "Dükkân",
+  "@recipientShopTitle": {
+    "description": "Title bar of the recipient shop detail."
+  },
+  "recipientShopOwnView": "Bu dükkân senin hesabına bağlı. Esnaf görünümünü Esnaf bölümünde bulabilirsin.",
+  "@recipientShopOwnView": {
+    "description": "Shown when the signed-in owner opens their own shop in recipient mode."
+  },
+  "recipientShopItemsTitle": "Askıda",
+  "@recipientShopItemsTitle": {
+    "description": "Heading of the item list on the shop detail."
+  },
+  "recipientShopLimits": "Bir günde en fazla iki askı alınabilir, aynı dükkândan bir tane. Kod 10 dakika geçerlidir.",
+  "@recipientShopLimits": {
+    "description": "Fairness limits under the item list."
+  },
+  "recipientItemCount": "{count} askıda",
+  "@recipientItemCount": {
+    "description": "Number of units of an item on the rail.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientItemCountLabel": "{name}, {count} askıda",
+  "@recipientItemCountLabel": {
+    "description": "Accessibility label of an item row.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientTake": "Askıdan al",
+  "@recipientTake": {
+    "description": "Button on an item row."
+  },
+  "recipientTakeLabel": "{name} askıdan al",
+  "@recipientTakeLabel": {
+    "description": "Accessibility label of the take button.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientReserveTitle": "Askıdan al",
+  "@recipientReserveTitle": {
+    "description": "Reserve screen title."
+  },
+  "recipientReserveItem": "1 {name}",
+  "@recipientReserveItem": {
+    "description": "Reserve screen: the item being taken.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientReserveBody": "Kodun {minutes} dakika geçerli olur. Dükkâna gidip kodu esnafa göstermen yeterli; kimse soru sormaz.",
+  "@recipientReserveBody": {
+    "description": "Reserve screen explanation.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientReserveConfirm": "Kodu al",
+  "@recipientReserveConfirm": {
+    "description": "Reserve screen button."
+  },
+  "recipientReserveHolding": "Geçerli bir kodun zaten var. Yenisini, bu kod kullanıldıktan ya da süresi dolduktan sonra alabilirsin.",
+  "@recipientReserveHolding": {
+    "description": "Reserve screen while another code is valid."
+  },
+  "recipientBackToShops": "Dükkânlara dön",
+  "@recipientBackToShops": {
+    "description": "Button back to the shop list."
+  },
+  "recipientBackToShop": "Dükkâna dön",
+  "@recipientBackToShop": {
+    "description": "Button back to the shop of an expired code."
+  },
+  "recipientCodeTitle": "Kodun",
+  "@recipientCodeTitle": {
+    "description": "Code screen title."
+  },
+  "recipientItemLine": "1 {name}",
+  "@recipientItemLine": {
+    "description": "Item line on the code tag.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientCountdown": "Kalan süre {time}",
+  "@recipientCountdown": {
+    "description": "Countdown under the code tag (mm:ss).",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientCountdownLabel": "Kalan süre yaklaşık {minutes} dakika",
+  "@recipientCountdownLabel": {
+    "description": "Spoken countdown, once a minute.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientCodeRules": "Kod yalnızca bu cihazın belleğinde durur ve kaydedilmez. Uygulamayı kapatırsan yeniden gösterilemez; süresi dolarsa askı askıya döner.",
+  "@recipientCodeRules": {
+    "description": "Rules under the code tag."
+  },
+  "recipientCodeExpiredTitle": "Kodun süresi doldu",
+  "@recipientCodeExpiredTitle": {
+    "description": "Code screen after expiry."
+  },
+  "recipientCodeExpiredBody": "Askı yeniden askıya döndü. İstersen dükkândan yeni bir kod alabilirsin; günlük sınırlar geçerlidir.",
+  "@recipientCodeExpiredBody": {
+    "description": "Code screen after expiry, body."
+  },
+  "recipientNoCodeTitle": "Gösterilecek bir kod yok",
+  "@recipientNoCodeTitle": {
+    "description": "Code screen without an active code."
+  },
+  "recipientNoCodeBody": "Kodlar yalnızca bu ekranda, geçerli oldukları sürece durur. Yakındaki dükkânlardan yeni bir askı seçebilirsin.",
+  "@recipientNoCodeBody": {
+    "description": "Code screen without an active code, body."
+  },
+  "recipientFullClose": "Kapat",
+  "@recipientFullClose": {
+    "description": "Closes the full-brightness code view."
+  },
+  "recipientAttestTitle": "Kod almadan önce",
+  "@recipientAttestTitle": {
+    "description": "Anonymous entry title."
+  },
+  "recipientAttestBody": "Bu cihaza anonim bir kimlik verilir. Hesap, ad ya da telefon numarası istenmez. Telefonun kendi hizmeti bunun gerçek bir cihaz olduğunu doğrular; bu doğrulama seni tanımlamaz.",
+  "@recipientAttestBody": {
+    "description": "Anonymous entry body."
+  },
+  "recipientAttestContinue": "Devam et",
+  "@recipientAttestContinue": {
+    "description": "Anonymous entry button."
+  },
+  "recipientAttestNote": "Bu kimliği istediğin an \"Verilerimi sıfırla\" ile silebilirsin.",
+  "@recipientAttestNote": {
+    "description": "Anonymous entry footnote."
+  },
+  "recipientAttestBlockedTitle": "Bu cihaz doğrulanamadı",
+  "@recipientAttestBlockedTitle": {
+    "description": "Blocking message when the device cannot attest (prod flavor)."
+  },
+  "recipientAttestBlockedBody": "Kod almak için cihazın, telefonun kendi doğrulama hizmetiyle doğrulanması gerekiyor. Bu cihazda bu hizmet yok ya da şu an çalışmıyor. Dükkânları ve askıdaki sayıları görmeye devam edebilirsin.",
+  "@recipientAttestBlockedBody": {
+    "description": "Blocking message body."
+  },
+  "recipientResetAction": "Verilerimi sıfırla",
+  "@recipientResetAction": {
+    "description": "Button that deletes the anonymous identity."
+  },
+  "recipientResetHint": "Hesap yok, ad yok. Bu cihazın anonim kimliğini ve kayıtlı listeyi istediğin an silebilirsin.",
+  "@recipientResetHint": {
+    "description": "Explanation under the reset button."
+  },
+  "recipientResetTitle": "Verilerimi sıfırla",
+  "@recipientResetTitle": {
+    "description": "Reset confirmation dialog title."
+  },
+  "recipientResetBody": "Bu cihazın anonim kimliği sunucudan ve cihazdan silinir. Kayıtlı dükkân listesi, seçtiğin bölge ve aktif kodun da silinir.",
+  "@recipientResetBody": {
+    "description": "Reset confirmation dialog body."
+  },
+  "recipientResetCancel": "Vazgeç",
+  "@recipientResetCancel": {
+    "description": "Reset dialog: cancel."
+  },
+  "recipientResetConfirm": "Sıfırla",
+  "@recipientResetConfirm": {
+    "description": "Reset dialog: confirm (destructive)."
+  },
+  "recipientResetDone": "Verilerin sıfırlandı.",
+  "@recipientResetDone": {
+    "description": "Snackbar after a reset."
+  },
+  "recipientResetDoneOffline": "Cihazdaki veriler silindi. Sunucuya şu an ulaşılamadı; anonim anahtarın süresi dolunca sunucuda da geçersiz olur.",
+  "@recipientResetDoneOffline": {
+    "description": "Snackbar after a reset when the server could not be reached."
+  },
+  "recipientRetry": "Yeniden dene",
+  "@recipientRetry": {
+    "description": "Retry button on recipient screens."
+  },
+  "recipientLoading": "Yükleniyor",
+  "@recipientLoading": {
+    "description": "Accessibility label of the progress indicator."
   }
 }

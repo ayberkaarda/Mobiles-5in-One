@@ -1,0 +1,7 @@
+{
+  "data": [
+    {"item": {"name": "Ekmek"}, "redeemed_at": "2026-10-04T09:45:12+03:00", "redeemed_by_role": "owner"},
+    {"item": {"name": "Mercimek çorbası"}, "redeemed_at": "2026-10-04T08:12:40+03:00", "redeemed_by_role": "staff"}
+  ],
+  "meta": {"day": "2026-10-04", "count": 2}
+}

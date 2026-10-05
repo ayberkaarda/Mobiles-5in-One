@@ -1,0 +1,33 @@
+{
+  "data": [
+    {
+      "id": "0192a4c1-7000-7a10-9b3c-000000000001",
+      "slug": "ornek-kose-firini-sisli",
+      "name": "[ÖRNEK] Köşe Fırını",
+      "type": "bakery",
+      "type_label": "Fırın",
+      "address": "Halaskargazi Cd. 1",
+      "il": "İstanbul",
+      "ilce": "Şişli",
+      "location": {"lat": 41.0602, "lng": 28.9877},
+      "distance_m": 450,
+      "available_count": 12,
+      "is_sample": true
+    },
+    {
+      "id": "0192a4c1-7000-7a10-9b3c-000000000002",
+      "slug": "ornek-mahalle-lokantasi-kadikoy",
+      "name": "[ÖRNEK] Mahalle Lokantası",
+      "type": "restaurant",
+      "type_label": "Lokanta",
+      "address": "Moda Cd. 20",
+      "il": "İstanbul",
+      "ilce": "Kadıköy",
+      "location": {"lat": 40.9875, "lng": 29.0262},
+      "distance_m": 1240,
+      "available_count": 0,
+      "is_sample": true
+    }
+  ],
+  "meta": {"radius": 3000, "next_cursor": "page-2"}
+}
