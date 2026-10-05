@@ -54,7 +54,8 @@ class JwtTest(
         assertEquals("es256-1", jwt.header.keyID)
         assertEquals(JOSEObjectType.JWT, jwt.header.type)
         val claims = jwt.jwtClaimsSet
-        assertEquals(setOf("sub", "did", "jti", "iat", "exp", "iss"), claims.claims.keys)
+        assertEquals(setOf("sub", "did", "jti", "iat", "exp", "iss", "aud"), claims.claims.keys)
+        assertEquals(listOf("cetele-api"), claims.audience)
         assertEquals("https://cetele.app", claims.issuer)
         assertEquals(user.toString(), claims.subject)
         assertEquals(device.toString(), claims.getStringClaim("did"))
@@ -112,6 +113,17 @@ class JwtTest(
         assertRejected(codec(keys), parts[0] + "." + otherPayload + "." + parts[2])
         assertRejected(codec(keys), "garbage")
         assertRejected(codec(keys), "")
+    }
+
+    @Test
+    fun `tokens without the cetele audience are rejected`() {
+        assertEquals(CurrentUser(user, device), codec(keys).verify(sign(es256Header(), validClaims())))
+        assertRejected(codec(keys), sign(es256Header(), JWTClaimsSet.Builder(validClaims()).audience(null as String?).build()))
+        assertRejected(codec(keys), sign(es256Header(), JWTClaimsSet.Builder(validClaims()).audience("other-api").build()))
+        assertRejected(
+            codec(keys),
+            sign(es256Header(), JWTClaimsSet.Builder(validClaims()).audience(listOf("cetele-api", "other-api")).build()),
+        )
     }
 
     @Test
@@ -189,6 +201,7 @@ class JwtTest(
         JWTClaimsSet
             .Builder()
             .issuer("https://cetele.app")
+            .audience("cetele-api")
             .subject(user.toString())
             .claim("did", device.toString())
             .jwtID(UUID.randomUUID().toString())
