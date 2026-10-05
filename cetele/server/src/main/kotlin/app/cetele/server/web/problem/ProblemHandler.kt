@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.servlet.HandlerMapping
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import tools.jackson.core.JacksonException
@@ -224,7 +225,7 @@ class ProblemHandler(
         request: HttpServletRequest,
     ): ResponseEntity<ProblemBody> {
         causeOfType<ProblemException>(ex)?.let { return render(request, it) }
-        log.error("Unhandled exception on {} {}", request.method, request.requestURI, ex)
+        log.error("Unhandled exception on {} {}", request.method, route(request), ex)
         return respond(request, ProblemCode.SERVER_ERROR)
     }
 
@@ -233,9 +234,9 @@ class ProblemHandler(
         ex: ProblemException,
     ): ResponseEntity<ProblemBody> {
         if (ex.code.status.is5xxServerError) {
-            log.error("Problem {} on {} {}: {}", ex.code.code, request.method, request.requestURI, ex.detail)
+            log.error("Problem {} on {} {}: {}", ex.code.code, request.method, route(request), ex.detail)
         } else {
-            log.debug("Problem {} on {} {}: {}", ex.code.code, request.method, request.requestURI, ex.detail)
+            log.debug("Problem {} on {} {}: {}", ex.code.code, request.method, route(request), ex.detail)
         }
         return writer.entity(request, ex.code, ex.errors, ex.headers)
     }
@@ -245,11 +246,18 @@ class ProblemHandler(
         code: ProblemCode,
         errors: List<ProblemFieldError> = emptyList(),
     ): ResponseEntity<ProblemBody> {
-        log.debug("Problem {} on {} {}", code.code, request.method, request.requestURI)
+        log.debug("Problem {} on {} {}", code.code, request.method, route(request))
         return writer.entity(request, code, errors)
     }
 
     companion object {
+        /**
+         * The matched route pattern (`/v1/invitations/{code}/accept`), never the raw URL: paths can
+         * carry secrets such as invitation codes. Unmatched requests are logged as `<unmatched>`.
+         */
+        fun route(request: HttpServletRequest): String =
+            request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "<unmatched>"
+
         /** Field error code for a binding error, derived from the constraint annotation only. */
         fun fieldErrorCode(error: FieldError): String {
             val violation = runCatching { error.unwrap(ConstraintViolation::class.java) }.getOrNull()
