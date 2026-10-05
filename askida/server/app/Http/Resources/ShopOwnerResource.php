@@ -6,6 +6,7 @@ use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopType;
 use App\Domain\Shops\Support\TurkishIban;
 use App\Domain\Shops\Support\TurkishTaxNumber;
+use App\Domain\Web\Directory\OpeningHours;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,6 +42,7 @@ class ShopOwnerResource extends JsonResource
             'verification_state' => $shop->verification_state->value,
             'verified_at' => $shop->verified_at?->toIso8601String(),
             'listed_on_web' => $shop->listed_on_web,
+            'opening_hours' => OpeningHours::normalize($shop->opening_hours),
             'created_at' => $shop->created_at?->toIso8601String(),
             'updated_at' => $shop->updated_at?->toIso8601String(),
         ];

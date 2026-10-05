@@ -7,6 +7,7 @@ use App\Domain\Shops\Models\Shop;
 use App\Domain\Shops\Models\ShopMember;
 use App\Domain\Shops\Models\ShopMemberRole;
 use App\Domain\Shops\Models\ShopVerificationState;
+use App\Domain\Web\Directory\OpeningHours;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  * Creates and edits shops for their owners.
  *
  * Input arrays carry the validated request fields: name, type, address, il, ilce, lat,
- * lng, phone, tax_number, iban, listed_on_web. The tax number and IBAN are written
+ * lng, phone, tax_number, iban, listed_on_web (and on edit opening_hours). The tax number and IBAN are written
  * through the model's encrypted casts only.
  */
 final class ShopRegistrar
@@ -89,6 +90,16 @@ final class ShopRegistrar
             if (array_key_exists('listed_on_web', $data) && (bool) $data['listed_on_web'] !== $locked->listed_on_web) {
                 $locked->forceFill(['listed_on_web' => (bool) $data['listed_on_web']]);
                 $changed[] = 'listed_on_web';
+            }
+
+            if (array_key_exists('opening_hours', $data)) {
+                $hours = OpeningHours::normalize(is_array($data['opening_hours']) ? $data['opening_hours'] : null);
+
+                // jsonb reorders object keys, so the stored value is normalised before comparing.
+                if ($hours !== OpeningHours::normalize($locked->opening_hours)) {
+                    $locked->opening_hours = $hours;
+                    $changed[] = 'opening_hours';
+                }
             }
 
             if ($changed === []) {

@@ -4,11 +4,13 @@ namespace App\Http\Resources;
 
 use App\Domain\Items\Models\Item;
 use App\Domain\Shops\Models\Shop;
+use App\Domain\Web\Directory\OpeningHours;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
 /**
- * GET shops/{slug}: the public shop shape plus its active items with AVAILABLE counts.
+ * GET shops/{slug}: the public shop shape plus its weekly opening hours and its active
+ * items with AVAILABLE counts.
  *
  * @mixin Shop
  */
@@ -33,8 +35,12 @@ class ShopDetailResource extends ShopPublicResource
             $available += (int) $item->getAttribute('available_count');
         }
 
+        /** @var Shop $shop */
+        $shop = $this->resource;
+
         return [
             ...parent::toArray($request),
+            'opening_hours' => OpeningHours::normalize($shop->opening_hours),
             'available_count' => $available,
             'items' => ItemPublicResource::collection($this->items)->resolve($request),
         ];
