@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Console logging with masking (phone numbers, verification codes, credentials, long tokens).
+  - profile local: one plain line per event, the whole rendered line passes through %mask(...)
+  - every other profile: Elastic Common Schema JSON; string values are masked by
+    MaskingJsonMembersCustomizer (logging.structured.json.customizer in application.yml)
+  Request and response bodies are never logged.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <conversionRule conversionWord="mask" class="app.cetele.server.config.logging.MaskingConverter"/>
+
+    <springProfile name="local">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%mask(%d{ISO8601} %5p [%X{traceId:-}] %-40.40logger{39} : %m %kvp%n%wEx)</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <springProfile name="!local">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="org.springframework.boot.logging.logback.StructuredLogEncoder">
+                <format>ecs</format>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

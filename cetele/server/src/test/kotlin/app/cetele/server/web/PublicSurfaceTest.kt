@@ -29,8 +29,9 @@ class PublicSurfaceTest(
 
     @Test
     fun `everything else is denied by default`() {
+        // The OTP and refresh endpoints are public since Phase 1; everything else still needs a token.
         mvc.get("/v1/me").andExpect { status { isUnauthorized() } }
-        mvc.post("/v1/auth/otp/request").andExpect { status { isUnauthorized() } }
+        mvc.post("/v1/shops").andExpect { status { isUnauthorized() } }
         mvc.get("/").andExpect { status { isUnauthorized() } }
     }
 }
