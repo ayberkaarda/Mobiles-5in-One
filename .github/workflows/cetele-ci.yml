@@ -1,0 +1,290 @@
+name: Cetele CI
+
+# Runs on every pull request and every push to main, without a path filter, so the single
+# "Cetele CI gate" check always reports and can be the one required status check on main.
+# The "changes" job decides whether the Cetele jobs have work to do; when nothing under cetele/
+# (or a cetele-* workflow, or .gitleaks.toml) changed they are skipped and the gate passes.
+# Same pattern as askida-ci.yml and kadro-ci.yml.
+# Actions are pinned to full commit SHAs. The workflow lives at the Git repository root.
+# gradle/actions is pinned to v6.4.0 (latest stable major 6); the SHA is the commit the
+# annotated tag points to, resolved with git ls-remote.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cetele-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  changes:
+    name: Detect Cetele changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cetele: ${{ steps.diff.outputs.cetele }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Cetele
+      # pathspecs, not from parsing file names, so quoted or non-ASCII names cannot slip past.
+      # --no-renames reports a file moved out of cetele/ as a deletion inside it. Exit 0 means
+      # no Cetele change, 1 a change, anything else is an error and runs every Cetele job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base commit; running every Cetele job."
+            cetele=true
+          else
+            set -- cetele/ ':(glob).github/workflows/cetele-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) cetele=false ;;
+              1) cetele=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Cetele job."
+                cetele=true
+                ;;
+            esac
+          fi
+          echo "cetele=$cetele" >> "$GITHUB_OUTPUT"
+          echo "Cetele jobs run: $cetele"
+
+  # Android app in cetele/android: style, static analysis, unit tests and the debug APK.
+  android:
+    name: Cetele android
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: cetele/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # Only the main branch writes the Gradle cache; other refs read it.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          build-root-directory: cetele/android
+
+      - name: Run checks
+        run: ./gradlew ktlintCheck detekt :app:testDebugUnitTest :app:assembleDebug
+
+  # Spring Boot server in cetele/server. check = ktlintCheck + test; the tests start PostgreSQL
+  # through Testcontainers on the runner's Docker daemon, so no service container is declared.
+  server:
+    name: Cetele server
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: cetele/server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # Only the main branch writes the Gradle cache; other refs read it.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          build-root-directory: cetele/server
+
+      - name: Run checks
+        run: ./gradlew check
+
+  # Brand token validation: pure node script, no dependencies to install.
+  brand:
+    name: Cetele brand
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Validate brand tokens
+        run: node cetele/brand/scripts/validate-tokens.mjs
+
+  # Leftover-marker grep over the tracked Cetele sources, and a secret scan of the full history.
+  # Exclusions are explicit: build output, Gradle caches and dependency lockfiles. git grep only reads tracked files, so untracked
+  # build output is never scanned anyway; the pathspecs keep that true if something is committed.
+  # Case-sensitive TODO, FIXME, XXX and YOUR_; lorem is matched case-insensitively.
+  placeholder-grep:
+    name: Cetele placeholder grep
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Placeholder markers
+        run: |
+          set -- cetele/android cetele/server \
+            ':(exclude,glob)**/build/**' \
+            ':(exclude,glob)**/.gradle/**' \
+            ':(exclude,glob)**/node_modules/**' \
+            ':(exclude,glob)**/gradle.lockfile' \
+            ':(exclude,glob)**/*.lockfile' \
+            ':(exclude,glob)**/package-lock.json' \
+            ':(exclude,glob)**/pnpm-lock.yaml' \
+            ':(exclude,glob)**/yarn.lock'
+          found=0
+          if git grep -n -I -E 'TODO|FIXME|XXX|YOUR_' -- "$@"; then found=1; fi
+          if git grep -n -I -i -E 'lorem' -- "$@"; then found=1; fi
+          if [ "$found" -ne 0 ]; then
+            echo "Placeholder markers found under cetele/android or cetele/server."
+            exit 1
+          fi
+          echo "No placeholder markers found."
+
+      # Turkish text must not be case-transformed (dotted and dotless i break under naive
+      # uppercasing), so the UI code never uppercases. Scanned: every src/main tree under
+      # cetele/android and cetele/server/src/main/resources. Excluded: build output.
+      - name: Uppercase transforms
+        run: |
+          set -- ':(glob)cetele/android/**/src/main/**' \
+            ':(glob)cetele/server/src/main/resources/**' \
+            ':(exclude,glob)**/build/**'
+          if git grep -n -I -E 'text-transform:[[:space:]]*uppercase|toUpperCase\(|uppercase\(' -- "$@"; then
+            echo "Uppercase transforms are not allowed in Cetele UI code."
+            exit 1
+          fi
+          echo "No uppercase transforms found."
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Scans every commit of every ref from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  # The only check to mark as required on main. "changes" must succeed and report cetele=true
+  # or cetele=false. true: android, server, brand and placeholder-grep must all succeed. false: all four
+  # must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # When a job is added to this workflow, add it to "needs" and to the checks below.
+  gate:
+    name: Cetele CI gate
+    needs: [changes, android, server, brand, placeholder-grep]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CETELE_CHANGED: ${{ needs.changes.outputs.cetele }}
+          ANDROID_RESULT: ${{ needs.android.result }}
+          SERVER_RESULT: ${{ needs.server.result }}
+          BRAND_RESULT: ${{ needs.brand.result }}
+          GREP_RESULT: ${{ needs.placeholder-grep.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (cetele=${CETELE_CHANGED:-<none>})"
+          echo "android: ${ANDROID_RESULT:-<none>}"
+          echo "server: ${SERVER_RESULT:-<none>}"
+          echo "brand: ${BRAND_RESULT:-<none>}"
+          echo "placeholder-grep: ${GREP_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Cetele CI failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$CETELE_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Cetele CI failed: change detection reported no valid cetele output."
+              exit 1
+              ;;
+          esac
+          for result in "$ANDROID_RESULT" "$SERVER_RESULT" "$BRAND_RESULT" "$GREP_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Cetele CI failed: cetele=$CETELE_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Cetele CI passed (cetele=$CETELE_CHANGED, all jobs $expected)."
