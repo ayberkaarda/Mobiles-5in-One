@@ -1,0 +1,12 @@
+{
+  "data": {
+    "day": "2026-10-04",
+    "level": "il",
+    "il": "İstanbul",
+    "ilce": null,
+    "donated": 184,
+    "redeemed": 151,
+    "shops": 12,
+    "methodology": "impact.v1.daily_units"
+  }
+}

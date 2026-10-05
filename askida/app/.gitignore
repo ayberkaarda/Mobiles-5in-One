@@ -58,3 +58,10 @@ app.*.map.json
 *.jks
 *.keystore
 key.properties
+
+# Sources built by build_runner (tool/codegen.sh); never committed
+*.g.dart
+*.freezed.dart
+*.drift.dart
+/lib/**/*.mocks.dart
+/test/**/*.mocks.dart

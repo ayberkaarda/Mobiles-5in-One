@@ -36,7 +36,16 @@ documented here, so a gap in the numbering is always explained.
 | [0023](0023-route-classification-and-authorization-completeness.md) | Route classification and authorization completeness       | Accepted                |
 | [0024](0024-openapi-contract-test.md)                               | OpenAPI document and contract test                        | Accepted                |
 | 0025-0032                                                           | Phase 3 decisions (payments, admin)                       | Reserved                |
-| 0033-0042                                                           | Phase 4 decisions (Flutter app)                           | Reserved                |
+| [0033](0033-app-architecture-and-state-management.md)               | App architecture and state management                     | Accepted                |
+| [0034](0034-api-client-cache-and-offline-policy.md)                 | API client, offline cache and offline policy              | Accepted                |
+| [0035](0035-secure-storage-and-token-handling.md)                   | Secure storage and token handling in the app              | Accepted                |
+| [0036](0036-map-tile-factory-and-coarse-recipient-location.md)      | Map tile factory and coarse recipient location            | Accepted                |
+| [0037](0037-anonymous-attestation-channels.md)                      | Anonymous attestation channels and nonce hashing          | Accepted                |
+| [0038](0038-push-routing-by-type.md)                                | Push routing by the server's type                         | Accepted                |
+| [0039](0039-mode-shell-and-settings-entry.md)                       | Mode shell and settings entry                             | Accepted                |
+| [0040](0040-integration-tests-on-the-emulator.md)                   | Integration tests on the Android emulator                 | Accepted                |
+| [0041](0041-merchant-shop-discovery-through-me-shops.md)            | Merchant shop discovery through GET /me/shops             | Accepted                |
+| [0042](0042-webview-checkout.md)                                    | WebView checkout with a navigation allowlist              | Accepted                |
 | [0043](0043-rendering-and-asset-pipeline.md)                        | Rendering and asset pipeline of the public web            | Accepted                |
 | [0044](0044-page-metadata-and-hreflang.md)                          | Page metadata and hreflang policy                         | Accepted                |
 | [0045](0045-json-ld-coverage-and-validation.md)                     | JSON-LD coverage and test-based validation                | Accepted                |

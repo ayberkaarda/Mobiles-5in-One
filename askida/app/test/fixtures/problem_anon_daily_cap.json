@@ -1,0 +1,7 @@
+{
+  "type": "https://askida.app/problems/anon.daily_cap",
+  "title": "The daily limit of this device is reached.",
+  "status": 409,
+  "code": "anon.daily_cap",
+  "request_id": "0192a4c1-b000-7a10-9b3c-000000000043"
+}

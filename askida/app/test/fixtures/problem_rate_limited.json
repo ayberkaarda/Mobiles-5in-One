@@ -1,0 +1,7 @@
+{
+  "type": "https://askida.app/problems/rate_limited",
+  "title": "Too many requests.",
+  "status": 429,
+  "code": "rate_limited",
+  "request_id": "0192a4c1-b000-7a10-9b3c-000000000044"
+}

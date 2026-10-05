@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": "0192a4c1-7000-7a10-9b3c-000000000001",
+      "slug": "ornek-kose-firini-sisli",
+      "name": "[ÖRNEK] Köşe Fırını",
+      "type": "bakery",
+      "type_label": "Fırın",
+      "il": "İstanbul",
+      "ilce": "Şişli",
+      "verification_state": "pending",
+      "role": "owner"
+    },
+    {
+      "id": "0192a4c1-7000-7a10-9b3c-000000000002",
+      "slug": "ornek-mahalle-lokantasi-kadikoy",
+      "name": "[ÖRNEK] Mahalle Lokantası",
+      "type": "restaurant",
+      "type_label": null,
+      "il": "İstanbul",
+      "ilce": "Kadıköy",
+      "verification_state": "verified",
+      "role": "staff"
+    }
+  ]
+}

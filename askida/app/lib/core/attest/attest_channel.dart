@@ -41,9 +41,15 @@ class AttestChannel {
   final MethodChannel _channel;
 
   /// Returns an attestation token or throws [AttestException].
-  Future<String> requestToken() async {
+  ///
+  /// [nonce] is the `device_nonce` the server will check; the native side
+  /// binds the provider request to it (passed as the `nonce` argument).
+  Future<String> requestToken({String? nonce}) async {
     try {
-      final token = await _channel.invokeMethod<String>(requestTokenMethod);
+      final token = await _channel.invokeMethod<String>(
+        requestTokenMethod,
+        nonce == null ? null : <String, String>{'nonce': nonce},
+      );
       if (token == null || token.isEmpty) {
         throw const AttestException(
           AttestFailure.unknown,

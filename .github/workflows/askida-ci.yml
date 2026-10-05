@@ -324,6 +324,11 @@ jobs:
       - name: Format check
         run: dart format --set-exit-if-changed .
 
+      # freezed, json_serializable and drift sources are not committed; build them after the
+      # format check (build_runner output is not formatted) and before analyze, test and build.
+      - name: Build code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Analyze
         run: flutter analyze
 

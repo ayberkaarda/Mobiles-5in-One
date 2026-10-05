@@ -1,0 +1,6 @@
+{
+  "data": [
+    {"day": "2026-10-03", "donated_minor": 45000, "commission_minor": 2250, "net_minor": 42750, "redeemed_count": 27, "status": "paid"},
+    {"day": "2026-10-04", "donated_minor": 12000, "commission_minor": 600, "net_minor": 11400, "redeemed_count": 6, "status": "pending"}
+  ]
+}

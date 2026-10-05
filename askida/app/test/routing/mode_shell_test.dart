@@ -1,5 +1,5 @@
 import 'package:askida/design/widgets/mode_switcher.dart';
-import 'package:askida/design/widgets/rail_counter.dart';
+import 'package:askida/features/settings/presentation/settings_screen.dart';
 import 'package:askida/routing/app_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,17 +14,15 @@ void main() {
       .selected
       .single;
 
-  testWidgets('opens in recipient mode with the rail counter', (tester) async {
+  testWidgets('opens in recipient mode on the first onboarding screen', (
+    tester,
+  ) async {
     await tester.pumpAskida(locale: const Locale('tr'));
 
     expect(find.byType(ModeSwitcher), findsOneWidget);
     expect(selectedMode(tester), AppMode.recipient);
-    expect(find.byType(RailCounter), findsOneWidget);
-    expect(find.text('ÖRNEK'), findsOneWidget);
-    expect(
-      find.text('Yakında askıda bekleyen bir şey görünmüyor'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('recipient-intro')), findsOneWidget);
+    expect(find.text('Askıda bekleyeni al, soru sorulmaz.'), findsOneWidget);
   });
 
   testWidgets('switches between the three modes', (tester) async {
@@ -42,10 +40,7 @@ void main() {
 
     await tester.tap(modeTab(AppMode.recipient));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Yakında askıda bekleyen bir şey görünmüyor'),
-      findsOneWidget,
-    );
+    expect(find.text('Askıda bekleyeni al, soru sorulmaz.'), findsOneWidget);
     expect(selectedMode(tester), AppMode.recipient);
   });
 
@@ -59,4 +54,30 @@ void main() {
       findsOneWidget,
     );
   });
+
+  for (final mode in AppMode.values) {
+    testWidgets('settings open from the ${mode.name} app bar, no account', (
+      tester,
+    ) async {
+      await tester.pumpAskida(locale: const Locale('tr'));
+      await tester.tap(modeTab(mode));
+      await tester.pumpAndSettle();
+
+      final action = find.byKey(const ValueKey('shell-settings'));
+      expect(action, findsOneWidget);
+      expect(find.byTooltip('Ayarlar'), findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      // A pushed page over the shell (the shell's location stays).
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text('Dil'), findsWidgets);
+      expect(find.text('Görünüm'), findsWidgets);
+
+      // Back returns to the same mode.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(selectedMode(tester), mode);
+    });
+  }
 }

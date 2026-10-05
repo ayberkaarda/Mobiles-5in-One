@@ -69,16 +69,16 @@ void main() {
   testWidgets('renders English copy for the en locale', (tester) async {
     await tester.pumpAskida(locale: const Locale('en'));
     expect(find.text('Take from the hook'), findsWidgets);
-    expect(find.text('Nothing is waiting on the hook nearby'), findsOneWidget);
+    expect(
+      find.text('Take what is waiting on the hook. No questions asked.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('falls back to Turkish for an unsupported locale', (
     tester,
   ) async {
     await tester.pumpAskida(locale: const Locale('de'));
-    expect(
-      find.text('Yakında askıda bekleyen bir şey görünmüyor'),
-      findsOneWidget,
-    );
+    expect(find.text('Askıda bekleyeni al, soru sorulmaz.'), findsOneWidget);
   });
 }
