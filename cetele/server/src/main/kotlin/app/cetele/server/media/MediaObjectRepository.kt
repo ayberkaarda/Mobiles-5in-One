@@ -36,4 +36,13 @@ interface MediaObjectRepository : TenantRepository<MediaObject> {
         @Param("shopId") shopId: UUID,
         @Param("before") before: Instant,
     ): List<UUID>
+
+    @Query(
+        "select m.uploadKey from MediaObject m where m.shopId = :shopId and m.status <> app.cetele.server.media.MediaStatus.PENDING and m.uploadExpiresAt < :now and m.uploadExpiresAt >= :since",
+    )
+    fun staleUploadKeys(
+        @Param("shopId") shopId: UUID,
+        @Param("now") now: Instant,
+        @Param("since") since: Instant,
+    ): List<String>
 }
