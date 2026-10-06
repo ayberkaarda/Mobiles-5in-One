@@ -9,7 +9,7 @@ class BuildConfigTest {
     @Test
     fun `application identity matches the store listing`() {
         assertEquals("app.cetele.android", BuildConfig.APPLICATION_ID)
-        assertEquals("0.1.0", BuildConfig.VERSION_NAME)
+        assertEquals("0.3.0", BuildConfig.VERSION_NAME)
     }
 
     @Test
