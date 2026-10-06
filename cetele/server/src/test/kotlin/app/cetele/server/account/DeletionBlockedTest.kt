@@ -70,6 +70,15 @@ class DeletionBlockedTest : AccountTestSupport() {
         )
         val transfer = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to code(owner)))
         assertEquals(200, transfer.status, transfer.contentAsString)
+        // The transfer itself cancels the previous owner's shop request, before any executor run.
+        assertEquals(
+            0,
+            jdbc.queryForObject(
+                "SELECT count(*) FROM deletion_requests WHERE shop_id = ? AND cancelled_at IS NULL AND completed_at IS NULL",
+                Int::class.java,
+                shopId,
+            ),
+        )
         executor.run(Instant.now())
         assertEquals(0, count("users", "id", owner.actor.id))
         assertEquals(1, count("shops", "id", shopId))

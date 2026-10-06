@@ -111,6 +111,8 @@ class DeletionExecutor(
             jdbc.sql("DELETE FROM $table WHERE user_id = :id").param("id", user.id).update()
         }
         jdbc.sql("DELETE FROM otp_codes WHERE phone_e164 = :phone").param("phone", user.phoneE164).update()
+        // Invitations addressed to the user's phone in any shop carry the phone number (PII).
+        jdbc.sql("DELETE FROM invitations WHERE phone_e164 = :phone").param("phone", user.phoneE164).update()
         jdbc.sql("DELETE FROM memberships WHERE user_id = :id").param("id", user.id).update()
         jdbc.sql("DELETE FROM users WHERE id = :id").param("id", user.id).update()
         request.completedAt = now
