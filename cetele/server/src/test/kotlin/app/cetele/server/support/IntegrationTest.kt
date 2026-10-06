@@ -16,5 +16,5 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(PostgresTestConfiguration::class, TestAuth::class)
+@Import(PostgresTestConfiguration::class, MinioTestConfiguration::class, TestAuth::class)
 annotation class IntegrationTest

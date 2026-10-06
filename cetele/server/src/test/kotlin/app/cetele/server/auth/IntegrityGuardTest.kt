@@ -9,9 +9,9 @@ import app.cetele.server.auth.integrity.IntegrityRejection
 import app.cetele.server.auth.integrity.IntegrityVerifier
 import app.cetele.server.auth.otp.OtpConfiguration
 import app.cetele.server.auth.otp.OtpHasher
-import app.cetele.server.auth.sms.SmsConfiguration
-import app.cetele.server.auth.sms.SmsGateway
 import app.cetele.server.config.LocalOnlyAdapterGuard
+import app.cetele.server.reminders.sms.SmsConfiguration
+import app.cetele.server.reminders.sms.SmsGateway
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext

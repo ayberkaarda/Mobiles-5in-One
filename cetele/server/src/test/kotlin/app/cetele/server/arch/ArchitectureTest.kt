@@ -67,12 +67,12 @@ class ArchitectureTest {
         assertViolations(
             CeteleArchitectureRules.noNativeQueryCalls,
             flagged = listOf("NativeCaller.count"),
-            accepted = listOf("NativeQueries"),
+            accepted = listOf("NativeQueries", "SyncNativeCaller", "AccountNativeCaller"),
         )
         assertViolations(
             CeteleArchitectureRules.noNativeQueryAnnotations,
             flagged = listOf("NativeQueries.everything"),
-            accepted = listOf("NativeQueries.jpql"),
+            accepted = listOf("NativeQueries.jpql", "SyncNativeRepository", "AccountNativeRepository"),
         )
     }
 
@@ -80,8 +80,24 @@ class ArchitectureTest {
     fun `rule 4 tenancy handlers carry PreAuthorize`() {
         assertViolations(
             CeteleArchitectureRules.tenancyHandlersArePreAuthorized,
-            flagged = listOf("UnguardedController.members"),
-            accepted = listOf("GuardedController"),
+            flagged =
+                listOf(
+                    "UnguardedController.members",
+                    "SyncUnguarded.list",
+                    "StatementUnguarded.page",
+                    "ReminderUnguarded.send",
+                    "MediaUnguarded.upload",
+                    "AccountUnguarded.me",
+                ),
+            accepted =
+                listOf(
+                    "GuardedController",
+                    "SyncGuarded",
+                    "StatementGuarded",
+                    "ReminderGuarded",
+                    "MediaGuarded",
+                    "AccountGuarded",
+                ),
         )
     }
 
@@ -97,6 +113,15 @@ class ArchitectureTest {
     @Test
     fun `rule 6 only config reads the environment`() {
         assertViolations(CeteleArchitectureRules.onlyConfigReadsEnvironment, flagged = listOf("EnvReader."), accepted = listOf("EnvConfig"))
+    }
+
+    @Test
+    fun `rule 7 plain JDBC is confined to the allowlist`() {
+        assertViolations(
+            CeteleArchitectureRules.plainJdbcIsConfined,
+            flagged = listOf("RawJdbcCaller"),
+            accepted = listOf("AccountJdbcCaller"),
+        )
     }
 
     private fun assertViolations(
@@ -117,10 +142,26 @@ class ArchitectureTest {
     }
 }
 
-/** The rule set run by `check`. Allowlists are explicit and empty in Phase 1. */
+/** The rule set run by `check`. Native SQL is restricted to sync and account operations. */
 object CeteleArchitectureRules {
-    /** Packages allowed to run native SQL. Phase 2 adds `..sync..` for the change-log queries. */
-    val NATIVE_QUERY_ALLOWED_PACKAGES: Array<String> = arrayOf()
+    val NATIVE_QUERY_ALLOWED_PACKAGES: Array<String> = arrayOf("..sync..", "..account..")
+
+    /** Packages that may use `JdbcClient` and `JdbcTemplate` (hard delete and retention). */
+    val PLAIN_JDBC_ALLOWED_PACKAGES: Array<String> = arrayOf("..account..")
+
+    /**
+     * Classes that may use `JdbcClient` and `JdbcTemplate` with bound parameters: the four
+     * Phase 1 classes of ADR-0012 and the advisory lock helpers of Phase 2.
+     */
+    val PLAIN_JDBC_ALLOWED_CLASSES: List<String> =
+        listOf(
+            "app.cetele.server.auth.AuthLocks",
+            "app.cetele.server.auth.UserStore",
+            "app.cetele.server.tenancy.UserDirectory",
+            "app.cetele.server.config.SecurityConfig",
+            "app.cetele.server.config.JobLocks",
+            "app.cetele.server.tenancy.ShopLocks",
+        )
 
     private const val TENANT_SCOPED = "TenantScoped"
     private const val TENANT_REPOSITORY = "TenantRepository"
@@ -163,8 +204,14 @@ object CeteleArchitectureRules {
         methods()
             .that()
             .areDeclaredInClassesThat()
-            .resideInAPackage("..tenancy.web..")
-            .and()
+            .resideInAnyPackage(
+                "..tenancy.web..",
+                "..sync.web..",
+                "..statements.web..",
+                "..reminders.web..",
+                "..media.web..",
+                "..account.web..",
+            ).and()
             .areMetaAnnotatedWith(RequestMapping::class.java)
             .should()
             .beAnnotatedWith(PreAuthorize::class.java)
@@ -190,6 +237,21 @@ object CeteleArchitectureRules {
                 },
             ).because("environment values are bound once, in configuration properties")
 
+    val plainJdbcIsConfined: ArchRule =
+        noClasses()
+            .that()
+            .resideOutsideOfPackages(*PLAIN_JDBC_ALLOWED_PACKAGES)
+            .and(
+                DescribedPredicate.not(
+                    DescribedPredicate.describe("are allowlisted JDBC classes") { javaClass: JavaClass ->
+                        PLAIN_JDBC_ALLOWED_CLASSES.any { javaClass.name == it || javaClass.name.startsWith("$it$") }
+                    },
+                ),
+            ).should()
+            .dependOnClassesThat()
+            .resideInAPackage("org.springframework.jdbc.core..")
+            .because("plain SQL is reviewed per class; new use outside the allowlist needs a decision")
+
     val all: List<ArchRule> =
         listOf(
             tenantScopedOnlyThroughTenantRepository,
@@ -199,6 +261,7 @@ object CeteleArchitectureRules {
             tenancyHandlersArePreAuthorized,
             webDoesNotUseRepositories,
             onlyConfigReadsEnvironment,
+            plainJdbcIsConfined,
         )
 
     private fun hasSupertypeNamed(

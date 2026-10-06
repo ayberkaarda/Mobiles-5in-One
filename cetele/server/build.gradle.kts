@@ -55,6 +55,13 @@ dependencies {
     implementation(libs.bucket4j.caffeine)
     implementation(libs.caffeine)
     implementation(libs.springdoc.openapi.webmvc.api)
+    implementation(platform(libs.aws.bom))
+    implementation(libs.aws.s3)
+    implementation(libs.aws.url.connection.client)
+    implementation(libs.tika.core)
+    implementation(libs.thumbnailator)
+    implementation(libs.imageio.webp)
+    implementation(libs.pdfbox)
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.spring.boot.starter.test)
@@ -63,6 +70,7 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.minio)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.archunit.junit5)
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -70,6 +78,33 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+tasks.register("openApiContractCheck") {
+    group = "verification"
+    description = "Compares the canonical OpenAPI document with the committed contract."
+    dependsOn(tasks.test)
+    val actual = layout.buildDirectory.file("openapi/openapi.json")
+    val expected = layout.projectDirectory.file("../docs/api/openapi.json")
+    inputs.file(actual)
+    inputs.file(expected)
+    doLast {
+        fun normalise(text: String) = text.replace("\r\n", "\n").replace("\r", "\n")
+        val actualText = normalise(actual.get().asFile.readText(Charsets.UTF_8))
+        val expectedText = normalise(expected.asFile.readText(Charsets.UTF_8))
+        if (actualText != expectedText) {
+            val actualLines = actualText.split('\n')
+            val expectedLines = expectedText.split('\n')
+            val index =
+                (0 until maxOf(actualLines.size, expectedLines.size))
+                    .first { actualLines.getOrNull(it) != expectedLines.getOrNull(it) }
+            throw GradleException(
+                "OpenAPI differs at line ${index + 1}\n" +
+                    "Expected: ${expectedLines.getOrNull(index) ?: "<end of file>"}\n" +
+                    "Actual: ${actualLines.getOrNull(index) ?: "<end of file>"}",
+            )
+        }
+    }
 }
 
 ktlint {

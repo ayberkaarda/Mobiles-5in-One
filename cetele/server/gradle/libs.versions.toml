@@ -9,6 +9,11 @@ nimbus-jose-jwt = "10.10"
 bucket4j = "8.21.0"
 springdoc = "3.1.1"
 archunit = "1.5.1"
+aws-sdk = "2.55.11"
+tika = "4.1.0"
+thumbnailator = "0.4.21"
+twelvemonkeys = "3.15.2"
+pdfbox = "3.0.8"
 
 [libraries]
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
@@ -28,6 +33,13 @@ bucket4j-core = { module = "com.bucket4j:bucket4j_jdk17-core", version.ref = "bu
 bucket4j-caffeine = { module = "com.bucket4j:bucket4j_jdk17-caffeine", version.ref = "bucket4j" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine" }
 springdoc-openapi-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdoc" }
+aws-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws-sdk" }
+aws-s3 = { module = "software.amazon.awssdk:s3" }
+aws-url-connection-client = { module = "software.amazon.awssdk:url-connection-client" }
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "thumbnailator" }
+imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
@@ -35,6 +47,7 @@ spring-boot-starter-security-test = { module = "org.springframework.boot:spring-
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-minio = { module = "org.testcontainers:testcontainers-minio" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }

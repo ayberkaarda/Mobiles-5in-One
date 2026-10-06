@@ -110,7 +110,7 @@ class V2AuthSchemaTest(
         hash: ByteArray,
     ) {
         jdbc.update(
-            "INSERT INTO refresh_tokens (id, token_hash, user_id, device_id, family_id, expires_at) VALUES (?, ?, ?, ?, ?, now())",
+            "INSERT INTO refresh_tokens (id, token_hash, user_id, device_id, family_id, expires_at, family_expires_at) VALUES (?, ?, ?, ?, ?, now(), now())",
             UUID.randomUUID(),
             hash,
             user,

@@ -28,6 +28,7 @@ object FieldErrorCodes {
     const val INVALID_FORMAT = "invalid_format"
     const val TOO_LONG = "too_long"
     const val OUT_OF_RANGE = "out_of_range"
+    const val OUT_OF_ORDER = "out_of_order"
 
     /** A JSON property the endpoint does not accept (unknown properties are rejected). */
     const val UNKNOWN_PROPERTY = "unknown_property"

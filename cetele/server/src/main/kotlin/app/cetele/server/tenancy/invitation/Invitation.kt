@@ -20,8 +20,8 @@ class Invitation(
     @Column(name = "code_hash", nullable = false, updatable = false)
     val codeHash: String,
     expiresAt: Instant,
-    @Column(name = "created_by", nullable = false, updatable = false)
-    val createdBy: UUID,
+    @Column(name = "created_by", updatable = false)
+    val createdBy: UUID?,
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
 ) : TenantScoped {

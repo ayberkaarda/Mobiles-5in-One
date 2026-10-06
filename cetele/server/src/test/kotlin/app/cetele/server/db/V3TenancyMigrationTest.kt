@@ -48,7 +48,8 @@ class V3TenancyMigrationTest(
                 "code_hash:text:NO",
                 "expires_at:timestamp with time zone:NO",
                 "accepted_at:timestamp with time zone:YES",
-                "created_by:uuid:NO",
+                // Nullable since V5: the creator may be deleted (ON DELETE SET NULL).
+                "created_by:uuid:YES",
                 "created_at:timestamp with time zone:NO",
             ),
             columns,

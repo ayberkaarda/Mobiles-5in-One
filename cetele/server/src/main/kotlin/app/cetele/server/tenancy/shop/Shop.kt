@@ -41,8 +41,8 @@ class Shop(
     var il: String,
     @Column(name = "ilce", nullable = false)
     var ilce: String,
-    @Column(name = "created_by", nullable = false, updatable = false)
-    val createdBy: UUID,
+    @Column(name = "created_by", updatable = false)
+    val createdBy: UUID?,
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
 ) : TenantScoped {
