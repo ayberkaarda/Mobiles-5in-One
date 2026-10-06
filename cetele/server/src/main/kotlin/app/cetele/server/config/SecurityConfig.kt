@@ -52,6 +52,7 @@ class SecurityConfig {
             // Error dispatches render a registry problem body for a request that was already handled.
             auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
             auth.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+            auth.requestMatchers(HttpMethod.GET, "/s/**", "/assets/**").permitAll()
             auth.requestMatchers(HttpMethod.POST, *PUBLIC_AUTH_PATHS.toTypedArray()).permitAll()
             if (apiDocsPublic) auth.requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**").permitAll()
             auth.anyRequest().authenticated()
