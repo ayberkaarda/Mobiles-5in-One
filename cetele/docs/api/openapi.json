@@ -1,168 +1,983 @@
 {
-  "openapi" : "3.1.0",
-  "info" : {
-    "title" : "Cetele API",
-    "description" : "Shop ledger API. Errors are RFC 9457 problem documents with a stable `code`.",
-    "version" : "v1"
-  },
-  "servers" : [ {
-    "url" : "https://cetele.app",
-    "description" : "Production"
-  } ],
-  "security" : [ {
-    "bearerAuth" : [ ]
-  } ],
-  "paths" : {
-    "/v1/shops" : {
-      "post" : {
-        "tags" : [ "shop-controller" ],
-        "operationId" : "create",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CreateShopRequest"
-              }
-            }
+  "components" : {
+    "schemas" : {
+      "AcceptedInvitation" : {
+        "properties" : {
+          "role" : {
+            "enum" : [
+              "OWNER",
+              "STAFF"
+            ],
+            "type" : "string"
           },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ShopView"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/shops/{shopId}/invitations" : {
-      "post" : {
-        "tags" : [ "invitation-controller" ],
-        "operationId" : "issue",
-        "parameters" : [ {
-          "name" : "shopId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CreateInvitationRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "201" : {
-            "description" : "Created",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/IssuedInvitation"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/invitations/{code}/accept" : {
-      "post" : {
-        "tags" : [ "invitation-controller" ],
-        "operationId" : "accept",
-        "parameters" : [ {
-          "name" : "code",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
+          "shopId" : {
+            "format" : "uuid",
             "type" : "string"
           }
-        } ],
-        "responses" : {
-          "201" : {
-            "description" : "Created",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AcceptedInvitation"
-                }
-              }
-            }
+        },
+        "type" : "object"
+      },
+      "AccountDeletionBody" : {
+        "properties" : {
+          "code" : {
+            "pattern" : "[0-9]{6}",
+            "type" : "string"
+          },
+          "deleteOwnedShops" : {
+            "type" : "boolean"
           }
-        }
+        },
+        "type" : "object"
+      },
+      "AccountDeletionReceipt" : {
+        "properties" : {
+          "graceUntil" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "requestedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "shopsToDelete" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ChangeView" : {
+        "properties" : {
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "entity" : {
+            "type" : "string"
+          },
+          "entityId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "op" : {
+            "type" : "string"
+          },
+          "payload" : { },
+          "seq" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateInvitationRequest" : {
+        "properties" : {
+          "phone" : {
+            "pattern" : "^\\+90[5][0-9]{9}$",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateShopRequest" : {
+        "properties" : {
+          "il" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : "string"
+          },
+          "ilce" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [
+              "BAKKAL",
+              "MANAV",
+              "KASAP",
+              "BERBER",
+              "KAHVEHANE",
+              "DIGER"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CustomerInput" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "note" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "phone" : {
+            "pattern" : "^\\+90[5][0-9]{9}$",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "smsConsent" : {
+            "type" : "boolean"
+          },
+          "smsConsentAt" : {
+            "format" : "date-time",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "smsConsentSource" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "tag" : {
+            "maxLength" : 30,
+            "minLength" : 1,
+            "type" : [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type" : "object"
+      },
+      "DeletionReceipt" : {
+        "properties" : {
+          "graceUntil" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "requestedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DeletionStatus" : {
+        "properties" : {
+          "blocked" : {
+            "type" : "boolean"
+          },
+          "graceUntil" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "requestedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EntryInput" : {
+        "properties" : {
+          "amountMinor" : {
+            "format" : "int64",
+            "maximum" : 10000000000,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "customerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "dueOn" : {
+            "format" : "date",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "note" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "occurredOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "photoKey" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "reverses" : {
+            "format" : "uuid",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "IssuedInvitation" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Me" : {
+        "properties" : {
+          "deletion" : {
+            "oneOf" : [
+              {
+                "$ref" : "#/components/schemas/DeletionStatus"
+              },
+              {
+                "type" : "null"
+              }
+            ]
+          },
+          "displayName" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "memberships" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MembershipSummary"
+            },
+            "type" : "array"
+          },
+          "phone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MePatchBody" : {
+        "properties" : {
+          "displayName" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "displayName"
+        ],
+        "type" : "object"
+      },
+      "MediaDownloadView" : {
+        "properties" : {
+          "downloadUrl" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "mediaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "photoKey" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "PENDING",
+              "READY",
+              "FAILED",
+              "EXPIRED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MediaPresignRequest" : {
+        "properties" : {
+          "contentLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "contentType" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MediaReadyView" : {
+        "properties" : {
+          "bytes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "height" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "mediaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "photoKey" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "PENDING",
+              "READY",
+              "FAILED",
+              "EXPIRED"
+            ],
+            "type" : "string"
+          },
+          "width" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MediaUploadView" : {
+        "properties" : {
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "headers" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "mediaId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "method" : {
+            "type" : "string"
+          },
+          "photoKey" : {
+            "type" : "string"
+          },
+          "uploadUrl" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MemberList" : {
+        "properties" : {
+          "members" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MemberView"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "MemberView" : {
+        "properties" : {
+          "displayName" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "joinedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [
+              "OWNER",
+              "STAFF"
+            ],
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MembershipSummary" : {
+        "properties" : {
+          "role" : {
+            "enum" : [
+              "OWNER",
+              "STAFF"
+            ],
+            "type" : "string"
+          },
+          "shopId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OperationResult" : {
+        "properties" : {
+          "clientId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "code" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "entityId" : {
+            "format" : "uuid",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "errors" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProblemFieldError"
+            },
+            "type" : [
+              "array",
+              "null"
+            ]
+          },
+          "status" : {
+            "enum" : [
+              "APPLIED",
+              "DUPLICATE",
+              "REJECTED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OtpRequestBody" : {
+        "properties" : {
+          "deviceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "integrityToken" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "phone" : {
+            "pattern" : "^\\+90[5][0-9]{9}$",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OtpVerifyBody" : {
+        "properties" : {
+          "appVersion" : {
+            "maxLength" : 32,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "code" : {
+            "pattern" : "^[0-9]{6}$",
+            "type" : "string"
+          },
+          "deviceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "model" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "pattern" : "^\\+90[5][0-9]{9}$",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "appVersion",
+          "model"
+        ],
+        "type" : "object"
+      },
+      "OwnershipBody" : {
+        "properties" : {
+          "code" : {
+            "pattern" : "[0-9]{6}",
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OwnershipReceipt" : {
+        "properties" : {
+          "ownerUserId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "previousOwnerUserId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "shopId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProblemFieldError" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "field" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PullResponse" : {
+        "properties" : {
+          "changes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ChangeView"
+            },
+            "type" : "array"
+          },
+          "hasMore" : {
+            "type" : "boolean"
+          },
+          "nextSince" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PushRequest" : {
+        "properties" : {
+          "operations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SyncOperation"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PushResponse" : {
+        "properties" : {
+          "head" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "results" : {
+            "items" : {
+              "$ref" : "#/components/schemas/OperationResult"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "QuotaState" : {
+        "properties" : {
+          "limit" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "month" : {
+            "type" : "string"
+          },
+          "used" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ReauthCode" : {
+        "properties" : {
+          "code" : {
+            "pattern" : "[0-9]{6}",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RefreshBody" : {
+        "properties" : {
+          "refreshToken" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "refreshToken"
+        ],
+        "type" : "object"
+      },
+      "ReminderRequest" : {
+        "properties" : {
+          "channel" : {
+            "type" : "string"
+          },
+          "customerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "template" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReminderResponse" : {
+        "properties" : {
+          "providerMessageId" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "quota" : {
+            "$ref" : "#/components/schemas/QuotaState"
+          },
+          "reminderId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sentAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShopView" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "il" : {
+            "type" : "string"
+          },
+          "ilce" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "plan" : {
+            "enum" : [
+              "FREE",
+              "PRO"
+            ],
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [
+              "OWNER",
+              "STAFF"
+            ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [
+              "BAKKAL",
+              "MANAV",
+              "KASAP",
+              "BERBER",
+              "KAHVEHANE",
+              "DIGER"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SignInResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "isNewUser" : {
+            "type" : "boolean"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/UserSummary"
+          }
+        },
+        "type" : "object"
+      },
+      "StatementLinkRequest" : {
+        "properties" : {
+          "customerId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "StatementLinkResponse" : {
+        "properties" : {
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "linkId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SyncOperation" : {
+        "properties" : {
+          "clientId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "clientSeq" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "customer" : {
+            "oneOf" : [
+              {
+                "$ref" : "#/components/schemas/CustomerInput"
+              },
+              {
+                "type" : "null"
+              }
+            ]
+          },
+          "customerId" : {
+            "format" : "uuid",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "entry" : {
+            "oneOf" : [
+              {
+                "$ref" : "#/components/schemas/EntryInput"
+              },
+              {
+                "type" : "null"
+              }
+            ]
+          },
+          "kind" : {
+            "enum" : [
+              "CUSTOMER_UPSERT",
+              "CUSTOMER_DELETE",
+              "ENTRY_CREATE"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateShopRequest" : {
+        "properties" : {
+          "il" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "ilce" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "name" : {
+            "maxLength" : 80,
+            "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "type" : {
+            "enum" : [
+              "BAKKAL",
+              "MANAV",
+              "KASAP",
+              "BERBER",
+              "KAHVEHANE",
+              "DIGER"
+            ],
+            "type" : [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type" : "object"
+      },
+      "UserSummary" : {
+        "properties" : {
+          "displayName" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
       }
     },
-    "/v1/auth/refresh" : {
-      "post" : {
-        "tags" : [ "auth-controller" ],
-        "operationId" : "refresh",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/RefreshBody"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/TokenResponse"
-                }
-              }
-            }
-          }
-        }
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
       }
-    },
-    "/v1/auth/otp/verify" : {
+    }
+  },
+  "info" : {
+    "description" : "Shop ledger API. Errors are RFC 9457 problem documents with a stable `code`.",
+    "title" : "Cetele API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/v1/auth/logout" : {
       "post" : {
-        "tags" : [ "auth-controller" ],
-        "operationId" : "verifyOtp",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/OtpVerifyBody"
-              }
-            }
-          },
-          "required" : true
-        },
+        "operationId" : "logout",
         "responses" : {
           "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SignInResponse"
-                }
-              }
-            }
+            "description" : "OK"
           }
-        }
+        },
+        "tags" : [
+          "auth-controller"
+        ]
       }
     },
     "/v1/auth/otp/request" : {
       "post" : {
-        "tags" : [ "auth-controller" ],
         "operationId" : "requestOtp",
         "requestBody" : {
           "content" : {
@@ -178,63 +993,20 @@
           "200" : {
             "description" : "OK"
           }
-        }
+        },
+        "tags" : [
+          "auth-controller"
+        ]
       }
     },
-    "/v1/auth/logout" : {
+    "/v1/auth/otp/verify" : {
       "post" : {
-        "tags" : [ "auth-controller" ],
-        "operationId" : "logout",
-        "responses" : {
-          "200" : {
-            "description" : "OK"
-          }
-        }
-      }
-    },
-    "/v1/shops/{shopId}" : {
-      "get" : {
-        "tags" : [ "shop-controller" ],
-        "operationId" : "get",
-        "parameters" : [ {
-          "name" : "shopId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ShopView"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch" : {
-        "tags" : [ "shop-controller" ],
-        "operationId" : "update",
-        "parameters" : [ {
-          "name" : "shopId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
+        "operationId" : "verifyOtp",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/UpdateShopRequest"
+                "$ref" : "#/components/schemas/OtpVerifyBody"
               }
             }
           },
@@ -242,37 +1014,142 @@
         },
         "responses" : {
           "200" : {
-            "description" : "OK",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ShopView"
+                  "$ref" : "#/components/schemas/SignInResponse"
                 }
               }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "auth-controller"
+        ]
+      }
+    },
+    "/v1/auth/reauth/request" : {
+      "post" : {
+        "operationId" : "request",
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [
+          "reauth-controller"
+        ]
+      }
+    },
+    "/v1/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "auth-controller"
+        ]
+      }
+    },
+    "/v1/invitations/{code}/accept" : {
+      "post" : {
+        "operationId" : "accept",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "code",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
             }
           }
-        }
+        ],
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AcceptedInvitation"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
       }
     },
     "/v1/me" : {
+      "delete" : {
+        "operationId" : "deleteAccount",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountDeletionBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountDeletionReceipt"
+                }
+              }
+            },
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [
+          "account-controller"
+        ]
+      },
       "get" : {
-        "tags" : [ "me-controller" ],
         "operationId" : "get_1",
         "responses" : {
           "200" : {
-            "description" : "OK",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Me"
                 }
               }
-            }
+            },
+            "description" : "OK"
           }
-        }
+        },
+        "tags" : [
+          "me-controller"
+        ]
       },
       "patch" : {
-        "tags" : [ "me-controller" ],
         "operationId" : "patch",
         "requestBody" : {
           "content" : {
@@ -286,394 +1163,689 @@
         },
         "responses" : {
           "200" : {
-            "description" : "OK",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Me"
                 }
               }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "me-controller"
+        ]
+      }
+    },
+    "/v1/me/deletion" : {
+      "delete" : {
+        "operationId" : "cancelAccount",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "account-controller"
+        ]
+      }
+    },
+    "/v1/shops" : {
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateShopRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShopView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "shop-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}" : {
+      "delete" : {
+        "operationId" : "deleteShop",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
             }
           }
-        }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReauthCode"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionReceipt"
+                }
+              }
+            },
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [
+          "account-controller"
+        ]
+      },
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShopView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "shop-controller"
+        ]
+      },
+      "patch" : {
+        "operationId" : "update",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateShopRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShopView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "shop-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/customers/{customerId}/statement.pdf" : {
+      "get" : {
+        "operationId" : "download_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "customerId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/pdf" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "statement-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/deletion" : {
+      "delete" : {
+        "operationId" : "cancelShop",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "account-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/invitations" : {
+      "post" : {
+        "operationId" : "issue_1",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateInvitationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedInvitation"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/media/presign" : {
+      "post" : {
+        "operationId" : "presign",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MediaPresignRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaUploadView"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "media-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/media/{mediaId}" : {
+      "get" : {
+        "operationId" : "download",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "mediaId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaDownloadView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "media-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/media/{mediaId}/complete" : {
+      "post" : {
+        "operationId" : "complete",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "mediaId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaReadyView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "media-controller"
+        ]
       }
     },
     "/v1/shops/{shopId}/members" : {
       "get" : {
-        "tags" : [ "member-controller" ],
         "operationId" : "list",
-        "parameters" : [ {
-          "name" : "shopId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
           }
-        } ],
+        ],
         "responses" : {
           "200" : {
-            "description" : "OK",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/MemberList"
                 }
               }
-            }
+            },
+            "description" : "OK"
           }
-        }
+        },
+        "tags" : [
+          "member-controller"
+        ]
       }
     },
     "/v1/shops/{shopId}/members/{userId}" : {
       "delete" : {
-        "tags" : [ "member-controller" ],
         "operationId" : "remove",
-        "parameters" : [ {
-          "name" : "shopId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
           }
-        }, {
-          "name" : "userId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
+        ],
         "responses" : {
           "200" : {
             "description" : "OK"
           }
-        }
+        },
+        "tags" : [
+          "member-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/ownership-transfer" : {
+      "post" : {
+        "operationId" : "transfer",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OwnershipBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OwnershipReceipt"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "account-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/reminders" : {
+      "post" : {
+        "operationId" : "send",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReminderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReminderResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "reminder-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/statement-links" : {
+      "post" : {
+        "operationId" : "issue",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StatementLinkRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StatementLinkResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "statement-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/sync/pull" : {
+      "get" : {
+        "operationId" : "pull",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "since",
+            "required" : false,
+            "schema" : {
+              "default" : 0,
+              "format" : "int64",
+              "type" : "integer"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "limit",
+            "required" : false,
+            "schema" : {
+              "default" : 500,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PullResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "sync-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/sync/push" : {
+      "post" : {
+        "operationId" : "push",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PushRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PushResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "sync-controller"
+        ]
       }
     }
   },
-  "components" : {
-    "schemas" : {
-      "CreateShopRequest" : {
-        "type" : "object",
-        "properties" : {
-          "name" : {
-            "type" : "string",
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          },
-          "type" : {
-            "type" : "string",
-            "enum" : [ "BAKKAL", "MANAV", "KASAP", "BERBER", "KAHVEHANE", "DIGER" ]
-          },
-          "il" : {
-            "type" : "string",
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          },
-          "ilce" : {
-            "type" : "string",
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          }
-        }
-      },
-      "ShopView" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "name" : {
-            "type" : "string"
-          },
-          "type" : {
-            "type" : "string",
-            "enum" : [ "BAKKAL", "MANAV", "KASAP", "BERBER", "KAHVEHANE", "DIGER" ]
-          },
-          "il" : {
-            "type" : "string"
-          },
-          "ilce" : {
-            "type" : "string"
-          },
-          "plan" : {
-            "type" : "string",
-            "enum" : [ "FREE", "PRO" ]
-          },
-          "createdAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "OWNER", "STAFF" ]
-          }
-        }
-      },
-      "CreateInvitationRequest" : {
-        "type" : "object",
-        "properties" : {
-          "phone" : {
-            "type" : "string",
-            "pattern" : "^\\+90[5][0-9]{9}$"
-          }
-        }
-      },
-      "IssuedInvitation" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "code" : {
-            "type" : "string"
-          },
-          "phone" : {
-            "type" : "string"
-          },
-          "expiresAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
-      },
-      "AcceptedInvitation" : {
-        "type" : "object",
-        "properties" : {
-          "shopId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "OWNER", "STAFF" ]
-          }
-        }
-      },
-      "RefreshBody" : {
-        "type" : "object",
-        "properties" : {
-          "refreshToken" : {
-            "type" : "string",
-            "maxLength" : 128,
-            "minLength" : 0
-          }
-        },
-        "required" : [ "refreshToken" ]
-      },
-      "TokenResponse" : {
-        "type" : "object",
-        "properties" : {
-          "accessToken" : {
-            "type" : "string"
-          },
-          "expiresIn" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "refreshToken" : {
-            "type" : "string"
-          }
-        }
-      },
-      "OtpVerifyBody" : {
-        "type" : "object",
-        "properties" : {
-          "phone" : {
-            "type" : "string",
-            "pattern" : "^\\+90[5][0-9]{9}$"
-          },
-          "deviceId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "code" : {
-            "type" : "string",
-            "pattern" : "^[0-9]{6}$"
-          },
-          "model" : {
-            "type" : "string",
-            "maxLength" : 100,
-            "minLength" : 0
-          },
-          "appVersion" : {
-            "type" : "string",
-            "maxLength" : 32,
-            "minLength" : 0
-          }
-        },
-        "required" : [ "appVersion", "model" ]
-      },
-      "SignInResponse" : {
-        "type" : "object",
-        "properties" : {
-          "accessToken" : {
-            "type" : "string"
-          },
-          "expiresIn" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "refreshToken" : {
-            "type" : "string"
-          },
-          "user" : {
-            "$ref" : "#/components/schemas/UserSummary"
-          },
-          "isNewUser" : {
-            "type" : "boolean"
-          }
-        }
-      },
-      "UserSummary" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "displayName" : {
-            "type" : [ "string", "null" ]
-          }
-        }
-      },
-      "OtpRequestBody" : {
-        "type" : "object",
-        "properties" : {
-          "phone" : {
-            "type" : "string",
-            "pattern" : "^\\+90[5][0-9]{9}$"
-          },
-          "deviceId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "integrityToken" : {
-            "type" : [ "string", "null" ]
-          }
-        }
-      },
-      "UpdateShopRequest" : {
-        "type" : "object",
-        "properties" : {
-          "name" : {
-            "type" : [ "string", "null" ],
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          },
-          "type" : {
-            "type" : [ "string", "null" ],
-            "enum" : [ "BAKKAL", "MANAV", "KASAP", "BERBER", "KAHVEHANE", "DIGER" ]
-          },
-          "il" : {
-            "type" : [ "string", "null" ],
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          },
-          "ilce" : {
-            "type" : [ "string", "null" ],
-            "maxLength" : 80,
-            "minLength" : 1,
-            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$"
-          }
-        }
-      },
-      "MePatchBody" : {
-        "type" : "object",
-        "properties" : {
-          "displayName" : {
-            "type" : "string",
-            "maxLength" : 80,
-            "minLength" : 1
-          }
-        },
-        "required" : [ "displayName" ]
-      },
-      "Me" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "phone" : {
-            "type" : "string"
-          },
-          "displayName" : {
-            "type" : [ "string", "null" ]
-          },
-          "memberships" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/MembershipSummary"
-            }
-          }
-        }
-      },
-      "MembershipSummary" : {
-        "type" : "object",
-        "properties" : {
-          "shopId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "OWNER", "STAFF" ]
-          }
-        }
-      },
-      "MemberList" : {
-        "type" : "object",
-        "properties" : {
-          "members" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/MemberView"
-            }
-          }
-        }
-      },
-      "MemberView" : {
-        "type" : "object",
-        "properties" : {
-          "userId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "role" : {
-            "type" : "string",
-            "enum" : [ "OWNER", "STAFF" ]
-          },
-          "displayName" : {
-            "type" : [ "string", "null" ]
-          },
-          "phone" : {
-            "type" : "string"
-          },
-          "joinedAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
-      }
-    },
-    "securitySchemes" : {
-      "bearerAuth" : {
-        "type" : "http",
-        "scheme" : "bearer",
-        "bearerFormat" : "JWT"
-      }
+  "security" : [
+    {
+      "bearerAuth" : [ ]
     }
-  }
+  ],
+  "servers" : [
+    {
+      "description" : "Production",
+      "url" : "https://cetele.app"
+    }
+  ]
 }
