@@ -10,8 +10,8 @@ are in [the authorization matrix](../security/authorization-matrix.md); the erro
 ## Export
 
 `OpenApiSnapshotTest` fetches `/v3/api-docs` through MockMvc in profile `test` (the document is
-served only in `local` and `test`) and writes it to `server/build/openapi/openapi.json` on every
-test run. To refresh the committed copy:
+served only in `local` and `test`) and writes a canonical form to `server/build/openapi/openapi.json`
+on every test run: map keys sorted, 2-space indent, trailing newline. To refresh the committed copy:
 
 ```sh
 cd cetele/server
@@ -20,10 +20,25 @@ cp build/openapi/openapi.json ../docs/api/openapi.json
 ```
 
 The copy is a manual step that the lead performs after merging; nobody edits `openapi.json` by
-hand. The document lists the Phase 1 operations (authentication, `me`, shops, invitations and
-members), the bearer scheme and the fixed server entry `https://cetele.app`. The authenticated
+hand. The document lists the operations of Phase 1 (authentication, `me`, shops, invitations and
+members) and Phase 2 (sync push and pull, statement links and the PDF statement, reminders, media
+presign, complete and download, re-authentication, account and shop deletion with cancellation, and
+ownership transfer), the bearer scheme and the fixed server entry `https://cetele.app`. The public
+statement page `GET /s/{token}` is HTML, not part of the `/v1` document. The authenticated
 principal does not appear as a parameter.
 
-A test that compares the committed file with the live document, and the contract test against real
-responses, arrive in Phase 2 together with the domain endpoints. Until then nothing fails when the
-two differ, so the copy is refreshed at every phase gate.
+## Contract check
+
+```sh
+cd cetele/server
+./gradlew check openApiContractCheck
+```
+
+`openApiContractCheck` (verification group) runs the tests, then compares
+`build/openapi/openapi.json` with `docs/api/openapi.json` byte for byte after line-ending
+normalisation and fails with the first differing line number and both lines. `check` does not
+depend on it, because the tree of a worker carries a stale copy by design until the lead refreshes
+it; the lead runs both after refreshing the copy, and the `cetele` CI server job runs the same
+command, so a change to an endpoint without a refreshed `openapi.json` fails the build. The check
+proves that the committed document equals the live one; the contract test against real responses
+(for example a schema validator over recorded bodies) is not built (`not exercised`).
