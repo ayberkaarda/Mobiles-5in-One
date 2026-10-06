@@ -75,13 +75,24 @@ class SmsQuotaService(
         quotas.save(row)
     }
 
+    /** SMS reminders that spent or may have spent provider credit today (Istanbul day, by request time). */
     @Transactional(readOnly = true)
     fun dailySent(now: Instant): Int {
         val day = now.atZone(CeteleTime.ZONE).toLocalDate()
         val start = day.atStartOfDay(CeteleTime.ZONE).toInstant()
         val end = day.plusDays(1).atStartOfDay(CeteleTime.ZONE).toInstant()
-        val count = sentIndex.shopsSentBetween(start, end).sumOf { sent.countSent(it, start, end) }
+        val count = sentIndex.shopsRequestedBetween(start, end).sumOf { sent.countSpent(it, start, end) }
         return count.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    /**
+     * Takes the global cap lock until the caller's transaction ends, then checks the cap. The caller inserts its
+     * QUEUED row in that same transaction, so the next caller counts it and concurrent requests cannot all pass.
+     */
+    @Transactional
+    fun reserveDailyCap(now: Instant) {
+        locks.smsDailyCap()
+        requireDailyCap(now)
     }
 
     @Transactional(readOnly = true)

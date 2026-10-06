@@ -13,6 +13,8 @@ import app.cetele.server.reminders.quota.SmsSentRecordRepository
 import app.cetele.server.reminders.sms.FakeSmsGateway
 import app.cetele.server.reminders.sms.SmsGateway
 import app.cetele.server.reminders.sms.SmsKind
+import app.cetele.server.reminders.sms.SmsMessage
+import app.cetele.server.reminders.sms.SmsSendResult
 import app.cetele.server.security.TraceIdFilter
 import app.cetele.server.statements.link.StatementLinkService
 import app.cetele.server.support.IntegrationTest
@@ -37,6 +39,10 @@ import org.springframework.transaction.PlatformTransactionManager
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -184,19 +190,95 @@ class ReminderFlowTest(
     }
 
     @Test
-    fun `failed send commits failure and refunds quota before answering bad gateway`() {
+    fun `unknown outcome commits failure, keeps quota used and answers bad gateway`() {
         val f = ReminderFixtures(mvc, auth, jdbc)
         val customer = f.customer()
         (gateway as FakeSmsGateway).failNextSend("SensitiveProviderFailure")
         f.send(customer).expectProblem(502, "sms.provider_failed")
+        // Failed = unknown outcome (timeout, transport, 5xx): the SMS may have gone out, so the slot stays used.
+        assertEquals(1, f.used())
+        val row = jdbc.queryForMap("SELECT * FROM reminders WHERE shop_id = ?", f.shopId)
+        assertEquals("FAILED", row["status"])
+        assertEquals("outcome_unknown", row["failure_code"])
+        assertEquals(null, row["sent_at"])
+        assertEquals(null, row["provider_msg_id"])
+        f.send(customer).andExpect { status { isCreated() } }
+        assertEquals(2, f.used())
+    }
+
+    @Test
+    fun `definitive provider rejection refunds quota and stays out of the daily count`() {
+        val f = ReminderFixtures(mvc, auth, jdbc)
+        val customer = f.customer()
+        val rejecting =
+            object : SmsGateway {
+                override fun send(message: SmsMessage): SmsSendResult = SmsSendResult.Rejected("invalid_sender")
+
+                override fun balance() = gateway.balance()
+            }
+        val service = ReminderService(reminders, customers, entries, shops, quotas, links, rejecting, clock, transactions)
+        val before = quotas.dailySent(clock.instant())
+        val failure =
+            assertFailsWith<ProblemException> {
+                service.send(f.shopId, f.owner.id, ReminderRequest(customer, "SMS", "BALANCE"))
+            }
+        assertEquals(ProblemCode.SMS_PROVIDER_FAILED, failure.code)
         assertEquals(0, f.used())
         val row = jdbc.queryForMap("SELECT * FROM reminders WHERE shop_id = ?", f.shopId)
         assertEquals("FAILED", row["status"])
         assertEquals("sms.provider_failed", row["failure_code"])
-        assertEquals(null, row["sent_at"])
-        assertEquals(null, row["provider_msg_id"])
-        f.send(customer).andExpect { status { isCreated() } }
-        assertEquals(1, f.used())
+        assertEquals(before, quotas.dailySent(clock.instant()))
+    }
+
+    @Test
+    fun `unknown outcome keeps counting toward the daily cap`() {
+        val f = ReminderFixtures(mvc, auth, jdbc)
+        val before = quotas.dailySent(clock.instant())
+        (gateway as FakeSmsGateway).failNextSend("timeout")
+        f.send(f.customer()).expectProblem(502, "sms.provider_failed")
+        assertEquals(before + 1, quotas.dailySent(clock.instant()))
+    }
+
+    @Test
+    fun `concurrent requests at cap minus one produce exactly one send`() {
+        val fixtures = List(6) { ReminderFixtures(mvc, auth, jdbc) }
+        val targets = fixtures.map { it to it.customer() }
+        val sends = AtomicInteger()
+        val counting =
+            object : SmsGateway {
+                override fun send(message: SmsMessage): SmsSendResult = SmsSendResult.Accepted("cap-${sends.incrementAndGet()}")
+
+                override fun balance() = gateway.balance()
+            }
+        val cap = quotas.dailySent(clock.instant()) + 1
+        val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = cap))
+        val service = ReminderService(reminders, customers, entries, shops, cappedQuota, links, counting, clock, transactions)
+        val start = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(targets.size)
+        try {
+            val futures =
+                targets.map { (f, customer) ->
+                    pool.submit<Throwable?> {
+                        start.await()
+                        runCatching { service.send(f.shopId, f.owner.id, ReminderRequest(customer, "SMS", "BALANCE")) }.exceptionOrNull()
+                    }
+                }
+            start.countDown()
+            val results = futures.map { it.get(60, TimeUnit.SECONDS) }
+            assertEquals(1, results.count { it == null })
+            assertTrue(results.filterNotNull().all { it is ProblemException && it.code == ProblemCode.SMS_DAILY_CAP_REACHED })
+            assertEquals(1, sends.get())
+        } finally {
+            pool.shutdownNow()
+            // Move the spent rows out of today so other tests keep a clean daily count.
+            fixtures.forEach {
+                jdbc.update(
+                    "UPDATE reminders SET requested_at = ? WHERE shop_id = ?",
+                    java.sql.Timestamp.from(clock.instant().minusSeconds(172800)),
+                    it.shopId,
+                )
+            }
+        }
     }
 
     @Test
@@ -218,10 +300,11 @@ class ReminderFlowTest(
         assertTrue(remaining >= 0)
         repeat(remaining) {
             jdbc.update(
-                "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, sent_at) VALUES (?, ?, ?, 'SMS', 'BALANCE', 'SENT', ?)",
+                "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, sent_at, requested_at) VALUES (?, ?, ?, 'SMS', 'BALANCE', 'SENT', ?, ?)",
                 TraceIdFilter.uuidV7(),
                 f.shopId,
                 customer,
+                java.sql.Timestamp.from(now),
                 java.sql.Timestamp.from(now),
             )
         }
@@ -240,7 +323,11 @@ class ReminderFlowTest(
             assertEquals(0, other.count("reminders"))
             assertEquals(0, other.count("sms_quota"))
         } finally {
-            jdbc.update("UPDATE reminders SET sent_at = ? WHERE shop_id = ?", java.sql.Timestamp.from(now.minusSeconds(172800)), f.shopId)
+            jdbc.update(
+                "UPDATE reminders SET requested_at = ? WHERE shop_id = ?",
+                java.sql.Timestamp.from(now.minusSeconds(172800)),
+                f.shopId,
+            )
         }
     }
 }
