@@ -5,17 +5,20 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import tools.jackson.core.util.DefaultIndenter
+import tools.jackson.core.util.DefaultPrettyPrinter
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
-import tools.jackson.databind.SerializationFeature
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.TreeMap
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
  * Exports the OpenAPI document to `build/openapi/openapi.json` on every test run (profile
- * `test`), the source for `docs/api/openapi.json`. Comparing against the committed copy is Phase 2.
+ * `test`), the source for `docs/api/openapi.json` and `openApiContractCheck`.
  */
 @IntegrationTest
 class OpenApiSnapshotTest(
@@ -41,6 +44,15 @@ class OpenApiSnapshotTest(
 
         val target = Path.of("build", "openapi", "openapi.json")
         Files.createDirectories(target.parent)
-        Files.writeString(target, json.writer().with(SerializationFeature.INDENT_OUTPUT).writeValueAsString(document) + "\n")
+        val indenter = DefaultIndenter("  ", "\n")
+        val printer = DefaultPrettyPrinter().withObjectIndenter(indenter).withArrayIndenter(indenter)
+        Files.writeString(target, json.writer().with(printer).writeValueAsString(canonical(document)) + "\n")
     }
+
+    private fun canonical(node: JsonNode): Any? =
+        when {
+            node.isObject -> TreeMap(node.propertyNames().associateWith { canonical(node[it]) })
+            node.isArray -> (0 until node.size()).map { canonical(node[it]) }
+            else -> json.treeToValue(node, Any::class.java)
+        }
 }
