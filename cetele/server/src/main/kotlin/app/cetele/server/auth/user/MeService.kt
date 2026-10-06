@@ -1,5 +1,7 @@
 package app.cetele.server.auth.user
 
+import app.cetele.server.account.AccountService
+import app.cetele.server.account.DeletionStatus
 import app.cetele.server.auth.UserStore
 import app.cetele.server.config.logging.Masking
 import app.cetele.server.security.CurrentUser
@@ -17,17 +19,19 @@ data class Me(
     val phone: String,
     val displayName: String?,
     val memberships: List<MembershipSummary>,
+    val deletion: DeletionStatus?,
 )
 
 @Service
 class MeService(
     private val users: UserStore,
     private val memberships: MembershipQuery,
+    private val accounts: AccountService,
 ) {
     @Transactional(readOnly = true)
     fun me(caller: CurrentUser): Me {
         val user = users.findById(caller.userId)?.takeIf { it.active } ?: throw ProblemException(ProblemCode.AUTH_UNAUTHENTICATED)
-        return Me(user.id, Masking.phone(user.phoneE164), user.displayName, memberships.membershipsOf(user.id))
+        return Me(user.id, Masking.phone(user.phoneE164), user.displayName, memberships.membershipsOf(user.id), accounts.deletion(user.id))
     }
 
     @Transactional
