@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.transaction.support.TransactionTemplate
 import java.sql.Timestamp
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
@@ -212,32 +213,26 @@ class V5ServicesSchemaTest(
     }
 
     @Test
-    fun `V5 backfills old refresh rows from their creation time`() {
+    fun `V5 backfills one deadline per family from its first token and clamps live tokens`() {
         val schema = "upgrade_" + UUID.randomUUID().toString().replace("-", "")
         Flyway
             .configure()
             .dataSource(dataSource)
             .schemas(schema)
             .defaultSchema(schema)
-            .target("3")
+            .target("4")
             .load()
             .migrate()
         val user = UUID.randomUUID()
-        val row = UUID.randomUUID()
-        val created = Instant.parse("2026-01-01T00:00:00Z")
+        val signIn = Instant.parse("2026-01-01T00:00:00Z")
         jdbc.update("INSERT INTO $schema.users (id, phone_e164) VALUES (?, ?)", user, TestUsers.phone())
-        jdbc.update(
-            "INSERT INTO $schema.refresh_tokens (id, token_hash, user_id, device_id, family_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            row,
-            RefreshTokenService.hash(UUID.randomUUID().toString()),
-            user,
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            Timestamp.from(
-                created.plusSeconds(60 * 86400L),
-            ),
-            Timestamp.from(created),
-        )
+        val family = UUID.randomUUID()
+        val other = UUID.randomUUID()
+        // A family rotated on days 100 and 150, and a second family signed in on day 10.
+        val first = oldRefresh(schema, user, family, signIn, days = 0)
+        val second = oldRefresh(schema, user, family, signIn, days = 100)
+        val third = oldRefresh(schema, user, family, signIn, days = 150)
+        val separate = oldRefresh(schema, user, other, signIn, days = 10)
         Flyway
             .configure()
             .dataSource(dataSource)
@@ -245,15 +240,12 @@ class V5ServicesSchemaTest(
             .defaultSchema(schema)
             .load()
             .migrate()
-        val familyEnd =
-            jdbc
-                .queryForObject(
-                    "SELECT family_expires_at FROM $schema.refresh_tokens WHERE id = ?",
-                    Timestamp::class.java,
-                    row,
-                )!!
-                .toInstant()
-        assertEquals(created.plus(RefreshTokenService.FAMILY_TTL), familyEnd)
+        val familyEnd = signIn.plus(RefreshTokenService.FAMILY_TTL)
+        listOf(first, second, third).forEach { assertEquals(familyEnd, column(schema, "family_expires_at", it)) }
+        assertEquals(signIn.plus(Duration.ofDays(60)), column(schema, "expires_at", first))
+        assertEquals(signIn.plus(Duration.ofDays(160)), column(schema, "expires_at", second))
+        assertEquals(familyEnd, column(schema, "expires_at", third))
+        assertEquals(signIn.plus(Duration.ofDays(10)).plus(RefreshTokenService.FAMILY_TTL), column(schema, "family_expires_at", separate))
         val nullable =
             jdbc.queryForObject(
                 "SELECT is_nullable FROM information_schema.columns WHERE table_schema = ? AND table_name = 'refresh_tokens' AND column_name = 'family_expires_at'",
@@ -261,8 +253,39 @@ class V5ServicesSchemaTest(
                 schema,
             )
         assertEquals("NO", nullable)
-        assertTrue(familyEnd.isAfter(created))
     }
+
+    /** A pre-V5 refresh row created [days] after [signIn], valid for the sliding 60 days. */
+    private fun oldRefresh(
+        schema: String,
+        user: UUID,
+        family: UUID,
+        signIn: Instant,
+        days: Long,
+    ): UUID {
+        val id = UUID.randomUUID()
+        val created = signIn.plus(Duration.ofDays(days))
+        jdbc.update(
+            "INSERT INTO $schema.refresh_tokens (id, token_hash, user_id, device_id, family_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            id,
+            RefreshTokenService.hash(UUID.randomUUID().toString()),
+            user,
+            UUID.randomUUID(),
+            family,
+            Timestamp.from(created.plus(RefreshTokenService.TTL)),
+            Timestamp.from(created),
+        )
+        return id
+    }
+
+    private fun column(
+        schema: String,
+        name: String,
+        id: UUID,
+    ): Instant =
+        jdbc
+            .queryForObject("SELECT $name FROM $schema.refresh_tokens WHERE id = ?", Timestamp::class.java, id)!!
+            .toInstant()
 
     private fun link(
         shop: UUID,
