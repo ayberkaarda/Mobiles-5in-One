@@ -13,7 +13,7 @@ stack, tooling and release cycle; nothing is shared between them.
 | [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | All planned phases merged (real-world proofs partly open) | 100%     |
 | [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code                             | 0%       |
 | [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                             | 0%       |
-| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | Swift (SwiftUI), ASP.NET Core, PostgreSQL + PostGIS                            | Design document only, no code                             | 0%       |
+| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | .NET MAUI (C#), ASP.NET Core, PostgreSQL + PostGIS                             | Design document only, no code                             | 0%       |
 
 ## Gallery
 
