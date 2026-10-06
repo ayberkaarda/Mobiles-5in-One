@@ -12,7 +12,16 @@ class UserSettingsSerializerTest {
     @Test
     fun `round trips non default values`() =
         runTest {
-            val settings = UserSettings(lockTimeoutSeconds = 300, biometricUnlockEnabled = true)
+            val settings =
+                UserSettings(
+                    lockTimeoutSeconds = 300,
+                    biometricUnlockEnabled = true,
+                    activeShopId = "shop-a",
+                    themeMode = ThemeMode.DARK,
+                    deviceId = "device-a",
+                    backgroundedAtEpochMillis = 123456,
+                    pinSetupDone = true,
+                )
             val output = ByteArrayOutputStream()
 
             UserSettingsSerializer.writeTo(settings, output)
@@ -38,6 +47,14 @@ class UserSettingsSerializerTest {
             val result = runCatching { UserSettingsSerializer.readFrom(ByteArrayInputStream(truncated)) }
 
             assertTrue(result.exceptionOrNull() is CorruptionException)
+        }
+
+    @Test
+    fun `v1 blob retains fields and defaults new preferences`() =
+        runTest {
+            val blob = byteArrayOf(0x08, 0x3c, 0x10, 0x01)
+            val restored = UserSettingsSerializer.readFrom(ByteArrayInputStream(blob))
+            assertEquals(UserSettings(lockTimeoutSeconds = 60, biometricUnlockEnabled = true), restored)
         }
 
     private companion object {
