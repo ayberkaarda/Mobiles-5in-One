@@ -1,5 +1,6 @@
 package app.cetele.android.core.network
 
+import app.cetele.android.core.network.dto.problem.ProblemFieldError
 import kotlinx.serialization.Serializable
 
 /**
@@ -13,4 +14,5 @@ data class ProblemDetail(
     val status: Int,
     val code: String? = null,
     val traceId: String? = null,
+    val errors: List<ProblemFieldError> = emptyList(),
 )
