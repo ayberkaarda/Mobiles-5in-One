@@ -25,6 +25,27 @@ class AccountStore(
         if (found == null) throw ProblemException(ProblemCode.AUTH_UNAUTHENTICATED)
     }
 
+    /**
+     * Lock order shared with [app.cetele.server.account.deletion.DeletionExecutor]: user rows first, in ascending id
+     * order, then shops. The caller must exist; a missing other user is left for the eligibility checks.
+     */
+    fun lockUsers(
+        callerId: UUID,
+        otherId: UUID,
+    ) {
+        listOf(callerId, otherId).distinct().sorted().forEach { id ->
+            if (id == callerId) {
+                lockUser(id)
+            } else {
+                jdbc
+                    .sql("SELECT id FROM users WHERE id = :id FOR UPDATE")
+                    .param("id", id)
+                    .query(UUID::class.java)
+                    .optional()
+            }
+        }
+    }
+
     fun lockShop(shopId: UUID) {
         locks.deletion(shopId)
         jdbc
@@ -86,6 +107,7 @@ class AccountStore(
         shopId: UUID,
         callerId: UUID,
         targetId: UUID,
+        targetLeaving: Boolean,
     ) {
         if (role(shopId, callerId) != "OWNER") throw ProblemException(ProblemCode.FORBIDDEN)
         if (callerId == targetId) throw ProblemException(ProblemCode.MEMBERSHIP_OWNER_LOCKED)
@@ -95,7 +117,8 @@ class AccountStore(
                 .param("id", targetId)
                 .query(Long::class.java)
                 .single() == 1L
-        if (!active || role(shopId, targetId) != "STAFF") throw ProblemException(ProblemCode.NOT_FOUND)
+        // A target whose account deletion is due (grace over) is not eligible: it would take the shop with it.
+        if (!active || targetLeaving || role(shopId, targetId) != "STAFF") throw ProblemException(ProblemCode.NOT_FOUND)
         jdbc
             .sql("UPDATE memberships SET role = 'STAFF' WHERE shop_id = :shopId AND user_id = :id AND role = 'OWNER'")
             .param("shopId", shopId)
