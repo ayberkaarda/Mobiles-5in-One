@@ -31,3 +31,9 @@ targetRules = ['generic-api-key']
 [[allowlists]]
 description = "Generated build output (Next.js preview and server-action keys) and installed dependencies"
 paths = ['''(^|/)\.next/''', '''(^|/)node_modules/''']
+
+[[allowlists]]
+description = "Runtime-built dummy password in the cetele sms configuration test"
+condition = "AND"
+paths = ['''cetele/server/src/test/kotlin/app/cetele/server/reminders/sms/SmsConfigurationTest\.kt''']
+targetRules = ['generic-api-key']
