@@ -1,6 +1,8 @@
 # Cetele local development stack (project "cetele").
-# Host ports use the 60xxx block and bind to 127.0.0.1 only:
-#   postgres 60432, minio api 60900 / console 60901, mailpit smtp 60025 / ui 60825, server 60080.
+# Host ports use the 60xxx block and bind to 127.0.0.1 only. Defaults, each overridable from .env:
+#   postgres 60432 (CETELE_PG_PORT), minio api 60900 / console 60901 (CETELE_MINIO_API_PORT,
+#   CETELE_MINIO_CONSOLE_PORT), mailpit smtp 60025 / ui 60825 (CETELE_MAILPIT_SMTP_PORT,
+#   CETELE_MAILPIT_UI_PORT), server 60080 (CETELE_SERVER_PORT).
 # The Android emulator reaches the server at http://10.0.2.2:60080.
 # Values come from cetele/.env when present (copy .env.example); the defaults below are local
 # development dummies only. Build the server image first: (cd server && ./gradlew jibDockerBuild).
@@ -14,7 +16,7 @@ services:
       POSTGRES_USER: ${CETELE_DB_USERNAME:-cetele}
       POSTGRES_PASSWORD: ${CETELE_DB_PASSWORD:-cetele_local_dev}
     ports:
-      - "127.0.0.1:60432:5432"
+      - "127.0.0.1:${CETELE_PG_PORT:-60432}:5432"
     volumes:
       - cetele_pg:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -32,8 +34,8 @@ services:
       MINIO_ROOT_USER: ${CETELE_S3_ACCESS_KEY:-cetele}
       MINIO_ROOT_PASSWORD: ${CETELE_S3_SECRET_KEY:-cetele_local_dev}
     ports:
-      - "127.0.0.1:60900:9000"
-      - "127.0.0.1:60901:9001"
+      - "127.0.0.1:${CETELE_MINIO_API_PORT:-60900}:9000"
+      - "127.0.0.1:${CETELE_MINIO_CONSOLE_PORT:-60901}:9001"
     volumes:
       - cetele_minio:/data
     healthcheck:
@@ -64,8 +66,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.4
     ports:
-      - "127.0.0.1:60025:1025"
-      - "127.0.0.1:60825:8025"
+      - "127.0.0.1:${CETELE_MAILPIT_SMTP_PORT:-60025}:1025"
+      - "127.0.0.1:${CETELE_MAILPIT_UI_PORT:-60825}:8025"
     restart: unless-stopped
 
   server:
@@ -83,8 +85,18 @@ services:
       CETELE_S3_SECRET_KEY: ${CETELE_S3_SECRET_KEY:-cetele_local_dev}
       CETELE_S3_BUCKET_MEDIA: ${CETELE_S3_BUCKET_MEDIA:-cetele-media}
       CETELE_S3_PATH_STYLE: ${CETELE_S3_PATH_STYLE:-true}
+      # Auth: empty secrets are accepted only in the local profile (ephemeral keys, dummy pepper).
+      CETELE_OTP_PEPPER: ${CETELE_OTP_PEPPER:-}
+      CETELE_JWT_ES256_PRIVATE_KEY_PEM: ${CETELE_JWT_ES256_PRIVATE_KEY_PEM:-}
+      CETELE_JWT_ES256_PUBLIC_KEY_PEM: ${CETELE_JWT_ES256_PUBLIC_KEY_PEM:-}
+      CETELE_OTP_LOCAL_ECHO: ${CETELE_OTP_LOCAL_ECHO:-false}
+      # Stand-in adapters for the local stack; the server refuses them outside local/test.
+      CETELE_SMS_PROVIDER: ${CETELE_SMS_PROVIDER:-fake}
+      CETELE_INTEGRITY_MODE: ${CETELE_INTEGRITY_MODE:-fake}
+      CETELE_PLAY_PACKAGE_NAME: ${CETELE_PLAY_PACKAGE_NAME:-app.cetele.android}
+      CETELE_TRUSTED_PROXIES: ${CETELE_TRUSTED_PROXIES:-}
     ports:
-      - "127.0.0.1:60080:8080"
+      - "127.0.0.1:${CETELE_SERVER_PORT:-60080}:8080"
     depends_on:
       postgres:
         condition: service_healthy

@@ -14,14 +14,28 @@ spring:
   flyway:
     locations: classpath:db/migration
   mvc:
+    # Errors are rendered by web.problem.ProblemHandler with the cetele code registry.
     problemdetails:
-      enabled: true
+      enabled: false
+  servlet:
+    # No multipart anywhere: photos go to object storage through presigned URLs.
+    multipart:
+      enabled: false
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   thymeleaf:
     check-template-location: false
 
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  # X-Forwarded-For/-Proto are honoured only from CETELE_TRUSTED_PROXIES (empty = nobody).
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${CETELE_TRUSTED_PROXIES:}
+      trusted-proxies: ${CETELE_TRUSTED_PROXIES:}
   error:
     include-message: never
     include-stacktrace: never
@@ -43,7 +57,30 @@ management:
       probes:
         enabled: false
 
+logging:
+  structured:
+    # Used outside the local profile (logback-spring.xml); string values are masked.
+    format:
+      console: ecs
+    json:
+      customizer: app.cetele.server.config.logging.MaskingJsonMembersCustomizer
+
+springdoc:
+  api-docs:
+    enabled: false
+  paths-to-match: /v1/**
+
 cetele:
+  security:
+    require-https: true
+  jwt:
+    private-key-pem: ${CETELE_JWT_ES256_PRIVATE_KEY_PEM:}
+    public-key-pem: ${CETELE_JWT_ES256_PUBLIC_KEY_PEM:}
+    issuer: https://cetele.app
+    access-token-ttl: 15m
+    clock-skew: 30s
+  client-ip:
+    trusted-proxies: ${CETELE_TRUSTED_PROXIES:}
   s3:
     endpoint: ${CETELE_S3_ENDPOINT:}
     region: ${CETELE_S3_REGION:auto}
@@ -51,3 +88,16 @@ cetele:
     secret-key: ${CETELE_S3_SECRET_KEY:}
     bucket-media: ${CETELE_S3_BUCKET_MEDIA:cetele-media}
     path-style: ${CETELE_S3_PATH_STYLE:true}
+
+---
+# Developer machines and the test suite: plain HTTP, OpenAPI document served.
+spring:
+  config:
+    activate:
+      on-profile: local | test
+cetele:
+  security:
+    require-https: false
+springdoc:
+  api-docs:
+    enabled: true
