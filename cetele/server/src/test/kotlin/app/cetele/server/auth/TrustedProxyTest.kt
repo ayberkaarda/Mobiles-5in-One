@@ -1,6 +1,7 @@
 package app.cetele.server.auth
 
 import app.cetele.server.auth.integrity.FakeIntegrityVerifier
+import app.cetele.server.support.MinioTestConfiguration
 import app.cetele.server.support.PostgresTestConfiguration
 import app.cetele.server.support.TestUsers
 import org.junit.jupiter.api.Test
@@ -26,7 +27,7 @@ import kotlin.test.assertTrue
     properties = ["CETELE_TRUSTED_PROXIES=127\\.0\\.0\\.2"],
 )
 @ActiveProfiles("test")
-@Import(PostgresTestConfiguration::class)
+@Import(PostgresTestConfiguration::class, MinioTestConfiguration::class)
 class TrustedProxyTest(
     @Value("\${local.server.port}") private val port: Int,
 ) {

@@ -55,7 +55,34 @@ class ProblemTest(
                 "payload_too_large" to 413,
                 "unsupported_media_type" to 415,
                 "server_error" to 500,
+                "auth.reauth_invalid" to 403,
+                "customer.deleted" to 409,
+                "ledger.already_reversed" to 409,
+                "ledger.reversal_mismatch" to 422,
+                "plan.customer_limit" to 409,
+                "plan.photo_limit" to 409,
+                "sms.quota_exceeded" to 429,
+                "sms.daily_cap_reached" to 429,
+                "sms.consent_missing" to 409,
+                "sms.phone_missing" to 409,
+                "sms.provider_failed" to 502,
+                "reminder.no_balance" to 409,
+                "statement.link_limit" to 409,
+                "media.invalid" to 422,
+                "media.not_uploaded" to 409,
+                "media.too_large" to 413,
+                "media.not_ready" to 409,
+                "account.owner_of_shared_shop" to 409,
+                "account.deletion_pending" to 409,
+                "shop.deletion_pending" to 409,
             )
+        assertEquals(
+            ProblemCode.entries.size,
+            ProblemCode.entries
+                .map { it.code }
+                .toSet()
+                .size,
+        )
         assertEquals(expected, ProblemCode.entries.associate { it.code to it.status.value() })
         ProblemCode.entries.forEach { code ->
             assertEquals("https://cetele.app/problems/${code.code}", code.type.toString())

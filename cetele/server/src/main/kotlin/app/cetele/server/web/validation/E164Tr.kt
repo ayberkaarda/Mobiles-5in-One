@@ -35,4 +35,8 @@ object FieldLimits {
 
     /** Ledger and customer notes (Phase 2). */
     const val NOTE_MAX = 500
+    const val TAG_MAX = 30
+    const val AMOUNT_MIN = 1L
+    const val AMOUNT_MAX = 10_000_000_000L
+    const val SYNC_BATCH_MAX = 500
 }

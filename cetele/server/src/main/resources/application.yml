@@ -25,7 +25,7 @@ spring:
     deserialization:
       fail-on-unknown-properties: true
   thymeleaf:
-    check-template-location: false
+    check-template-location: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -71,6 +71,17 @@ springdoc:
   paths-to-match: /v1/**
 
 cetele:
+  public-base-url: ${CETELE_PUBLIC_BASE_URL:}
+  jobs:
+    enabled: ${CETELE_JOBS_ENABLED:true}
+  sms:
+    provider: ${CETELE_SMS_PROVIDER:}
+    daily-cap: ${CETELE_SMS_DAILY_CAP:1000}
+    netgsm:
+      base-url: ${CETELE_NETGSM_BASE_URL:}
+      username: ${CETELE_NETGSM_USERNAME:}
+      password: ${CETELE_NETGSM_PASSWORD:}
+      msgheader: ${CETELE_NETGSM_MSGHEADER:}
   security:
     require-https: true
   jwt:
@@ -101,3 +112,13 @@ cetele:
 springdoc:
   api-docs:
     enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+cetele:
+  public-base-url: http://localhost
+  jobs:
+    enabled: false

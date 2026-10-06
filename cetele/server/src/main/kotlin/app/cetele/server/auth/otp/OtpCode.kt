@@ -16,7 +16,7 @@ import org.springframework.data.repository.query.Param
 import java.time.Instant
 import java.util.UUID
 
-/** Why a code was issued. Only [LOGIN] is used in Phase 1; [REAUTH] is reserved for Phase 2. */
+/** Login and sensitive account actions use separate one-time codes. */
 enum class OtpPurpose {
     LOGIN,
     REAUTH,

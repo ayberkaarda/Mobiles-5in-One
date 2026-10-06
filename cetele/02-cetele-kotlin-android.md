@@ -121,6 +121,7 @@ cetele/
 `POST shops/{id}/sync/push · GET shops/{id}/sync/pull?since={seq}&limit=500` (batch, idempotent by `client_id`)
 `GET shops/{id}/customers/{customerId}/statement.pdf` (server-rendered fallback) · `POST shops/{id}/statement-links`
 `POST shops/{id}/reminders (channel=SMS)` · `POST shops/{id}/media/presign`
+`POST auth/reauth/request · DELETE shops/{id} (re-verified, 14-day grace) · DELETE shops/{id}/deletion · DELETE me/deletion · POST shops/{id}/ownership-transfer · POST shops/{id}/media/{mediaId}/complete · GET shops/{id}/media/{mediaId}` (added in Phase 2: account deletion, ownership transfer and media completion need them)
 `POST shops/{id}/billing/link (purchaseToken)` · `POST webhooks/play-rtdn` · `POST webhooks/sms-dlr`
 `GET s/{token}` (public signed statement page, `noindex`)
 `/admin/**` (Thymeleaf, platform admins)

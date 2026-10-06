@@ -3,6 +3,7 @@ package app.cetele.server.auth
 import app.cetele.server.auth.device.DeviceService
 import app.cetele.server.auth.integrity.IntegrityGate
 import app.cetele.server.auth.otp.OtpCheck
+import app.cetele.server.auth.otp.OtpPurpose
 import app.cetele.server.auth.otp.OtpService
 import app.cetele.server.auth.ratelimit.RateLimit
 import app.cetele.server.auth.ratelimit.RateLimiter
@@ -67,7 +68,7 @@ class AuthService(
         limiter.consume(RateLimit.OTP_REQUEST_IP, clientIp)
         integrity.require(integrityToken, phoneE164, deviceId)
         limiter.consume(RateLimit.OTP_REQUEST_PHONE, RateLimiter.phoneSubject(phoneE164))
-        val text = tx.execute { otp.issue(phoneE164, deviceId, clock.instant()) }!!
+        val text = tx.execute { otp.issue(phoneE164, deviceId, OtpPurpose.LOGIN, clock.instant()) }!!
         otp.deliver(phoneE164, text)
         log.info("OTP request phone={} outcome=sent", Masking.phone(phoneE164))
     }
@@ -85,7 +86,7 @@ class AuthService(
         val now = clock.instant()
         val result =
             tx.execute {
-                when (val check = otp.check(phoneE164, deviceId, code, now)) {
+                when (val check = otp.check(phoneE164, deviceId, OtpPurpose.LOGIN, code, now)) {
                     OtpCheck.Rejected -> {
                         null
                     }

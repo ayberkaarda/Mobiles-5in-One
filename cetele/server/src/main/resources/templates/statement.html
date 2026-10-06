@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title th:text="'Hesap Dökümü'">Hesap Dökümü</title>
+  <link rel="stylesheet" href="/assets/statement.css" th:attr="nonce=${cspNonce}">
+</head>
+<body>
+<main>
+  <header>
+    <p class="shop" th:text="${statement.shopName}"></p>
+    <h1 th:text="'Hesap Dökümü'"></h1>
+    <h2 th:text="${statement.customerName}"></h2>
+    <p class="muted" th:text="'Hazırlanma tarihi: ' + ${statement.date}"></p>
+  </header>
+  <div class="table-scroll" role="region" aria-label="Hesap hareketleri" tabindex="0">
+    <table>
+      <thead><tr><th th:text="'Tarih'"></th><th th:text="'Açıklama'"></th><th th:text="'Borç'"></th><th th:text="'Tahsilat'"></th><th th:text="'Bakiye'"></th></tr></thead>
+      <tbody>
+      <tr th:each="row : ${statement.rows}" th:classappend="${row.reversed} ? 'reversed' : ''">
+        <td th:text="${row.date}"></td><td th:text="${row.description}"></td><td class="amount debt" th:text="${row.debt}"></td><td class="amount payment" th:text="${row.payment}"></td><td class="amount" th:text="${row.balance}"></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+  <section class="total" aria-label="Güncel bakiye"><span th:text="'Güncel bakiye'"></span><strong th:text="${statement.balance}"></strong></section>
+  <footer th:text="${statement.footer}"></footer>
+</main>
+</body>
+</html>

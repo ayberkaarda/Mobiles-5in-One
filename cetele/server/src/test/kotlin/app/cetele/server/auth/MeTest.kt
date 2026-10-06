@@ -42,7 +42,8 @@ class MeTest(
                 .andReturn()
                 .response
         val body = json.readTree(response.contentAsString)
-        assertEquals(setOf("id", "phone", "displayName", "memberships"), body.propertyNames().toSet())
+        assertEquals(setOf("id", "phone", "displayName", "memberships", "deletion"), body.propertyNames().toSet())
+        assertEquals(true, body["deletion"].isNull)
         assertEquals(user.toString(), body["id"].asString())
         assertEquals(TestUsers.masked(phone), body["phone"].asString())
         assertEquals("Mehmet", body["displayName"].asString())

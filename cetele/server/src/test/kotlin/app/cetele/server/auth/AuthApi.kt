@@ -1,7 +1,7 @@
 package app.cetele.server.auth
 
 import app.cetele.server.auth.integrity.FakeIntegrityVerifier
-import app.cetele.server.auth.sms.FakeSmsGateway
+import app.cetele.server.reminders.sms.FakeSmsGateway
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.test.web.servlet.MockMvc

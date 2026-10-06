@@ -36,6 +36,8 @@ class RefreshToken(
     val rotatedFrom: UUID?,
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+    @Column(name = "family_expires_at", nullable = false, updatable = false)
+    val familyExpiresAt: Instant,
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)

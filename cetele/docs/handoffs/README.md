@@ -18,4 +18,6 @@ API contract changes follow the same route: `server` asks `lead` to update the A
 
 ## Index
 
-No handoffs yet.
+| File                                                                                 | Subject                                                                                                                          | Status |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| [server-to-android-001-phase2-contract.md](server-to-android-001-phase2-contract.md) | Phase 2 contract: integrity nonce, sync wire format, photo upload, statements and reminders, re-authentication and deletion flow | open   |
