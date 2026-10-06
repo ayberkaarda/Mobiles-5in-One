@@ -34,8 +34,8 @@ sealed interface RotationResult {
 
 /**
  * Opaque refresh tokens: 32 random bytes, base64url, stored as SHA-256, valid 60 days from their
- * issue. Each use rotates the token; presenting a token that is no longer current (rotated,
- * revoked, logged out) is treated as theft and revokes every token of its family.
+ * issue, capped by a fixed 180-day family lifetime. Inside that lifetime, presenting a token
+ * that is no longer current (rotated, revoked, logged out) revokes every token of its family.
  * All methods run inside the caller's transaction.
  */
 @Service
@@ -50,14 +50,15 @@ class RefreshTokenService(
         userId: UUID,
         deviceId: UUID,
         now: Instant,
-    ): IssuedRefreshToken = issue(userId, deviceId, TraceIdFilter.uuidV7(), rotatedFrom = null, now = now)
+    ): IssuedRefreshToken =
+        issue(userId, deviceId, TraceIdFilter.uuidV7(), rotatedFrom = null, now = now, familyExpiresAt = now.plus(FAMILY_TTL))
 
     /**
      * Handles a presented refresh token. The family is resolved by hash without loading the row,
      * then locked ([AuthLocks.family]) before the row is read again under a row lock, so rotation,
      * reuse revocation and logout of one family never interleave.
      *
-     * Order: reuse detection (a revoked token revokes the whole family, never throttled), then
+     * Order: absolute family expiry (reject without revocation), then reuse detection, then
      * expiry and [isActive], then [beforeRotation] (the device throttle; throwing there rolls the
      * transaction back with nothing changed), then the rotation itself.
      */
@@ -72,6 +73,7 @@ class RefreshTokenService(
         val familyId = tokens.findFamilyIdByTokenHash(hash) ?: return RotationResult.Unknown
         locks.family(familyId)
         val current = tokens.findByTokenHash(hash) ?: return RotationResult.Unknown
+        if (!now.isBefore(current.familyExpiresAt)) return RotationResult.Rejected
         if (current.revokedAt != null) {
             tokens.revokeFamily(current.familyId, now)
             return RotationResult.ReuseDetected
@@ -80,7 +82,7 @@ class RefreshTokenService(
         beforeRotation(current)
         current.revokedAt = now
         tokens.save(current)
-        return RotationResult.Rotated(issue(current.userId, current.deviceId, current.familyId, current.id, now))
+        return RotationResult.Rotated(issue(current.userId, current.deviceId, current.familyId, current.id, now, current.familyExpiresAt))
     }
 
     /** Logout: revokes every live token of the caller's device, holding the locks of its families. */
@@ -99,15 +101,29 @@ class RefreshTokenService(
         familyId: UUID,
         rotatedFrom: UUID?,
         now: Instant,
+        familyExpiresAt: Instant,
     ): IssuedRefreshToken {
         val bytes = ByteArray(TOKEN_BYTES).also { random.nextBytes(it) }
         val token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-        val row = tokens.save(RefreshToken(hash(token), userId, deviceId, familyId, now.plus(TTL), rotatedFrom, now))
+        val row =
+            tokens.save(
+                RefreshToken(
+                    hash(token),
+                    userId,
+                    deviceId,
+                    familyId,
+                    minOf(now.plus(TTL), familyExpiresAt),
+                    rotatedFrom,
+                    now,
+                    familyExpiresAt,
+                ),
+            )
         return IssuedRefreshToken(token, row)
     }
 
     companion object {
         val TTL: Duration = Duration.ofDays(60)
+        val FAMILY_TTL: Duration = Duration.ofDays(180)
         const val TOKEN_BYTES = 32
 
         /** 32 bytes in unpadded base64url are 43 characters; longer input is never looked up. */

@@ -1,7 +1,10 @@
 package app.cetele.server.auth.otp
 
 import app.cetele.server.auth.AuthLocks
-import app.cetele.server.auth.sms.SmsGateway
+import app.cetele.server.reminders.sms.SmsGateway
+import app.cetele.server.reminders.sms.SmsKind
+import app.cetele.server.reminders.sms.SmsMessage
+import app.cetele.server.reminders.sms.SmsSendResult
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
@@ -23,7 +26,7 @@ sealed interface OtpCheck {
 /**
  * Issues and checks one-time codes: six digits from [SecureRandom], stored as an HMAC, valid for
  * five minutes, single use, five attempts. Issuing a code closes every older open code of the
- * phone. [issue] and [check] run inside the caller's transaction; [deliver] runs after commit.
+ * phone and purpose. [issue] and [check] run inside the caller's transaction; [deliver] runs after commit.
  */
 @Service
 class OtpService(
@@ -41,17 +44,18 @@ class OtpService(
     fun issue(
         phoneE164: String,
         deviceId: UUID,
+        purpose: OtpPurpose,
         now: Instant,
     ): String {
         // Serialised per phone: a concurrent issue must see and close this code, so one code stays open.
         locks.otpPhone(phoneE164)
-        codes.consumeOpen(phoneE164, OtpPurpose.LOGIN, now)
+        codes.consumeOpen(phoneE164, purpose, now)
         val code = newCode()
         codes.save(
             OtpCode(
                 phoneE164 = phoneE164,
                 deviceId = deviceId,
-                purpose = OtpPurpose.LOGIN,
+                purpose = purpose,
                 codeHmac = hasher.hmac(phoneE164, code),
                 expiresAt = now.plus(TTL),
                 createdAt = now,
@@ -64,7 +68,8 @@ class OtpService(
         phoneE164: String,
         text: String,
     ) {
-        sms.send(phoneE164, text)
+        val result = sms.send(SmsMessage(phoneE164, text, SmsKind.OTP))
+        if (result !is SmsSendResult.Accepted) log.warn("OTP delivery outcome=send_failed")
         if (settings.localEcho) echo.info(text)
     }
 
@@ -76,10 +81,11 @@ class OtpService(
     fun check(
         phoneE164: String,
         deviceId: UUID,
+        purpose: OtpPurpose,
         code: String,
         now: Instant,
     ): OtpCheck {
-        val open = codes.findFirstByPhoneE164AndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(phoneE164, OtpPurpose.LOGIN)
+        val open = codes.findFirstByPhoneE164AndPurposeAndConsumedAtIsNullOrderByCreatedAtDesc(phoneE164, purpose)
         val codeMatches = hasher.matches(phoneE164, code, open?.codeHmac ?: EMPTY_HMAC)
         if (open == null) return OtpCheck.Rejected
         if (!now.isBefore(open.expiresAt) || open.attempts >= MAX_ATTEMPTS) {
