@@ -130,6 +130,19 @@ class AccountDeletionTest : AccountTestSupport() {
             invitationHash,
             user.actor.id,
         )
+        // An open invitation of a foreign shop addressed to the user's phone: PII that must go with the account.
+        val foreignInvitation = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO invitations (id, shop_id, phone_e164, code_hash, expires_at) VALUES (?, ?, ?, ?, now() + interval '1 day')",
+            foreignInvitation,
+            foreignShop,
+            user.actor.phone,
+            java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest
+                    .getInstance("SHA-256")
+                    .digest(foreignInvitation.toString().toByteArray()),
+            ),
+        )
         jdbc.update("INSERT INTO shop_sequences (shop_id, last_seq) VALUES (?, 1)", shopId)
         jdbc.update(
             "INSERT INTO change_log (id, shop_id, seq, entity, entity_id, op, payload) VALUES (?, ?, 1, 'CUSTOMER', ?, 'UPSERT', '{}'::jsonb)",

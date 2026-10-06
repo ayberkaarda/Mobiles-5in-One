@@ -141,6 +141,11 @@ class AccountService(
                 it.blockedAt = null
                 requests.save(it)
             }
+            // The new owner never inherits the previous owner's pending deletion of this shop.
+            requests.openShop(shopId)?.takeIf { it.userId == caller.userId }?.let {
+                it.cancelledAt = clock.instant()
+                requests.save(it)
+            }
             log.info("Ownership transferred shop={} previousOwner={} owner={}", shopId, caller.userId, targetId)
             OwnershipReceipt(shopId, targetId, caller.userId)
         }
