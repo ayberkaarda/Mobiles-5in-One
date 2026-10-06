@@ -61,7 +61,11 @@ CREATE UNIQUE INDEX deletion_requests_open_shop_key ON deletion_requests (shop_i
 CREATE INDEX deletion_requests_due_idx ON deletion_requests (grace_until) WHERE completed_at IS NULL AND cancelled_at IS NULL;
 
 ALTER TABLE refresh_tokens ADD COLUMN family_expires_at TIMESTAMPTZ;
-UPDATE refresh_tokens SET family_expires_at = created_at + INTERVAL '180 days';
+-- One deadline per family, counted from the family's first token (the sign-in); live tokens are clamped to it.
+UPDATE refresh_tokens t
+SET family_expires_at = f.family_end, expires_at = LEAST(t.expires_at, f.family_end)
+FROM (SELECT family_id, min(created_at) + INTERVAL '180 days' AS family_end FROM refresh_tokens GROUP BY family_id) f
+WHERE t.family_id = f.family_id;
 ALTER TABLE refresh_tokens ALTER COLUMN family_expires_at SET NOT NULL;
 ALTER TABLE shops DROP CONSTRAINT shops_created_by_fkey, ALTER COLUMN created_by DROP NOT NULL,
     ADD CONSTRAINT shops_created_by_fkey FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL;
