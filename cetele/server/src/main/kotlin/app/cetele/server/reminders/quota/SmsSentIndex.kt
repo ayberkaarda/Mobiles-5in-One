@@ -10,13 +10,13 @@ import java.util.UUID
 class SmsSentIndex(
     private val entityManager: EntityManager,
 ) {
-    fun shopsSentBetween(
+    fun shopsRequestedBetween(
         start: Instant,
         end: Instant,
     ): List<UUID> =
         entityManager
             .createQuery(
-                "select distinct r.shopId from SmsSentRecord r where r.channel = 'SMS' and r.sentAt >= :start and r.sentAt < :end",
+                "select distinct r.shopId from SmsSentRecord r where r.channel = 'SMS' and r.requestedAt >= :start and r.requestedAt < :end",
                 UUID::class.java,
             ).setParameter("start", start)
             .setParameter("end", end)

@@ -26,6 +26,7 @@ class DailyCapTest(
     @Autowired private val locks: ShopLocks,
     @Autowired private val sent: SmsSentRecordRepository,
     @Autowired private val index: SmsSentIndex,
+    @Autowired private val dailyLock: SmsDailyCapLock,
     @Autowired private val transactions: org.springframework.transaction.PlatformTransactionManager,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired mvc: MockMvc,
@@ -34,7 +35,7 @@ class DailyCapTest(
     private val fixtures = TenancyFixtures(mvc, auth, jdbc)
 
     @Test
-    fun `daily count is global and includes only sent SMS inside the Istanbul day`() {
+    fun `daily count is global and includes queued, sent and unknown-outcome SMS requested inside the Istanbul day`() {
         val first = customer()
         val second = customer()
         val start = Instant.parse("2040-10-05T21:00:00Z")
@@ -44,12 +45,13 @@ class DailyCapTest(
         reminder(first, "SMS", "UNDELIVERED", start.plusSeconds(2))
         reminder(first, "SMS", "SENT", start.minusSeconds(1))
         reminder(first, "SMS", "SENT", start.plusSeconds(86400))
-        reminder(first, "SMS", "QUEUED", null)
-        reminder(first, "SMS", "FAILED", null)
+        reminder(first, "SMS", "QUEUED", start.plusSeconds(3))
+        reminder(first, "SMS", "FAILED", start.plusSeconds(4), "outcome_unknown")
+        reminder(first, "SMS", "FAILED", start.plusSeconds(5), "sms.provider_failed")
         reminder(first, "WHATSAPP", "SENT", now)
-        assertEquals(3, service.dailySent(now))
+        assertEquals(5, service.dailySent(now))
         service.requireDailyCap(now)
-        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 3))
+        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 5), dailyLock)
         val failure =
             assertFailsWith<ProblemException> {
                 TransactionTemplate(transactions).execute { capped.requireDailyCap(now) }
@@ -64,7 +66,7 @@ class DailyCapTest(
         val customer = customer()
         val start = Instant.parse("2041-10-05T21:00:00Z")
         reminder(customer, "SMS", "SENT", start)
-        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 1))
+        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 1), dailyLock)
         val failure =
             assertFailsWith<ProblemException> {
                 TransactionTemplate(transactions).execute { capped.requireDailyCap(start.plusMillis(86_399_500)) }
@@ -85,16 +87,18 @@ class DailyCapTest(
         customer: Pair<UUID, UUID>,
         channel: String,
         status: String,
-        sentAt: Instant?,
+        requestedAt: Instant,
+        failureCode: String? = null,
     ) {
         jdbc.update(
-            "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, sent_at) VALUES (?, ?, ?, ?, 'BALANCE', ?, ?)",
+            "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, requested_at, failure_code) VALUES (?, ?, ?, ?, 'BALANCE', ?, ?, ?)",
             TraceIdFilter.uuidV7(),
             customer.first,
             customer.second,
             channel,
             status,
-            sentAt?.let(Timestamp::from),
+            Timestamp.from(requestedAt),
+            failureCode,
         )
     }
 }

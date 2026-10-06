@@ -85,7 +85,7 @@ class ReminderService(
                     if (!customer.smsConsent) throw ProblemException(ProblemCode.SMS_CONSENT_MISSING)
                     val balance = Balance.of(entries.balanceLines(shopId, customer.id))
                     if (balance <= 0) throw ProblemException(ProblemCode.REMINDER_NO_BALANCE)
-                    quota.requireDailyCap(now)
+                    quota.reserveDailyCap(now)
                     val reserved = quota.reserve(shopId, shop.plan, now)
                     val link = links.issue(shopId, customer.id, requestedBy, now = now)
                     val row = reminders.save(Reminder(shopId, customer.id, link.id, requestedBy, now))
@@ -110,9 +110,16 @@ class ReminderService(
                     ReminderResponse(queued.id, row.status, sentAt, row.providerMessageId, queued.quota)
                 } else {
                     row.status = "FAILED"
-                    row.failureCode = ProblemCode.SMS_PROVIDER_FAILED.code
+                    if (result is SmsSendResult.Rejected) {
+                        // Definitive provider refusal: nothing was sent, give the slot back.
+                        row.failureCode = ProblemCode.SMS_PROVIDER_FAILED.code
+                        quota.refund(shopId, queued.quota.month)
+                    } else {
+                        // Timeout, transport or 5xx: the provider may have sent it. Keep the monthly slot and the
+                        // daily-cap count (the row stays counted through failure_code).
+                        row.failureCode = OUTCOME_UNKNOWN
+                    }
                     reminders.save(row)
-                    quota.refund(shopId, queued.quota.month)
                     null
                 }
             }
@@ -120,10 +127,18 @@ class ReminderService(
             "Reminder shop={} reminder={} outcome={} to={}",
             shopId,
             queued.id,
-            if (response == null) "failed" else "sent",
+            when {
+                response != null -> "sent"
+                result is SmsSendResult.Rejected -> "rejected"
+                else -> OUTCOME_UNKNOWN
+            },
             Masking.phone(queued.phone),
         )
         return response ?: throw ProblemException(ProblemCode.SMS_PROVIDER_FAILED)
+    }
+
+    private companion object {
+        const val OUTCOME_UNKNOWN = "outcome_unknown"
     }
 
     private data class Queued(
