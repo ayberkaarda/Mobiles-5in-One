@@ -27,12 +27,13 @@ pile up until a retention job exists.
   (`RotationResult.Rejected`). The check runs before reuse detection, so an old, already rotated
   token presented after the family end is also a plain 401; every token of that family is dead
   either way. The user signs in again with a phone code.
-- Migration `V5__services.sql` adds the column, backfills existing rows with `created_at + 180 days`
-  and makes it `NOT NULL`.
+- Migration `V5__services.sql` adds the column, backfills **one deadline per family** (`family_id`)
+  as the earliest `created_at` of the family plus 180 days, clamps the `expires_at` of live
+  tokens to it, and makes the column `NOT NULL`.
 - Evidence:
   - `RefreshFamilyLifetimeTest`: `rotations share the fixed family end and shorten the final token`
   - `RefreshFamilyLifetimeTest`: `HTTP refresh after family end is 401 and leaves the family unchanged`
-  - `V5ServicesSchemaTest`: `V5 backfills old refresh rows from their creation time`
+  - `V5ServicesSchemaTest`: `V5 backfills one deadline per family from its first token and clamps live tokens`
   - `RefreshRotationTest` and `RefreshRaceTest` are unchanged and still part of the gate.
 
 ### Retention

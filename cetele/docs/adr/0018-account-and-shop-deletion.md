@@ -79,7 +79,12 @@ still in storage (`AccountDeletionTest`: `storage failure preserves database and
 Then it deletes explicitly, never through cascades, in this order: `reminders`, `statement_links`,
 `sync_outbox_receipts`, `change_log`, `ledger_entries`, `customers`, `media_objects`, `sms_quota`,
 `invitations`, `shop_sequences`, `memberships`, `shops`. The account part deletes `refresh_tokens`,
-`devices`, `otp_codes` of the phone, `memberships` and `users`. The access token of a deleted user
+`devices`, `otp_codes` of the phone, the `invitations` addressed to that phone in any shop (they
+carry the phone number), `memberships` and `users`, in that order. The executor takes the user row lock first and then the shop, the same order as an ownership
+transfer ([ADR-0019](0019-ownership-transfer-and-reauthentication.md)), so a transfer to a user
+whose deletion is running waits and then finds the user gone
+(`OwnershipTransferRaceTest`: `transfer to a user whose account deletion is running waits and then finds the user gone`).
+The access token of a deleted user
 becomes 401 because the authentication filter refuses an unknown user
 ([ADR-0005](0005-session-model.md)); during grace it keeps working by design.
 
@@ -125,14 +130,9 @@ this section supersedes its "known gap" paragraph.
 
 ## Open points
 
-- Invitations addressed to a deleted user's phone in **other** shops are not removed by account
-  completion; they hold that phone number until the retention rule removes them (7 days after they
-  expire, at most 24 hours of validity). Deleting them at completion
-  (`invitations WHERE phone_e164 = :phone AND accepted_at IS NULL`) is a small follow-up proposal for
-  the owner; it is not built.
-- A transfer does not cancel the shop's open `SHOP` request itself; the executor cancels it at the
-  next run (`owner_changed`). No endpoint reads a shop's deletion state, so the new owner cannot see
-  it in between.
+- No endpoint reads a shop's deletion state, so a new owner cannot see a pending request of the
+  shop. A transfer cancels the previous owner's open `SHOP` request in the same transaction, so
+  the new owner never inherits it; the executor's `owner_changed` outcome stays as a safety net.
 
 ## Evidence limits
 

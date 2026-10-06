@@ -48,16 +48,21 @@ account.
 `POST /v1/shops/{shopId}/ownership-transfer` (`MEMBERS_MANAGE`, body `{userId, code}`; no new
 action) answers 200 `{shopId, ownerUserId, previousOwnerUserId}`. Checks in order: the `REAUTH`
 code; a target equal to the caller is `409 membership.owner_locked`; a target that is not an active
-`STAFF` member of this shop is 404 (a member of another shop and an unknown id look the same). In
-one transaction the caller is demoted to `STAFF` first and the target promoted to `OWNER`, because
+`STAFF` member of this shop is 404 (a member of another shop and an unknown id look the same). The transaction first locks both user rows in ascending id order and then the shop, the same
+order as the deletion executor, and re-checks the target's eligibility (active `STAFF` member,
+account not being deleted) under those locks; if the target is gone or no longer eligible the
+answer is 404. Then the caller is demoted to `STAFF` first and the target promoted to `OWNER`, because
 the partial unique index on one owner per shop is checked per statement
 ([ADR-0007](0007-tenancy-and-permission-enforcement.md), D-6); the promotion must change exactly one
-row. The transfer clears `blocked_at` on the caller's open account deletion request, if any. If the
+row. The transfer clears `blocked_at` on the caller's open account deletion request, if any, and cancels
+the caller's open `SHOP` deletion request of this shop in the same transaction, so the new owner
+never inherits it. If the
 promotion fails the demotion is rolled back and the caller stays `OWNER`.
 
 - `OwnershipTransferTest`: `roles swap and exactly one owner remains`
 - `OwnershipTransferTest`: `foreign target self and wrong code never alter ownership`
 - `OwnershipTransferTest`: `database rejection of promotion rolls back demotion`
+- `OwnershipTransferRaceTest`: `transfer to a user whose account deletion is running waits and then finds the user gone`
 - `OneOwnerInvariantTest` (Phase 1) still holds.
 
 ### Product spec
@@ -75,5 +80,5 @@ after the gate: `POST auth/reauth/request`, `DELETE me/deletion`, `DELETE shops/
 - The REAUTH SMS costs money and has its own small bucket; it does not count toward the reminder
   quota (only `REMINDER` sends do, [ADR-0016](0016-sms-reminders-and-netgsm-client.md)).
 - Real SMS delivery of the code is not exercised (`not exercised: fake gateway only`, G4).
-- Evidence: `ReauthTest`, `ReauthOtpTest`, `OwnershipTransferTest`, `OneOwnerInvariantTest`,
+- Evidence: `ReauthTest`, `ReauthOtpTest`, `OwnershipTransferTest`, `OwnershipTransferRaceTest`, `OneOwnerInvariantTest`,
   `AccountPermissionTest`, `AccountLogSampleTest`.

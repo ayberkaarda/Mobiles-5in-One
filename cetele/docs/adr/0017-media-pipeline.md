@@ -63,7 +63,10 @@ runs the processing inside the request:
 4. The image is decoded (WebP through TwelveMonkeys `imageio-webp`), scaled so the longest side is
    at most 1600 pixels and re-encoded as JPEG at quality 0.85 with Thumbnailator. No metadata is
    carried over, so EXIF and location are gone. The output is always JPEG.
-5. The result is written to `media/<shopId>/<mediaId>.jpg`, the upload object is deleted and the
+5. Completion takes the shop deletion lock (`ShopLocks.deletion`) before it reads the media row and
+   holds it through the storage writes, so a completion cannot race the purge of the shop
+   ([ADR-0018](0018-account-and-shop-deletion.md)) and leave an object behind.
+6. The result is written to `media/<shopId>/<mediaId>.jpg`, the upload object is deleted and the
    row becomes `READY` with `width`, `height`, `bytes` and `ready_at`. The response is
    `{mediaId, photoKey, status, width, height, bytes}`.
 
@@ -72,6 +75,7 @@ runs the processing inside the request:
 - `MediaCompleteTest`: `missing upload stays pending and an oversized upload fails`
 - `MediaCompleteTest`: `large jpeg is resized without exif and completion is idempotent`
 - `MediaCompleteTest`: `webp is decoded and stored as jpeg`
+- `MediaCompleteTest`: `a completion racing a purge of the shop leaves no object behind`
 
 ### Keys and shop prefix
 
@@ -96,7 +100,10 @@ risk is in threat model 4.12.
 `MediaSweeper` runs hourly behind `cetele.jobs.enabled` under `JobLocks`. A `PENDING` row whose
 `upload_expires_at` is more than 24 hours old gets its upload object deleted and becomes `EXPIRED`
 (`MediaSweeperTest`: `only pending uploads older than the full grace are expired`). `FAILED` and
-`EXPIRED` rows are removed after 7 days by the retention job.
+`EXPIRED` rows are removed after 7 days by the retention job. The sweeper also removes the upload
+object of rows that are no longer `PENDING` (`READY`, `FAILED`, `EXPIRED`) once `upload_expires_at`
+has passed, within a 48 hour window, so a presigned `PUT` URL replayed after completion cannot leave
+an original behind (`MediaSweeperTest`: `a replayed upload after completion is removed once the url has expired`).
 
 ### Storage
 

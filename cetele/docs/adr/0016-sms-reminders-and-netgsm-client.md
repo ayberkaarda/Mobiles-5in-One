@@ -73,16 +73,23 @@ name fails startup with `CETELE_SMS_PROVIDER=netgsm needs CETELE_NETGSM_USERNAME
 per 10 minutes), channel and template check, then transaction 1 under the shop row lock: customer
 lookup (deleted or foreign is 404), no phone is `409 sms.phone_missing`, no consent is
 `409 sms.consent_missing`, balance at or below zero is `409 reminder.no_balance`, the daily cap
-pre-check, one quota slot reserved, a statement link issued
+reservation, one quota slot reserved, a statement link issued
 ([ADR-0015](0015-statement-links-and-public-page.md)) and the `reminders` row inserted as `QUEUED`.
 The send happens after that commit, outside any transaction. Transaction 2 marks the row `SENT` with
-`sent_at` and `provider_msg_id`, or `FAILED` with `failure_code`, refunds the quota slot and answers
-`502 sms.provider_failed`. The response is 201
-`{reminderId, status, sentAt, providerMessageId?, quota: {month, used, limit}}`.
+`sent_at` and `provider_msg_id` when the provider accepted it. A definitive provider refusal
+(`SmsSendResult.Rejected`) marks the row `FAILED` with `failure_code = sms.provider_failed`, refunds
+the monthly quota slot and answers `502 sms.provider_failed`. Any other failure (a timeout, a
+transport error, a 5xx, an exception) leaves the outcome unknown, because the provider may have sent
+the message: the row is `FAILED` with `failure_code = outcome_unknown`, the monthly slot is **not**
+refunded, the row keeps counting toward the daily cap, and the answer is the same 502. The response
+on success is 201 `{reminderId, status, sentAt, providerMessageId?, quota: {month, used, limit}}`.
+A row left `QUEUED` by a crash between the two transactions stays counted in the daily cap and in
+the monthly quota (accepted, see the consequences).
 
 - `ReminderFlowTest`: `accepted reminder stores delivery metadata and sends a usable statement link`
 - `ReminderFlowTest`: `eligibility failures have exact codes and no side effects`
-- `ReminderFlowTest`: `failed send commits failure and refunds quota before answering bad gateway`
+- `ReminderFlowTest`: `unknown outcome commits failure, keeps quota used and answers bad gateway`
+- `ReminderFlowTest`: `definitive provider rejection refunds quota and stays out of the daily count`
 - `ReminderFlowTest`: `link limit rolls back reservation and does not send`
 
 ### Quota, daily cap, template
@@ -96,14 +103,17 @@ The send happens after that commit, outside any transaction. Transaction 2 marks
   - `SmsQuotaServiceTest`: `month rollover follows Istanbul midnight rather than UTC`
   - `SmsQuotaServiceTest`: `sixteen threads reserve thirty distinct slots including concurrent first creation`
   - `SmsQuotaServiceTest`: `refund never drops below zero and cannot touch another shop or month`
-- The global daily cap (`CETELE_SMS_DAILY_CAP`, default 1000) counts `reminders` rows with `sent_at`
-  inside the Istanbul day and is checked **before** the send. It is a pre-check, not a reservation:
-  concurrent requests that all pass the check before any row has `sent_at` can overshoot the cap by
-  at most the number of requests in flight, which the per-user bucket (30 per 10 minutes) and the
-  shop quota bound. This is accepted. A hard cap would have to count `QUEUED` rows as well and is a
-  possible later tightening.
-  - `DailyCapTest`: `daily count is global and includes only sent SMS inside the Istanbul day`
+- The global daily cap (`CETELE_SMS_DAILY_CAP`, default 1000) is an **atomic reservation**. The
+  request takes a platform-wide advisory lock (`ShopLocks.smsDailyCap`) inside transaction 1, counts
+  the day, and inserts its `QUEUED` row before the lock is released at commit, so concurrent
+  requests cannot all pass at cap minus one. The count is by `requested_at` inside the Istanbul day
+  and covers `QUEUED`, `SENT`, `DELIVERED`, `UNDELIVERED` and `FAILED` rows with
+  `failure_code = outcome_unknown`; a definitively rejected row is not counted. The cap lock is one
+  lock for the whole platform, which serialises only the short queueing transaction.
+  - `DailyCapTest`: `daily count is global and includes queued, sent and unknown-outcome SMS requested inside the Istanbul day`
   - `DailyCapTest`: `daily cap resets exactly at Istanbul midnight with fractional retry rounding`
+  - `ReminderFlowTest`: `concurrent requests at cap minus one produce exactly one send`
+  - `ReminderFlowTest`: `unknown outcome keeps counting toward the daily cap`
   - `ReminderFlowTest`: `lowered global daily cap blocks sends across shops`
 - The text is `Sayın {customerName}, {shopName} defterinizdeki güncel borcunuz {amount}. Hesap dökümü: {url}`.
   Names are trimmed, stripped of control characters and clipped to 40 characters without splitting
@@ -135,9 +145,12 @@ customer is a legal text owned by the shop and the owner of the project
 
 ## Consequences
 
-- A provider outage costs the user a clear 502 and no quota; a timeout where the provider did send
-  can still produce an SMS for a request that answered 502. That is the price of no retry.
-- The daily cap can be exceeded by the in-flight count; the cost exposure stays small and bounded.
+- A definitive provider refusal costs the user a clear 502 and no quota. An unknown outcome (a
+  timeout where the provider may have sent) also answers 502 but keeps the quota slot and the daily
+  count: that is the price of no retry, and it errs on the side of not under-counting spend.
+- A reminder row left `QUEUED` by a crash between the two transactions stays counted in the monthly
+  quota and the daily cap until retention removes it; there is no reconciler. Accepted
+  ([threat model](../security/threat-model.md) 4.10).
 - Switching provider changes one adapter and its configuration keys, as ADR-0003 intended.
 - Evidence: `NetgsmSmsGatewayTest`, `SmsConfigurationTest`, `SmsQuotaServiceTest`, `DailyCapTest`,
   `ReminderTemplatesTest`, `ReminderFlowTest`, `ReminderPermissionTest`, `ReminderLogSampleTest`,
