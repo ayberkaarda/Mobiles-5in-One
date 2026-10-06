@@ -35,9 +35,22 @@ internal fun Project.configureAndroidCommon(extension: CommonExtension) {
         defaultConfig.minSdk = MIN_SDK
         compileOptions.sourceCompatibility = ANDROID_BYTECODE
         compileOptions.targetCompatibility = ANDROID_BYTECODE
+        testOptions.unitTests.isIncludeAndroidResources = true
+        testOptions.unitTests.isReturnDefaultValues = false
+        lint.abortOnError = true
+        lint.warningsAsErrors = false
+        lint.checkDependencies = true
+        lint.disable += "ObsoleteLintCustomCheck"
     }
     configureKotlin(JvmTarget.JVM_17)
     configureJUnitPlatform()
+    dependencies {
+        add("testImplementation", libs.findLibrary("robolectric").get())
+        add("testImplementation", libs.findLibrary("androidx-test-core-ktx").get())
+        add("testImplementation", libs.findLibrary("androidx-test-ext-junit").get())
+        add("testImplementation", libs.findLibrary("kotlinx-coroutines-test").get())
+        add("lintChecks", libs.findLibrary("compose-lint").get())
+    }
 }
 
 internal fun Project.configureKotlin(target: JvmTarget) {
@@ -63,8 +76,17 @@ internal fun Project.configureJUnitPlatform() {
         add("testImplementation", platform(libs.findLibrary("junit-bom").get()))
         add("testImplementation", libs.findLibrary("junit-jupiter").get())
         add("testRuntimeOnly", libs.findLibrary("junit-platform-launcher").get())
+        add("testRuntimeOnly", libs.findLibrary("junit-vintage").get())
     }
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        // Robolectric's Conscrypt loader lower-cases the OS name with the default locale; under a Turkish
+        // locale "Windows" becomes "wındows" and the JNI library is not found. The JDK provider is enough.
+        systemProperty("robolectric.conscryptMode", "OFF")
+        // Robolectric 4.17 reaches FileDescriptor internals through jdk.internal.access on JDK 17+.
+        jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED", "--add-opens=java.base/java.io=ALL-UNNAMED")
+        // Modules without a test source set yet (feature shells) still get Hilt and R test classes
+        // from the build; the empty-run guard stays on wherever tests are written.
+        failOnNoDiscoveredTests.set(file("src/test").exists())
     }
 }
