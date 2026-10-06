@@ -1,7 +1,7 @@
 package app.cetele.server.auth
 
-import app.cetele.server.auth.sms.FakeSmsGateway
-import app.cetele.server.auth.sms.SmsGateway
+import app.cetele.server.reminders.sms.FakeSmsGateway
+import app.cetele.server.reminders.sms.SmsGateway
 import app.cetele.server.security.JwtCodec
 import app.cetele.server.support.IntegrationTest
 import app.cetele.server.support.TestAuth
