@@ -63,6 +63,8 @@ class DeletionExecutor(
         if (scope.first == "SHOP") {
             store.lockShop(checkNotNull(scope.third))
         } else if (users.findById(scope.second) != null) {
+            // Same order as an ownership transfer (AccountStore.lockUsers): the user row first, then its shops.
+            // Held until commit, so a transfer to this user waits and then finds the user gone.
             store.lockUser(scope.second)
         }
         // Serialize cancellation and execution before reading the current request state.

@@ -134,9 +134,12 @@ class AccountService(
     ): OwnershipReceipt {
         reauth.require(caller, code, clock.instant())
         return tx.execute {
-            store.lockUser(caller.userId)
+            // Both user rows before the shop, as DeletionExecutor does: a target whose account deletion is running
+            // holds its row until it is gone, and every eligibility check below is read under these locks.
+            store.lockUsers(caller.userId, targetId)
             store.lockShop(shopId)
-            store.transfer(shopId, caller.userId, targetId)
+            val targetLeaving = requests.openAccount(targetId)?.let { !it.graceUntil.isAfter(clock.instant()) } ?: false
+            store.transfer(shopId, caller.userId, targetId, targetLeaving)
             requests.openAccount(caller.userId)?.let {
                 it.blockedAt = null
                 requests.save(it)
