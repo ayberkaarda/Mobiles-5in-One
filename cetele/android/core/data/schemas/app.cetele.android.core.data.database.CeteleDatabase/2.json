@@ -1,0 +1,640 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "165a3f5046422617fc2d19a7146a529f",
+    "entities": [
+      {
+        "tableName": "shops",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `il` TEXT NOT NULL, `ilce` TEXT NOT NULL, `plan` TEXT NOT NULL, `role` TEXT NOT NULL, `created_at` TEXT NOT NULL, `refreshed_at` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "il",
+            "columnName": "il",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ilce",
+            "columnName": "ilce",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "plan",
+            "columnName": "plan",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "refreshedAt",
+            "columnName": "refreshed_at",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "customers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `shop_id` TEXT NOT NULL, `name` TEXT NOT NULL, `search_key` TEXT NOT NULL, `phone` TEXT, `note` TEXT, `tag` TEXT, `sms_consent` INTEGER NOT NULL, `sms_consent_at` TEXT, `sms_consent_source` TEXT, `created_at` TEXT NOT NULL, `updated_at` TEXT NOT NULL, `deleted_at` TEXT, `sync_state` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchKey",
+            "columnName": "search_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tag",
+            "columnName": "tag",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "smsConsent",
+            "columnName": "sms_consent",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "smsConsentAt",
+            "columnName": "sms_consent_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "smsConsentSource",
+            "columnName": "sms_consent_source",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deleted_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "syncState",
+            "columnName": "sync_state",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_customers_shop_id_deleted_at_search_key",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "deleted_at",
+              "search_key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_customers_shop_id_deleted_at_search_key` ON `${TABLE_NAME}` (`shop_id`, `deleted_at`, `search_key`)"
+          },
+          {
+            "name": "index_customers_shop_id_updated_at",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "updated_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_customers_shop_id_updated_at` ON `${TABLE_NAME}` (`shop_id`, `updated_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ledger_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `shop_id` TEXT NOT NULL, `customer_id` TEXT NOT NULL, `type` TEXT NOT NULL, `amount_minor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `occurred_on` TEXT NOT NULL, `due_on` TEXT, `note` TEXT, `photo_key` TEXT, `reverses` TEXT, `reversed_by` TEXT, `created_by` TEXT, `created_at` TEXT NOT NULL, `sync_state` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerId",
+            "columnName": "customer_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amount_minor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency",
+            "columnName": "currency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurredOn",
+            "columnName": "occurred_on",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueOn",
+            "columnName": "due_on",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "photoKey",
+            "columnName": "photo_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "reverses",
+            "columnName": "reverses",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "reversedBy",
+            "columnName": "reversed_by",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdBy",
+            "columnName": "created_by",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncState",
+            "columnName": "sync_state",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ledger_entries_shop_id_customer_id_occurred_on_created_at",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "customer_id",
+              "occurred_on",
+              "created_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ledger_entries_shop_id_customer_id_occurred_on_created_at` ON `${TABLE_NAME}` (`shop_id`, `customer_id`, `occurred_on`, `created_at`)"
+          },
+          {
+            "name": "index_ledger_entries_shop_id_occurred_on",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "occurred_on"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ledger_entries_shop_id_occurred_on` ON `${TABLE_NAME}` (`shop_id`, `occurred_on`)"
+          },
+          {
+            "name": "index_ledger_entries_shop_id_due_on",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "due_on"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ledger_entries_shop_id_due_on` ON `${TABLE_NAME}` (`shop_id`, `due_on`)"
+          }
+        ]
+      },
+      {
+        "tableName": "outbox_operations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`client_id` TEXT NOT NULL, `shop_id` TEXT NOT NULL, `kind` TEXT NOT NULL, `entity_id` TEXT NOT NULL, `payload_json` TEXT NOT NULL, `created_at` TEXT NOT NULL, `client_seq` INTEGER, `depends_on_client_id` TEXT, `photo_entry_id` TEXT, `state` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `last_code` TEXT, `errors_json` TEXT, `updated_at` TEXT NOT NULL, PRIMARY KEY(`client_id`))",
+        "fields": [
+          {
+            "fieldPath": "clientId",
+            "columnName": "client_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityId",
+            "columnName": "entity_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadJson",
+            "columnName": "payload_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clientSeq",
+            "columnName": "client_seq",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dependsOnClientId",
+            "columnName": "depends_on_client_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "photoEntryId",
+            "columnName": "photo_entry_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attempts",
+            "columnName": "attempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastCode",
+            "columnName": "last_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "errorsJson",
+            "columnName": "errors_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "client_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_outbox_operations_shop_id_client_seq",
+            "unique": true,
+            "columnNames": [
+              "shop_id",
+              "client_seq"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_outbox_operations_shop_id_client_seq` ON `${TABLE_NAME}` (`shop_id`, `client_seq`)"
+          },
+          {
+            "name": "index_outbox_operations_shop_id_state_created_at",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "state",
+              "created_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_outbox_operations_shop_id_state_created_at` ON `${TABLE_NAME}` (`shop_id`, `state`, `created_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "pending_photos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`entry_id` TEXT NOT NULL, `shop_id` TEXT NOT NULL, `local_path` TEXT NOT NULL, `content_length` INTEGER NOT NULL, `media_id` TEXT, `photo_key` TEXT, `state` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `last_code` TEXT, `created_at` TEXT NOT NULL, `updated_at` TEXT NOT NULL, PRIMARY KEY(`entry_id`))",
+        "fields": [
+          {
+            "fieldPath": "entryId",
+            "columnName": "entry_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "localPath",
+            "columnName": "local_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentLength",
+            "columnName": "content_length",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaId",
+            "columnName": "media_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "photoKey",
+            "columnName": "photo_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attempts",
+            "columnName": "attempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastCode",
+            "columnName": "last_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "entry_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_pending_photos_shop_id_state",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "state"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_pending_photos_shop_id_state` ON `${TABLE_NAME}` (`shop_id`, `state`)"
+          }
+        ]
+      },
+      {
+        "tableName": "sync_cursor",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`shop_id` TEXT NOT NULL, `last_pulled_seq` INTEGER NOT NULL, `next_client_seq` INTEGER NOT NULL DEFAULT 1, `last_push_at` TEXT, `last_pull_at` TEXT, `last_error_code` TEXT, PRIMARY KEY(`shop_id`))",
+        "fields": [
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPulledSeq",
+            "columnName": "last_pulled_seq",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextClientSeq",
+            "columnName": "next_client_seq",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "lastPushAt",
+            "columnName": "last_push_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastPullAt",
+            "columnName": "last_pull_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastErrorCode",
+            "columnName": "last_error_code",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "shop_id"
+          ]
+        }
+      },
+      {
+        "tableName": "reminder_log",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `shop_id` TEXT NOT NULL, `customer_id` TEXT NOT NULL, `channel` TEXT NOT NULL, `sent_at` TEXT NOT NULL, `status` TEXT NOT NULL, `quota_used` INTEGER, `quota_limit` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shopId",
+            "columnName": "shop_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerId",
+            "columnName": "customer_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "channel",
+            "columnName": "channel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sentAt",
+            "columnName": "sent_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quotaUsed",
+            "columnName": "quota_used",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "quotaLimit",
+            "columnName": "quota_limit",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reminder_log_shop_id_customer_id_sent_at",
+            "unique": false,
+            "columnNames": [
+              "shop_id",
+              "customer_id",
+              "sent_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reminder_log_shop_id_customer_id_sent_at` ON `${TABLE_NAME}` (`shop_id`, `customer_id`, `sent_at`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '165a3f5046422617fc2d19a7146a529f')"
+    ]
+  }
+}
