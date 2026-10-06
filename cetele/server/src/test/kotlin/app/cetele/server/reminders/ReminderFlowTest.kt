@@ -6,7 +6,6 @@ import app.cetele.server.ledger.LedgerFixtures
 import app.cetele.server.ledger.customer.CustomerRepository
 import app.cetele.server.ledger.entry.LedgerEntryRepository
 import app.cetele.server.ledger.money.MoneyFormat
-import app.cetele.server.reminders.quota.SmsDailyCapLock
 import app.cetele.server.reminders.quota.SmsQuotaRepository
 import app.cetele.server.reminders.quota.SmsQuotaService
 import app.cetele.server.reminders.quota.SmsSentIndex
@@ -62,7 +61,6 @@ class ReminderFlowTest(
     @Autowired private val locks: ShopLocks,
     @Autowired private val sent: SmsSentRecordRepository,
     @Autowired private val sentIndex: SmsSentIndex,
-    @Autowired private val dailyLock: SmsDailyCapLock,
     @Autowired private val reminders: ReminderRepository,
     @Autowired private val customers: CustomerRepository,
     @Autowired private val entries: LedgerEntryRepository,
@@ -253,7 +251,7 @@ class ReminderFlowTest(
                 override fun balance() = gateway.balance()
             }
         val cap = quotas.dailySent(clock.instant()) + 1
-        val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = cap), dailyLock)
+        val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = cap))
         val service = ReminderService(reminders, customers, entries, shops, cappedQuota, links, counting, clock, transactions)
         val start = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(targets.size)
@@ -313,7 +311,7 @@ class ReminderFlowTest(
         try {
             assertEquals(100, quotas.dailySent(now))
             val other = ReminderFixtures(mvc, auth, jdbc)
-            val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = 100), dailyLock)
+            val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = 100))
             val capped = ReminderService(reminders, customers, entries, shops, cappedQuota, links, gateway, clock, transactions)
             val failure =
                 assertFailsWith<ProblemException> {

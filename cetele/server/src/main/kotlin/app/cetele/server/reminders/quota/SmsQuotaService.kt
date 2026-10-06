@@ -28,7 +28,6 @@ class SmsQuotaService(
     private val sent: SmsSentRecordRepository,
     private val sentIndex: SmsSentIndex,
     private val limits: SmsLimitsProperties,
-    private val dailyLock: SmsDailyCapLock,
 ) {
     /** Joins the caller's queue transaction, so a failed queue insert also rolls back usage. */
     @Transactional
@@ -92,7 +91,7 @@ class SmsQuotaService(
      */
     @Transactional
     fun reserveDailyCap(now: Instant) {
-        dailyLock.acquire()
+        locks.smsDailyCap()
         requireDailyCap(now)
     }
 

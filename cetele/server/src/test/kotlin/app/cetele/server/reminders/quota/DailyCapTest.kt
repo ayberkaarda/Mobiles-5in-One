@@ -26,7 +26,6 @@ class DailyCapTest(
     @Autowired private val locks: ShopLocks,
     @Autowired private val sent: SmsSentRecordRepository,
     @Autowired private val index: SmsSentIndex,
-    @Autowired private val dailyLock: SmsDailyCapLock,
     @Autowired private val transactions: org.springframework.transaction.PlatformTransactionManager,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired mvc: MockMvc,
@@ -51,7 +50,7 @@ class DailyCapTest(
         reminder(first, "WHATSAPP", "SENT", now)
         assertEquals(5, service.dailySent(now))
         service.requireDailyCap(now)
-        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 5), dailyLock)
+        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 5))
         val failure =
             assertFailsWith<ProblemException> {
                 TransactionTemplate(transactions).execute { capped.requireDailyCap(now) }
@@ -66,7 +65,7 @@ class DailyCapTest(
         val customer = customer()
         val start = Instant.parse("2041-10-05T21:00:00Z")
         reminder(customer, "SMS", "SENT", start)
-        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 1), dailyLock)
+        val capped = SmsQuotaService(quotas, locks, sent, index, SmsLimitsProperties(dailyCap = 1))
         val failure =
             assertFailsWith<ProblemException> {
                 TransactionTemplate(transactions).execute { capped.requireDailyCap(start.plusMillis(86_399_500)) }
