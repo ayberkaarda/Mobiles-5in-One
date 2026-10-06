@@ -24,6 +24,8 @@ class MediaCompleteTest(
     @Autowired private val auth: TestAuth,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val store: MediaStore,
+    @Autowired private val locks: app.cetele.server.tenancy.ShopLocks,
+    @Autowired private val transactions: org.springframework.transaction.PlatformTransactionManager,
 ) {
     @Test
     fun `renamed pdf and undecodable images fail persistently and delete originals`() {
@@ -125,6 +127,39 @@ class MediaCompleteTest(
         store.put(f.uploadKey(id), bytes, "image/jpeg")
         f.complete(id).expectProblem(422, "media.invalid")
         assertEquals("FAILED", f.status(id))
+        assertNull(store.head(f.uploadKey(id)))
+    }
+
+    @Test
+    fun `a completion racing a purge of the shop leaves no object behind`() {
+        val f = MediaFixtures(mvc, auth, jdbc, store)
+        val bytes = MediaFixtures.jpeg()
+        val id = f.id(f.presign(bytes.size))
+        store.put(f.uploadKey(id), bytes, "image/jpeg")
+        val purging = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val purge =
+            java.util.concurrent.Executors.newSingleThreadExecutor().submit {
+                org.springframework.transaction.support.TransactionTemplate(transactions).executeWithoutResult {
+                    locks.deletion(f.shopId)
+                    purging.countDown()
+                    release.await()
+                    store.deletePrefix("uploads/${f.shopId}/")
+                    store.deletePrefix("media/${f.shopId}/")
+                    jdbc.update("DELETE FROM media_objects WHERE shop_id = ?", f.shopId)
+                }
+            }
+        purging.await()
+        val completion =
+            java.util.concurrent.Executors
+                .newSingleThreadExecutor()
+                .submit(java.util.concurrent.Callable { f.complete(id) })
+        Thread.sleep(500)
+        assertEquals(false, completion.isDone, "completion must wait for the deletion lock")
+        release.countDown()
+        purge.get()
+        completion.get().expectProblem(404, "not_found")
+        assertNull(store.head("media/${f.shopId}/$id.jpg"))
         assertNull(store.head(f.uploadKey(id)))
     }
 }

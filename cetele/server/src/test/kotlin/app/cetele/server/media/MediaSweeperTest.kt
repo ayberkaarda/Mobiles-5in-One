@@ -59,4 +59,18 @@ class MediaSweeperTest(
         assertEquals("READY", f.status(ready))
         assertEquals(0, sweeper.sweep(now))
     }
+
+    @Test
+    fun `a replayed upload after completion is removed once the url has expired`() {
+        val f = MediaFixtures(mvc, auth, jdbc, store)
+        val now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)
+        val ready = f.ready()
+        store.put(f.uploadKey(ready), byteArrayOf(1), "image/jpeg")
+        sweeper.sweep(now)
+        assertNotNull(store.head(f.uploadKey(ready)))
+        sweeper.sweep(now.plus(Duration.ofMinutes(11)))
+        assertNull(store.head(f.uploadKey(ready)))
+        assertEquals("READY", f.status(ready))
+        assertNotNull(store.head("media/${f.shopId}/$ready.jpg"))
+    }
 }

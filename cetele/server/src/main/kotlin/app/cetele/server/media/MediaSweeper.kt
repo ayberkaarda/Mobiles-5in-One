@@ -21,6 +21,18 @@ class MediaExpiryIndex(
                 UUID::class.java,
             ).setParameter("before", before)
             .resultList
+
+    fun shopsWithTerminalUploads(
+        now: Instant,
+        since: Instant,
+    ): List<UUID> =
+        entityManager
+            .createQuery(
+                "select distinct m.shopId from MediaObject m where m.status <> app.cetele.server.media.MediaStatus.PENDING and m.uploadExpiresAt < :now and m.uploadExpiresAt >= :since",
+                UUID::class.java,
+            ).setParameter("now", now)
+            .setParameter("since", since)
+            .resultList
 }
 
 @Component
@@ -49,6 +61,12 @@ class MediaSweeper(
                         count++
                     }
                 }
+            }
+            // A presigned PUT of a finished row must not be replayable: remove the original after the URL expired.
+            // Bounded window: older rows were covered by earlier runs.
+            val since = now.minus(Duration.ofHours(48))
+            index.shopsWithTerminalUploads(now, since).forEach { shopId ->
+                repository.staleUploadKeys(shopId, now, since).forEach { store.delete(it) }
             }
         }
         return count

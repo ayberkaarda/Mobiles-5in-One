@@ -112,6 +112,8 @@ class MediaService(
         var rejection: ProblemCode? = null
         val result =
             tx.execute {
+                // Same lock as the deletion executor, taken first and held through storage writes and commit.
+                locks.deletion(shopId)
                 val row = repository.lock(shopId, mediaId) ?: throw ProblemException(ProblemCode.NOT_FOUND)
                 if (row.status == MediaStatus.READY) return@execute ready(row)
                 if (row.status != MediaStatus.PENDING) throw ProblemException(ProblemCode.NOT_FOUND)
