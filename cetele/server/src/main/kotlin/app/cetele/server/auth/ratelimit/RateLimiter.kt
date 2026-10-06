@@ -29,6 +29,17 @@ enum class RateLimit(
     OTP_VERIFY_IP("otp.verify.ip", 20, Duration.ofMinutes(10)),
     REFRESH_DEVICE("refresh.device", 30, Duration.ofMinutes(1)),
     REFRESH_IP("refresh.ip", 30, Duration.ofMinutes(1)),
+    SYNC_PUSH_USER("sync.push.user", 60, Duration.ofMinutes(1)),
+    SYNC_PULL_USER("sync.pull.user", 120, Duration.ofMinutes(1)),
+    STATEMENT_LINK_USER("statement.link.user", 30, Duration.ofMinutes(10)),
+    STATEMENT_PAGE_IP("statement.page.ip", 60, Duration.ofMinutes(1)),
+    STATEMENT_PDF_USER("statement.pdf.user", 20, Duration.ofMinutes(10)),
+    REMINDER_USER("reminder.user", 30, Duration.ofMinutes(10)),
+    MEDIA_PRESIGN_USER("media.presign.user", 60, Duration.ofMinutes(10)),
+    MEDIA_COMPLETE_USER("media.complete.user", 60, Duration.ofMinutes(10)),
+    MEDIA_DOWNLOAD_USER("media.download.user", 300, Duration.ofMinutes(10)),
+    REAUTH_REQUEST_USER("reauth.request.user", 3, Duration.ofMinutes(10)),
+    REAUTH_VERIFY_USER("reauth.verify.user", 10, Duration.ofMinutes(10)),
     ;
 
     val configuration: BucketConfiguration =
