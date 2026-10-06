@@ -1,6 +1,7 @@
 # Overrides on top of the detekt default configuration (buildUponDefaultConfig = true).
 config:
   validation: true
+  excludes: 'cetele>.*'
 
 naming:
   FunctionNaming:
@@ -20,6 +21,20 @@ style:
       - Preview
 
 complexity:
+  # Test fixtures spell out full wire bodies and scenarios; length limits apply to production code.
+  LongMethod:
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+  LargeClass:
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
   LongParameterList:
+    ignoreDataClasses: true
     ignoreAnnotated:
       - Composable
+
+cetele:
+  MonetaryDouble:
+    active: true
