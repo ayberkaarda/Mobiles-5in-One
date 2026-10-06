@@ -1,5 +1,7 @@
 # PATİKA — Product Specification
 
+> **Notice (2026-10-04):** the mobile client stack changed to .NET MAUI (C#). The Swift/SwiftUI/SwiftData/MapKit/StoreKit wording below is superseded and will be rewritten in Patika Phase 0 (stack ADR).
+
 **Stack:** Swift (iOS, SwiftUI, MapKit, StoreKit 2) · ASP.NET Core (C#) · PostgreSQL + PostGIS · Razor Pages web
 **Product:** Community platform for street animals — feeding-station map, "beslendi" check-ins, animal profiles, adoption listings, urgent-help posts, vet/shelter directory.
 **Owner:** Ayberk (`ayberkaarda/patika`) · **Specification version:** 1.0 · **Language rule:** code, identifiers, commits, docs = English; all user-facing product copy = Turkish (tr-TR primary, en secondary).

@@ -35,20 +35,20 @@ Patika is a community platform for street animals that connects neighbourhood vo
 
 ## Planned technology stack
 
-| Layer | Technology |
-|---|---|
-| iOS app | Swift, SwiftUI, MapKit, SwiftData, StoreKit 2 |
-| Backend API | ASP.NET Core Minimal APIs (C#), EF Core |
-| Web and admin | ASP.NET Core Razor Pages, server-side rendered |
-| Background jobs | .NET Worker with Quartz.NET |
-| Database | PostgreSQL with PostGIS |
-| Object storage | S3-compatible (Cloudflare R2) |
-| Push notifications | APNs (token-based) |
-| Email | Resend |
+| Layer              | Technology                                        |
+| ------------------ | ------------------------------------------------- |
+| Mobile app         | .NET MAUI (C#), Android first; iOS not built here |
+| Backend API        | ASP.NET Core Minimal APIs (C#), EF Core           |
+| Web and admin      | ASP.NET Core Razor Pages, server-side rendered    |
+| Background jobs    | .NET Worker with Quartz.NET                       |
+| Database           | PostgreSQL with PostGIS                           |
+| Object storage     | S3-compatible (Cloudflare R2)                     |
+| Push notifications | APNs (token-based)                                |
+| Email              | Resend                                            |
 
 ## Planned architecture
 
-A repository with an `ios/` Xcode project built from local Swift packages (core, design system, map) and a .NET solution under `src/` split into Domain, Infrastructure, Api, Web, Worker and Contracts projects, with tests under `tests/`. The iOS app is intended to have zero third-party runtime dependencies. The API is organised as vertical slices with versioned JSON endpoints under `/v1`; the Razor web app renders public SEO pages and the admin area; the worker handles push fan-out, deletions, subscription reconciliation and backup checks. Subscription entitlement is decided server-side from verified App Store transactions and notifications.
+A repository with a .NET MAUI app project (C#, Android first; iOS is not built or exercised here) and a .NET solution under `src/` split into Domain, Infrastructure, Api, Web, Worker and Contracts projects, with tests under `tests/`. The API is organised as vertical slices with versioned JSON endpoints under `/v1`; the Razor web app renders public SEO pages and the admin area; the worker handles push fan-out, deletions, subscription reconciliation and backup checks. Subscription entitlement is decided server-side from verified store transactions and notifications.
 
 ## Status
 

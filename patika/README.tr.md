@@ -35,20 +35,20 @@ Patika, mahalle gönüllülerini buluşturan bir sokak hayvanları topluluk plat
 
 ## Planlanan teknoloji yığını
 
-| Katman | Teknoloji |
-|---|---|
-| iOS uygulaması | Swift, SwiftUI, MapKit, SwiftData, StoreKit 2 |
-| Backend API | ASP.NET Core Minimal API (C#), EF Core |
-| Web ve admin | ASP.NET Core Razor Pages, sunucu tarafı render |
-| Arka plan işleri | .NET Worker + Quartz.NET |
-| Veritabanı | PostgreSQL + PostGIS |
-| Nesne depolama | S3 uyumlu (Cloudflare R2) |
-| Push bildirimi | APNs (token tabanlı) |
-| E-posta | Resend |
+| Katman           | Teknoloji                                            |
+| ---------------- | ---------------------------------------------------- |
+| Mobil uygulama   | .NET MAUI (C#), önce Android; iOS burada derlenmiyor |
+| Backend API      | ASP.NET Core Minimal API (C#), EF Core               |
+| Web ve admin     | ASP.NET Core Razor Pages, sunucu tarafı render       |
+| Arka plan işleri | .NET Worker + Quartz.NET                             |
+| Veritabanı       | PostgreSQL + PostGIS                                 |
+| Nesne depolama   | S3 uyumlu (Cloudflare R2)                            |
+| Push bildirimi   | APNs (token tabanlı)                                 |
+| E-posta          | Resend                                               |
 
 ## Planlanan mimari
 
-Bir repoda `ios/` altında yerel Swift paketlerinden (core, tasarım sistemi, harita) oluşan bir Xcode projesi ve `src/` altında Domain, Infrastructure, Api, Web, Worker ve Contracts projelerine ayrılmış bir .NET çözümü; testler `tests/` altında. iOS uygulamasında üçüncü taraf runtime bağımlılığı hedeflenmiyor. API, `/v1` altında sürümlü JSON uç noktalarıyla vertical slice düzeninde kurulur; Razor web uygulaması herkese açık SEO sayfalarını ve admin alanını render eder; worker push dağıtımı, silme işlemleri, abonelik mutabakatı ve yedek kontrollerini yürütür. Abonelik hakkı, sunucuda doğrulanmış App Store işlemleri ve bildirimlerinden belirlenir.
+Bir repoda bir .NET MAUI uygulama projesi (C#, önce Android; iOS burada derlenmez ve denenmez) ve `src/` altında Domain, Infrastructure, Api, Web, Worker ve Contracts projelerine ayrılmış bir .NET çözümü; testler `tests/` altında. API, `/v1` altında sürümlü JSON uç noktalarıyla vertical slice düzeninde kurulur; Razor web uygulaması herkese açık SEO sayfalarını ve admin alanını render eder; worker push dağıtımı, silme işlemleri, abonelik mutabakatı ve yedek kontrollerini yürütür. Abonelik hakkı, sunucuda doğrulanmış mağaza işlemleri ve bildirimlerinden belirlenir.
 
 ## Durum
 
