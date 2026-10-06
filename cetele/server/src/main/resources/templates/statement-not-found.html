@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title th:text="'Hesap dökümü bulunamadı'">Hesap dökümü bulunamadı</title>
+  <link rel="stylesheet" href="/assets/statement.css" th:attr="nonce=${cspNonce}">
+</head>
+<body><main><h1 th:text="'Hesap dökümü bulunamadı'"></h1><p th:text="'Bu bağlantı kullanılamıyor. Güncel hesap dökümü için dükkânınızla iletişime geçin.'"></p></main></body>
+</html>
