@@ -156,7 +156,7 @@ jobs:
           build-root-directory: cetele/server
 
       - name: Run checks
-        run: ./gradlew check
+        run: ./gradlew check openApiContractCheck
 
   # Brand token validation: pure node script, no dependencies to install.
   brand:
