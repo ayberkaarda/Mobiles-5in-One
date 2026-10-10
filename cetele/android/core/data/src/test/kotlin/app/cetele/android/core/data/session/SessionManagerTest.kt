@@ -17,6 +17,7 @@ import app.cetele.android.core.data.settings.SettingsRepository
 import app.cetele.android.core.data.settings.ThemeMode
 import app.cetele.android.core.data.settings.UserSettings
 import app.cetele.android.core.data.settings.UserSettingsSerializer
+import app.cetele.android.core.data.sync.RetryAfterPolicy
 import app.cetele.android.core.data.vault.InMemoryVault
 import app.cetele.android.core.data.vault.VaultKeys
 import app.cetele.android.core.network.ApiResult
@@ -79,7 +80,9 @@ class SessionManagerTest {
         val photos = EncryptedPhotoStore(File(directory, "photos"), vault)
         val pins = PinStore(vault, PinHasher(), Clock.systemUTC())
         val lock = LockController(pins, settings, Clock.systemUTC())
-        val manager = SessionManager(Provider { auth }, tokens, vault, databases, photos, settings, work, lock)
+        val retryAfter = RetryAfterPolicy(context, Clock.systemUTC())
+        val manager =
+            SessionManager(Provider { auth }, tokens, vault, databases, photos, settings, work, lock, retryAfter)
         val initialAccess = "access-" + java.util.UUID.randomUUID()
         val initialRefresh = "refresh-" + java.util.UUID.randomUUID()
 
@@ -131,6 +134,26 @@ class SessionManagerTest {
                         .syncCursorDao()
                         .get("shop-a"),
                 )
+            } finally {
+                f.close()
+            }
+        }
+
+    @Test fun signOutDeletesPersistedRetryAfterDeadlines() =
+        runTest {
+            val f = Fixture()
+            try {
+                f.signIn()
+                f.retryAfter.defer("shop-a", 600)
+                val file = File(f.context.dataDir, "shared_prefs/${RetryAfterPolicy.FILE_NAME}.xml")
+                assertTrue(file.exists())
+                assertTrue(f.retryAfter.remainingSeconds("shop-a") > 0)
+                coEvery { f.auth.logout() } returns ApiResult.Success(Unit, 204)
+                f.manager.signOut(SignOutReason.USER)
+                assertFalse(file.exists())
+                assertEquals(0, f.retryAfter.remainingSeconds("shop-a"))
+                val reopened = RetryAfterPolicy(f.context, Clock.systemUTC())
+                assertEquals(0, reopened.remainingSeconds("shop-a"))
             } finally {
                 f.close()
             }
