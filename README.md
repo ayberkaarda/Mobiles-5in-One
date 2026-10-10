@@ -11,7 +11,7 @@ stack, tooling and release cycle; nothing is shared between them.
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------- | -------- |
 | [`kadro`](kadro/)         | Match organizer for amateur pitch football: build the squad, fill missing players, split the pitch fee                | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | All planned phases merged (real-world proofs partly open) | 100%     |
 | [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | All planned phases merged (real-world proofs partly open) | 100%     |
-| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Design document only, no code                             | 0%       |
+| [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Phases 0 to 3 merged (server and Android app; real-world proofs open) | 57%      |
 | [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Design document only, no code                             | 0%       |
 | [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | .NET MAUI (C#), ASP.NET Core, PostgreSQL + PostGIS                             | Design document only, no code                             | 0%       |
 
@@ -36,7 +36,7 @@ One card per project. Kadro and Askıda have applications. The Askıda card show
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/cetele.png" alt="Cetele card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Cetele</b>: in design stage, no app yet</sub>
+      <sub><b>Cetele</b>: server and Android app merged (Phases 0 to 3)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
@@ -82,18 +82,22 @@ the push. Real payments and attestation have not been exercised and iOS has neve
 [`askida/README.md`](askida/README.md) and
 [`askida/docs/security/verification-matrix.md`](askida/docs/security/verification-matrix.md).
 
-Cetele, Inecek Var and Patika currently consist of a single specification document each.
+Cetele has its server (Spring Boot: authentication, sync, ledger, reminders, media) and its
+Android app (Kotlin, Jetpack Compose, offline-first with a local outbox) merged, covering
+Phases 0 to 3 of 7. Billing, the web and admin area, and release hardening are not started.
+
+Inecek Var and Patika currently consist of a single specification document each.
 No application code exists for them yet.
 
 ### Progress
 
-Last updated: 2026-10-05 (written for the merge of Askıda Phases 4 to 6). The figures are estimates, refreshed whenever a batch of work merges.
+Last updated: 2026-10-11 (written for the merge of Cetele Phase 3). The figures are estimates, refreshed whenever a batch of work merges.
 
 | Project     | Progress | Basis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kadro`     | 100%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 11 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 11/11) / 7 = 100%. Phase 6 is complete for the portfolio scope (all 11 deliverables merged), while proofs that need systems that do not exist yet stay recorded as partial (10 of 23 security items, hosted origin, EAS builds, provider accounts, iOS), so 100% means the planned work is merged, not that every control is proven in production.                                                                   |
 | `askida`    | 100%     | Phases 0 to 6 merged: 7 of 7 phases, weighted equally (foundation; data layer, authentication and security baseline; shops, accounts and hooks; payments, webhooks, payouts and admin panel; Flutter app; public web, SEO and GEO; hardening and release readiness): 7/7 = 100%. 100% means the planned work is merged, not that every control is proven in production: 9 of 23 security items stay partial ([verification matrix](askida/docs/security/verification-matrix.md)); real payments, real attestation, store accounts, a hosted origin and iOS are not exercised. |
-| `cetele`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `cetele`    | 57%      | Phases 0 to 3 merged: 4 of 7 phases, weighted equally (foundation; server core, authentication and security baseline; sync, ledger, reminders and media; Android app): 4/7 = 57%. Phases 4 to 6 (billing, webhooks and admin; web SEO and GEO; hardening and release readiness) are not started. Phase 3 was verified on the JVM and in CI only: no device, emulator or live server run, and real PDF output, biometrics and camera are not exercised. |
 | `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
@@ -109,7 +113,7 @@ counted. 100% means all phases are merged; real-world verification is tracked se
 lefthook.yml         git hook configuration
 kadro/               Kadro monorepo (pnpm workspaces + Turborepo)
 askida/              Askıda: Laravel server (Docker), Flutter app, brand package, ADRs, spec
-cetele/              design document
+cetele/              Cetele: Spring Boot server, Android app, brand package, ADRs, spec
 inecekvar/           design document
 patika/              design document
 ```
@@ -125,7 +129,7 @@ patika/              design document
 
 ## Development
 
-Kadro and Askıda are buildable; the other three projects have no code. Kadro: work from inside `kadro/`:
+Kadro, Askıda and Cetele are buildable; Inecek Var and Patika have no code. Cetele has no root-level commands: its Android and server builds run from `cetele/android` and `cetele/server` (see [`cetele/README.md`](cetele/README.md)). Kadro: work from inside `kadro/`:
 
 ```sh
 cd kadro

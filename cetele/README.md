@@ -53,8 +53,22 @@ A single repository with two roots: `android/` (a multi-module Gradle project wi
 
 ## Status
 
-This folder currently contains only a design/spec document; no source code has been written yet.
+Phases 0 to 3 of 7 are merged: the repository foundation, the Spring Boot server (authentication and security baseline, sync with a change log, ledger, reminders, media pipeline, account and shop deletion) and the Android app (offline-first ledger, sync engine, PIN and biometric lock, reminders, PDF and CSV export, settings). Progress is about 57%. Billing and webhooks, the web and admin area, and release hardening (Phases 4 to 6) have not started.
+
+Verification so far is JVM unit tests and CI only. The Android app has not been run on a device or emulator and the server has not been exercised by a real client, so biometrics, camera capture, real PDF output, WhatsApp and live SMS are untested. Phase 3 left open: the KVKK notice link (a product decision) and a running-sync signal for the dashboard refresh indicator.
 
 ## Getting started
 
-There is no code to install or run yet. The product and technical specification lives in this folder as `02-cetele-kotlin-android.md`. This README will be updated once development starts.
+The product and technical specification is `02-cetele-kotlin-android.md`; architecture decisions are in `docs/adr`, the API in `docs/api/openapi.json` and the Android-to-server contract in `docs/handoffs`.
+
+Android (JDK 21, Android SDK), from `android/`:
+
+```
+./gradlew ktlintCheck detekt lintDebug testDebugUnitTest assembleDebug
+```
+
+Server (JDK 21; the integration tests start containers, so Docker must be running), from `server/`:
+
+```
+./gradlew check
+```
