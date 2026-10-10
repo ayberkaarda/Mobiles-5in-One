@@ -54,9 +54,16 @@ class EntryDetailViewModel
                     if (shop != null) {
                         ledger.observeAll(shop.id).collectLatest { entries ->
                             val entry = entries.firstOrNull { it.id == entryId }
-                            val photoStatus = entry?.let { photos.status(it) } ?: EntryPhotoStatus.Absent
-                            mutableState.update {
-                                it.copy(entry = entry, loading = false, photoStatus = photoStatus)
+                            if (entry == null) {
+                                mutableState.update {
+                                    it.copy(entry = null, loading = false, photoStatus = EntryPhotoStatus.Absent)
+                                }
+                            } else {
+                                photos.observe(entry).collect { photoStatus ->
+                                    mutableState.update {
+                                        it.copy(entry = entry, loading = false, photoStatus = photoStatus)
+                                    }
+                                }
                             }
                         }
                     }
@@ -92,6 +99,14 @@ class EntryDetailViewModel
                     }
                 }
             }
+        }
+
+        /** Only offered after a failed upload; the entry then leaves through the outbox without its photo. */
+        fun sendWithoutPhoto() {
+            val current = state.value
+            val entry = current.entry ?: return
+            if (current.photoStatus != EntryPhotoStatus.Failed || current.busy) return
+            performWrite { photos.sendWithoutPhoto(entry) }
         }
 
         private fun performWrite(write: suspend () -> Unit) {
