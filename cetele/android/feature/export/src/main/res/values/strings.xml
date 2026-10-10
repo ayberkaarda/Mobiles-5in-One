@@ -1,0 +1,24 @@
+<resources>
+    <string name="export_statement_title">Hesap dökümü</string>
+    <string name="export_statement_balance">Güncel bakiye</string>
+    <string name="export_statement_date">Tarih</string>
+    <string name="export_statement_description">Açıklama</string>
+    <string name="export_statement_debt">Borç</string>
+    <string name="export_statement_payment">Tahsilat</string>
+    <string name="export_statement_balance_column">Bakiye</string>
+    <string name="export_statement_correction">Düzeltme: %1$s</string>
+    <string name="export_statement_footer">Bu döküm %1$s tarafından Çetele ile hazırlanmıştır.</string>
+    <string name="export_statement_page">Sayfa %1$d / %2$d</string>
+    <string name="export_statement_count">%1$d kayıt · %2$s</string>
+    <string name="export_statement_download">Sunucudan indir</string>
+    <string name="export_statement_fonts_error">Yazı tipleri açılamadı. Dökümü sunucudan indirebilirsiniz.</string>
+    <string name="export_all_title">Kayıtları dışa aktar</string>
+    <string name="export_all_share">Tüm kayıtları CSV olarak paylaş</string>
+    <string name="export_all_count">%1$d kayıt</string>
+    <string name="export_common_share">Paylaş</string>
+    <string name="export_common_loading">Kayıtlar hazırlanıyor</string>
+    <string name="export_common_unavailable">Döküm için dükkân veya müşteri bulunamadı.</string>
+    <string name="export_common_error">Dosya hazırlanamadı. Yeniden deneyebilirsiniz.</string>
+    <string name="export_common_support">Destek kodu: %1$s</string>
+    <string name="export_common_retry">Yeniden dene</string>
+</resources>

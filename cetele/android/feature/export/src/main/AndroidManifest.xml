@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="app.cetele.android.feature.export.share.ExportCleanupProvider"
+            android:authorities="${applicationId}.exports.cleanup"
+            android:exported="false" />
+    </application>
+</manifest>
