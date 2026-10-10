@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Yöneticiler')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <h1>Yöneticiler</h1>
+  <p th:replace="~{admin/fragments :: notice}"></p>
+  <p><a class="button" href="/admin/admins/new">Yeni yönetici ekle</a></p>
+  <div class="table-scroll">
+    <table>
+      <caption>Panel hesapları</caption>
+      <thead>
+      <tr><th scope="col">E-posta</th><th scope="col">Rol</th><th scope="col">Durum</th><th scope="col">Son giriş</th><th scope="col">İşlemler</th></tr>
+      </thead>
+      <tbody>
+      <tr th:each="account : ${admins}">
+        <td th:text="${account.email}"></td>
+        <td th:text="${account.role}"></td>
+        <td>
+          <span th:text="${account.disabled} ? 'Devre dışı' : (${account.locked} ? 'Geçici kilitli' : 'Etkin')"></span>
+          <span th:unless="${account.enrolled}" class="badge">Doğrulama kurulmadı</span>
+          <span th:if="${account.mustChangePassword}" class="badge">Parola değişmeli</span>
+        </td>
+        <td th:text="${account.lastLoginAt}"></td>
+        <td th:if="${account.id == currentAdmin.id}">Kendi hesabınız</td>
+        <td th:unless="${account.id == currentAdmin.id}" class="actions">
+          <form th:action="@{/admin/admins/{id}/role(id=${account.id})}" method="post" class="inline">
+            <label th:for="'role-' + ${account.id}" class="visually-hidden" th:text="'Rol: ' + ${account.email}">Rol</label>
+            <select th:id="'role-' + ${account.id}" name="role">
+              <option th:each="role : ${roles}" th:value="${role}" th:text="${role}" th:selected="${role == account.role}"></option>
+            </select>
+            <button type="submit" class="secondary">Rolü kaydet</button>
+          </form>
+          <form th:unless="${account.disabled}" th:action="@{/admin/admins/{id}/disable(id=${account.id})}" method="post" class="inline">
+            <button type="submit" class="danger">Devre dışı bırak</button>
+          </form>
+          <form th:if="${account.disabled}" th:action="@{/admin/admins/{id}/enable(id=${account.id})}" method="post" class="inline">
+            <button type="submit" class="secondary">Etkinleştir</button>
+          </form>
+          <form th:action="@{/admin/admins/{id}/totp-reset(id=${account.id})}" method="post" class="inline">
+            <button type="submit" class="secondary">Doğrulamayı sıfırla</button>
+          </form>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

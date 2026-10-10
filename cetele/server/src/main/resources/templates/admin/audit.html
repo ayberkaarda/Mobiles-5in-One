@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Denetim kaydı')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <h1>Denetim kaydı</h1>
+  <p class="muted">Kayıtlar 365 gün saklanır. Bu sayfayı açmak da kayda geçer.</p>
+  <p th:if="${audit.rows.isEmpty()}">Bu sayfada kayıt yok.</p>
+  <div class="table-scroll" th:unless="${audit.rows.isEmpty()}">
+    <table>
+      <caption th:text="'Sayfa ' + ${audit.page + 1}">Sayfa</caption>
+      <thead>
+      <tr><th scope="col">Zaman</th><th scope="col">İşlem</th><th scope="col">Yapan</th><th scope="col">Hedef</th><th scope="col">Ek bilgi</th></tr>
+      </thead>
+      <tbody>
+      <tr th:each="row : ${audit.rows}">
+        <td th:text="${row.at}"></td>
+        <td th:text="${row.action}"></td>
+        <td th:text="${row.actorType} + ' ' + (${row.actorId != null} ? ${row.actorId} : '-')"></td>
+        <td th:text="${row.targetType != null} ? ${row.targetType} + ' ' + ${row.targetId} : '-'"></td>
+        <td><code th:text="${row.metadata}"></code></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+  <nav class="pager" aria-label="Sayfalar">
+    <a th:if="${audit.page > 0}" th:href="@{/admin/audit(page=${audit.page - 1})}">Daha yeni kayıtlar</a>
+    <a th:if="${audit.hasNext}" th:href="@{/admin/audit(page=${audit.page + 1})}">Daha eski kayıtlar</a>
+  </nav>
+</main>
+</body>
+</html>

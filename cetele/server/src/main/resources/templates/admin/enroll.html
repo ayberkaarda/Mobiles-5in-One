@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Doğrulama uygulaması')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main" class="narrow">
+  <h1>Doğrulama uygulamasını kurun</h1>
+  <p class="muted">Panele girmek için iki adımlı doğrulama zorunludur.</p>
+  <p th:replace="~{admin/fragments :: error}"></p>
+  <ol class="steps">
+    <li>Telefonunuzdaki doğrulama uygulamasıyla aşağıdaki QR kodunu okutun.</li>
+    <li>QR kodu okutamıyorsanız anahtarı elle girin.</li>
+    <li>Uygulamanın gösterdiği 6 haneli kodu yazıp kurulumu tamamlayın.</li>
+  </ol>
+  <img class="qr" th:src="${enrollment.qrDataUri}" width="240" height="240" alt="Doğrulama uygulaması için QR kodu">
+  <p><strong>Anahtar:</strong> <code class="secret" th:text="${enrollment.secret}"></code></p>
+  <details>
+    <summary>Bağlantıyı metin olarak göster</summary>
+    <p><code class="secret" th:text="${enrollment.uri}"></code></p>
+  </details>
+  <form th:action="@{/admin/totp/enroll}" method="post" class="stack">
+    <label for="code">6 haneli kod</label>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+    <button type="submit">Kurulumu tamamla</button>
+  </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title th:text="${title} + ' · Çetele Yönetim'">Çetele Yönetim</title>
+  <link rel="stylesheet" href="/assets/admin/admin.css" th:attr="nonce=${cspNonce}">
+</head>
+<body>
+<header th:fragment="nav" class="topbar">
+  <a class="skip" href="#main">İçeriğe geç</a>
+  <p class="brand">Çetele Yönetim</p>
+  <nav aria-label="Yönetim menüsü" th:if="${currentAdmin != null}">
+    <ul>
+      <li><a href="/admin">Özet</a></li>
+      <li><a href="/admin/shops">Dükkânlar</a></li>
+      <li><a href="/admin/users">Kullanıcılar</a></li>
+      <li th:if="${currentAdmin.admin}"><a href="/admin/audit">Denetim kaydı</a></li>
+      <li th:if="${currentAdmin.admin}"><a href="/admin/admins">Yöneticiler</a></li>
+      <li><a href="/admin/account/password">Parolam</a></li>
+    </ul>
+    <p class="who"><span th:text="${currentAdmin.email}"></span> <span class="badge" th:text="${currentAdmin.role}"></span></p>
+    <form th:action="@{/admin/logout}" method="post" class="inline">
+      <button type="submit" class="secondary">Çıkış yap</button>
+    </form>
+  </nav>
+</header>
+<p th:fragment="notice" class="notice" role="status" th:if="${notice}" th:text="${notice}"></p>
+<p th:fragment="error" class="error" role="alert" th:if="${error}" th:text="${error}"></p>
+</body>
+</html>

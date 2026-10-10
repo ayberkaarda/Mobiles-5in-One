@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Yeni yönetici')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main" class="narrow">
+  <p><a href="/admin/admins">Yöneticilere dön</a></p>
+  <h1>Yeni yönetici</h1>
+  <p class="muted">Yeni hesap için tek kullanımlık bir parola oluşturulur ve yalnızca bir kez gösterilir. Hesap sahibi ilk girişte doğrulama uygulamasını kurar ve kendi parolasını belirler.</p>
+  <form th:action="@{/admin/admins/new}" method="post" class="stack">
+    <label for="email">E-posta</label>
+    <input id="email" name="email" type="email" autocomplete="off" required maxlength="254">
+    <label for="role">Rol</label>
+    <select id="role" name="role">
+      <option th:each="role : ${roles}" th:value="${role}" th:text="${role == 'ADMIN'} ? 'ADMIN (tam yetki)' : 'SUPPORT (yalnızca görüntüleme)'"></option>
+    </select>
+    <button type="submit">Hesabı oluştur</button>
+  </form>
+</main>
+</body>
+</html>

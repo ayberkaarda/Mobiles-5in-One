@@ -19,20 +19,20 @@ class FlywayMigrationTest(
     @Autowired private val tx: TransactionTemplate,
 ) {
     @Test
-    fun `V1 to V7 are applied, the head is V7 and nothing is pending`() {
+    fun `V1 to V8 are applied, the head is V8 and nothing is pending`() {
         val info = flyway.info()
-        assertEquals("7", info.current()?.version?.version)
+        assertEquals("8", info.current()?.version?.version)
         assertEquals(0, info.pending().size)
         val applied =
             jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank",
                 String::class.java,
             )
-        assertEquals(listOf("1", "2", "3", "4", "5", "6", "7"), applied)
+        assertEquals(listOf("1", "2", "3", "4", "5", "6", "7", "8"), applied)
     }
 
     @Test
-    fun `the schema holds exactly the V1 to V6 tables and nothing unexpected`() {
+    fun `the schema holds exactly the V1 to V8 tables and nothing unexpected`() {
         val tables =
             jdbc.queryForList(
                 """
@@ -44,6 +44,8 @@ class FlywayMigrationTest(
             )
         val expected =
             listOf(
+                "admin_users",
+                "audit_logs",
                 "change_log",
                 "customers",
                 "deletion_requests",

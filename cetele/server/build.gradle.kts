@@ -62,6 +62,13 @@ dependencies {
     implementation(libs.thumbnailator)
     implementation(libs.imageio.webp)
     implementation(libs.pdfbox)
+    implementation(libs.totp) {
+        // The QR PNG is written by the JDK's own ImageIO; the zxing command line parser and the
+        // extra ImageIO codecs are not needed and must not change how media uploads are decoded.
+        exclude(group = "com.beust", module = "jcommander")
+        exclude(group = "com.github.jai-imageio", module = "jai-imageio-core")
+    }
+    implementation(libs.bouncycastle.bcprov)
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.spring.boot.starter.test)

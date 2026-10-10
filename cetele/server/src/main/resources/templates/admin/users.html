@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Kullanıcılar')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <h1>Kullanıcılar</h1>
+  <form action="/admin/users" method="get" class="search" role="search">
+    <label for="phone">Telefon numarası (tam eşleşme)</label>
+    <input id="phone" name="phone" type="tel" maxlength="16" autocomplete="off" required>
+    <button type="submit">Ara</button>
+  </form>
+  <p th:replace="~{admin/fragments :: error}"></p>
+  <th:block th:if="${results != null}">
+    <p th:if="${results.isEmpty()}" role="status">Bu numarayla kayıtlı kullanıcı yok.</p>
+    <div class="table-scroll" th:unless="${results.isEmpty()}">
+      <table>
+        <caption>Arama sonucu</caption>
+        <thead><tr><th scope="col">Telefon</th><th scope="col">Ad</th><th scope="col">Kayıt</th><th scope="col">Durum</th></tr></thead>
+        <tbody>
+        <tr th:each="user : ${results}">
+          <td><a th:href="@{/admin/users/{id}(id=${user.id})}" th:text="${user.maskedPhone}"></a></td>
+          <td th:text="${user.displayName != null} ? ${user.displayName} : '-'"></td>
+          <td th:text="${user.createdAt}"></td>
+          <td th:text="${user.deactivated} ? 'Devre dışı' : 'Etkin'"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </th:block>
+</main>
+</body>
+</html>

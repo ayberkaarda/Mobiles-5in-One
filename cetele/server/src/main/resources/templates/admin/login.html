@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Giriş')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main" class="narrow">
+  <h1>Giriş</h1>
+  <p class="muted">Bu panel yalnızca Çetele platform personeli içindir. Her işlem kayıt altına alınır.</p>
+  <p th:replace="~{admin/fragments :: error}"></p>
+  <form th:action="@{/admin/login}" method="post" class="stack">
+    <label for="email">E-posta</label>
+    <input id="email" name="email" type="email" autocomplete="username" required maxlength="254">
+    <label for="password">Parola</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128">
+    <button type="submit">Devam et</button>
+  </form>
+</main>
+</body>
+</html>
