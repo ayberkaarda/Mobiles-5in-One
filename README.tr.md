@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kartı marka sistemini ve üç uygulama ekranını gösterir (Android emülatörü, örnek veri); tamamı [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) dosyasında. Diğer kartlar henüz tasarım aşamasındaki ürünler için yer tutucudur.
+Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Askıda kartı marka sistemini ve üç uygulama ekranını gösterir (Android emülatörü, örnek veri); tamamı [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) dosyasında. Cetele kartı iki gerçek emülatör ekranını gösterir (yalnızca giriş, sunucu çalışmıyordu); ekran görüntüleri [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) altında. Inecek Var ve Patika kartları henüz tasarım aşamasındaki ürünler için yer tutucudur.
 
 <table>
   <tr>
@@ -35,8 +35,10 @@ Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kar
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
-      <sub><b>Cetele</b>: sunucu ve Android uygulaması birleşti (Phase 0-3)</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele kartı: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android uygulaması giriş ekranı, boş telefon numarası alanı, emülatör" width="32%">
+      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android uygulaması sunucu çalışmadığı için bağlanılamadı hatasını gösteriyor, emülatör" width="32%"><br>
+      <sub><b>Cetele</b>: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı (emülatör ekranları, sunucu yok)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>

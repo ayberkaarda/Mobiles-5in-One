@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro and Askıda have applications. The Askıda card shows its brand system and three app screens (Android emulator, sample data); the full set is in [`askida/README.md`](askida/README.md#screenshots). The other cards are placeholders for products that are still in the design stage.
+One card per project. Kadro, Askıda and Cetele have applications. The Askıda card shows its brand system and three app screens (Android emulator, sample data); the full set is in [`askida/README.md`](askida/README.md#screenshots). The Cetele card shows two real emulator screens (sign-in only, no server was running); screenshots are in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
@@ -35,8 +35,10 @@ One card per project. Kadro and Askıda have applications. The Askıda card show
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Cetele</b>: server and Android app merged (Phases 0 to 3)</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele card: Android app and server merged, not yet run against a live server" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android app sign-in screen with an empty phone number field, emulator" width="32%">
+      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android app showing an unable-to-connect error because no server was running, emulator" width="32%"><br>
+      <sub><b>Cetele</b>: Android app and server merged, not yet run against a live server (emulator screens, no server)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
