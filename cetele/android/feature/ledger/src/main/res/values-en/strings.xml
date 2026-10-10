@@ -33,4 +33,5 @@
     <string name="ledger_dashboard_no_due">No entries due today</string>
     <string name="ledger_dashboard_no_shop">Select a shop to view the dashboard</string>
     <string name="ledger_dashboard_due_amount">Amount due</string>
+    <string name="ledger_dashboard_refreshing">Syncing</string>
 </resources>

@@ -58,7 +58,7 @@ fun CeteleNavHost(
             authGraph(navigations.auth)
             shopGraph(navigations.shop)
             customersGraph(navigations.customers)
-            ledgerGraph(navigations.ledger)
+            ledgerGraph(navigations.ledger, services.refreshing)
             remindersGraph(navigations.back)
             exportGraph(navigations.back)
             settingsGraph(navigations.settings)
