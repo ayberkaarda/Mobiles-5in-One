@@ -1,0 +1,19 @@
+<resources>
+    <string name="reminders_sheet_title">Remind</string>
+    <string name="reminders_sheet_whatsapp">Send via WhatsApp</string>
+    <string name="reminders_sheet_sms">Send SMS</string>
+    <string name="reminders_sheet_phone_missing">No phone number is recorded for this customer</string>
+    <string name="reminders_sheet_no_balance">The customer must have an outstanding debt</string>
+    <string name="reminders_sheet_consent_missing">SMS reminder consent is not recorded</string>
+    <string name="reminders_sheet_unavailable">Customer or shop unavailable</string>
+    <string name="reminders_sheet_provider_failed">It may have been sent. Do not retry</string>
+    <string name="reminders_sheet_share_failed">Could not open a sharing app</string>
+    <string name="reminders_sheet_sms_sent">SMS sent</string>
+    <string name="reminders_sheet_quota">This month: %1$d/%2$d SMS</string>
+    <string name="reminders_sheet_quota_unknown">SMS usage is shown after a successful send</string>
+    <string name="reminders_sheet_last">Last reminder: %1$s (%2$s, from this device)</string>
+    <string name="reminders_sheet_channel_whatsapp">WhatsApp</string>
+    <string name="reminders_sheet_channel_sms">SMS</string>
+    <string name="reminders_sheet_retry_after">Try again after %1$d seconds</string>
+    <string name="reminders_sheet_support">Support code: %1$s</string>
+</resources>
