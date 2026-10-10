@@ -18,6 +18,7 @@ import app.cetele.android.feature.shop.navigation.ShopNavigation
 import app.cetele.android.feature.shop.navigation.ShopRoutes
 import app.cetele.android.startup.SyncRequests
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 class AppAuthNavigation(
     private val navigator: RouteNavigator,
@@ -135,6 +136,8 @@ class ShellServices(
     val customerLimitRejected: Flow<Boolean>,
     val activeShopId: () -> String?,
     val appVersion: String,
+    /** True while the active shop has changes on their way to the server; feeds the dashboard refresh indicator. */
+    val refreshing: Flow<Boolean> = flowOf(false),
 )
 
 /** Every feature's callbacks, built once per host. */

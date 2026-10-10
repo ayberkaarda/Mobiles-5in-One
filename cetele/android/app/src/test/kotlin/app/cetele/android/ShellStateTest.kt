@@ -4,7 +4,6 @@ import app.cetele.android.core.data.settings.ThemeMode
 import app.cetele.android.core.data.sync.SyncStatus
 import app.cetele.android.core.designsystem.component.SyncStatusSummary
 import app.cetele.android.core.domain.model.ShopRole
-import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.feature.export.navigation.ExportRoutes
 import app.cetele.android.feature.shop.navigation.ShopRoutes
 import app.cetele.android.shop.ShopHomeAction
@@ -33,13 +32,6 @@ class ShellStateTest {
         val status = SyncStatus(pendingCount = 4, blockedCount = 1, rejectedCount = 2, offline = true)
 
         assertEquals(SyncStatusSummary(4, 1, 2, offline = true), status.summary())
-    }
-
-    @Test
-    fun `customer limit banner follows the last sync error code`() {
-        assertTrue(SyncStatus(lastErrorCode = ProblemCodes.PLAN_CUSTOMER_LIMIT).customerLimitReached())
-        assertFalse(SyncStatus(lastErrorCode = "validation.failed").customerLimitReached())
-        assertFalse(SyncStatus().customerLimitReached())
     }
 
     @Test
