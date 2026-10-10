@@ -33,6 +33,7 @@ enum class RateLimit(
     SYNC_PULL_USER("sync.pull.user", 120, Duration.ofMinutes(1)),
     STATEMENT_LINK_USER("statement.link.user", 30, Duration.ofMinutes(10)),
     STATEMENT_PAGE_IP("statement.page.ip", 60, Duration.ofMinutes(1)),
+    WEBHOOK_DLR_IP("webhook.dlr.ip", 300, Duration.ofMinutes(1)),
     STATEMENT_PDF_USER("statement.pdf.user", 20, Duration.ofMinutes(10)),
     REMINDER_USER("reminder.user", 30, Duration.ofMinutes(10)),
     MEDIA_PRESIGN_USER("media.presign.user", 60, Duration.ofMinutes(10)),

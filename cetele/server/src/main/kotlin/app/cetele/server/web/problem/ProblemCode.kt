@@ -51,6 +51,7 @@ enum class ProblemCode(
     ACCOUNT_OWNER_OF_SHARED_SHOP("account.owner_of_shared_shop", HttpStatus.CONFLICT, "Owner of a shop with other members"),
     ACCOUNT_DELETION_PENDING("account.deletion_pending", HttpStatus.CONFLICT, "Deletion already requested"),
     SHOP_DELETION_PENDING("shop.deletion_pending", HttpStatus.CONFLICT, "Shop deletion already requested"),
+    WEBHOOK_UNAUTHENTICATED("webhook.unauthenticated", HttpStatus.UNAUTHORIZED, "Webhook authentication failed"),
     ;
 
     /** `type` member of the RFC 9457 body. */
