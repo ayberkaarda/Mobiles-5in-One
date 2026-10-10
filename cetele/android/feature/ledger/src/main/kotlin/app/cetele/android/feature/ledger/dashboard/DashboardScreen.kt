@@ -15,6 +15,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.CeteleTextStyles
 import app.cetele.android.core.designsystem.component.AmountStyle
@@ -46,7 +48,7 @@ fun DashboardScreen(
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.padding(padding).fillMaxSize(),
+            modifier = Modifier.padding(padding).fillMaxSize().then(refreshingSemantics(refreshing)),
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -114,4 +116,12 @@ private fun LazyListScope.summaryItems(
             )
         }
     }
+}
+
+/** Announces the running sync to screen readers; nothing is added while idle. */
+@Composable
+private fun refreshingSemantics(refreshing: Boolean): Modifier {
+    if (!refreshing) return Modifier
+    val description = stringResource(R.string.ledger_dashboard_refreshing)
+    return Modifier.semantics { stateDescription = description }
 }

@@ -33,4 +33,5 @@
     <string name="ledger_dashboard_no_due">Bugün vadesi gelen kayıt yok</string>
     <string name="ledger_dashboard_no_shop">Paneli görmek için bir dükkân seçin</string>
     <string name="ledger_dashboard_due_amount">Vadesi gelen tutar</string>
+    <string name="ledger_dashboard_refreshing">Eşitleniyor</string>
 </resources>
