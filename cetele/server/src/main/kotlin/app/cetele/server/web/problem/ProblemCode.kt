@@ -37,6 +37,10 @@ enum class ProblemCode(
     LEDGER_REVERSAL_MISMATCH("ledger.reversal_mismatch", HttpStatus.UNPROCESSABLE_CONTENT, "Reversal does not match the entry"),
     PLAN_CUSTOMER_LIMIT("plan.customer_limit", HttpStatus.CONFLICT, "Customer limit reached"),
     PLAN_PHOTO_LIMIT("plan.photo_limit", HttpStatus.CONFLICT, "Photo limit reached"),
+    BILLING_PURCHASE_INVALID("billing.purchase_invalid", HttpStatus.UNPROCESSABLE_CONTENT, "Purchase is not valid"),
+    BILLING_TOKEN_IN_USE("billing.token_in_use", HttpStatus.CONFLICT, "Purchase belongs to another shop"),
+    BILLING_ALREADY_SUBSCRIBED("billing.already_subscribed", HttpStatus.CONFLICT, "Shop already has a subscription"),
+    BILLING_UNAVAILABLE("billing.unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Purchase verification unavailable"),
     SMS_QUOTA_EXCEEDED("sms.quota_exceeded", HttpStatus.TOO_MANY_REQUESTS, "SMS quota exceeded"),
     SMS_DAILY_CAP_REACHED("sms.daily_cap_reached", HttpStatus.TOO_MANY_REQUESTS, "Daily SMS cap reached"),
     SMS_CONSENT_MISSING("sms.consent_missing", HttpStatus.CONFLICT, "SMS consent missing"),
@@ -51,6 +55,7 @@ enum class ProblemCode(
     ACCOUNT_OWNER_OF_SHARED_SHOP("account.owner_of_shared_shop", HttpStatus.CONFLICT, "Owner of a shop with other members"),
     ACCOUNT_DELETION_PENDING("account.deletion_pending", HttpStatus.CONFLICT, "Deletion already requested"),
     SHOP_DELETION_PENDING("shop.deletion_pending", HttpStatus.CONFLICT, "Shop deletion already requested"),
+    WEBHOOK_UNAUTHENTICATED("webhook.unauthenticated", HttpStatus.UNAUTHORIZED, "Webhook authentication failed"),
     ;
 
     /** `type` member of the RFC 9457 body. */
