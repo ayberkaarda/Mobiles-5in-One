@@ -75,6 +75,7 @@ class ProblemTest(
                 "account.owner_of_shared_shop" to 409,
                 "account.deletion_pending" to 409,
                 "shop.deletion_pending" to 409,
+                "webhook.unauthenticated" to 401,
             )
         assertEquals(
             ProblemCode.entries.size,
