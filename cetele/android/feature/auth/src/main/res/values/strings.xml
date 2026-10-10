@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_common_connection_error">Bağlantı kurulamadı. Lütfen tekrar deneyin.</string>
+    <string name="auth_common_support_code">Destek kodu: %1$s</string>
+    <string name="auth_phone_title">Çetele’ye giriş</string>
+    <string name="auth_phone_number">Telefon numaranız</string>
+    <string name="auth_phone_consent">Devam ederek Gizlilik Politikası’nı okuduğunuzu kabul edersiniz</string>
+    <string name="auth_phone_privacy">Gizlilik Politikası</string>
+    <string name="auth_phone_privacy_url" translatable="false">https://cetele.app/gizlilik</string>
+    <string name="auth_phone_send">Kod gönder</string>
+    <string name="auth_phone_invalid">Geçerli bir Türkiye cep telefonu numarası girin</string>
+    <string name="auth_phone_integrity_unavailable">Cihaz doğrulaması yapılamadı</string>
+    <string name="auth_phone_retry">Çok fazla deneme, %1$d sn sonra tekrar deneyin</string>
+    <string name="auth_otp_title">Telefonunuzu doğrulayın</string>
+    <string name="auth_otp_sent">%1$s numaranıza gönderilen kodu girin</string>
+    <string name="auth_otp_code">6 haneli doğrulama kodu</string>
+    <string name="auth_otp_empty_digit" translatable="false">–</string>
+    <string name="auth_otp_invalid">Kod hatalı veya süresi doldu</string>
+    <string name="auth_otp_resend">Kodu tekrar gönder</string>
+    <string name="auth_otp_resend_wait">%1$d sn sonra yeniden kod gönderebilirsiniz</string>
+    <string name="auth_pinsetup_title">PIN oluşturun</string>
+    <string name="auth_pinsetup_explanation">Defterinizi korumak için 6 haneli bir PIN belirleyin</string>
+    <string name="auth_pinsetup_enter">Yeni PIN’inizi girin</string>
+    <string name="auth_pinsetup_repeat">PIN’inizi tekrar girin</string>
+    <string name="auth_pinsetup_mismatch">PIN’ler eşleşmiyor, yeniden deneyin</string>
+    <string name="auth_pinsetup_biometric">Biyometrik kilidi de aç</string>
+    <string name="auth_lock_title">Defteriniz kilitli</string>
+    <string name="auth_lock_enter">PIN’inizi girin</string>
+    <string name="auth_lock_wrong">PIN hatalı, tekrar deneyin</string>
+    <string name="auth_lock_delay">%1$d sn sonra tekrar deneyin</string>
+    <string name="auth_lock_biometric">Biyometrik kilidi aç</string>
+    <string name="auth_lock_biometric_unavailable">Biyometrik kilit açılamadı, PIN’inizi girin</string>
+    <string name="auth_lock_pin_fallback">PIN ile aç</string>
+    <string name="auth_lock_forgot">PIN\'imi unuttum</string>
+    <string name="auth_lock_forgot_explanation">Çıkış yapıldığında bu cihazdaki defter temizlenir. Telefonunuzu yeniden doğrulayarak yeni bir PIN belirleyebilirsiniz.</string>
+    <string name="auth_lock_pending">Gönderilmemiş %1$d kayıt var. Çıkış yaparsanız bu kayıtlar silinir. Yine de çıkış yapılsın mı?</string>
+    <string name="auth_lock_signout">Çıkış yap</string>
+    <string name="auth_sessionended_title">Yeniden giriş</string>
+    <string name="auth_sessionended_user">Çıkış yaptınız</string>
+    <string name="auth_sessionended_expired">Oturumunuz sona erdi, yeniden giriş yapın</string>
+    <string name="auth_sessionended_deleted">Hesabınız silindi</string>
+    <string name="auth_sessionended_membership">Dükkân üyeliğiniz sona erdi</string>
+    <string name="auth_sessionended_signin">Giriş yap</string>
+</resources>
