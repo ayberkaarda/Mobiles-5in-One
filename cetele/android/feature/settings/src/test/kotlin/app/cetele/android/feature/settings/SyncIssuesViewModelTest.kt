@@ -1,11 +1,14 @@
 package app.cetele.android.feature.settings
 
-import app.cetele.android.core.data.database.entity.OutboxEntity
+import app.cetele.android.core.data.repository.PhotoUploadState
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.data.repository.SyncIssue
+import app.cetele.android.core.data.repository.SyncIssueRepository
+import app.cetele.android.core.data.repository.SyncIssueState
 import app.cetele.android.core.designsystem.copy.ProblemCodeText
-import app.cetele.android.feature.settings.sync.RoomSettingsIssueStore
+import app.cetele.android.core.network.dto.SyncKind
 import app.cetele.android.feature.settings.sync.SyncIssuesViewModel
-import app.cetele.android.feature.settings.sync.canSendWithoutPhoto
+import app.cetele.android.feature.settings.sync.reasonText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -24,56 +27,69 @@ import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncIssuesViewModelTest : SettingsTestSupport() {
-    private fun row(
-        state: String,
-        photo: String? = null,
+    private fun issue(
+        state: SyncIssueState,
+        photo: PhotoUploadState? = null,
         code: String? = null,
-    ) = OutboxEntity(
-        "client",
+    ) = SyncIssue(
         "shop",
-        "ENTRY_CREATE",
+        "client",
+        SyncKind.ENTRY_CREATE,
         "entry",
-        "{}",
+        state,
+        code,
+        photo,
         "2026-10-06T00:00:00Z",
-        photoEntryId = photo,
-        state = state,
-        lastCode = code,
-        updatedAt = "2026-10-06T00:00:00Z",
     )
 
     @Test
-    fun onlyRejectedRowsCanBeDismissedAndPhotoBlocksCanBeReleased() =
+    fun onlyRejectedIssuesCanBeDismissedAndFailedPhotosCanBeReleased() =
         runTest(dispatcher) {
             val shops = mockk<ShopRepository>()
-            val store = mockk<RoomSettingsIssueStore>()
-            val rows = MutableStateFlow(listOf(row("REJECTED", code = "forbidden")))
+            val repository = mockk<SyncIssueRepository>()
+            val rows = MutableStateFlow(listOf(issue(SyncIssueState.REJECTED, code = "forbidden")))
             every { shops.observeActive() } returns MutableStateFlow(shop())
-            every { store.observe("shop") } returns rows
-            coEvery { store.remove(any(), any()) } returns true
-            coEvery { store.withoutPhoto(any(), any()) } returns true
-            val model = SyncIssuesViewModel(shops, store)
+            every { repository.observeIssues("shop") } returns rows
+            coEvery { repository.dismiss(any(), any()) } returns true
+            coEvery { repository.sendWithoutPhoto(any(), any()) } returns true
+            val model = SyncIssuesViewModel(shops, repository)
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { model.issues.collect {} }
             runCurrent()
             assertEquals(rows.value, model.issues.value)
+            model.withoutPhoto(rows.value.single()).join()
             model.remove(rows.value.single()).join()
-            rows.value = listOf(row("BLOCKED", "entry"))
+            rows.value = listOf(issue(SyncIssueState.BLOCKED, PhotoUploadState.Uploading))
             runCurrent()
             model.remove(rows.value.single()).join()
             model.withoutPhoto(rows.value.single()).join()
-            coVerify(exactly = 1) { store.remove("shop", "client") }
-            coVerify(exactly = 1) { store.withoutPhoto("shop", "client") }
-            model.remove(row("REJECTED").copy(shopId = "other")).join()
-            coVerify(exactly = 0) { store.remove("other", any()) }
+            rows.value =
+                listOf(issue(SyncIssueState.BLOCKED, PhotoUploadState.Failed("media.invalid"), "media.invalid"))
+            runCurrent()
+            model.withoutPhoto(rows.value.single()).join()
+            coVerify(exactly = 1) { repository.dismiss("shop", "client") }
+            coVerify(exactly = 1) { repository.sendWithoutPhoto(any(), any()) }
+            coVerify(exactly = 1) { repository.sendWithoutPhoto("shop", "entry") }
+            model.remove(issue(SyncIssueState.REJECTED).copy(shopId = "other")).join()
+            coVerify(exactly = 0) { repository.dismiss("other", any()) }
         }
 
     @Test
-    fun validationBlocksAndRejectionsCannotBeResentWithoutPhoto() {
-        assertTrue(canSendWithoutPhoto(row("BLOCKED", "entry")))
-        assertTrue(canSendWithoutPhoto(row("BLOCKED", "entry", "media.invalid")))
-        assertTrue(canSendWithoutPhoto(row("BLOCKED", "entry", "plan.photo_limit")))
-        assertFalse(canSendWithoutPhoto(row("BLOCKED", "entry", "validation.failed")))
-        assertFalse(canSendWithoutPhoto(row("REJECTED", "entry", "media.invalid")))
-        assertFalse(canSendWithoutPhoto(row("BLOCKED")))
+    fun reasonsExplainPhotoWaitsFailuresAndServerCodes() {
+        val failed = issue(SyncIssueState.BLOCKED, PhotoUploadState.Failed(null))
+        assertTrue(failed.canSendWithoutPhoto)
+        assertEquals(R.string.settings_sync_photo_failed, reasonText(failed))
+        val lost = issue(SyncIssueState.BLOCKED, PhotoUploadState.Absent)
+        assertTrue(lost.canSendWithoutPhoto)
+        assertEquals(R.string.settings_sync_photo_failed, reasonText(lost))
+        val waiting = issue(SyncIssueState.BLOCKED, PhotoUploadState.Uploading)
+        assertFalse(waiting.canSendWithoutPhoto)
+        assertEquals(R.string.settings_sync_photo_wait, reasonText(waiting))
+        val limit = issue(SyncIssueState.BLOCKED, PhotoUploadState.Failed("plan.photo_limit"), "plan.photo_limit")
+        assertEquals(ProblemCodeText.resId("plan.photo_limit"), reasonText(limit))
+        val validation = issue(SyncIssueState.BLOCKED, code = "validation.failed")
+        assertFalse(validation.canSendWithoutPhoto)
+        assertEquals(ProblemCodeText.resId("validation.failed"), reasonText(validation))
+        assertFalse(issue(SyncIssueState.REJECTED, code = "media.invalid").canSendWithoutPhoto)
         for (code in listOf(
             "forbidden",
             "not_found",
@@ -94,18 +110,18 @@ class SyncIssuesViewModelTest : SettingsTestSupport() {
     fun switchingShopsDropsOldIssuesAndActions() =
         runTest(dispatcher) {
             val shops = mockk<ShopRepository>()
-            val store = mockk<RoomSettingsIssueStore>()
+            val repository = mockk<SyncIssueRepository>()
             val active = MutableStateFlow(shop())
             every { shops.observeActive() } returns active
-            every { store.observe("shop") } returns MutableStateFlow(listOf(row("REJECTED")))
-            every { store.observe("other") } returns MutableStateFlow(emptyList())
-            val model = SyncIssuesViewModel(shops, store)
+            every { repository.observeIssues("shop") } returns MutableStateFlow(listOf(issue(SyncIssueState.REJECTED)))
+            every { repository.observeIssues("other") } returns MutableStateFlow(emptyList())
+            val model = SyncIssuesViewModel(shops, repository)
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { model.issues.collect {} }
             runCurrent()
             active.value = shop().copy(id = "other")
             runCurrent()
             assertTrue(model.issues.value.isEmpty())
-            model.remove(row("REJECTED")).join()
-            coVerify(exactly = 0) { store.remove(any(), any()) }
+            model.remove(issue(SyncIssueState.REJECTED)).join()
+            coVerify(exactly = 0) { repository.dismiss(any(), any()) }
         }
 }

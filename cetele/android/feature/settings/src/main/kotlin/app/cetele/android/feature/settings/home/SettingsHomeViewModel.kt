@@ -2,8 +2,8 @@ package app.cetele.android.feature.settings.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.cetele.android.core.data.database.DatabaseStore
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.data.repository.SyncIssueRepository
 import app.cetele.android.core.data.session.SessionManager
 import app.cetele.android.core.data.session.SignOutCheck
 import app.cetele.android.core.data.session.SignOutReason
@@ -16,12 +16,9 @@ import app.cetele.android.core.network.dto.me.DeletionStatus
 import app.cetele.android.feature.settings.common.SettingsError
 import app.cetele.android.feature.settings.common.error
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,7 +42,7 @@ class SettingsHomeViewModel
         private val settings: SettingsRepository,
         private val me: MeApi,
         private val session: SessionManager,
-        private val databases: DatabaseStore,
+        private val syncIssues: SyncIssueRepository,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(SettingsHomeState())
         val state = mutableState.asStateFlow()
@@ -54,16 +51,13 @@ class SettingsHomeViewModel
             viewModelScope.launch {
                 shops.observeActive().collectLatest { shop ->
                     mutableState.value = state.value.copy(shop = shop, pending = 0, lastSync = null)
-                    if (shop != null) {
-                        val db = databases.get()
-                        while (currentCoroutineContext().isActive) {
-                            val cursor = db.syncCursorDao().get(shop.id)
+                    shop?.let { active ->
+                        syncIssues.observeStatus(active.id).collect { status ->
                             mutableState.value =
                                 state.value.copy(
-                                    pending = db.outboxDao().countPending(shop.id),
-                                    lastSync = cursor?.lastPullAt,
+                                    pending = status.pendingCount,
+                                    lastSync = status.lastPullAt?.toString(),
                                 )
-                            delay(STATUS_REFRESH_MILLIS)
                         }
                     }
                 }
@@ -77,10 +71,6 @@ class SettingsHomeViewModel
                         )
                 }
             }
-        }
-
-        private companion object {
-            const val STATUS_REFRESH_MILLIS = 5000L
         }
 
         fun refresh() =

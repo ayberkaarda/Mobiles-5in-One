@@ -1,12 +1,14 @@
 package app.cetele.android.feature.settings
 
-import app.cetele.android.core.data.database.DatabaseStore
+import androidx.lifecycle.viewModelScope
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.data.repository.SyncIssueRepository
 import app.cetele.android.core.data.session.SessionManager
 import app.cetele.android.core.data.session.SignOutCheck
 import app.cetele.android.core.data.session.SignOutReason
 import app.cetele.android.core.data.settings.SettingsRepository
 import app.cetele.android.core.data.settings.UserSettings
+import app.cetele.android.core.data.sync.SyncStatus
 import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.MeApi
@@ -17,6 +19,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -32,16 +35,41 @@ class SettingsHomeViewModelTest : SettingsTestSupport() {
     private val settings = mockk<SettingsRepository>()
     private val me = mockk<MeApi>()
     private val session = mockk<SessionManager>()
-    private val databases = mockk<DatabaseStore>()
+    private val syncIssues = mockk<SyncIssueRepository>()
+    private val active = MutableStateFlow<Shop?>(null)
     private val deletion =
         MutableStateFlow<DeletionStatus?>(DeletionStatus(Instant.EPOCH, Instant.EPOCH.plusSeconds(1209600), true))
 
     private fun model(): SettingsHomeViewModel {
-        every { shops.observeActive() } returns MutableStateFlow<Shop?>(null)
+        every { shops.observeActive() } returns active
         every { shops.deletion } returns deletion
         every { settings.settings } returns MutableStateFlow(UserSettings())
-        return SettingsHomeViewModel(shops, settings, me, session, databases)
+        return SettingsHomeViewModel(shops, settings, me, session, syncIssues)
     }
+
+    @Test
+    fun syncStatusFollowsTheActiveShopFromTheRepository() =
+        runTest(dispatcher) {
+            val pulled = Instant.parse("2026-10-06T08:00:00Z")
+            val status = MutableStateFlow(SyncStatus(pendingCount = 2, lastPullAt = pulled))
+            every { syncIssues.observeStatus("shop") } returns status
+            val model = model()
+            runCurrent()
+            assertEquals(0, model.state.value.pending)
+            active.value = shop()
+            runCurrent()
+            assertEquals(2, model.state.value.pending)
+            assertEquals(pulled.toString(), model.state.value.lastSync)
+            status.value = SyncStatus(pendingCount = 0, rejectedCount = 1, lastPullAt = pulled.plusSeconds(60))
+            runCurrent()
+            assertEquals(0, model.state.value.pending)
+            assertEquals(pulled.plusSeconds(60).toString(), model.state.value.lastSync)
+            active.value = null
+            runCurrent()
+            assertEquals(0, model.state.value.pending)
+            assertEquals(null, model.state.value.lastSync)
+            model.viewModelScope.cancel()
+        }
 
     @Test
     fun cancelDeletionClearsBlockedGraceAndRefreshesMemberships() =

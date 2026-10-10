@@ -52,6 +52,7 @@
     <string name="settings_sync_rejected">Kayıt kabul edilmedi</string>
     <string name="settings_sync_blocked">Kayıt bekliyor</string>
     <string name="settings_sync_photo_wait">Fotoğraf veya bağlı kayıt bekleniyor.</string>
+    <string name="settings_sync_photo_failed">Fotoğraf yüklenemedi. Kaydı fotoğrafsız gönderebilirsiniz.</string>
     <string name="settings_sync_without_photo">Fotoğrafsız gönder</string>
     <string name="settings_sync_remove">Sorunu kaldır</string>
     <string name="settings_about_version">Sürüm %1$s</string>
