@@ -27,6 +27,28 @@ ownership transfer), the bearer scheme and the fixed server entry `https://cetel
 statement page `GET /s/{token}` is HTML, not part of the `/v1` document. The authenticated
 principal does not appear as a parameter.
 
+## Phase 4 entries written ahead of the code
+
+The Phase 4 operations were added to `openapi.json` from the contract, before the server code
+exists, so the parallel billing, webhook and Android work share one target. This is the one
+exception to the export-only rule, and it was made in the canonical format (sorted keys, 2-space
+indent, `" : "` separators, trailing newline) so the later export can replace it line for line:
+
+| Operation                              | `operationId`     | Tag (controller class)            | Contract                                                             |
+| -------------------------------------- | ----------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `GET /v1/shops/{shopId}/billing`       | `billingState`    | `billing-controller`              | [ADR-0031](../adr/0031-billing-purchase-linking-and-entitlements.md) |
+| `POST /v1/shops/{shopId}/billing/link` | `linkPurchase`    | `billing-controller`              | [ADR-0031](../adr/0031-billing-purchase-linking-and-entitlements.md) |
+| `POST /v1/webhooks/play-rtdn`          | `receivePlayRtdn` | `play-rtdn-webhook-controller`    | [ADR-0032](../adr/0032-webhook-authentication.md)                    |
+| `POST /v1/webhooks/sms-dlr`            | `receiveSmsDlr`   | `sms-delivery-webhook-controller` | [ADR-0032](../adr/0032-webhook-authentication.md)                    |
+
+New schemas: `LinkPurchaseRequest`, `BillingState`, `PlanLimitsView`, `PlanUsageView` and
+`SubscriptionView`. The method names, class names and DTO names in the table and in
+[handoff 002](../handoffs/server-to-android-002-phase4-contract.md) are binding, because springdoc
+derives `operationId`, tags and schema names from them. The webhook controllers take only
+`HttpServletRequest`, so the document shows no request body or header for them; their wire format
+is in ADR-0032. After the Phase 4 merge the lead refreshes the file from `OpenApiSnapshotTest` as
+described above, and `openApiContractCheck` then compares the live document with it.
+
 ## Contract check
 
 ```sh
