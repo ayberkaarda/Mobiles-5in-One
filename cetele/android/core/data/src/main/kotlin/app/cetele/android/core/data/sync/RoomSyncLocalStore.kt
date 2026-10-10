@@ -151,6 +151,17 @@ class RoomSyncLocalStore
                 .createFlow("outbox_operations")
                 .map { outbox(shopId) }
 
+        override suspend fun discardPhotoFile(entryId: String) {
+            photos.remove(entryId)
+        }
+
+        override fun observePhotos(shopId: String): Flow<List<PendingPhotoEntity>> =
+            databases
+                .get()
+                .invalidationTracker
+                .createFlow("pending_photos")
+                .map { allPhotos(shopId) }
+
         override fun observeCursor(shopId: String): Flow<SyncCursorEntity> =
             databases
                 .get()

@@ -12,6 +12,8 @@ import app.cetele.android.core.data.repository.RoomLedgerRepository
 import app.cetele.android.core.data.repository.RoomReminderLogRepository
 import app.cetele.android.core.data.repository.RoomShopRepository
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.data.repository.StoreSyncIssueRepository
+import app.cetele.android.core.data.repository.SyncIssueRepository
 import app.cetele.android.core.data.session.SessionManager
 import app.cetele.android.core.data.session.SessionWork
 import app.cetele.android.core.data.session.WorkSession
@@ -47,6 +49,9 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun photos(implementation: StoredPhotoRepository): PhotoRepository
+
+    @Binds @Singleton
+    abstract fun syncIssues(implementation: StoreSyncIssueRepository): SyncIssueRepository
 
     @Binds abstract fun refresher(implementation: SessionManager): TokenRefresher
 

@@ -147,4 +147,13 @@ class InMemorySyncLocalStore(
     override fun observeRows(shopId: String): Flow<List<OutboxRow>> = changes.map { outbox(shopId) }
 
     override fun observeCursor(shopId: String): Flow<SyncCursorEntity> = changes.map { cursor(shopId) }
+
+    override fun observePhotos(shopId: String): Flow<List<PendingPhotoEntity>> = changes.map { allPhotos(shopId) }
+
+    /** Entry ids whose local photo file the store asked to discard. */
+    val discardedFiles = mutableListOf<String>()
+
+    override suspend fun discardPhotoFile(entryId: String) {
+        discardedFiles += entryId
+    }
 }

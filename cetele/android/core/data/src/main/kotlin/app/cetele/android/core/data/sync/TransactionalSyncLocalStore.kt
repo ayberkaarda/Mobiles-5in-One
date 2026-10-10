@@ -11,6 +11,7 @@ import app.cetele.android.core.network.dto.OperationStatus
 import app.cetele.android.core.network.dto.SyncKind
 import app.cetele.android.core.network.dto.sync.ChangeView
 import app.cetele.android.core.network.dto.sync.CustomerSnapshot
+import app.cetele.android.core.network.dto.sync.EntryInput
 import app.cetele.android.core.network.dto.sync.EntrySnapshot
 import app.cetele.android.core.network.dto.sync.OperationResult
 import kotlinx.coroutines.flow.Flow
@@ -263,26 +264,57 @@ abstract class TransactionalSyncLocalStore(
     open override suspend fun removePhoto(
         shopId: String,
         entryId: String,
-    ) = transaction {
+    ) = transaction { releaseWithoutPhoto(shopId, entryId, heldByPhoto(shopId, entryId)) }
+
+    override suspend fun detachPhoto(
+        shopId: String,
+        entryId: String,
+    ): Boolean {
+        val detached =
+            transaction {
+                val held = heldByPhoto(shopId, entryId)
+                val upload = photo(shopId, entryId)
+                if (held.isEmpty() || (upload != null && upload.state != "FAILED")) {
+                    false
+                } else {
+                    releaseWithoutPhoto(shopId, entryId, held)
+                    true
+                }
+            }
+        if (detached) discardPhotoFile(entryId)
+        return detached
+    }
+
+    /** Removes the local encrypted copy once its upload row is gone; the default store keeps no files. */
+    protected open suspend fun discardPhotoFile(entryId: String) = Unit
+
+    private suspend fun heldByPhoto(
+        shopId: String,
+        entryId: String,
+    ): List<OutboxRow> =
+        outbox(shopId).filter { it.photoEntryId == entryId && it.state == "BLOCKED" && it.lastCode == null }
+
+    private suspend fun releaseWithoutPhoto(
+        shopId: String,
+        entryId: String,
+        held: List<OutboxRow>,
+    ) {
         deletePhoto(shopId, entryId)
         getEntry(shopId, entryId)?.let { putEntry(it.copy(photoKey = null)) }
-        outbox(shopId)
-            .filter { it.photoEntryId == entryId && it.state == "BLOCKED" && it.lastCode == null }
-            .forEach { row ->
-                val input =
-                    NetworkJson.decodeFromString<app.cetele.android.core.network.dto.sync.EntryInput>(
-                        row.payloadJson,
-                    )
-                putOutbox(
-                    row.copy(
-                        photoEntryId = null,
-                        state = "QUEUED",
-                        payloadJson = NetworkJson.encodeToString(input.copy(photoKey = null)),
-                        updatedAt = now(),
-                    ),
-                )
-            }
+        held.forEach { row ->
+            val input = NetworkJson.decodeFromString<EntryInput>(row.payloadJson)
+            putOutbox(
+                row.copy(
+                    photoEntryId = null,
+                    state = "QUEUED",
+                    payloadJson = NetworkJson.encodeToString(input.copy(photoKey = null)),
+                    updatedAt = now(),
+                ),
+            )
+        }
     }
+
+    override fun observeOutbox(shopId: String): Flow<List<OutboxRow>> = observeRows(shopId)
 
     override suspend fun dismissIssue(
         shopId: String,
