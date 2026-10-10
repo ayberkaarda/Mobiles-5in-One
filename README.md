@@ -35,8 +35,10 @@ One card per project. Kadro and Askıda have applications. The Askıda card show
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Cetele</b>: in design stage, no app yet</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele card: Android app and server merged, not yet run against a live server" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android app sign-in screen with an empty phone number field, emulator" width="32%">
+      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android app showing an unable-to-connect error because no server was running, emulator" width="32%"><br>
+      <sub><b>Cetele</b>: Android app and server merged, not yet run against a live server (emulator screens, no server)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>

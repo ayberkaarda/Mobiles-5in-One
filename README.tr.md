@@ -35,8 +35,10 @@ Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kar
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
-      <sub><b>Cetele</b>: tasarım aşamasında, henüz uygulama yok</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele kartı: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android uygulaması giriş ekranı, boş telefon numarası alanı, emülatör" width="32%">
+      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android uygulaması sunucu çalışmadığı için bağlanılamadı hatasını gösteriyor, emülatör" width="32%"><br>
+      <sub><b>Cetele</b>: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı (emülatör ekranları, sunucu yok)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
