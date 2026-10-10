@@ -31,6 +31,7 @@ fun EntryDetailRoute(
                 viewModel::requestReversal,
                 viewModel::confirmReversal,
                 viewModel::dismissReversal,
+                viewModel::sendWithoutPhoto,
             ),
         modifier = modifier,
         photoContent = { entry ->

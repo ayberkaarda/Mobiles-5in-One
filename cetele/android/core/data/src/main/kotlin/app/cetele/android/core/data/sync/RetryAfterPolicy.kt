@@ -11,10 +11,17 @@ import javax.inject.Singleton
 class RetryAfterPolicy
     @Inject
     constructor(
-        @ApplicationContext context: Context,
+        @ApplicationContext private val context: Context,
         private val clock: Clock,
     ) {
         private val preferences = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+
+        /** Forgets every deadline and deletes the preferences file (session wipe). */
+        @Synchronized fun clear() {
+            // The cached instance must be emptied too; deleting only the file would keep its in-memory values.
+            check(preferences.edit().clear().commit())
+            context.deleteSharedPreferences(FILE_NAME)
+        }
 
         @Synchronized fun defer(
             shopId: String,

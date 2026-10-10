@@ -37,6 +37,7 @@ class EntryDetailViewModelTest {
     private val shops = mockk<ShopRepository>()
     private val photos = mockk<EntryPhotos>()
     private val entries = MutableStateFlow(listOf(LedgerFixtures.entry()))
+    private val upload = MutableStateFlow(EntryPhotoStatus.Absent)
     private lateinit var model: EntryDetailViewModel
 
     @BeforeEach
@@ -44,7 +45,7 @@ class EntryDetailViewModelTest {
         Dispatchers.setMain(dispatcher)
         every { shops.observeActive() } returns MutableStateFlow(LedgerFixtures.shop())
         every { ledger.observeAll("shop-a") } returns entries
-        coEvery { photos.status(any()) } returns EntryPhotoStatus.Absent
+        every { photos.observe(any()) } returns upload
         model =
             EntryDetailViewModel(
                 SavedStateHandle(mapOf("entryId" to "entry-a")),
@@ -109,13 +110,15 @@ class EntryDetailViewModelTest {
         modelTest {
             runCurrent()
             assertEquals(EntryPhotoStatus.Absent, model.state.value.photoStatus)
-            val pending = LedgerFixtures.entry().copy(note = "Süt")
-            coEvery { photos.status(pending) } returns EntryPhotoStatus.Uploading
-            entries.value = listOf(pending)
+            upload.value = EntryPhotoStatus.Uploading
             runCurrent()
             assertEquals(EntryPhotoStatus.Uploading, model.state.value.photoStatus)
-            val uploaded = pending.copy(photoKey = "media/shop-a/photo-a.jpg")
-            coEvery { photos.status(uploaded) } returns EntryPhotoStatus.Ready
+            upload.value = EntryPhotoStatus.Failed
+            runCurrent()
+            assertEquals(EntryPhotoStatus.Failed, model.state.value.photoStatus)
+            val uploaded = LedgerFixtures.entry().copy(photoKey = "media/shop-a/photo-a.jpg")
+            val ready = MutableStateFlow(EntryPhotoStatus.Ready)
+            every { photos.observe(uploaded) } returns ready
             entries.value = listOf(uploaded)
             runCurrent()
             assertEquals(EntryPhotoStatus.Ready, model.state.value.photoStatus)
@@ -124,6 +127,30 @@ class EntryDetailViewModelTest {
                 model.state.value.entry
                     ?.photoKey,
             )
+        }
+
+    @Test
+    fun sendWithoutPhotoIsOnlyOfferedAfterAFailedUpload() =
+        modelTest {
+            coEvery { photos.sendWithoutPhoto(any()) } returns true
+            upload.value = EntryPhotoStatus.Uploading
+            runCurrent()
+            model.sendWithoutPhoto()
+            runCurrent()
+            coVerify(exactly = 0) { photos.sendWithoutPhoto(any()) }
+            upload.value = EntryPhotoStatus.Failed
+            runCurrent()
+            model.sendWithoutPhoto()
+            runCurrent()
+            coVerify(exactly = 1) { photos.sendWithoutPhoto(LedgerFixtures.entry()) }
+            assertFalse(model.state.value.busy)
+            assertFalse(model.state.value.failed)
+            upload.value = EntryPhotoStatus.Absent
+            runCurrent()
+            assertEquals(EntryPhotoStatus.Absent, model.state.value.photoStatus)
+            model.sendWithoutPhoto()
+            runCurrent()
+            coVerify(exactly = 1) { photos.sendWithoutPhoto(any()) }
         }
 
     @Test

@@ -81,6 +81,23 @@ interface SyncLocalStore {
     suspend fun shopsWithPending(): List<String>
 
     fun status(shopId: String): Flow<SyncStatus>
+
+    /** Every outbox row of the shop, re-emitted after each committed change. */
+    fun observeOutbox(shopId: String): Flow<List<OutboxRow>>
+
+    /** Every photo upload row of the shop, re-emitted after each committed change. */
+    fun observePhotos(shopId: String): Flow<List<PendingPhotoEntity>>
+
+    /**
+     * Releases the entry operation held back by a failed (or missing) photo upload: the operation is
+     * queued without a photo key, the entry loses its photo and the upload row is dropped, all in one
+     * transaction. Returns false and changes nothing when no operation is held by that photo or the
+     * upload is still in progress or already finished.
+     */
+    suspend fun detachPhoto(
+        shopId: String,
+        entryId: String,
+    ): Boolean
 }
 
 data class SyncStatus(

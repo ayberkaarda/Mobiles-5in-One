@@ -4,6 +4,7 @@ import app.cetele.android.core.data.database.DatabaseStore
 import app.cetele.android.core.data.lock.LockController
 import app.cetele.android.core.data.media.EncryptedPhotoStore
 import app.cetele.android.core.data.settings.SettingsRepository
+import app.cetele.android.core.data.sync.RetryAfterPolicy
 import app.cetele.android.core.data.vault.Vault
 import app.cetele.android.core.data.vault.VaultKeys
 import app.cetele.android.core.network.ApiResult
@@ -71,6 +72,8 @@ class SessionManager
         private val settings: SettingsRepository,
         private val work: SessionWork,
         private val lock: LockController,
+        // Optional only to keep the earlier constructor shape; the injected graph always provides it.
+        private val retryAfter: RetryAfterPolicy? = null,
     ) : TokenRefresher {
         private companion object {
             const val EVENT_CAPACITY = 8
@@ -151,6 +154,7 @@ class SessionManager
                     { vault.clear() },
                     { settings.clearSession() },
                     { lock.reset() },
+                    { retryAfter?.clear() },
                 )
             var failure: Exception? = null
             for (action in actions) {

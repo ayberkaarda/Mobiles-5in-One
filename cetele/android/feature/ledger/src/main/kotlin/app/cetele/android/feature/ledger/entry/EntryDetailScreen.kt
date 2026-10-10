@@ -95,6 +95,14 @@ private fun EntryDetails(
         entry.note?.let { Text(it) }
         if (state.photoStatus != EntryPhotoStatus.Absent) photoContent(entry)
         if (state.photoStatus == EntryPhotoStatus.Uploading) Text(stringResource(R.string.ledger_photo_uploading))
+        if (state.photoStatus == EntryPhotoStatus.Failed) {
+            Text(stringResource(R.string.ledger_photo_failed))
+            CeteleButton(
+                stringResource(R.string.ledger_photo_send_without),
+                actions.onSendWithoutPhoto,
+                enabled = !state.busy,
+            )
+        }
         val relatedId = entry.reversedBy ?: entry.reverses
         if (relatedId != null) {
             val link =

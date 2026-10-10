@@ -13,6 +13,8 @@
     <string name="ledger_photo_remove">Remove photo</string>
     <string name="ledger_photo_capture_error">Could not prepare the photo. Please take another photo.</string>
     <string name="ledger_photo_uploading">Uploading photo</string>
+    <string name="ledger_photo_failed">The photo could not be uploaded. The entry can be sent without it.</string>
+    <string name="ledger_photo_send_without">Send without photo</string>
     <string name="ledger_photo_view_error">Could not display the photo. Please check your connection.</string>
     <string name="ledger_detail_title">Entry details</string>
     <string name="ledger_detail_loading">Loading entries</string>

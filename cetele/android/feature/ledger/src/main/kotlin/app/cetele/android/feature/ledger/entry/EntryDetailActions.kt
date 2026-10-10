@@ -6,4 +6,5 @@ data class EntryDetailActions(
     val onRequestReversal: () -> Unit,
     val onConfirmReversal: () -> Unit,
     val onDismissReversal: () -> Unit,
+    val onSendWithoutPhoto: () -> Unit = {},
 )

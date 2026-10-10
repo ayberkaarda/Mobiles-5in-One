@@ -116,6 +116,49 @@ class EntryDetailScreenTest {
     }
 
     @Test
+    fun failedPhotoUploadOffersSendingWithoutPhoto() {
+        var released = 0
+        compose.setContent {
+            CeteleTheme {
+                EntryDetailScreen(
+                    EntryDetailState(
+                        entry = LedgerFixtures.entry(),
+                        loading = false,
+                        photoStatus = EntryPhotoStatus.Failed,
+                    ),
+                    actions(onSelected = {}, onRequest = {}).copy(onSendWithoutPhoto = { released++ }),
+                    photoContent = {},
+                )
+            }
+        }
+        compose
+            .onNodeWithText("Fotoğraf yüklenemedi. Kayıt fotoğraf olmadan gönderilebilir.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        compose.onNodeWithText("Fotoğraf yükleniyor").assertDoesNotExist()
+        compose.onNodeWithText("Fotoğrafsız gönder").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(1, released) }
+    }
+
+    @Test
+    fun uploadingPhotoHasNoSendWithoutPhotoAction() {
+        compose.setContent {
+            CeteleTheme {
+                EntryDetailScreen(
+                    EntryDetailState(
+                        entry = LedgerFixtures.entry(),
+                        loading = false,
+                        photoStatus = EntryPhotoStatus.Uploading,
+                    ),
+                    actions(onSelected = {}, onRequest = {}),
+                    photoContent = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Fotoğrafsız gönder").assertDoesNotExist()
+    }
+
+    @Test
     fun entryWithoutPhotoShowsNoPhotoContent() {
         var shown = false
         compose.setContent {

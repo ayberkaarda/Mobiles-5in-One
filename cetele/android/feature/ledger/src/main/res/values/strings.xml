@@ -13,6 +13,8 @@
     <string name="ledger_photo_remove">Fotoğrafı kaldır</string>
     <string name="ledger_photo_capture_error">Fotoğraf hazırlanamadı. Yeniden fotoğraf çekin.</string>
     <string name="ledger_photo_uploading">Fotoğraf yükleniyor</string>
+    <string name="ledger_photo_failed">Fotoğraf yüklenemedi. Kayıt fotoğraf olmadan gönderilebilir.</string>
+    <string name="ledger_photo_send_without">Fotoğrafsız gönder</string>
     <string name="ledger_photo_view_error">Fotoğraf görüntülenemedi. Bağlantınızı kontrol edin.</string>
     <string name="ledger_detail_title">Kayıt ayrıntısı</string>
     <string name="ledger_detail_loading">Kayıtlar yükleniyor</string>
