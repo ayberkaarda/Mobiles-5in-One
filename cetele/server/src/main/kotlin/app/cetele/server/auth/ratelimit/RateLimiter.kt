@@ -27,6 +27,7 @@ enum class RateLimit(
     OTP_REQUEST_PHONE("otp.phone", 3, Duration.ofMinutes(10)),
     OTP_REQUEST_IP("otp.ip", 10, Duration.ofMinutes(10)),
     OTP_VERIFY_IP("otp.verify.ip", 20, Duration.ofMinutes(10)),
+    ADMIN_LOGIN_IP("admin.login.ip", 20, Duration.ofMinutes(10)),
     REFRESH_DEVICE("refresh.device", 30, Duration.ofMinutes(1)),
     REFRESH_IP("refresh.ip", 30, Duration.ofMinutes(1)),
     SYNC_PUSH_USER("sync.push.user", 60, Duration.ofMinutes(1)),

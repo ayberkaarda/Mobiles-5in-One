@@ -92,6 +92,12 @@ cetele:
     clock-skew: 30s
   client-ip:
     trusted-proxies: ${CETELE_TRUSTED_PROXIES:}
+  admin:
+    totp-key: ${CETELE_ADMIN_TOTP_KEY:}
+    bootstrap-email: ${CETELE_ADMIN_BOOTSTRAP_EMAIL:}
+    bootstrap-password: ${CETELE_ADMIN_BOOTSTRAP_PASSWORD:}
+  audit:
+    ip-key: ${CETELE_AUDIT_IP_KEY:}
   s3:
     endpoint: ${CETELE_S3_ENDPOINT:}
     region: ${CETELE_S3_REGION:auto}
