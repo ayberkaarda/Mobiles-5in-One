@@ -32,7 +32,10 @@ documented here, so a gap in the numbering is always explained.
 | [0019](0019-ownership-transfer-and-reauthentication.md)    | Ownership transfer and re-authentication            | Accepted |
 | [0020](0020-refresh-family-lifetime-and-auth-retention.md) | Refresh family lifetime and auth retention          | Accepted |
 | 0021-0030                                                  | Phase 3 decisions (Android app)                     | Reserved |
-| 0031-0038                                                  | Phase 4 decisions (billing, webhooks, admin)        | Reserved |
+| [0031](0031-billing-purchase-linking-and-entitlements.md)  | Billing, purchase linking and entitlements          | Accepted |
+| [0032](0032-webhook-authentication.md)                     | Webhook authentication                              | Accepted |
+| [0033](0033-admin-console-and-audit-log.md)                | Admin console and audit log                         | Accepted |
+| 0034-0038                                                  | Phase 4 decisions (billing, webhooks, admin)        | Reserved |
 | 0039-0046                                                  | Phase 5 decisions (web, SEO and GEO)                | Reserved |
 | 0047-0056                                                  | Phase 6 decisions (hardening and release readiness) | Reserved |
 
@@ -53,3 +56,9 @@ SMS reminders and the Netgsm client (superseding the value-type paragraph of ADR
 rule 7 of the architecture tests, which turns the known gap of ADR-0012 into an allowlist),
 ownership transfer with re-authentication (D-7), and the 180-day refresh family lifetime with
 retention (superseding two consequences of ADR-0005). The range 0013-0020 is fully used.
+
+ADR-0031 to ADR-0033 record the Phase 4 contract, written before the code so the billing, webhook,
+admin and Android billing work can run in parallel: purchase linking, entitlement states and the
+downgrade rule; webhook authentication for Play RTDN and SMS delivery reports; and the admin
+console with TOTP and the audit log (settling D-9 and D-10). Phase 3 recorded no ADR, so 0021-0030
+stays reserved and unused; 0034-0038 stays reserved for decisions made while Phase 4 is built.

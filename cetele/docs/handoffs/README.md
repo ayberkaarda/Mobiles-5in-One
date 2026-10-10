@@ -18,6 +18,7 @@ API contract changes follow the same route: `server` asks `lead` to update the A
 
 ## Index
 
-| File                                                                                 | Subject                                                                                                                          | Status |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| [server-to-android-001-phase2-contract.md](server-to-android-001-phase2-contract.md) | Phase 2 contract: integrity nonce, sync wire format, photo upload, statements and reminders, re-authentication and deletion flow | open   |
+| File                                                                                 | Subject                                                                                                                                     | Status |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| [server-to-android-001-phase2-contract.md](server-to-android-001-phase2-contract.md) | Phase 2 contract: integrity nonce, sync wire format, photo upload, statements and reminders, re-authentication and deletion flow            | open   |
+| [server-to-android-002-phase4-contract.md](server-to-android-002-phase4-contract.md) | Phase 4 contract: billing wire shapes, Play Billing flow, webhook and admin references, work split, migration numbers and shared-file rules | open   |
