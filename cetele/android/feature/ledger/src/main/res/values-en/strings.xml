@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ledger_entry_title">Add entry</string>
+    <string name="ledger_entry_debt">Debt</string>
+    <string name="ledger_entry_payment">Payment</string>
+    <string name="ledger_entry_date">Date: %1$s</string>
+    <string name="ledger_entry_due">Due date</string>
+    <string name="ledger_entry_clear_due">Remove due date</string>
+    <string name="ledger_entry_note">Note</string>
+    <string name="ledger_entry_write_error">Could not save the entry. Please try again.</string>
+    <string name="ledger_photo_description">Entry photo</string>
+    <string name="ledger_photo_capture">Take photo</string>
+    <string name="ledger_photo_remove">Remove photo</string>
+    <string name="ledger_photo_capture_error">Could not prepare the photo. Please take another photo.</string>
+    <string name="ledger_photo_uploading">Uploading photo</string>
+    <string name="ledger_photo_view_error">Could not display the photo. Please check your connection.</string>
+    <string name="ledger_detail_title">Entry details</string>
+    <string name="ledger_detail_loading">Loading entries</string>
+    <string name="ledger_detail_missing">This entry was not found</string>
+    <string name="ledger_detail_due">Due date: %1$s</string>
+    <string name="ledger_detail_reversal_link">Open correction entry</string>
+    <string name="ledger_detail_original_link">Open original entry</string>
+    <string name="ledger_detail_confirm_title">Correct entry</string>
+    <string name="ledger_detail_confirm_text">This entry will be reversed and a correction entry will be created</string>
+    <string name="ledger_dashboard_title">Dashboard</string>
+    <string name="ledger_dashboard_today">Today: Debt %1$s · Payment %2$s</string>
+    <string name="ledger_dashboard_total">Total receivable</string>
+    <string name="ledger_dashboard_top">Top 10 debtors</string>
+    <string name="ledger_dashboard_due">Due today</string>
+    <string name="ledger_dashboard_no_debt">No customers with debt</string>
+    <string name="ledger_dashboard_no_due">No entries due today</string>
+    <string name="ledger_dashboard_no_shop">Select a shop to view the dashboard</string>
+    <string name="ledger_dashboard_due_amount">Amount due</string>
+</resources>
