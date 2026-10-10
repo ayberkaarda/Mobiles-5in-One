@@ -1,0 +1,24 @@
+<resources>
+    <string name="export_statement_title">Account statement</string>
+    <string name="export_statement_balance">Current balance</string>
+    <string name="export_statement_date">Date</string>
+    <string name="export_statement_description">Description</string>
+    <string name="export_statement_debt">Debt</string>
+    <string name="export_statement_payment">Payment</string>
+    <string name="export_statement_balance_column">Balance</string>
+    <string name="export_statement_correction">Correction: %1$s</string>
+    <string name="export_statement_footer">This statement was prepared by %1$s with Çetele.</string>
+    <string name="export_statement_page">Page %1$d / %2$d</string>
+    <string name="export_statement_count">%1$d entries · %2$s</string>
+    <string name="export_statement_download">Download from server</string>
+    <string name="export_statement_fonts_error">Fonts could not be opened. You can download the statement from the server.</string>
+    <string name="export_all_title">Export entries</string>
+    <string name="export_all_share">Share all entries as CSV</string>
+    <string name="export_all_count">%1$d entries</string>
+    <string name="export_common_share">Share</string>
+    <string name="export_common_loading">Preparing entries</string>
+    <string name="export_common_unavailable">The shop or customer for this statement could not be found.</string>
+    <string name="export_common_error">The file could not be prepared. You can try again.</string>
+    <string name="export_common_support">Support code: %1$s</string>
+    <string name="export_common_retry">Try again</string>
+</resources>

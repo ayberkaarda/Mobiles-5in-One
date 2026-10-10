@@ -1,0 +1,19 @@
+<resources>
+    <string name="reminders_sheet_title">Hatırlat</string>
+    <string name="reminders_sheet_whatsapp">WhatsApp ile gönder</string>
+    <string name="reminders_sheet_sms">SMS gönder</string>
+    <string name="reminders_sheet_phone_missing">Müşterinin telefon numarası kayıtlı değil</string>
+    <string name="reminders_sheet_no_balance">Hatırlatma için müşterinin borcu olmalı</string>
+    <string name="reminders_sheet_consent_missing">Müşterinin SMS hatırlatma izni kayıtlı değil</string>
+    <string name="reminders_sheet_unavailable">Müşteri veya dükkân bulunamadı</string>
+    <string name="reminders_sheet_provider_failed">Gönderilmiş olabilir, tekrar denemeyin</string>
+    <string name="reminders_sheet_share_failed">Paylaşım uygulaması açılamadı</string>
+    <string name="reminders_sheet_sms_sent">SMS gönderildi</string>
+    <string name="reminders_sheet_quota">Bu ay %1$d/%2$d SMS</string>
+    <string name="reminders_sheet_quota_unknown">SMS kullanımı başarılı gönderimden sonra gösterilir</string>
+    <string name="reminders_sheet_last">Son hatırlatma: %1$s (%2$s, bu cihazdan)</string>
+    <string name="reminders_sheet_channel_whatsapp">WhatsApp</string>
+    <string name="reminders_sheet_channel_sms">SMS</string>
+    <string name="reminders_sheet_retry_after">%1$d sn sonra tekrar deneyin</string>
+    <string name="reminders_sheet_support">Destek kodu: %1$s</string>
+</resources>

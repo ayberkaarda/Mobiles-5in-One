@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ledger_entry_title">Kayıt ekle</string>
+    <string name="ledger_entry_debt">Borç</string>
+    <string name="ledger_entry_payment">Tahsilat</string>
+    <string name="ledger_entry_date">Tarih: %1$s</string>
+    <string name="ledger_entry_due">Vade</string>
+    <string name="ledger_entry_clear_due">Vadeyi kaldır</string>
+    <string name="ledger_entry_note">Not</string>
+    <string name="ledger_entry_write_error">Kayıt kaydedilemedi. Yeniden deneyin.</string>
+    <string name="ledger_photo_description">Kaydın fotoğrafı</string>
+    <string name="ledger_photo_capture">Fotoğraf çek</string>
+    <string name="ledger_photo_remove">Fotoğrafı kaldır</string>
+    <string name="ledger_photo_capture_error">Fotoğraf hazırlanamadı. Yeniden fotoğraf çekin.</string>
+    <string name="ledger_photo_uploading">Fotoğraf yükleniyor</string>
+    <string name="ledger_photo_failed">Fotoğraf yüklenemedi. Kayıt fotoğraf olmadan gönderilebilir.</string>
+    <string name="ledger_photo_send_without">Fotoğrafsız gönder</string>
+    <string name="ledger_photo_view_error">Fotoğraf görüntülenemedi. Bağlantınızı kontrol edin.</string>
+    <string name="ledger_detail_title">Kayıt ayrıntısı</string>
+    <string name="ledger_detail_loading">Kayıtlar yükleniyor</string>
+    <string name="ledger_detail_missing">Bu kayıt bulunamadı</string>
+    <string name="ledger_detail_due">Vade: %1$s</string>
+    <string name="ledger_detail_reversal_link">Düzeltme kaydını aç</string>
+    <string name="ledger_detail_original_link">Asıl kaydı aç</string>
+    <string name="ledger_detail_confirm_title">Kaydı düzelt</string>
+    <string name="ledger_detail_confirm_text">Bu kayıt geri alınacak ve bir düzeltme kaydı oluşturulacak</string>
+    <string name="ledger_dashboard_title">Panel</string>
+    <string name="ledger_dashboard_today">Bugün: Borç %1$s · Tahsilat %2$s</string>
+    <string name="ledger_dashboard_total">Toplam alacak</string>
+    <string name="ledger_dashboard_top">En çok borçlu 10</string>
+    <string name="ledger_dashboard_due">Bugün vadesi gelen</string>
+    <string name="ledger_dashboard_no_debt">Borcu olan müşteri yok</string>
+    <string name="ledger_dashboard_no_due">Bugün vadesi gelen kayıt yok</string>
+    <string name="ledger_dashboard_no_shop">Paneli görmek için bir dükkân seçin</string>
+    <string name="ledger_dashboard_due_amount">Vadesi gelen tutar</string>
+    <string name="ledger_dashboard_refreshing">Eşitleniyor</string>
+</resources>

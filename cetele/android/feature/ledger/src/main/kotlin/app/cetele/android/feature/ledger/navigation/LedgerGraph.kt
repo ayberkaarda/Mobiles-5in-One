@@ -1,0 +1,33 @@
+package app.cetele.android.feature.ledger.navigation
+
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import app.cetele.android.feature.ledger.dashboard.DashboardRoute
+import app.cetele.android.feature.ledger.entry.EntryDetailRoute
+import app.cetele.android.feature.ledger.entry.EntryEditRoute
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+
+/** [refreshing] is true while the active shop is exchanging changes with the server (dashboard indicator). */
+fun NavGraphBuilder.ledgerGraph(
+    nav: LedgerNavigation,
+    refreshing: Flow<Boolean> = flowOf(false),
+) {
+    composable<LedgerRoutes.Entry> {
+        EntryEditRoute(onBack = nav::onBack)
+    }
+    composable<LedgerRoutes.EntryDetail> {
+        EntryDetailRoute(onBack = nav::onBack, onEntrySelected = nav::onEntrySelected)
+    }
+    composable<LedgerRoutes.Dashboard> {
+        val syncing by refreshing.collectAsStateWithLifecycle(initialValue = false)
+        DashboardRoute(
+            onCustomerSelected = nav::onCustomerSelected,
+            onRemind = nav::onRemind,
+            onRequestSync = nav::onRequestSync,
+            refreshing = syncing,
+        )
+    }
+}

@@ -63,7 +63,7 @@ class SyncValidationTest : SyncTestSupport() {
             )
         val result = push(world, requests)
         assertEquals(List(10) { "validation.failed" } + listOf(null), result.results.map { it.code })
-        assertTrue(result.results.take(10).all { it.status == OperationStatus.REJECTED && !it.errors.isNullOrEmpty() })
+        assertTrue(result.results.take(10).all { it.status == OperationStatus.REJECTED && it.errors?.isNotEmpty() == true })
         assertEquals(OperationStatus.APPLIED, result.results.last().status)
         assertEquals(1L, result.head)
         val fieldCodes = result.results.take(10).map { row -> row.errors!!.map { it.field to it.code } }

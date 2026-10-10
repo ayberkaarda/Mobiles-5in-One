@@ -4,6 +4,10 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
+    implementation(project(":core:network"))
+    implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.serialization.json)
 }
 

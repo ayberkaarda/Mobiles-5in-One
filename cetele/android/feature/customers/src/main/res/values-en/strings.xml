@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="customers_list_title">Customers</string>
+    <string name="customers_list_search">Search customers</string>
+    <string name="customers_list_add">Add customer</string>
+    <string name="customers_list_empty">No customers yet</string>
+    <string name="customers_list_empty_body">Add your first customer to open your ledger.</string>
+    <string name="customers_list_no_results">No customer found</string>
+    <string name="customers_list_search_body">Try another name or phone number.</string>
+    <string name="customers_list_offline">You are offline. Records will be sent when connected.</string>
+    <string name="customers_list_limit">You have reached the customer limit</string>
+    <string name="customers_edit_title">Customer details</string>
+    <string name="customers_edit_name">Name</string>
+    <string name="customers_edit_phone">Phone</string>
+    <string name="customers_edit_note">Note</string>
+    <string name="customers_edit_tag">Tag</string>
+    <string name="customers_edit_consent">SMS reminder permission</string>
+    <string name="customers_edit_consent_notice">You are recording that your customer agreed to receive SMS messages.</string>
+    <string name="customers_edit_source">Permission source</string>
+    <string name="customers_edit_source_person">In person</string>
+    <string name="customers_edit_source_phone">Phone</string>
+    <string name="customers_edit_source_written">Written</string>
+    <string name="customers_edit_source_other">Other</string>
+    <string name="customers_edit_date">Permission date: %1$s</string>
+    <string name="customers_edit_date_confirm">Done</string>
+    <string name="customers_edit_cancel">Cancel</string>
+    <string name="customers_edit_save">Save</string>
+    <string name="customers_detail_title">Customer</string>
+    <string name="customers_detail_more">More actions</string>
+    <string name="customers_detail_edit">Edit</string>
+    <string name="customers_detail_delete">Delete customer</string>
+    <string name="customers_detail_delete_body">The customer and their records will be removed from this shop’s ledger.</string>
+    <string name="customers_detail_delete_confirm">Delete</string>
+    <string name="customers_detail_debt">Record debt</string>
+    <string name="customers_detail_payment">Receive payment</string>
+    <string name="customers_detail_remind">Remind</string>
+    <string name="customers_detail_statement">Statement</string>
+    <string name="customers_detail_empty">No records yet</string>
+    <string name="customers_detail_empty_body">You can add a debt or payment record.</string>
+</resources>

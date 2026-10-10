@@ -26,7 +26,7 @@ class CeteleColorsTokenTest {
 
         assertEquals(tokens.keys, actual.keys, "role names in $scheme")
         tokens.forEach { (role, value) ->
-            assertEquals(value.jsonPrimitive.content.uppercase(), actual.getValue(role).toTokenHex(), "$scheme.$role")
+            assertEquals(value.jsonPrimitive.content, actual.getValue(role).toTokenHex(), "$scheme.$role")
         }
     }
 

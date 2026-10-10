@@ -3,6 +3,7 @@ package app.cetele.android.buildlogic
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.dependencies
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 /**
@@ -12,6 +13,9 @@ import org.jlleitschuh.gradle.ktlint.KtlintExtension
 internal fun Project.configureStaticAnalysis() {
     pluginManager.apply("org.jlleitschuh.gradle.ktlint")
     pluginManager.apply("io.gitlab.arturbosch.detekt")
+    dependencies {
+        add("detektPlugins", project(":detekt-rules"))
+    }
 
     extensions.configure<KtlintExtension> {
         version.set(libs.findVersion("ktlint").get().requiredVersion)

@@ -23,4 +23,11 @@ class ApiConfigTest {
         assertThrows<IllegalArgumentException> { ApiConfig("api.cetele.app") }
         assertThrows<IllegalArgumentException> { ApiConfig("ftp://api.cetele.app") }
     }
+
+    @Test
+    fun `rejects credentials query strings and fragments`() {
+        assertThrows<IllegalArgumentException> { ApiConfig("https://user:password@api.cetele.app") }
+        assertThrows<IllegalArgumentException> { ApiConfig("https://api.cetele.app?phone=value") }
+        assertThrows<IllegalArgumentException> { ApiConfig("https://api.cetele.app#fragment") }
+    }
 }

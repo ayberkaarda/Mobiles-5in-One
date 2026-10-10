@@ -11,11 +11,15 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.time.Clock
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
+    @Provides
+    fun provideClock(): Clock = Clock.systemUTC()
+
     private const val USER_SETTINGS_FILE = "user_settings.pb"
 
     @Provides

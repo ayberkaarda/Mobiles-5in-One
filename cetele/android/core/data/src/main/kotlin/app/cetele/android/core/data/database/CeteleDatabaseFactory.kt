@@ -21,6 +21,7 @@ object CeteleDatabaseFactory {
         return Room
             .databaseBuilder(context.applicationContext, CeteleDatabase::class.java, FILE_NAME)
             .openHelperFactory(SupportOpenHelperFactory(passphrase))
+            .addMigrations(Migrations.MIGRATION_1_2)
             .build()
     }
 }

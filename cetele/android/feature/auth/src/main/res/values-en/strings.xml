@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_common_connection_error">Unable to connect. Please try again.</string>
+    <string name="auth_common_support_code">Support code: %1$s</string>
+    <string name="auth_phone_title">Sign in to Çetele</string>
+    <string name="auth_phone_number">Your phone number</string>
+    <string name="auth_phone_consent">By continuing, you confirm you have read the Privacy Policy</string>
+    <string name="auth_phone_privacy">Privacy Policy</string>
+    <string name="auth_phone_send">Send code</string>
+    <string name="auth_phone_invalid">Enter a valid Turkish mobile phone number</string>
+    <string name="auth_phone_integrity_unavailable">Device verification was unavailable</string>
+    <string name="auth_phone_retry">Too many attempts, try again in %1$d seconds</string>
+    <string name="auth_otp_title">Verify your phone</string>
+    <string name="auth_otp_sent">Enter the code sent to %1$s</string>
+    <string name="auth_otp_code">6 digit verification code</string>
+    <string name="auth_otp_invalid">The code is incorrect or expired</string>
+    <string name="auth_otp_resend">Resend code</string>
+    <string name="auth_otp_resend_wait">You can resend the code in %1$d seconds</string>
+    <string name="auth_pinsetup_title">Set your PIN</string>
+    <string name="auth_pinsetup_explanation">Choose a 6 digit PIN to protect your ledger</string>
+    <string name="auth_pinsetup_enter">Enter your new PIN</string>
+    <string name="auth_pinsetup_repeat">Repeat your PIN</string>
+    <string name="auth_pinsetup_mismatch">The PINs do not match, please try again</string>
+    <string name="auth_pinsetup_biometric">Enable biometric unlock too</string>
+    <string name="auth_lock_title">Your ledger is locked</string>
+    <string name="auth_lock_enter">Enter your PIN</string>
+    <string name="auth_lock_wrong">Incorrect PIN, please try again</string>
+    <string name="auth_lock_delay">Try again in %1$d seconds</string>
+    <string name="auth_lock_biometric">Unlock with biometrics</string>
+    <string name="auth_lock_biometric_unavailable">Biometric unlock failed, please enter your PIN</string>
+    <string name="auth_lock_pin_fallback">Unlock with PIN</string>
+    <string name="auth_lock_forgot">Forgot my PIN</string>
+    <string name="auth_lock_forgot_explanation">Signing out clears the ledger on this device. Verify your phone again to set a new PIN.</string>
+    <string name="auth_lock_pending">There are %1$d unsent records. Signing out deletes them. Sign out anyway?</string>
+    <string name="auth_lock_signout">Sign out</string>
+    <string name="auth_sessionended_title">Sign in again</string>
+    <string name="auth_sessionended_user">You signed out</string>
+    <string name="auth_sessionended_expired">Your session has ended, please sign in again</string>
+    <string name="auth_sessionended_deleted">Your account has been deleted</string>
+    <string name="auth_sessionended_membership">Your shop membership has ended</string>
+    <string name="auth_sessionended_signin">Sign in</string>
+</resources>

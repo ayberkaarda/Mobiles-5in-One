@@ -4,15 +4,22 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 
-/** Device-local preferences, stored with Proto DataStore. Field numbers are part of the file format. */
+@Serializable enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+/** Protobuf field numbers are the on-disk format: never renumber or reuse one. */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
+@Suppress("MagicNumber")
 data class UserSettings(
     @ProtoNumber(1) val lockTimeoutSeconds: Int = DEFAULT_LOCK_TIMEOUT_SECONDS,
     @ProtoNumber(2) val biometricUnlockEnabled: Boolean = false,
+    @ProtoNumber(3) val activeShopId: String? = null,
+    @ProtoNumber(4) val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    @ProtoNumber(5) val deviceId: String? = null,
+    @ProtoNumber(6) val backgroundedAtEpochMillis: Long? = null,
+    @ProtoNumber(7) val pinSetupDone: Boolean = false,
 ) {
     companion object {
-        /** The app asks for the PIN again after two minutes in the background. */
-        const val DEFAULT_LOCK_TIMEOUT_SECONDS: Int = 120
+        const val DEFAULT_LOCK_TIMEOUT_SECONDS = 120
     }
 }

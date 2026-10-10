@@ -20,6 +20,10 @@ class AndroidComposeConventionPlugin : Plugin<Project> {
                 add("implementation", catalog.findLibrary("androidx-compose-material3").get())
                 add("implementation", catalog.findLibrary("androidx-compose-ui-tooling-preview").get())
                 add("debugImplementation", catalog.findLibrary("androidx-compose-ui-tooling").get())
+                add("implementation", catalog.findLibrary("androidx-compose-material-icons-core").get())
+                add("testImplementation", bom)
+                add("testImplementation", catalog.findLibrary("androidx-compose-ui-test-junit4").get())
+                add("debugImplementation", catalog.findLibrary("androidx-compose-ui-test-manifest").get())
             }
         }
     }

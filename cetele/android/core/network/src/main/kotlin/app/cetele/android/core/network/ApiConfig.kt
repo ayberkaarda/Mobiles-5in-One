@@ -8,12 +8,16 @@ import java.net.URI
  */
 class ApiConfig(
     baseUrl: String,
+    val appVersion: String = "0.3.0",
 ) {
     val baseUrl: String = if (baseUrl.endsWith('/')) baseUrl else "$baseUrl/"
 
     init {
         val uri = runCatching { URI(this.baseUrl) }.getOrNull()
         require(uri != null && uri.host != null) { "API base URL is not a valid absolute URL" }
+        require(uri.userInfo == null && uri.query == null && uri.fragment == null) {
+            "API base URL cannot contain credentials, query or fragment"
+        }
         val scheme = uri.scheme?.lowercase()
         require(scheme == "https" || (scheme == "http" && uri.host in DEBUG_HTTP_HOSTS)) {
             "API base URL must use HTTPS"
