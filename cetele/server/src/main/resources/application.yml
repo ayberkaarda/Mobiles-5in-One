@@ -99,6 +99,16 @@ cetele:
     secret-key: ${CETELE_S3_SECRET_KEY:}
     bucket-media: ${CETELE_S3_BUCKET_MEDIA:cetele-media}
     path-style: ${CETELE_S3_PATH_STYLE:true}
+  billing:
+    mode: ${CETELE_BILLING_MODE:}
+    token-key: ${CETELE_BILLING_TOKEN_KEY:}
+    product-id: ${CETELE_PLAY_PRO_PRODUCT_ID:cetele_pro}
+  play:
+    service-account-json: ${CETELE_PLAY_SERVICE_ACCOUNT_JSON:}
+    rtdn:
+      audience: ${CETELE_PLAY_RTDN_AUDIENCE:}
+      service-account-email: ${CETELE_PLAY_RTDN_SERVICE_ACCOUNT_EMAIL:}
+      jwks-url: ${CETELE_PLAY_RTDN_JWKS_URL:https://www.googleapis.com/oauth2/v3/certs}
 
 ---
 # Developer machines and the test suite: plain HTTP, OpenAPI document served.

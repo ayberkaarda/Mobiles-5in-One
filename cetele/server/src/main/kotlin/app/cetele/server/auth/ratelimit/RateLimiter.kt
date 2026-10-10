@@ -38,6 +38,8 @@ enum class RateLimit(
     MEDIA_PRESIGN_USER("media.presign.user", 60, Duration.ofMinutes(10)),
     MEDIA_COMPLETE_USER("media.complete.user", 60, Duration.ofMinutes(10)),
     MEDIA_DOWNLOAD_USER("media.download.user", 300, Duration.ofMinutes(10)),
+    BILLING_LINK_USER("billing.link.user", 10, Duration.ofMinutes(10)),
+    WEBHOOK_RTDN_IP("webhook.rtdn.ip", 600, Duration.ofMinutes(1)),
     REAUTH_REQUEST_USER("reauth.request.user", 3, Duration.ofMinutes(10)),
     REAUTH_VERIFY_USER("reauth.verify.user", 10, Duration.ofMinutes(10)),
     ;
