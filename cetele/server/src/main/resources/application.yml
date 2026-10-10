@@ -82,6 +82,10 @@ cetele:
       username: ${CETELE_NETGSM_USERNAME:}
       password: ${CETELE_NETGSM_PASSWORD:}
       msgheader: ${CETELE_NETGSM_MSGHEADER:}
+    dlr:
+      secret: ${CETELE_SMS_DLR_SECRET:}
+      previous-secret: ${CETELE_SMS_DLR_PREVIOUS_SECRET:}
+      allowed-ips: ${CETELE_SMS_DLR_ALLOWED_IPS:}
   security:
     require-https: true
   jwt:
