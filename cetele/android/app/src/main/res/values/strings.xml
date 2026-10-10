@@ -4,4 +4,13 @@
   <string name="shell_title">Çetele</string>
   <string name="shell_tagline">Veresiyeyi unutma, Çetele\'ye yaz.</string>
   <string name="shell_status">Defteriniz hazırlanıyor. İnternet olmadan da çalışacak.</string>
+  <string name="app_tab_today">Bugün</string>
+  <string name="app_tab_customers">Müşteriler</string>
+  <string name="app_tab_shop">Dükkân</string>
+  <string name="app_tab_settings">Ayarlar</string>
+  <string name="app_shop_title">Dükkân</string>
+  <string name="app_shop_switch">Dükkân değiştir veya ekle</string>
+  <string name="app_shop_details">Dükkân bilgileri</string>
+  <string name="app_shop_members">Çalışanlar</string>
+  <string name="app_shop_export_all">Tüm kayıtları dışa aktar</string>
 </resources>
