@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Kullanıcı')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <p><a href="/admin/users">Kullanıcı aramasına dön</a></p>
+  <h1 th:text="${detail.user.maskedPhone}">Kullanıcı</h1>
+  <p th:replace="~{admin/fragments :: notice}"></p>
+  <section aria-labelledby="user-info">
+    <h2 id="user-info">Bilgiler</h2>
+    <dl class="facts">
+      <dt>Ad</dt><dd th:text="${detail.user.displayName != null} ? ${detail.user.displayName} : '-'"></dd>
+      <dt>Kayıt</dt><dd th:text="${detail.user.createdAt}"></dd>
+      <dt>Durum</dt><dd th:text="${detail.user.deactivated} ? 'Devre dışı (' + ${detail.user.deactivatedAt} + ')' : 'Etkin'"></dd>
+    </dl>
+    <th:block th:if="${currentAdmin.admin}">
+      <form th:unless="${detail.user.deactivated}" th:action="@{/admin/users/{id}/deactivate(id=${detail.user.id})}" method="post" class="inline">
+        <button type="submit" class="danger">Kullanıcıyı devre dışı bırak</button>
+      </form>
+      <form th:if="${detail.user.deactivated}" th:action="@{/admin/users/{id}/reactivate(id=${detail.user.id})}" method="post" class="inline">
+        <button type="submit">Kullanıcıyı yeniden etkinleştir</button>
+      </form>
+    </th:block>
+  </section>
+  <section aria-labelledby="user-shops">
+    <h2 id="user-shops">Dükkânlar</h2>
+    <p th:if="${detail.memberships.isEmpty()}">Bu kullanıcının dükkân üyeliği yok.</p>
+    <div class="table-scroll" th:unless="${detail.memberships.isEmpty()}">
+      <table>
+        <caption>Üyelikler</caption>
+        <thead><tr><th scope="col">Dükkân</th><th scope="col">Rol</th><th scope="col">Durum</th></tr></thead>
+        <tbody>
+        <tr th:each="membership : ${detail.memberships}">
+          <td><a th:href="@{/admin/shops/{id}(id=${membership.shopId})}" th:text="${membership.shopName}"></a></td>
+          <td th:text="${membership.role == 'OWNER'} ? 'Sahip' : 'Çalışan'"></td>
+          <td th:text="${membership.shopDeleted} ? 'Silindi' : 'Etkin'"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section aria-labelledby="user-devices">
+    <h2 id="user-devices">Cihazlar</h2>
+    <p th:if="${detail.devices.isEmpty()}">Kayıtlı cihaz yok.</p>
+    <div class="table-scroll" th:unless="${detail.devices.isEmpty()}">
+      <table>
+        <caption>Giriş yapılan cihazlar</caption>
+        <thead>
+        <tr><th scope="col">Model</th><th scope="col">Uygulama sürümü</th><th scope="col">Son görülme</th><th scope="col">Bütünlük doğrulaması</th><th scope="col">Açık oturum</th><th scope="col" th:if="${currentAdmin.admin}">İşlem</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="device : ${detail.devices}">
+          <td th:text="${device.model}"></td>
+          <td th:text="${device.appVersion}"></td>
+          <td th:text="${device.lastSeenAt}"></td>
+          <td th:text="${device.integrityVerifiedAt}"></td>
+          <td th:text="${device.liveSessions}"></td>
+          <td th:if="${currentAdmin.admin}">
+            <form th:action="@{/admin/users/{userId}/devices/{deviceId}/revoke(userId=${detail.user.id},deviceId=${device.id})}" method="post" class="inline">
+              <button type="submit" class="secondary" th:attr="aria-label='Oturumları kapat: ' + ${device.model}">Oturumları kapat</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

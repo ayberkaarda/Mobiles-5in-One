@@ -1,0 +1,53 @@
+@font-face { font-family: Inter; src: url('/assets/fonts/Inter-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Inter; src: url('/assets/fonts/Inter-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: Manrope; src: url('/assets/fonts/Manrope-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+:root { --background: #F3EEE3; --surface: #FAF7F0; --text: #1A1A1A; --muted: #575D69; --primary: #1E2A5A; --border: #E0D8C7; --danger: #A8301F; --ok: #24704A; --sunken: #EAE3D4; --focus: #1E2A5A; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--text); font: 16px/1.6 Inter, sans-serif; }
+a { color: var(--primary); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.skip { position: absolute; left: -10000px; top: 8px; padding: 8px 12px; background: var(--surface); }
+.skip:focus { left: 8px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: var(--primary); color: #FFFFFF; }
+.topbar a { color: #FFFFFF; }
+.topbar .brand { margin: 0; font-family: Manrope, sans-serif; font-weight: 700; }
+.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; flex: 1; }
+.topbar ul { display: flex; flex-wrap: wrap; gap: 16px; margin: 0; padding: 0; list-style: none; flex: 1; }
+.topbar .who { margin: 0; }
+main { max-width: 1080px; margin: 32px auto; padding: 32px; background: var(--surface); border: 1px solid var(--border); }
+main.narrow { max-width: 520px; }
+h1, h2 { font-family: Manrope, sans-serif; color: var(--primary); overflow-wrap: anywhere; }
+h1 { font-size: 28px; margin: 0 0 16px; }
+h2 { font-size: 20px; margin: 32px 0 12px; }
+.muted { color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.search { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.search label { flex-basis: 100%; }
+label { font-weight: 600; }
+input, select { font: inherit; padding: 10px 12px; border: 1px solid var(--muted); border-radius: 4px; background: #FFFFFF; color: var(--text); }
+button, .button { font: inherit; font-weight: 600; padding: 10px 16px; border: 1px solid var(--primary); border-radius: 4px; background: var(--primary); color: #FFFFFF; cursor: pointer; text-decoration: none; display: inline-block; }
+button.secondary { background: var(--surface); color: var(--primary); }
+button.danger { background: var(--danger); border-color: var(--danger); }
+.topbar button.secondary { padding: 6px 12px; }
+form.inline { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 8px 4px 0; }
+.error, .warning { padding: 12px 16px; border-left: 4px solid var(--danger); background: #F6E3DF; }
+.notice { padding: 12px 16px; border-left: 4px solid var(--ok); background: #E1EFE6; }
+.badge { display: inline-block; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; gap: 16px; padding: 0; list-style: none; }
+.stats li { flex: 1 1 180px; padding: 16px; background: var(--sunken); }
+.stats .label { display: block; color: var(--muted); }
+.stats strong { font-family: Manrope, sans-serif; font-size: 28px; font-variant-numeric: tabular-nums; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; }
+.facts dt { font-weight: 600; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.table-scroll { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+caption { text-align: left; font-weight: 600; padding-bottom: 8px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+td .badge { margin-left: 4px; }
+code, .secret { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.qr { display: block; margin: 16px 0; background: #FFFFFF; }
+.steps { padding-left: 20px; }
+.pager { display: flex; gap: 24px; margin-top: 16px; }
+@media (max-width: 600px) { main { margin: 0; padding: 24px 16px; border: 0; } .topbar { padding: 12px 16px; } .facts { grid-template-columns: 1fr; } }

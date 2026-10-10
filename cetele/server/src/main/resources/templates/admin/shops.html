@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Dükkânlar')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <h1>Dükkânlar</h1>
+  <form action="/admin/shops" method="get" class="search" role="search">
+    <label for="q">Dükkân adı</label>
+    <input id="q" name="q" type="search" maxlength="80" th:value="${q}" required>
+    <button type="submit">Ara</button>
+  </form>
+  <p class="muted">Adında aranan metni içeren en fazla 50 dükkân, en yeniden eskiye listelenir.</p>
+  <th:block th:if="${results != null}">
+    <p th:if="${results.isEmpty()}" role="status">Eşleşen dükkân bulunamadı.</p>
+    <div class="table-scroll" th:unless="${results.isEmpty()}">
+      <table>
+        <caption>Arama sonuçları</caption>
+        <thead>
+        <tr><th scope="col">Ad</th><th scope="col">Tür</th><th scope="col">İl / İlçe</th><th scope="col">Plan</th><th scope="col">Oluşturulma</th><th scope="col">Durum</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="shop : ${results}">
+          <td><a th:href="@{/admin/shops/{id}(id=${shop.id})}" th:text="${shop.name}"></a></td>
+          <td th:text="${shop.type}"></td>
+          <td th:text="${shop.il} + ' / ' + ${shop.ilce}"></td>
+          <td th:text="${shop.plan}"></td>
+          <td th:text="${shop.createdAt}"></td>
+          <td th:text="${shop.deletedAt != null} ? 'Silindi: ' + ${shop.deletedAt} : 'Etkin'"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </th:block>
+</main>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Dükkân')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <p><a href="/admin/shops">Dükkân aramasına dön</a></p>
+  <h1 th:text="${detail.shop.name}">Dükkân</h1>
+  <p class="warning" role="alert" th:if="${detail.ownerDeactivated}">
+    Dükkânın sahibi devre dışı. Çalışanlar okumaya ve yazmaya devam eder; sahip yeniden etkinleşene veya hesabını silene kadar üye ve abonelik yönetimi yapılamaz.
+  </p>
+  <section aria-labelledby="shop-info">
+    <h2 id="shop-info">Bilgiler</h2>
+    <dl class="facts">
+      <dt>Tür</dt><dd th:text="${detail.shop.type}"></dd>
+      <dt>İl / İlçe</dt><dd th:text="${detail.shop.il} + ' / ' + ${detail.shop.ilce}"></dd>
+      <dt>Plan</dt><dd th:text="${detail.shop.plan}"></dd>
+      <dt>Oluşturulma</dt><dd th:text="${detail.shop.createdAt}"></dd>
+      <dt>Silinme</dt><dd th:text="${detail.shop.deletedAt != null} ? ${detail.shop.deletedAt} : '-'"></dd>
+      <dt>Açık silme talebi</dt>
+      <dd th:text="${detail.deletionGraceUntil != null} ? 'Talep: ' + ${detail.deletionRequestedAt} + ', silinme: ' + ${detail.deletionGraceUntil} : 'Yok'"></dd>
+    </dl>
+  </section>
+  <section aria-labelledby="shop-counts">
+    <h2 id="shop-counts">Sayılar</h2>
+    <ul class="stats">
+      <li><span class="label">Kayıtlı müşteri</span><strong th:text="${detail.liveCustomers}"></strong></li>
+      <li><span class="label">Defter kaydı</span><strong th:text="${detail.entries}"></strong></li>
+      <li><span class="label">Fotoğraf</span><strong th:text="${detail.readyPhotos}"></strong></li>
+      <li><span class="label" th:text="'SMS kullanımı (' + ${detail.smsMonth} + ')'">SMS kullanımı</span><strong th:text="${detail.smsUsed}"></strong></li>
+    </ul>
+  </section>
+  <section aria-labelledby="shop-members">
+    <h2 id="shop-members">Üyeler</h2>
+    <p th:text="${detail.memberCount} + ' üye: ' + ${detail.ownerCount} + ' sahip, ' + ${detail.staffCount} + ' çalışan'"></p>
+    <div class="table-scroll" th:unless="${detail.members.isEmpty()}">
+      <table>
+        <caption>Dükkân üyeleri</caption>
+        <thead><tr><th scope="col">Telefon</th><th scope="col">Rol</th><th scope="col">Durum</th></tr></thead>
+        <tbody>
+        <tr th:each="member : ${detail.members}">
+          <td><a th:href="@{/admin/users/{id}(id=${member.userId})}" th:text="${member.maskedPhone}"></a></td>
+          <td th:text="${member.role == 'OWNER'} ? 'Sahip' : 'Çalışan'"></td>
+          <td th:text="${member.deactivated} ? 'Devre dışı' : 'Etkin'"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

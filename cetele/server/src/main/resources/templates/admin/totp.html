@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Doğrulama kodu')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main" class="narrow">
+  <h1>Doğrulama kodu</h1>
+  <p class="muted">Doğrulama uygulamanızdaki 6 haneli kodu girin. Her kod yalnızca bir kez kullanılabilir.</p>
+  <p th:replace="~{admin/fragments :: error}"></p>
+  <form th:action="@{/admin/login/totp}" method="post" class="stack">
+    <label for="code">6 haneli kod</label>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+    <button type="submit">Doğrula</button>
+  </form>
+</main>
+</body>
+</html>
