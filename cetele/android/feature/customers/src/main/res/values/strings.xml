@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="customers_list_title">Müşteriler</string>
+    <string name="customers_list_search">Müşteri arayın</string>
+    <string name="customers_list_add">Müşteri ekle</string>
+    <string name="customers_list_empty">Henüz müşteri yok</string>
+    <string name="customers_list_empty_body">İlk müşterinizi ekleyerek defterinizi açabilirsiniz.</string>
+    <string name="customers_list_no_results">Müşteri bulunamadı</string>
+    <string name="customers_list_search_body">Başka bir ad veya telefon numarası arayabilirsiniz.</string>
+    <string name="customers_list_offline">Çevrimdışısınız, kayıtlar bağlanınca gönderilecek</string>
+    <string name="customers_list_limit">Müşteri sınırına ulaştınız</string>
+    <string name="customers_edit_title">Müşteri bilgileri</string>
+    <string name="customers_edit_name">Ad</string>
+    <string name="customers_edit_phone">Telefon</string>
+    <string name="customers_edit_note">Not</string>
+    <string name="customers_edit_tag">Etiket</string>
+    <string name="customers_edit_consent">SMS hatırlatma izni</string>
+    <string name="customers_edit_consent_notice">Müşterinizin SMS almayı kabul ettiğini kaydediyorsunuz</string>
+    <string name="customers_edit_source">İzin kaynağı</string>
+    <string name="customers_edit_source_person">Yüz yüze</string>
+    <string name="customers_edit_source_phone">Telefon</string>
+    <string name="customers_edit_source_written">Yazılı</string>
+    <string name="customers_edit_source_other">Diğer</string>
+    <string name="customers_edit_date">İzin tarihi: %1$s</string>
+    <string name="customers_edit_date_confirm">Tamam</string>
+    <string name="customers_edit_cancel">Vazgeç</string>
+    <string name="customers_edit_save">Kaydet</string>
+    <string name="customers_detail_title">Müşteri</string>
+    <string name="customers_detail_more">Diğer işlemler</string>
+    <string name="customers_detail_edit">Düzenle</string>
+    <string name="customers_detail_delete">Müşteriyi sil</string>
+    <string name="customers_detail_delete_body">Müşteri ve kayıtları bu dükkânın defterinden kaldırılır</string>
+    <string name="customers_detail_delete_confirm">Sil</string>
+    <string name="customers_detail_debt">Borç yaz</string>
+    <string name="customers_detail_payment">Tahsilat al</string>
+    <string name="customers_detail_remind">Hatırlat</string>
+    <string name="customers_detail_statement">Hesap dökümü</string>
+    <string name="customers_detail_empty">Henüz kayıt yok</string>
+    <string name="customers_detail_empty_body">Borç veya tahsilat kaydı ekleyebilirsiniz.</string>
+</resources>
