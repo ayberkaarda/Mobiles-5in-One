@@ -78,6 +78,9 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    // OpenApiSnapshotTest writes this file; declaring it keeps it in the build cache entry so a
+    // cached test run still provides the input of openApiContractCheck.
+    outputs.file(layout.buildDirectory.file("openapi/openapi.json"))
 }
 
 tasks.register("openApiContractCheck") {
