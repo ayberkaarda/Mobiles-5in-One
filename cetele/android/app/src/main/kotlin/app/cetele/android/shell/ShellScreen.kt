@@ -16,17 +16,17 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import app.cetele.android.R
+import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.CeteleTheme
 
-/** Start screen of the foundation build: brand name, tagline and a short status line. */
+/** Shown while the stored session and settings are read: brand name, tagline and a short status line. */
 @Composable
 fun ShellScreen(modifier: Modifier = Modifier) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
-            modifier = Modifier.safeDrawingPadding().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            modifier = Modifier.safeDrawingPadding().padding(CeteleSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(CeteleSpacing.medium, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(

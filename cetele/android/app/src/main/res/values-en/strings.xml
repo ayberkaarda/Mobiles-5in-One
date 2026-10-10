@@ -4,4 +4,13 @@
   <string name="shell_title">Çetele</string>
   <string name="shell_tagline">Never forget a tab, write it in Çetele.</string>
   <string name="shell_status">Your ledger is being prepared. It will work offline too.</string>
+  <string name="app_tab_today">Today</string>
+  <string name="app_tab_customers">Customers</string>
+  <string name="app_tab_shop">Shop</string>
+  <string name="app_tab_settings">Settings</string>
+  <string name="app_shop_title">Shop</string>
+  <string name="app_shop_switch">Switch or add a shop</string>
+  <string name="app_shop_details">Shop details</string>
+  <string name="app_shop_members">Staff</string>
+  <string name="app_shop_export_all">Export all records</string>
 </resources>
