@@ -11,7 +11,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ | -------- |
 | [`kadro`](kadro/)         | Halı saha maç organizasyonu: kadro kur, eksik oyuncuyu bul, saha ücretini böl                                                                             | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
 | [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
-| [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
+| [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | Phase 0-3 birleşti (sunucu ve Android uygulaması; gerçek dünya doğrulamaları açık) | %57      |
 | [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 | [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | .NET MAUI (C#), ASP.NET Core, PostgreSQL + PostGIS                             | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 
@@ -36,7 +36,7 @@ Her proje için bir kart. Kadro'nun ve Askıda'nın uygulaması var. Askıda kar
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/cetele.png" alt="Cetele kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
-      <sub><b>Cetele</b>: tasarım aşamasında, henüz uygulama yok</sub>
+      <sub><b>Cetele</b>: sunucu ve Android uygulaması birleşti (Phase 0-3)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
@@ -82,18 +82,22 @@ bağlı ya da ancak push'tan sonra çalışır. Gerçek ödeme ve cihaz doğrula
 derlenmedi. Bkz. [`askida/README.tr.md`](askida/README.tr.md) ve
 [`askida/docs/security/verification-matrix.md`](askida/docs/security/verification-matrix.md).
 
-Cetele, Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
+Cetele'nin sunucusu (Spring Boot: kimlik doğrulama, senkronizasyon, defter, hatırlatma, medya) ve
+Android uygulaması (Kotlin, Jetpack Compose, yerel işlem kutusuyla çevrimdışı çalışır) birleşti;
+7 fazın 0-3'ü tamam. Faturalama, web ve yönetim alanı ile yayın sertleştirmesi başlamadı.
+
+Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
 uygulama kodu yok.
 
 ### İlerleme
 
-Son güncelleme: 2026-10-05 (Askıda Phase 4-6 birleştirmesi için yazıldı). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
+Son güncelleme: 2026-10-11 (Cetele Phase 3 birleştirmesi için yazıldı). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
 
 | Proje       | İlerleme | Dayanak                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kadro`     | %100     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktının 11'i birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 11/11) / 7 = %100. Phase 6 portfolyo kapsamında tamamdır (11 çıktının 11'i birleşti); henüz var olmayan sistemlere bağlı kanıtlar kısmi olarak kayıtlı kalır (23 güvenlik maddesinin 10'u, barındırılan origin, EAS derlemeleri, sağlayıcı hesapları, iOS). Yani %100, planlanan işin birleştiği anlamına gelir; her kontrolün üretimde kanıtlandığı anlamına gelmez.                                                                                                  |
 | `askida`    | %100     | Phase 0-6 birleşti: yedi fazın 7'si, eşit ağırlıklı (temel; veri katmanı, kimlik doğrulama ve güvenlik tabanı; dükkânlar, hesaplar ve askı; ödeme akışı, webhook'lar, esnaf ödemeleri ve yönetim paneli; Flutter uygulaması; herkese açık web, SEO ve GEO; sertleştirme ve yayına hazırlık): 7/7 = %100. %100 planlanan işin birleştiği anlamına gelir, her kontrolün üretimde kanıtlandığı anlamına gelmez: 23 güvenlik maddesinin 9'u kısmi kalır ([doğrulama matrisi](askida/docs/security/verification-matrix.md)); gerçek ödeme, gerçek cihaz doğrulaması, mağaza hesapları, barındırılan origin ve iOS denenmedi. |
-| `cetele`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `cetele`    | %57      | Phase 0-3 birleşti: 7 fazdan 4'ü, fazlar eşit ağırlıklı (temel; sunucu çekirdeği, kimlik doğrulama ve güvenlik tabanı; senkronizasyon, defter, hatırlatma ve medya; Android uygulaması): 4/7 = %57. Phase 4-6 (faturalama, webhook ve yönetim; web SEO ve GEO; sertleştirme ve yayın hazırlığı) başlamadı. Phase 3 yalnızca JVM ve CI'da doğrulandı: cihaz, emülatör veya canlı sunucu denemesi yok; gerçek PDF çıktısı, biyometri ve kamera denenmedi. |
 | `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
@@ -109,7 +113,7 @@ iş sayılmaz. %100, tüm fazların birleştiği anlamına gelir; gerçek dünya
 lefthook.yml         git hook yapılandırması
 kadro/               Kadro monorepo (pnpm workspaces + Turborepo)
 askida/              Askıda: Laravel sunucusu (Docker), Flutter uygulaması, marka paketi, ADR'ler, spec
-cetele/              tasarım dokümanı
+cetele/              Cetele: Spring Boot sunucusu, Android uygulaması, marka paketi, ADR'ler, spec
 inecekvar/           tasarım dokümanı
 patika/              tasarım dokümanı
 ```
@@ -125,7 +129,7 @@ patika/              tasarım dokümanı
 
 ## Geliştirme
 
-Kadro ve Askıda derlenebilir; diğer üç projede kod yok. Kadro için komutları `kadro/` içinden çalıştırın:
+Kadro, Askıda ve Cetele derlenebilir; Inecek Var ve Patika’da kod yok. Cetele için kök dizinde komut yok: Android ve sunucu derlemeleri `cetele/android` ve `cetele/server` içinden çalışır ([`cetele/README.tr.md`](cetele/README.tr.md)). Kadro için komutları `kadro/` içinden çalıştırın:
 
 ```sh
 cd kadro

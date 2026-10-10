@@ -53,8 +53,22 @@ Slogan: "Veresiyeyi unutma, Çetele'ye yaz."
 
 ## Durum
 
-Bu klasörde şu an yalnızca tasarım/spec dokümanı var; kaynak kod henüz yazılmadı.
+7 fazdan 0-3 birleşti: depo temeli, Spring Boot sunucusu (kimlik doğrulama ve güvenlik tabanı, değişiklik günlüğüyle senkronizasyon, defter, hatırlatma, medya hattı, hesap ve dükkân silme) ve Android uygulaması (çevrimdışı defter, senkronizasyon motoru, PIN ve biyometrik kilit, hatırlatma, PDF ve CSV dışa aktarma, ayarlar). İlerleme yaklaşık %57. Faturalama ve webhook, web ve yönetim alanı ile yayın sertleştirmesi (Phase 4-6) başlamadı.
+
+Şimdiye kadarki doğrulama yalnızca JVM birim testleri ve CI. Android uygulaması cihazda veya emülatörde çalıştırılmadı, sunucu gerçek bir istemciyle denenmedi; bu yüzden biyometri, kamera çekimi, gerçek PDF çıktısı, WhatsApp ve canlı SMS denenmiş değil. Phase 3'ten açık kalanlar: KVKK aydınlatma bağlantısı (ürün kararı) ve dashboard yenileme göstergesi için çalışan senkronizasyon sinyali.
 
 ## Kurulum
 
-Henüz kod yok, bu yüzden kurulacak ya da çalıştırılacak bir şey de yok. Ürün ve teknik tanım bu klasörde `02-cetele-kotlin-android.md` dosyasında duruyor. Geliştirme başlayınca bu README güncellenecek.
+Ürün ve teknik tanım `02-cetele-kotlin-android.md` dosyasında; mimari kararlar `docs/adr`, API `docs/api/openapi.json`, Android-sunucu sözleşmesi `docs/handoffs` altında.
+
+Android (JDK 21, Android SDK), `android/` içinden:
+
+```
+./gradlew ktlintCheck detekt lintDebug testDebugUnitTest assembleDebug
+```
+
+Sunucu (JDK 21; entegrasyon testleri konteyner başlatır, Docker çalışıyor olmalı), `server/` içinden:
+
+```
+./gradlew check
+```
