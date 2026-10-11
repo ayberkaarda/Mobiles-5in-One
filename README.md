@@ -38,11 +38,11 @@ One card per project. Kadro, Askıda and Cetele have applications. The Kadro car
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele card: Android app and server run locally, sample data" width="100%"><br>
+      <img src="docs/readme/cetele.png" alt="Cetele card: web home page and Android customer list, local server, sample data" width="100%"><br>
       <img src="cetele/docs/release/screenshots/01-customers.png" alt="Cetele Android app: customer list with balances, sample customers, emulator" width="32%">
       <img src="cetele/docs/release/screenshots/02-customer-ledger.png" alt="Cetele Android app: one customer's ledger with debts, a payment and a reversed entry struck through, sample data, emulator" width="32%">
       <img src="cetele/docs/release/screenshots/03-dashboard.png" alt="Cetele Android app: dashboard with the total owed and the top debtors, sample data, emulator" width="32%"><br>
-      <sub><b>Cetele</b>: Android app screens (emulator, local server, sample data)</sub>
+      <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>

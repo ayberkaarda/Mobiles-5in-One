@@ -38,11 +38,11 @@ Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var.
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele kartı: Android uygulaması ve sunucu yerelde çalışıyor, örnek veri" width="100%"><br>
+      <img src="docs/readme/cetele.png" alt="Cetele kartı: web ana sayfası ve Android müşteri listesi, yerel sunucu, örnek veri" width="100%"><br>
       <img src="cetele/docs/release/screenshots/01-customers.png" alt="Cetele Android uygulaması: bakiyeleriyle müşteri listesi, örnek müşteriler, emülatör" width="32%">
       <img src="cetele/docs/release/screenshots/02-customer-ledger.png" alt="Cetele Android uygulaması: bir müşterinin hesabı, borçlar, tahsilat ve üstü çizili düzeltilmiş kayıt, örnek veri, emülatör" width="32%">
       <img src="cetele/docs/release/screenshots/03-dashboard.png" alt="Cetele Android uygulaması: toplam alacak ve en çok borçlu müşterilerle panel, örnek veri, emülatör" width="32%"><br>
-      <sub><b>Cetele</b>: Android uygulama ekranları (emülatör, yerel sunucu, örnek veri)</sub>
+      <sub><b>Cetele</b>: web ana sayfası ve Android müşteri listesi (yerel sunucu, örnek veri)</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
