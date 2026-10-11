@@ -33,11 +33,14 @@ app.use((req, res, next) => {
     .catch(next);
 });
 
-// Starts the server when run directly; the port comes from PORT (default 4000).
+// Starts the server when run directly. It binds to loopback unless HOST names another
+// interface (a deployment sets it); the port comes from PORT (default 4000). The Host header
+// is still checked against security.allowedHosts whatever the bind address.
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
-  const port = process.env['PORT'] || 4000;
-  app.listen(port, () => {
-    console.log(`Node Express server listening on http://localhost:${port}`);
+  const host = process.env['HOST'] || '127.0.0.1';
+  const port = Number(process.env['PORT'] || 4000);
+  app.listen(port, host, () => {
+    console.log(`Node Express server listening on http://${host}:${port}`);
   });
 }
 

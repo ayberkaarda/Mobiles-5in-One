@@ -109,8 +109,11 @@ Use the latest stable releases, pinned exactly in `package.json` (no ranges) and
 Everything binds to 127.0.0.1. Compose defaults (overridable, see `docker-compose.yml`):
 PostgreSQL 57432, Redis 57379, Caddy web site 57080 and app site 57081, MinIO 57900 (console
 57901), Mailpit SMTP 57025 and UI 57825. Host processes: API 57800
-(`uv run uvicorn app.main:app --port 57800`), web dev server 4200, mobile dev server 8100. Caddy
-proxies `/api/*` on both sites to the API so the browser origins stay same-origin.
+(`uv run uvicorn app.main:app --host 127.0.0.1 --port 57800`), web dev server 4200, mobile dev
+server 8100, and the production SSR server (`node dist/apps/web/server/server.mjs`), which binds
+to 127.0.0.1:4000 unless `HOST` and `PORT` say otherwise; a deployment sets `HOST`, and the
+`security.allowedHosts` check applies on every bind address. Caddy proxies `/api/*` on both
+sites to the API so the browser origins stay same-origin.
 
 ### Phase 0 evidence
 
