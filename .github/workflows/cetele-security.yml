@@ -144,6 +144,16 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           build-root-directory: cetele/${{ matrix.root }}
 
+      # Fail early and readably: an empty key makes the NVD client throw "Invalid API Key, length of
+      # 0", and the job must not report a scan that did not run. The gate stays red until the
+      # repository secret exists (free key: https://nvd.nist.gov/developers/request-an-api-key).
+      - name: Require the NVD API key
+        run: |
+          if [ -z "${NVD_API_KEY}" ]; then
+            echo "::error title=NVD_API_KEY is not set::The repository secret NVD_API_KEY is missing, so the dependency scan did not run. Add it under Settings, Secrets and variables, Actions (or: gh secret set NVD_API_KEY)."
+            exit 1
+          fi
+
       # The vulnerability database is large; the weekly key keeps the incremental update small.
       - name: Cache the vulnerability database
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
