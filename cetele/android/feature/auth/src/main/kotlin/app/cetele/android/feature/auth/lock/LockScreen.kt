@@ -1,11 +1,15 @@
 package app.cetele.android.feature.auth.lock
 
 import androidx.biometric.BiometricManager
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import app.cetele.android.core.designsystem.CeteleTextStyles
+import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.designsystem.component.ConfirmSheet
@@ -23,7 +27,7 @@ fun LockScreen(
     onDismissSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AuthPage(stringResource(R.string.auth_lock_title), modifier) {
+    AuthPage(stringResource(R.string.auth_lock_title), modifier, centered = true) {
         PinPad(
             onComplete = onPin,
             subtitle = stringResource(R.string.auth_lock_enter),
@@ -31,12 +35,27 @@ fun LockScreen(
             enabled = !state.loading && state.delaySeconds == 0 && !state.unlocked,
             resetKey = state.attempt,
         )
-        if (state.delaySeconds > 0) Text(stringResource(R.string.auth_lock_delay, state.delaySeconds))
-        if (state.biometricError) Text(stringResource(R.string.auth_lock_biometric_unavailable))
+        if (state.delaySeconds > 0) {
+            Text(
+                stringResource(R.string.auth_lock_delay, state.delaySeconds),
+                modifier = Modifier.fillMaxWidth(),
+                style = CeteleTextStyles.bodyStrong,
+                color = CeteleTheme.colors.accentText,
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (state.biometricError) {
+            Text(
+                stringResource(R.string.auth_lock_biometric_unavailable),
+                color = CeteleTheme.colors.textMuted,
+            )
+        }
         if (state.biometricEnabled) {
             CeteleButton(
                 stringResource(R.string.auth_lock_biometric),
                 onBiometric,
+                modifier = Modifier.fillMaxWidth(),
+                style = ButtonStyle.Outlined,
                 enabled =
                     !state.loading && !state.unlocked,
             )
@@ -44,6 +63,7 @@ fun LockScreen(
         CeteleButton(
             stringResource(R.string.auth_lock_forgot),
             onForgotPin,
+            modifier = Modifier.fillMaxWidth(),
             style = ButtonStyle.Text,
             enabled = !state.loading,
         )

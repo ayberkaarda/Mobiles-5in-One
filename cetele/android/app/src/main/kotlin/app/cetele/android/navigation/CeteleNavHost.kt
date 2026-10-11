@@ -1,11 +1,14 @@
 package app.cetele.android.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.cetele.android.core.designsystem.CeteleSpacing
+import app.cetele.android.core.designsystem.CeteleTextStyles
+import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.feature.auth.navigation.AuthRoutes
 import app.cetele.android.feature.auth.navigation.authGraph
 import app.cetele.android.feature.billing.navigation.billingGraph
@@ -91,15 +97,27 @@ private fun TopLevelBar(
     selected: TopLevelDestination,
     onSelect: (Any) -> Unit,
 ) {
-    NavigationBar {
-        TopLevelDestination.entries.forEach { tab ->
-            val label = stringResource(tab.label)
-            NavigationBarItem(
-                selected = tab == selected,
-                onClick = { onSelect(tab.route) },
-                icon = { Icon(tab.icon, contentDescription = null) },
-                label = { Text(label) },
-            )
+    val colors = CeteleTheme.colors
+    Column {
+        HorizontalDivider(thickness = CeteleSpacing.hairline, color = colors.border)
+        NavigationBar(containerColor = colors.surface, tonalElevation = CeteleSpacing.none) {
+            TopLevelDestination.entries.forEach { tab ->
+                val label = stringResource(tab.label)
+                NavigationBarItem(
+                    selected = tab == selected,
+                    onClick = { onSelect(tab.route) },
+                    icon = { Icon(tab.icon, contentDescription = null) },
+                    label = { Text(label, style = CeteleTextStyles.caption, maxLines = 1) },
+                    colors =
+                        NavigationBarItemDefaults.colors(
+                            selectedIconColor = colors.onSecondary,
+                            selectedTextColor = colors.primaryText,
+                            indicatorColor = colors.secondary,
+                            unselectedIconColor = colors.textMuted,
+                            unselectedTextColor = colors.textMuted,
+                        ),
+                )
+            }
         }
     }
 }

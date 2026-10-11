@@ -42,10 +42,10 @@ data class CeteleColors(
 
 val LightCeteleColors: CeteleColors =
     CeteleColors(
-        background = Color(0xFFF3EEE3),
+        background = Color(0xFFEDEAE4),
         surface = Color(0xFFFAF7F0),
         surfaceRaised = Color(0xFFFFFFFF),
-        surfaceSunken = Color(0xFFEAE3D4),
+        surfaceSunken = Color(0xFFE8E4DC),
         text = Color(0xFF1A1A1A),
         textMuted = Color(0xFF575D69),
         border = Color(0xFFE0D8C7),
@@ -105,3 +105,37 @@ val DarkCeteleColors: CeteleColors =
         focusRing = Color(0xFFE8712B),
         overlay = Color(0xB3000000),
     )
+
+/**
+ * The ledger cover: the Defter Lacivert block that carries the key figure of a screen (shop total, customer
+ * balance) in both schemes, like the navy hardcover of a veresiye defteri. It is a dark surface, so its text uses
+ * the dark roles: Kâğıt 12.79, Gece Muted 6.16, Ödendi Açık 6.10 and Borç Açık 4.55 to 1 on Defter Lacivert.
+ */
+@Immutable
+data class CoverColors(
+    val container: Color,
+    val content: Color,
+    val contentMuted: Color,
+    val debt: Color,
+    val payment: Color,
+    val rule: Color,
+    val edge: Color,
+    val notch: Color,
+)
+
+/** Cover roles derived from the scheme roles; nothing here is a new colour value. */
+fun coverColors(dark: Boolean): CoverColors {
+    val night = DarkCeteleColors
+    return CoverColors(
+        container = LightCeteleColors.primary,
+        content = night.text,
+        contentMuted = night.textMuted,
+        debt = night.debtText,
+        payment = night.paymentText,
+        rule = night.text.copy(alpha = COVER_RULE_ALPHA),
+        edge = if (dark) night.border else Color.Transparent,
+        notch = night.accent,
+    )
+}
+
+private const val COVER_RULE_ALPHA = 0.16f
