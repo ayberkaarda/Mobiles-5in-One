@@ -116,4 +116,6 @@ def test_rules_match_spec() -> None:
         "edits.default": (100, 86400),
         "traces": (20, 86400),
         "plan": (30, 60),
+        "media.presign": (20, 86400),
+        "pack.download": (10, 86400),
     }

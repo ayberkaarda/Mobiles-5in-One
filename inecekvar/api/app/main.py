@@ -25,6 +25,7 @@ from app.core.logging import configure_logging
 from app.core.ratelimit import RedisSlidingWindowLimiter
 from app.core.settings import Settings, load_settings
 from app.core.setup import install_core
+from app.core.storage import S3ObjectStore
 from app.models.session import create_engine, create_session_factory
 
 API_PREFIX = "/v1"
@@ -91,6 +92,9 @@ def build_services(settings: Settings) -> Services:
         mail_sender=SmtpMailSender(settings),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
+        object_store=(
+            S3ObjectStore.from_settings(settings) if settings.s3_endpoint_url is not None else None
+        ),
     )
 
 
