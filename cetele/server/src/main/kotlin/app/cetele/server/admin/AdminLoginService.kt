@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.util.UUID
 
@@ -25,6 +27,7 @@ sealed interface LoginStepResult {
         val email: String,
         val next: LoginStage,
         val principal: AdminPrincipal? = null,
+        val startedAt: Instant? = null,
     ) : LoginStepResult
 
     /** [restart] means the pre-authentication must be dropped (locked, disabled or gone). */
@@ -79,7 +82,7 @@ class AdminLoginService(
             )
             return LoginStepResult.Rejected(restart = true)
         }
-        if (!found.enabled || found.isLocked(clock.instant())) {
+        if (!found.enabled || found.isLocked(clock.instant().truncatedTo(ChronoUnit.MICROS))) {
             audit.record(
                 AuditActorType.ADMIN,
                 found.id,
@@ -94,15 +97,16 @@ class AdminLoginService(
             return LoginStepResult.Rejected(restart = true)
         }
         val next = if (found.enrolled) LoginStage.TOTP_VERIFY else LoginStage.TOTP_ENROLL
-        return LoginStepResult.Accepted(found.id, found.email, next)
+        return LoginStepResult.Accepted(found.id, found.email, next, startedAt = clock.instant().truncatedTo(ChronoUnit.MICROS))
     }
 
     @Transactional
     fun totpStep(
         adminId: UUID,
         code: String,
+        startedAt: Instant,
     ): LoginStepResult {
-        val account = usable(adminId) ?: return LoginStepResult.Rejected(restart = true)
+        val account = usable(adminId, startedAt) ?: return LoginStepResult.Rejected(restart = true)
         val sealed = account.totpSecretEnc
         if (!account.enrolled || sealed == null) return LoginStepResult.Rejected(restart = true)
         val secret = cipher.decrypt(sealed)
@@ -121,8 +125,9 @@ class AdminLoginService(
         adminId: UUID,
         secret: String,
         code: String,
+        startedAt: Instant,
     ): LoginStepResult {
-        val account = usable(adminId) ?: return LoginStepResult.Rejected(restart = true)
+        val account = usable(adminId, startedAt) ?: return LoginStepResult.Rejected(restart = true)
         if (account.enrolled) return LoginStepResult.Rejected(restart = true)
         val step = totp.matchStep(secret, code.trim())
         if (step == null) {
@@ -130,7 +135,7 @@ class AdminLoginService(
             return LoginStepResult.Rejected(restart = locked)
         }
         account.totpSecretEnc = cipher.encrypt(secret)
-        account.totpEnrolledAt = clock.instant()
+        account.totpEnrolledAt = clock.instant().truncatedTo(ChronoUnit.MICROS)
         account.totpLastStep = step
         audit.record(AuditActorType.ADMIN, account.id, AuditAction.ADMIN_TOTP_ENROLLED, AuditTargetType.ADMIN_USER, account.id)
         return advance(account)
@@ -141,8 +146,9 @@ class AdminLoginService(
     fun forcedPasswordChange(
         adminId: UUID,
         newPassword: String,
+        startedAt: Instant,
     ): PasswordChangeResult {
-        val account = usable(adminId) ?: return PasswordChangeResult.Restart
+        val account = usable(adminId, startedAt) ?: return PasswordChangeResult.Restart
         if (!account.mustChangePassword || !account.enrolled) return PasswordChangeResult.Restart
         invalidNewPassword(account, newPassword)?.let { return it }
         setPassword(account, newPassword, forced = true)
@@ -156,11 +162,19 @@ class AdminLoginService(
         currentPassword: String,
         newPassword: String,
     ): PasswordChangeResult {
-        val account = accounts.lockById(adminId)?.takeIf { it.enabled } ?: return PasswordChangeResult.Restart
-        if (!passwords.matches(currentPassword, account.passwordHash)) return PasswordChangeResult.Invalid(WRONG_CURRENT)
+        val account = usable(adminId) ?: return PasswordChangeResult.Restart
+        if (!account.enrolled) return PasswordChangeResult.Restart
+        if (!passwords.matches(currentPassword, account.passwordHash)) {
+            return if (registerFailure(account, LoginFailureStage.PASSWORD)) {
+                PasswordChangeResult.Restart
+            } else {
+                PasswordChangeResult.Invalid(WRONG_CURRENT)
+            }
+        }
         invalidNewPassword(account, newPassword)?.let { return it }
         setPassword(account, newPassword, forced = false)
-        return PasswordChangeResult.Changed(null)
+        account.failedAttempts = 0
+        return PasswordChangeResult.Changed(principal(account))
     }
 
     @Transactional
@@ -169,9 +183,13 @@ class AdminLoginService(
     }
 
     /** The enabled, unlocked account of a pending login, or `null` (audited as a locked failure). */
-    private fun usable(adminId: UUID): AdminAccount? {
+    private fun usable(
+        adminId: UUID,
+        startedAt: Instant? = null,
+    ): AdminAccount? {
         val account = accounts.lockById(adminId) ?: return null
-        if (!account.enabled || account.isLocked(clock.instant())) {
+        if (startedAt != null && account.passwordChangedAt?.isAfter(startedAt) == true) return null
+        if (!account.enabled || account.isLocked(clock.instant().truncatedTo(ChronoUnit.MICROS))) {
             audit.record(
                 AuditActorType.ADMIN,
                 account.id,
@@ -194,10 +212,13 @@ class AdminLoginService(
     private fun complete(account: AdminAccount): AdminPrincipal {
         account.failedAttempts = 0
         account.lockedUntil = null
-        account.lastLoginAt = clock.instant()
+        account.lastLoginAt = clock.instant().truncatedTo(ChronoUnit.MICROS)
         audit.record(AuditActorType.ADMIN, account.id, AuditAction.ADMIN_LOGIN_SUCCEEDED)
-        return AdminPrincipal(account.id, account.email, account.role)
+        return principal(account)
     }
+
+    private fun principal(account: AdminAccount): AdminPrincipal =
+        AdminPrincipal(account.id, account.email, account.role, clock.instant().truncatedTo(ChronoUnit.MICROS))
 
     /** Counts a failure; returns `true` when it locked the account. */
     private fun registerFailure(
@@ -207,7 +228,7 @@ class AdminLoginService(
         account.failedAttempts += 1
         audit.record(AuditActorType.ADMIN, account.id, AuditAction.ADMIN_LOGIN_FAILED, metadata = mapOf("stage" to stage))
         if (account.failedAttempts < MAX_FAILURES) return false
-        val until = clock.instant().plus(LOCKOUT)
+        val until = clock.instant().truncatedTo(ChronoUnit.MICROS).plus(LOCKOUT)
         account.failedAttempts = 0
         account.lockedUntil = until
         audit.record(
@@ -238,7 +259,7 @@ class AdminLoginService(
     ) {
         account.passwordHash = passwords.hash(newPassword)
         account.mustChangePassword = false
-        account.passwordChangedAt = clock.instant()
+        account.passwordChangedAt = clock.instant().truncatedTo(ChronoUnit.MICROS)
         audit.record(
             AuditActorType.ADMIN,
             account.id,

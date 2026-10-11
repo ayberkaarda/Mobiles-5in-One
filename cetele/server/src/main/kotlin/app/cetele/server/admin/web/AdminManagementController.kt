@@ -95,11 +95,10 @@ class AdminManagementController(
     @PreAuthorize("hasRole('ADMIN')")
     fun resetTotp(
         @PathVariable adminId: UUID,
-        redirect: RedirectAttributes,
+        model: Model,
     ): String {
-        management.resetTotp(currentAdmin(), adminId)
-        redirect.addFlashAttribute("notice", "Doğrulama uygulaması sıfırlandı; yönetici bir sonraki girişte yeniden kurar.")
-        return "redirect:/admin/admins"
+        model.addAttribute("created", management.resetTotp(currentAdmin(), adminId))
+        return "admin/admin-reset"
     }
 
     private fun role(value: String): AdminRole =

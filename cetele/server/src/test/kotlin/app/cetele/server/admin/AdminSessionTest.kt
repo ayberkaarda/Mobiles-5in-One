@@ -153,4 +153,99 @@ class AdminSessionTest : AdminIntegrationTest() {
         assertRedirect(console, "/admin/login")
         assertFalse(console.contentAsString.contains("Özet"))
     }
+
+    @Test
+    fun `password change rotates its session and ends other sessions and pending logins`() {
+        val (admin, first) = admins.signedIn()
+        val ip = admins.randomIp()
+        val password =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                ip,
+                "email" to admin.email,
+                "password" to admin.password,
+            )
+        val secondLogin =
+            admins.post(
+                "/admin/login/totp",
+                sessionOf(password),
+                ip,
+                "code" to admins.code(admin.secret!!, offset = 1),
+            )
+        assertRedirect(secondLogin.response, "/admin")
+        val second = sessionOf(secondLogin)
+        val pendingLogin =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                admins.randomIp(),
+                "email" to admin.email,
+                "password" to admin.password,
+            )
+        val pending = sessionOf(pendingLogin)
+        val initialId = first.id
+        val replacement = "[ÖRNEK] oturum yenileyen parola"
+        val changed =
+            admins.post(
+                "/admin/account/password",
+                first,
+                admins.randomIp(),
+                "currentPassword" to admin.password,
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertRedirect(changed.response, "/admin")
+        assertNotEquals(initialId, first.id)
+        assertEquals(200, page("/admin", first).response.status)
+        assertRedirect(page("/admin", second).response, "/admin/login")
+        assertTrue(second.isInvalid)
+        assertRedirect(page("/admin/login/totp", pending).response, "/admin/login")
+        assertTrue(pending.isInvalid)
+    }
+
+    @Test
+    fun `totp reset ends authenticated and pending sessions while the operator stays signed in`() {
+        val (_, operator) = admins.signedIn()
+        val (target, session) = admins.signedIn()
+        val first =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                admins.randomIp(),
+                "email" to target.email,
+                "password" to target.password,
+            )
+        val pending = sessionOf(first)
+        assertEquals(200, admins.post("/admin/admins/${target.id}/totp-reset", operator, admins.randomIp()).response.status)
+        assertRedirect(page("/admin", session).response, "/admin/login")
+        assertTrue(session.isInvalid)
+        assertRedirect(page("/admin/login/totp", pending).response, "/admin/login")
+        assertTrue(pending.isInvalid)
+        assertEquals(200, page("/admin", operator).response.status)
+    }
+
+    @Test
+    fun `a newer enrollment ends an old session and equal stored timestamps remain current`() {
+        val (admin, session) = admins.signedIn()
+        val context =
+            session.getAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+            ) as org.springframework.security.core.context.SecurityContext
+        val principal = checkNotNull(AdminPrincipal.of(context.authentication))
+        jdbc.update(
+            "UPDATE admin_users SET password_changed_at = ?, totp_enrolled_at = ? WHERE id = ?",
+            java.sql.Timestamp.from(principal.authenticatedAt),
+            java.sql.Timestamp.from(principal.authenticatedAt),
+            admin.id,
+        )
+        assertEquals(200, page("/admin", session).response.status)
+        jdbc.update(
+            "UPDATE admin_users SET totp_enrolled_at = ? WHERE id = ?",
+            java.sql.Timestamp.from(principal.authenticatedAt.plusSeconds(1)),
+            admin.id,
+        )
+        assertRedirect(page("/admin", session).response, "/admin/login")
+        assertTrue(session.isInvalid)
+    }
 }

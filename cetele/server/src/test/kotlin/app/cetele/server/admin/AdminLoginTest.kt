@@ -6,6 +6,7 @@ import app.cetele.server.admin.web.AdminLoginController
 import app.cetele.server.security.CspNonceFilter
 import app.cetele.server.support.IntegrationTest
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository
 import java.time.Duration
@@ -18,6 +19,8 @@ import kotlin.test.assertTrue
 
 @IntegrationTest
 class AdminLoginTest : AdminIntegrationTest() {
+    @Autowired lateinit var login: AdminLoginService
+
     @Test
     fun `password then totp grants the role`() {
         listOf(AdminRole.ADMIN, AdminRole.SUPPORT).forEach { role ->
@@ -253,5 +256,200 @@ class AdminLoginTest : AdminIntegrationTest() {
     ): String {
         val nonce = result.request.getAttribute(CspNonceFilter.ATTRIBUTE) as String
         return html.replace(nonce, "NONCE").replace(Regex("name=\"_csrf\" value=\"[^\"]+\""), "name=\"_csrf\" value=\"TOKEN\"")
+    }
+
+    @Test
+    fun `reset replaces the old password and requires enrollment then password change`() {
+        val (_, operator) = admins.signedIn()
+        val (target, oldSession) = admins.signedIn()
+        val reset = admins.post("/admin/admins/${target.id}/totp-reset", operator, admins.randomIp())
+        assertEquals(200, reset.response.status)
+        assertEquals("admin/admin-reset", reset.modelAndView!!.viewName)
+        assertTrue(reset.response.getHeader("Cache-Control")!!.contains("no-store"))
+        val created = reset.modelAndView!!.model["created"] as CreatedAdmin
+        assertTrue(reset.response.contentAsString.contains(created.oneTimePassword))
+        val account = accounts.findById(target.id)!!
+        assertNull(account.totpSecretEnc)
+        assertNull(account.totpEnrolledAt)
+        assertNull(account.totpLastStep)
+        assertTrue(account.mustChangePassword)
+        assertFalse(passwords.matches(target.password, account.passwordHash))
+        assertTrue(passwords.matches(created.oneTimePassword, account.passwordHash))
+        val ip = admins.randomIp()
+        val refused =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                ip,
+                "email" to target.email,
+                "password" to target.password,
+            )
+        assertEquals(401, refused.response.status)
+        val first =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                ip,
+                "email" to target.email,
+                "password" to created.oneTimePassword,
+            )
+        assertRedirect(first.response, "/admin/totp/enroll")
+        val pending = sessionOf(first)
+        assertEquals(200, page("/admin/totp/enroll", pending).response.status)
+        val state = pending.getAttribute(AdminSessionPolicy.PENDING) as app.cetele.server.admin.web.PendingLogin
+        val enrolled = admins.post("/admin/totp/enroll", pending, ip, "code" to admins.code(checkNotNull(state.enrollSecret)))
+        assertRedirect(enrolled.response, "/admin/account/password")
+        assertRedirect(page("/admin", sessionOf(enrolled)).response, "/admin/login")
+        val replacement = "[ÖRNEK] yeni güvenli parola"
+        val finished =
+            admins.post(
+                "/admin/account/password",
+                sessionOf(enrolled),
+                ip,
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertRedirect(finished.response, "/admin")
+        assertEquals(200, page("/admin", sessionOf(finished)).response.status)
+        assertRedirect(page("/admin", oldSession).response, "/admin/login")
+        assertTrue(oldSession.isInvalid)
+        assertFalse(accounts.findById(target.id)!!.mustChangePassword)
+        assertFalse(passwords.matches(created.oneTimePassword, accounts.findById(target.id)!!.passwordHash))
+        assertFalse(page("/admin/admins", operator).response.contentAsString.contains(created.oneTimePassword))
+    }
+
+    @Test
+    fun `five wrong current passwords lock the account and end the session`() {
+        val (admin, session) = admins.signedIn()
+        val replacement = "[ÖRNEK] değiştirilmiş parola"
+        repeat(AdminLoginService.MAX_FAILURES - 1) { index ->
+            val refused =
+                admins.post(
+                    "/admin/account/password",
+                    session,
+                    admins.randomIp(),
+                    "currentPassword" to "yanlis-parola",
+                    "newPassword" to replacement,
+                    "confirmPassword" to replacement,
+                )
+            assertEquals(400, refused.response.status)
+            assertTrue(refused.response.contentAsString.contains(AdminLoginService.WRONG_CURRENT))
+            assertEquals(index + 1, accounts.findById(admin.id)!!.failedAttempts)
+            assertEquals(200, page("/admin", session).response.status)
+        }
+        val fifth =
+            admins.post(
+                "/admin/account/password",
+                session,
+                admins.randomIp(),
+                "currentPassword" to "yanlis-parola",
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertRedirect(fifth.response, "/admin/login")
+        assertTrue(session.isInvalid)
+        val until = assertNotNull(accounts.findById(admin.id)!!.lockedUntil)
+        assertTrue(Duration.between(Instant.now(), until) > Duration.ofMinutes(14))
+        assertEquals(PasswordChangeResult.Restart, login.changePassword(admin.id, admin.password, replacement))
+        val locked =
+            admins.post(
+                "/admin/login",
+                MockHttpSession(),
+                admins.randomIp(),
+                "email" to admin.email,
+                "password" to admin.password,
+            )
+        assertEquals(401, locked.response.status)
+        assertEquals(5, admins.auditRows(admin.id).count { it["metadata"] == """{"stage": "PASSWORD"}""" })
+        assertEquals(1, admins.actions(admin.id).count { it == "ADMIN_LOCKED_OUT" })
+        assertTrue(passwords.matches(admin.password, accounts.findById(admin.id)!!.passwordHash))
+    }
+
+    @Test
+    fun `correct current password changes the password and clears failures`() {
+        val (admin, session) = admins.signedIn()
+        val replacement = "[ÖRNEK] güvenli yeni parola"
+        val wrong =
+            admins.post(
+                "/admin/account/password",
+                session,
+                admins.randomIp(),
+                "currentPassword" to "yanlis",
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertEquals(400, wrong.response.status)
+        val changed =
+            admins.post(
+                "/admin/account/password",
+                session,
+                admins.randomIp(),
+                "currentPassword" to admin.password,
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertRedirect(changed.response, "/admin")
+        assertEquals(0, accounts.findById(admin.id)!!.failedAttempts)
+        assertTrue(passwords.matches(replacement, accounts.findById(admin.id)!!.passwordHash))
+    }
+
+    @Test
+    fun `password change failures share the sign in failure counter`() {
+        val (admin, session) = admins.signedIn()
+        repeat(3) {
+            val rejected =
+                admins.post(
+                    "/admin/login",
+                    MockHttpSession(),
+                    admins.randomIp(),
+                    "email" to admin.email,
+                    "password" to "yanlis-parola",
+                )
+            assertEquals(401, rejected.response.status)
+        }
+        assertEquals(3, accounts.findById(admin.id)!!.failedAttempts)
+        val replacement = "[ÖRNEK] ortak sayaç parolası"
+        repeat(2) { index ->
+            val rejected =
+                admins.post(
+                    "/admin/account/password",
+                    session,
+                    admins.randomIp(),
+                    "currentPassword" to "yanlis-parola",
+                    "newPassword" to replacement,
+                    "confirmPassword" to replacement,
+                )
+            if (index == 0) {
+                assertEquals(400, rejected.response.status)
+                assertEquals(4, accounts.findById(admin.id)!!.failedAttempts)
+            } else {
+                assertRedirect(rejected.response, "/admin/login")
+            }
+        }
+        assertTrue(session.isInvalid)
+        assertNotNull(accounts.findById(admin.id)!!.lockedUntil)
+        assertEquals(1, admins.actions(admin.id).count { it == "ADMIN_LOCKED_OUT" })
+    }
+
+    @Test
+    fun `stale pending credentials cannot pass the locked row check`() {
+        val (admin, session) = admins.signedIn()
+        val pending = login.passwordStep(admin.email, admin.password) as LoginStepResult.Accepted
+        val replacement = "[ÖRNEK] yarım girişi kapatan parola"
+        val changed =
+            admins.post(
+                "/admin/account/password",
+                session,
+                admins.randomIp(),
+                "currentPassword" to admin.password,
+                "newPassword" to replacement,
+                "confirmPassword" to replacement,
+            )
+        assertRedirect(changed.response, "/admin")
+        assertEquals(
+            LoginStepResult.Rejected(restart = true),
+            login.totpStep(admin.id, admins.code(admin.secret!!, offset = 1), checkNotNull(pending.startedAt)),
+        )
+        assertEquals(200, page("/admin", session).response.status)
     }
 }

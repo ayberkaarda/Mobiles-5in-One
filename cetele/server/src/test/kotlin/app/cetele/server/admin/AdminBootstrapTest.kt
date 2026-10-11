@@ -44,7 +44,8 @@ class AdminBootstrapTest : AdminIntegrationTest() {
             assertTrue(passwords.matches(password, account.passwordHash))
             val row =
                 jdbc.queryForMap(
-                    "SELECT actor_type, actor_id, target_type, target_id, ip_hash, metadata::text AS metadata FROM audit_logs WHERE action = 'ADMIN_BOOTSTRAPPED' AND target_id = ?",
+                    "SELECT actor_type, actor_id, target_type, target_id, ip_hash, metadata::text AS metadata " +
+                        "FROM audit_logs WHERE action = 'ADMIN_BOOTSTRAPPED' AND target_id = ?",
                     account.id,
                 )
             assertEquals("SYSTEM", row["actor_type"])
@@ -103,5 +104,36 @@ class AdminBootstrapTest : AdminIntegrationTest() {
             assertEquals(AdminRole.ADMIN, accounts.findByEmail(email)!!.role)
         }
         assertNull(accounts.findByEmail(email), "rolled back")
+    }
+
+    @Test
+    fun `bootstrap never promotes or changes a support account`() {
+        val support = admins.admin(AdminRole.SUPPORT)
+        withoutAdmins {
+            val before = accounts.findById(support.id)!!
+            val hash = before.passwordHash
+            val secret = checkNotNull(before.totpSecretEnc).copyOf()
+            val enrolledAt = before.totpEnrolledAt
+            val changedAt = before.passwordChangedAt
+            val forced = before.mustChangePassword
+            assertFalse(bootstrap.bootstrap(support.email, password))
+            val after = accounts.findById(support.id)!!
+            assertEquals(AdminRole.SUPPORT, after.role)
+            assertEquals(hash, after.passwordHash)
+            assertTrue(secret.contentEquals(after.totpSecretEnc))
+            assertEquals(enrolledAt, after.totpEnrolledAt)
+            assertEquals(changedAt, after.passwordChangedAt)
+            assertEquals(forced, after.mustChangePassword)
+            assertTrue(after.enabled)
+            assertEquals(0L, accounts.countEnabledAdmins())
+            assertEquals(
+                0,
+                jdbc.queryForObject(
+                    "SELECT count(*) FROM audit_logs WHERE action = 'ADMIN_BOOTSTRAPPED' AND target_id = ?",
+                    Int::class.java,
+                    support.id,
+                ),
+            )
+        }
     }
 }

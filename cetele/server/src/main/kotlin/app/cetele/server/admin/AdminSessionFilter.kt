@@ -44,7 +44,8 @@ object AdminSessionPolicy {
 /**
  * Ends console sessions that are idle for 30 minutes or older than 12 hours (the container's
  * `maxInactiveInterval` is the first line; this check uses the application clock), and signed-in
- * sessions whose account was disabled or changed role since the login. An ended session is
+ * sessions whose account was disabled, locked, changed role, changed password or enrolled a new
+ * authenticator since the login. An ended session is
  * invalidated before authorization runs, so the request continues as anonymous.
  */
 class AdminSessionFilter(
