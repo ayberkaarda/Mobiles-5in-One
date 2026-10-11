@@ -1,30 +1,29 @@
-# Phase 1 package 1A: 0 done, 3 partial, 20 not-started
+# Phase 1 packages 1A to 1D: 3 done, 10 partial, 10 not-started
 
 | # | Requirement | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Remove secrets from source | not-started | planned: phase 0 |
+| 1 | Remove secrets from source | partial | API secrets come only from `INECEKVAR_*` environment values through `pydantic-settings` (`app/core/settings.py`); `tests/core/test_settings.py::test_environment_must_be_explicit` and `test_production_requires_secrets` passed; gitleaks 8.30.1 on `origin/main..HEAD` scanned 34 commits, no leaks (ADR-0012). not exercised: gitleaks pre-commit hook and CI history scan (branch not pushed) |
 | 2 | Purge secrets from history | not-started | planned: phase 6 |
-| 3 | Define authorization rules | not-started | planned: phase 1 |
-| 4 | Enforce authorization on server | partial | database layer only: `api/tests/migrations/test_constraints.py::test_no_self_review` passed (a reviewer equal to the author is rejected, SQLSTATE 23514; ADR-0006). not exercised: API policy and IDOR suite (planned: phase 1) |
-| 5 | Rate limit entry points | not-started | planned: phase 1 |
-| 6 | Validate input | partial | database layer only: `test_fare_boundary`, `test_trace_bounds[1]`, `test_trace_bounds[5001]`, `test_route_length`, `test_invalid_mode`, `test_email_lowercase` in `api/tests/migrations/test_constraints.py` passed; the fare and immutability checks were mutation-tested (ADR-0006). not exercised: Pydantic request validation and body limits (planned: phase 1) |
+| 3 | Define authorization rules | done | `api/app/security/policy.py` total table; `tests/security/test_policy_matrix.py::test_every_cell_matches_expected` (55 cells), `test_decide_allow_if_cells`, `test_deny_cells_deny_even_with_full_context`, `test_matrix_document_matches_table` passed; flipping one cell fails 4 named tests (ADR-0011) |
+| 4 | Enforce authorization on server | partial | `tests/security/test_idor.py::test_idor_case` (13 cases: cross-user trace and edit reads, contributor approval, self-approval) passed against test-only probe routes that call the real policy with real bearer sign-in; database layer `test_no_self_review` (ADR-0006). not exercised: the real trace, edit and moderation endpoints (phase 2) |
+| 5 | Rate limit entry points | partial | auth rules 5 per 15 minutes per IP and per email: `tests/auth/test_links_login.py::test_login_sixth_attempt_is_rate_limited`, `tests/auth/test_rate_limit_real_redis.py::test_sixth_login_is_429_on_real_redis` (429 with `Retry-After` on Testcontainers Redis), `tests/core/test_client_ip.py::test_spoofed_x_forwarded_for_ignored` passed; trusting `X-Forwarded-For` fails the last one (ADR-0009). not exercised: edits, traces and plan limits (declared, wired in phase 2) |
+| 6 | Validate input | partial | request schemas with `extra='forbid'` and bounds for the auth routes (`tests/auth/test_accounts.py::test_patch_me_rejects_unknown_fields`, `test_validation_errors_never_echo_credentials`); body limits 1 MiB and 2 MiB for traces, JSON-only mutations (`tests/core/test_body_limit.py`, 5 tests); database constraints (ADR-0006). not exercised: domain validation of coordinates, fares, traces and geometry (phase 2) |
 | 7 | Constrain uploads | not-started | planned: phase 2 |
-| 8 | Lock down CORS | not-started | planned: phase 1 |
-| 9 | Set security headers | not-started | planned: phase 1 |
-| 10 | Require HTTPS | not-started | planned: phase 1 |
-| 11 | Hash passwords | not-started | planned: phase 1 |
-| 12 | Secure cookies | not-started | planned: phase 1 |
-| 13 | Limit error details | not-started | planned: phase 1 |
-| 14 | Sanitize logs | not-started | planned: phase 1 |
-| 15 | Parameterize queries | not-started | planned: phase 1 |
+| 8 | Lock down CORS | done | `tests/core/test_cors.py::test_evil_origin_gets_no_cors_headers` (4 origins, simple and preflight), `test_capacitor_origins_are_bearer_only`, `test_web_origins_get_credentials`, `test_local_origins_only_in_local_env` and `tests/auth/test_sessions.py::test_cookie_mode_refused_for_capacitor_origin` passed (ADR-0012) |
+| 9 | Set security headers | partial | API: `tests/core/test_headers.py::test_api_security_headers` (no-store, nosniff, HSTS on 200, 404, 413, 429, 500 and preflight) passed (ADR-0012). not exercised: SSR helmet, CSP nonce and Playwright header assertions (phase 4) |
+| 10 | Require HTTPS | not-started | the API sends HSTS (item 9) and the session cookie is Secure; not exercised: redirect, refusal of plain http behind the proxy and native cleartext configuration (no host; phases 3 and 6) |
+| 11 | Hash passwords | partial | `tests/auth/test_storage.py::test_db_dump_contains_only_argon2id_and_hashes`, `tests/auth/test_passwords.py::test_argon2_production_parameters`, `test_login_rehashes_outdated_hash`, `test_magic_link_stored_as_sha256`, HIBP k-anonymity tests in `tests/auth/test_hibp_mail.py` passed (ADR-0007). not exercised: TOTP secret encryption with AES-256-GCM (phase 4), the live HIBP API |
+| 12 | Secure cookies | done | `tests/auth/test_sessions.py::test_cookie_attributes`, `test_cookie_mutation_without_csrf_is_403`, `tests/auth/test_refresh_jwt.py::test_refresh_reuse_revokes_family`, `test_logout_all_revokes_everything` passed; disabling the CSRF check or reuse detection fails them (ADR-0008). not exercised: native secure storage (phase 3) and the cookie through the TLS proxy (no host) |
+| 13 | Limit error details | partial | API: `tests/core/test_handlers.py::test_forced_exception_returns_generic_body` and the other problem tests passed (ADR-0010). not exercised: generic SSR error pages and the Angular code-to-toast mapping (phases 3 and 4) |
+| 14 | Sanitize logs | partial | `tests/core/test_log_sample.py::test_log_sample_has_no_email_token_or_precise_coordinate` (real register, verify, login, `/me`, refresh) and `tests/core/test_logging.py` passed; removing email hashing fails two named tests (ADR-0010). not exercised: trace and plan log samples (phase 2), retention and Sentry scrubbing (phase 6) |
+| 15 | Parameterize queries | partial | API code uses SQLAlchemy expressions and bound `text()` parameters only; `uv run ruff check .` with the flake8-bandit `S` rules passed. not exercised: `bandit` and the `semgrep` rule (phase 6) |
 | 16 | Escape against XSS | not-started | planned: phase 6 |
 | 17 | Verify webhook signatures | not-started | planned: phase 5 |
-| 18 | Assign admin roles | not-started | planned: phase 4 |
+| 18 | Assign admin roles | not-started | policy cells for moderation, step-up and admin exist (item 3); not exercised: TOTP step-up, audit trail of moderation actions and admin routes (phase 4) |
 | 19 | Audit packages | not-started | planned: phase 6 |
 | 20 | Automate backups | not-started | planned: phase 6 |
-| 21 | Delete accounts | partial | database layer only: `test_publisher_anonymisation` and `test_contribution_retention` in `api/tests/migrations/test_constraints.py` passed (deleting a user sets contribution authors and publishers to NULL and deletes private traces; ADR-0006). not exercised: the deletion flow, grace period and hard-delete job (planned: phase 2) |
+| 21 | Delete accounts | partial | database layer: `test_publisher_anonymisation`, `test_contribution_retention` (ADR-0006); API: `tests/auth/test_accounts.py::test_delete_me_deactivates_and_revokes` (deactivation, tokens revoked, favorites and traces deleted now, pending edits withdrawn, deletion request 7 days ahead) and `test_delete_me_requires_reauthentication` passed (ADR-0007). not exercised: grace-period login, hard-delete job, confirmation mail and RevenueCat deletion (phases 2 and 5) |
 | 22 | Set spending alerts | not-started | planned: phase 6 |
-| 23 | Test as an attacker | not-started | planned: phase 6 |
+| 23 | Test as an attacker | not-started | planned: phase 6 (a white-box review of the phase 1 API ran; its findings and fixes are recorded in ADR-0007, ADR-0008 and ADR-0010) |
 
-The item names and acceptance scope follow section 6 of the product specification. Rows marked partial name the executed tests that back them (package 1A run, ADR-0006 evidence); every other row has no verification yet. A status may change only after its check has been executed and its output recorded.
-
+The item names and acceptance scope follow section 6 of the product specification. A row is done only when every acceptance check named in section 6 for that item has been executed in this repository and its output recorded; rows marked partial name the executed tests and what is not exercised yet. Test runs: `INECEKVAR_REQUIRE_DOCKER=1 uv run pytest` in `inecekvar/api`, 330 passed, with Testcontainers PostGIS and Redis (ADR-0007 to ADR-0012). A status may change only after its check has been executed and its output recorded.
