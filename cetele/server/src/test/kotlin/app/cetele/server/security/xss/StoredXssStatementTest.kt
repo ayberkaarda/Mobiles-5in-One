@@ -144,7 +144,7 @@ class StoredXssStatementTest(
     fun `statement page shows every stored payload as inert text under a nonce-bound policy`() {
         val world = TenancyFixtures(mvc, auth, jdbc).world()
         // One push: a device's operation sequence restarts in every call of [store].
-        val written = store(world, listOf("Ayşe Yılmaz") + XssCorpus.all)
+        val written = store(world, listOf("Ayşe Yılmaz") + XssCorpus.storable)
         val baseline = written.first()
         val stored = written.drop(1)
         val reference = page(world, baseline.customerId)
@@ -164,6 +164,36 @@ class StoredXssStatementTest(
             assertTrue(text.lines().count { it == payload } >= 3, "$where: shown as text")
             assertTrue(text.contains("Bu döküm $payload tarafından"), "$where: footer")
         }
+    }
+
+    @Test
+    fun `bidi control payloads are refused by sync push and shop rename and nothing is stored`() {
+        val world = TenancyFixtures(mvc, auth, jdbc).world()
+        val refused = XssCorpus.all - XssCorpus.storable.toSet()
+        assertTrue(refused.isNotEmpty())
+        refused.forEach { payload ->
+            val customer = CustomerInput(TraceIdFilter.uuidV7(), payload, note = payload, tag = payload, smsConsent = false)
+            val op = SyncOperation(TraceIdFilter.uuidV7(), 1, OperationKind.CUSTOMER_UPSERT, customer = customer)
+            val result = push(world, listOf(op)).results.single()
+            assertEquals(OperationStatus.REJECTED, result.status, "[$payload]")
+            assertEquals(
+                listOf("customer.name", "customer.note", "customer.tag").map { it to "invalid_format" },
+                result.errors?.map { it.field to it.code },
+                "[$payload]",
+            )
+            val rename =
+                mvc
+                    .patch("/v1/shops/${world.shopId}") {
+                        header(AUTHORIZATION, world.owner.bearer)
+                        contentType = MediaType.APPLICATION_JSON
+                        content = mapper.writeValueAsString(mapOf("name" to payload))
+                    }.andReturn()
+                    .response
+            assertEquals(422, rename.status, rename.contentAsString)
+        }
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM customers WHERE shop_id = ?", Int::class.java, world.shopId))
+        val shopName = jdbc.queryForObject("SELECT name FROM shops WHERE id = ?", String::class.java, world.shopId)
+        assertTrue(refused.none { it == shopName })
     }
 
     @Test
@@ -193,7 +223,7 @@ class StoredXssStatementTest(
     @Test
     fun `sync pull returns stored payloads unchanged as json with nosniff`() {
         val world = TenancyFixtures(mvc, auth, jdbc).world()
-        store(world, XssCorpus.all)
+        store(world, XssCorpus.storable)
         val response =
             mvc
                 .get("/v1/shops/${world.shopId}/sync/pull?since=0&limit=500") { header(AUTHORIZATION, world.owner.bearer) }
@@ -211,8 +241,8 @@ class StoredXssStatementTest(
             }
         }
         collect(mapper.readTree(response.contentAsString))
-        XssCorpus.all.forEach { assertTrue(it in values, "pull round-trips [$it]") }
-        XssCorpus.short.forEach { assertTrue(it in values, "tag round-trips [$it]") }
+        XssCorpus.storable.forEach { assertTrue(it in values, "pull round-trips [$it]") }
+        XssCorpus.storable.filter { it.length <= 30 }.forEach { assertTrue(it in values, "tag round-trips [$it]") }
     }
 
     @Test

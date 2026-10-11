@@ -8,7 +8,7 @@
 #   2. create the policies of minio/ (writer: PutObject under the prefix only; reader: list the
 #      prefix and get) and attach them to two new users
 #   3. create the media bucket when missing, enable versioning on it and import
-#      media-lifecycle.json (noncurrent photo versions expire after 30 days)
+#      media-lifecycle.json (noncurrent media/ versions expire after 30 days, uploads/ after 1 day)
 #
 # It uses the MinIO admin API (`mc admin`). Cloudflare R2 has no such API: there the bucket,
 # lifecycle rule and tokens are made in the dashboard, see the runbook.

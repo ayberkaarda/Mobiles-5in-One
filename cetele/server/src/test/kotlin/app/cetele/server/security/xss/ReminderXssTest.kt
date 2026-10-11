@@ -165,7 +165,7 @@ class ReminderXssTest(
                 XssCorpus.expressions[0],
                 XssCorpus.expressions[9],
                 XssCorpus.encodings[0],
-                XssCorpus.unicode[0],
+                XssCorpus.unicode[3],
                 XssCorpus.unicode[2],
                 XssCorpus.unicode[4],
                 XssCorpus.csv[0],

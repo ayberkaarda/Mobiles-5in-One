@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cetele.android.core.domain.format.PhoneFormat
 import app.cetele.android.core.domain.validation.Limits
+import app.cetele.android.core.domain.validation.containsBidiControl
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.MeApi
 import app.cetele.android.core.network.dto.me.MePatchBody
@@ -65,7 +66,7 @@ class ProfileViewModel
             viewModelScope.launch {
                 if (state.value.busy) return@launch
                 val name = state.value.name.trim()
-                if (name.length !in 1..Limits.DISPLAY_NAME_MAX) {
+                if (name.length !in 1..Limits.DISPLAY_NAME_MAX || containsBidiControl(name)) {
                     mutableState.value = state.value.copy(invalidName = true)
                     return@launch
                 }

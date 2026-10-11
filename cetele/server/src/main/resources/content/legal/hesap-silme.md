@@ -31,7 +31,7 @@ Bekleme sırasında dükkâna yeni bir üye katılırsa silme engellenebilir. Su
 
 ## Hangi kayıtlar kaldırılır?
 
-Kısaca: Dükkân silindiğinde müşteriler, borç ve tahsilat kayıtları, ters kayıtlar, fotoğraflar, hatırlatma kayıtları, döküm bağlantıları, davetler, üyelikler ve eşitleme kayıtları kaldırılır. Fotoğrafların dosya deposundaki yükleme ve işlenmiş kopyaları da silinir.
+Kısaca: Dükkân silindiğinde müşteriler, borç ve tahsilat kayıtları, ters kayıtlar, fotoğraflar, hatırlatma kayıtları, döküm bağlantıları, davetler, üyelikler ve eşitleme kayıtları kaldırılır. Fotoğrafların dosya deposundaki yükleme ve işlenmiş kopyaları da silme kapsamındadır. Silinen kayıtlar ve fotoğraflar, silmeden önce alınmış şifreli günlük yedeklerde ve fotoğraf deposunun eski sürümlerinde en fazla 30 gün daha kalabilir; ardından otomatik olarak silinir. Fotoğrafın ham ilk yüklemesi, silindikten sonra en geç bir ila iki gün içinde kaldırılır. Yedekten geri yükleme yalnızca bir arıza sonrasında yapılır; yedek tarihinden sonra tamamlanan silmeler, geri yüklemenin ardından yeniden uygulanır.
 
 Hesap silindiğinde hesap telefonu ve görünen adı, cihaz kayıtları, oturum yenileme kayıtları, telefonla ilişkili giriş kodları ve davetler kaldırılır. Ürün akışı ayrıca telefondaki yerel veritabanının temizlenmesini ve şifreleme anahtarının yok edilmesini içerir. Sunucunun tamamlanma kaydı, telefondaki temizliğin gerçekleştiğine tek başına kanıt değildir.
 

@@ -349,6 +349,7 @@ class SiteWebTest(
         assertEquals("DENY", response.getHeader("X-Frame-Options"), path)
         assertEquals("strict-origin-when-cross-origin", response.getHeader("Referrer-Policy"), path)
         assertEquals(SecurityHeadersConfig.PERMISSIONS_POLICY, response.getHeader("Permissions-Policy"), path)
+        assertEquals("same-origin", response.getHeader("Cross-Origin-Resource-Policy"), path)
         assertNull(response.getHeader(HttpHeaders.SET_COOKIE), path)
         assertNull(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN), path)
     }
