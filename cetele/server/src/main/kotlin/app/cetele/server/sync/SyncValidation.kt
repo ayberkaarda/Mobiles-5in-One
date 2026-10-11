@@ -5,6 +5,7 @@ import app.cetele.server.web.problem.FieldErrorCodes
 import app.cetele.server.web.problem.ProblemCode
 import app.cetele.server.web.problem.ProblemException
 import app.cetele.server.web.problem.ProblemFieldError
+import app.cetele.server.web.validation.containsBidiControl
 import jakarta.validation.ConstraintViolation
 import jakarta.validation.Validator
 import jakarta.validation.constraints.Size
@@ -58,9 +59,9 @@ class SyncValidation(
             validator.validate(c).forEach { errors += ProblemFieldError("customer.${it.propertyPath}", code(it)) }
             // PostgreSQL text cannot hold U+0000 and names and tags have no use for control characters;
             // without this the database error surfaced as a misleading "conflict" rejection.
-            if (c.name.any { Character.isISOControl(it) }) add("customer.name")
-            if (c.tag != null && c.tag.any { Character.isISOControl(it) }) add("customer.tag")
-            if (c.note != null && c.note.contains(NUL)) add("customer.note")
+            if (c.name.any { Character.isISOControl(it) } || containsBidiControl(c.name)) add("customer.name")
+            if (c.tag != null && (c.tag.any { Character.isISOControl(it) } || containsBidiControl(c.tag))) add("customer.tag")
+            if (c.note != null && (c.note.contains(NUL) || containsBidiControl(c.note))) add("customer.note")
             if (c.smsConsentSource != null &&
                 c.smsConsentSource !in setOf("IN_PERSON", "PHONE", "WRITTEN", "OTHER")
             ) {
@@ -71,7 +72,7 @@ class SyncValidation(
         }
         op.entry?.let { e ->
             validator.validate(e).forEach { errors += ProblemFieldError("entry.${it.propertyPath}", code(it)) }
-            if (e.note != null && e.note.contains(NUL)) add("entry.note")
+            if (e.note != null && (e.note.contains(NUL) || containsBidiControl(e.note))) add("entry.note")
             if (e.type !in setOf("DEBT", "PAYMENT")) add("entry.type")
             if (e.dueOn != null && e.type != "DEBT") add("entry.dueOn")
             if (e.occurredOn > CeteleTime.today(clock).plusDays(1)) add("entry.occurredOn", "out_of_range")

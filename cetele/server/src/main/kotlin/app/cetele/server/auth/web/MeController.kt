@@ -5,6 +5,7 @@ import app.cetele.server.auth.user.MeService
 import app.cetele.server.security.CurrentUser
 import app.cetele.server.tenancy.web.TEXT_PATTERN
 import app.cetele.server.web.validation.FieldLimits
+import app.cetele.server.web.validation.NoBidiControl
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
@@ -22,6 +23,7 @@ data class MePatchBody(
     // Same visible-text rule as shop names: a NUL character cannot be stored (PostgreSQL text) and
     // other control characters have no place in a name.
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val displayName: String,
 )
 

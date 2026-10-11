@@ -3,6 +3,7 @@ package app.cetele.server.tenancy.web
 import app.cetele.server.tenancy.shop.ShopType
 import app.cetele.server.web.validation.E164Tr
 import app.cetele.server.web.validation.FieldLimits
+import app.cetele.server.web.validation.NoBidiControl
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
@@ -13,13 +14,16 @@ internal const val TEXT_PATTERN = "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*
 data class CreateShopRequest(
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val name: String,
     val type: ShopType,
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val il: String,
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val ilce: String,
 )
 
@@ -27,13 +31,16 @@ data class CreateShopRequest(
 data class UpdateShopRequest(
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val name: String? = null,
     val type: ShopType? = null,
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val il: String? = null,
     @field:Size(min = FieldLimits.NAME_MIN, max = FieldLimits.NAME_MAX)
     @field:Pattern(regexp = TEXT_PATTERN)
+    @field:NoBidiControl
     val ilce: String? = null,
 )
 

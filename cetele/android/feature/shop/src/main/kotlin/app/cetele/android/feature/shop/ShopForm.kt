@@ -4,6 +4,7 @@ import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.domain.validation.FieldCodes
 import app.cetele.android.core.domain.validation.FieldError
 import app.cetele.android.core.domain.validation.Limits
+import app.cetele.android.core.domain.validation.containsBidiControl
 import app.cetele.android.core.network.dto.ShopType
 import app.cetele.android.core.network.dto.shops.CreateShopRequest
 
@@ -19,7 +20,7 @@ data class ShopForm(
                 when {
                     value.isBlank() -> add(FieldError(field, FieldCodes.REQUIRED))
                     value.length > Limits.NAME_MAX -> add(FieldError(field, FieldCodes.TOO_LONG))
-                    value.any { it.isISOControl() } -> add(FieldError(field, FieldCodes.INVALID_FORMAT))
+                    !isPlainText(value) -> add(FieldError(field, FieldCodes.INVALID_FORMAT))
                 }
             }
             if (type == null) add(FieldError("type", FieldCodes.REQUIRED))
@@ -31,6 +32,8 @@ data class ShopForm(
         fun from(shop: Shop): ShopForm = ShopForm(shop.name, ShopType.valueOf(shop.type.name), shop.il, shop.ilce)
     }
 }
+
+private fun isPlainText(value: String): Boolean = value.none { it.isISOControl() } && !containsBidiControl(value)
 
 data class ShopFormState(
     val form: ShopForm = ShopForm(),
