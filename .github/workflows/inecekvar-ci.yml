@@ -285,6 +285,24 @@ jobs:
           fi
           echo "No placeholder markers found."
 
+      # The project's banned words, case-insensitive, over every tracked file under inecekvar/.
+      # Narrow exclusions: the specification names the words in its own rules text; node_modules
+      # and dist are not sources; lockfiles hold third-party names and hashes; the Android project
+      # is managed by Capacitor (`cap sync` rewrites its gradle files and their header comments).
+      - name: Banned words
+        run: |
+          if git grep -n -I -i -E 'claude|codex|gpt|generated|orchestrat|todo|fixme|lorem|your_' -- inecekvar \
+            ':(exclude)inecekvar/05-inecekvar-ionic-angular.md' \
+            ':(exclude,glob)**/node_modules/**' \
+            ':(exclude,glob)**/dist/**' \
+            ':(exclude,glob)**/pnpm-lock.yaml' \
+            ':(exclude,glob)**/uv.lock' \
+            ':(exclude)inecekvar/apps/mobile/android'; then
+            echo "Banned words found under inecekvar/."
+            exit 1
+          fi
+          echo "No banned words found."
+
       - name: Compose file is valid
         run: docker compose -f inecekvar/docker-compose.yml config --quiet
 
