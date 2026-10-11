@@ -61,6 +61,10 @@ class ProblemTest(
                 "ledger.reversal_mismatch" to 422,
                 "plan.customer_limit" to 409,
                 "plan.photo_limit" to 409,
+                "billing.purchase_invalid" to 422,
+                "billing.token_in_use" to 409,
+                "billing.already_subscribed" to 409,
+                "billing.unavailable" to 503,
                 "sms.quota_exceeded" to 429,
                 "sms.daily_cap_reached" to 429,
                 "sms.consent_missing" to 409,
@@ -75,6 +79,7 @@ class ProblemTest(
                 "account.owner_of_shared_shop" to 409,
                 "account.deletion_pending" to 409,
                 "shop.deletion_pending" to 409,
+                "webhook.unauthenticated" to 401,
             )
         assertEquals(
             ProblemCode.entries.size,

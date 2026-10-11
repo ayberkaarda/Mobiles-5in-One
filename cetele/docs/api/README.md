@@ -21,11 +21,35 @@ cp build/openapi/openapi.json ../docs/api/openapi.json
 
 The copy is a manual step that the lead performs after merging; nobody edits `openapi.json` by
 hand. The document lists the operations of Phase 1 (authentication, `me`, shops, invitations and
-members) and Phase 2 (sync push and pull, statement links and the PDF statement, reminders, media
+members), Phase 2 (sync push and pull, statement links and the PDF statement, reminders, media
 presign, complete and download, re-authentication, account and shop deletion with cancellation, and
-ownership transfer), the bearer scheme and the fixed server entry `https://cetele.app`. The public
+ownership transfer) and Phase 4 (billing state and purchase link, the two webhooks), the bearer scheme and the fixed server entry `https://cetele.app`. The public
 statement page `GET /s/{token}` is HTML, not part of the `/v1` document. The authenticated
 principal does not appear as a parameter.
+
+## Phase 4 entries
+
+The Phase 4 operations were added to `openapi.json` from the contract before the server code
+existed, so the parallel billing, webhook and Android work shared one target (the one exception to
+the export-only rule, made in the canonical format). After the Phase 4 merge the export of the
+merged server was compared with the committed file: `OpenApiSnapshotTest` wrote
+`build/openapi/openapi.json` and `cmp` found it byte-identical, so the hand-written entries are
+exactly what springdoc produces and no refresh was needed. The operations are:
+
+| Operation                              | `operationId`     | Tag (controller class)            | Contract                                                             |
+| -------------------------------------- | ----------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `GET /v1/shops/{shopId}/billing`       | `billingState`    | `billing-controller`              | [ADR-0031](../adr/0031-billing-purchase-linking-and-entitlements.md) |
+| `POST /v1/shops/{shopId}/billing/link` | `linkPurchase`    | `billing-controller`              | [ADR-0031](../adr/0031-billing-purchase-linking-and-entitlements.md) |
+| `POST /v1/webhooks/play-rtdn`          | `receivePlayRtdn` | `play-rtdn-webhook-controller`    | [ADR-0032](../adr/0032-webhook-authentication.md)                    |
+| `POST /v1/webhooks/sms-dlr`            | `receiveSmsDlr`   | `sms-delivery-webhook-controller` | [ADR-0032](../adr/0032-webhook-authentication.md)                    |
+
+New schemas: `LinkPurchaseRequest`, `BillingState`, `PlanLimitsView`, `PlanUsageView` and
+`SubscriptionView`. The method names, class names and DTO names in the table and in
+[handoff 002](../handoffs/server-to-android-002-phase4-contract.md) are binding, because springdoc
+derives `operationId`, tags and schema names from them. The webhook controllers take only
+`HttpServletRequest`, so the document shows no request body or header for them; their wire format
+is in ADR-0032. `openApiContractCheck` compares the live document with the committed one.
+The admin console (`/admin/**`) is HTML and is not part of this document.
 
 ## Contract check
 

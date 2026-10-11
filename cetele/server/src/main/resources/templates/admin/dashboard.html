@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Özet')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main">
+  <h1>Özet</h1>
+  <ul class="stats" aria-label="Platform sayıları">
+    <li><span class="label">Etkin dükkân</span><strong th:text="${dashboard.shops}"></strong></li>
+    <li><span class="label">Etkin kullanıcı</span><strong th:text="${dashboard.users}"></strong></li>
+    <li><span class="label">Çetele Pro dükkân</span><strong th:text="${dashboard.proShops}"></strong></li>
+  </ul>
+  <p class="muted">Panel yalnızca sayıları ve kayıt bilgilerini gösterir; defter notları, tutarlar, fotoğraflar ve müşteri bilgileri hiçbir rolde gösterilmez.</p>
+</main>
+</body>
+</html>

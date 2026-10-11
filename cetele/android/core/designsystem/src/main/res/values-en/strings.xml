@@ -30,6 +30,8 @@
     <string name="designsystem_sync_done">Records are up to date</string>
     <string name="designsystem_error_support_code">Support code: %1$s</string>
     <string name="designsystem_phone_label">Your phone number</string>
+    <string name="designsystem_plan_upgrade">Upgrade to Çetele Pro</string>
+    <string name="designsystem_plan_owner_only">The shop owner can upgrade to Çetele Pro</string>
     <string name="error_generic">Unable to complete the action. Please try again later.</string>
     <string name="error_auth_unauthenticated">Sign in to continue</string>
     <string name="error_auth_integrity_required">Device verification failed</string>
@@ -52,6 +54,10 @@
     <string name="error_ledger_reversal_mismatch">The correction does not match the original record</string>
     <string name="error_plan_customer_limit">You have reached the customer limit</string>
     <string name="error_plan_photo_limit">You have reached this month\'s photo limit</string>
+    <string name="error_billing_purchase_invalid">The purchase could not be verified.</string>
+    <string name="error_billing_token_in_use">This subscription belongs to another shop.</string>
+    <string name="error_billing_already_subscribed">This shop already has an active Çetele Pro subscription.</string>
+    <string name="error_billing_unavailable">The purchase cannot be verified right now; it will be retried shortly.</string>
     <string name="error_sms_quota_exceeded">You have reached this month\'s SMS limit</string>
     <string name="error_sms_daily_cap_reached">Today\'s SMS sending limit was reached. Try again later.</string>
     <string name="error_sms_consent_missing">Record your customer\'s consent before sending SMS</string>

@@ -37,3 +37,15 @@ description = "Runtime-built dummy password in the cetele sms configuration test
 condition = "AND"
 paths = ['''cetele/server/src/test/kotlin/app/cetele/server/reminders/sms/SmsConfigurationTest\.kt''']
 targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "Phase 4 cetele server tests: RSA keys generated at run time, the RFC 6238 appendix B seed and fixed local dummy secrets"
+condition = "AND"
+paths = [
+  '''cetele/server/src/test/kotlin/app/cetele/server/admin/AdminCryptoTest\.kt''',
+  '''cetele/server/src/test/kotlin/app/cetele/server/billing/BillingConfigurationTest\.kt''',
+  '''cetele/server/src/test/kotlin/app/cetele/server/billing/play/HttpPlayDeveloperApiTest\.kt''',
+  '''cetele/server/src/test/kotlin/app/cetele/server/auth/integrity/HttpPlayIntegrityApiTest\.kt''',
+  '''cetele/server/src/test/kotlin/app/cetele/server/reminders/delivery/SmsDlrWebhookTest\.kt''',
+]
+targetRules = ['generic-api-key', 'private-key']

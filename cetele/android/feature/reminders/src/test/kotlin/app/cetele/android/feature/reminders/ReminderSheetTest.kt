@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.cetele.android.core.data.database.entity.ReminderLogEntity
 import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.dto.reminders.QuotaState
 import app.cetele.android.feature.reminders.sheet.ReminderSheet
 import app.cetele.android.feature.reminders.sheet.ReminderState
@@ -61,6 +62,30 @@ class ReminderSheetTest {
         compose.onNodeWithText("₺1.250,00").assertIsDisplayed()
         compose.onNodeWithText("Bu ay 7/30 SMS").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Son hatırlatma: 6 Ekim 2026 (SMS, bu cihazdan)").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun quotaExceededOnTheFreePlanLetsTheOwnerOpenTheProScreen() {
+        var opened = 0
+        compose.setContent {
+            CeteleTheme {
+                ReminderSheet(ready().copy(quotaExceeded = true), {}, {}, {}, onUpgrade = { opened++ })
+            }
+        }
+        compose.onNodeWithText("Çetele Pro'ya geç").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+    }
+
+    @Test
+    fun quotaExceededTellsStaffThatTheOwnerCanUpgrade() {
+        val staff = reminderShop().copy(role = ShopRole.STAFF)
+        compose.setContent {
+            CeteleTheme {
+                ReminderSheet(ready().copy(shop = staff, quotaExceeded = true), {}, {}, {}, onUpgrade = {})
+            }
+        }
+        compose.onNodeWithText("Dükkân sahibi Çetele Pro'ya geçebilir").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Çetele Pro'ya geç").assertDoesNotExist()
     }
 
     @Test

@@ -9,6 +9,7 @@ import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.designsystem.component.ConfirmSheet
 import app.cetele.android.core.designsystem.component.RoleGate
 import app.cetele.android.core.domain.format.DateFormats
+import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.domain.model.ShopPlan
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.domain.time.CeteleClock
@@ -28,6 +29,7 @@ internal fun SettingsHomeScreen(
     onSignOut: () -> Unit,
     onConfirmSignOut: () -> Unit,
     onDismissSignOut: () -> Unit,
+    onOpenBilling: (() -> Unit)? = null,
 ) {
     SettingsPage(stringResource(R.string.settings_home_title)) {
         state.deletion?.let { deletion ->
@@ -49,7 +51,7 @@ internal fun SettingsHomeScreen(
         }, style = ButtonStyle.Text)
         Text(stringResource(R.string.settings_home_shop))
         state.shop?.let { Text(it.name) }
-        if (state.shop?.plan != ShopPlan.PRO) Text(stringResource(R.string.settings_home_plan))
+        PlanSection(state.shop, onOpenBilling)
         CeteleButton(
             stringResource(R.string.settings_home_lock),
             { onOpen(SettingsRoutes.Lock) },
@@ -118,5 +120,17 @@ internal fun SettingsHomeScreen(
             onDismiss = onDismissSignOut,
             loading = state.busy,
         )
+    }
+}
+
+/** The free plan's limits, and the way to the plan and Çetele Pro screen once a shop is active. */
+@Composable
+private fun PlanSection(
+    shop: Shop?,
+    onOpenBilling: (() -> Unit)?,
+) {
+    if (shop?.plan != ShopPlan.PRO) Text(stringResource(R.string.settings_home_plan))
+    if (shop != null && onOpenBilling != null) {
+        CeteleButton(stringResource(R.string.settings_home_billing), onOpenBilling, style = ButtonStyle.Text)
     }
 }

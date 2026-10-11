@@ -82,6 +82,10 @@ cetele:
       username: ${CETELE_NETGSM_USERNAME:}
       password: ${CETELE_NETGSM_PASSWORD:}
       msgheader: ${CETELE_NETGSM_MSGHEADER:}
+    dlr:
+      secret: ${CETELE_SMS_DLR_SECRET:}
+      previous-secret: ${CETELE_SMS_DLR_PREVIOUS_SECRET:}
+      allowed-ips: ${CETELE_SMS_DLR_ALLOWED_IPS:}
   security:
     require-https: true
   jwt:
@@ -92,6 +96,12 @@ cetele:
     clock-skew: 30s
   client-ip:
     trusted-proxies: ${CETELE_TRUSTED_PROXIES:}
+  admin:
+    totp-key: ${CETELE_ADMIN_TOTP_KEY:}
+    bootstrap-email: ${CETELE_ADMIN_BOOTSTRAP_EMAIL:}
+    bootstrap-password: ${CETELE_ADMIN_BOOTSTRAP_PASSWORD:}
+  audit:
+    ip-key: ${CETELE_AUDIT_IP_KEY:}
   s3:
     endpoint: ${CETELE_S3_ENDPOINT:}
     region: ${CETELE_S3_REGION:auto}
@@ -99,6 +109,16 @@ cetele:
     secret-key: ${CETELE_S3_SECRET_KEY:}
     bucket-media: ${CETELE_S3_BUCKET_MEDIA:cetele-media}
     path-style: ${CETELE_S3_PATH_STYLE:true}
+  billing:
+    mode: ${CETELE_BILLING_MODE:}
+    token-key: ${CETELE_BILLING_TOKEN_KEY:}
+    product-id: ${CETELE_PLAY_PRO_PRODUCT_ID:cetele_pro}
+  play:
+    service-account-json: ${CETELE_PLAY_SERVICE_ACCOUNT_JSON:}
+    rtdn:
+      audience: ${CETELE_PLAY_RTDN_AUDIENCE:}
+      service-account-email: ${CETELE_PLAY_RTDN_SERVICE_ACCOUNT_EMAIL:}
+      jwks-url: ${CETELE_PLAY_RTDN_JWKS_URL:https://www.googleapis.com/oauth2/v3/certs}
 
 ---
 # Developer machines and the test suite: plain HTTP, OpenAPI document served.

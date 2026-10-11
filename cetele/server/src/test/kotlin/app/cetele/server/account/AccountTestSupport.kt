@@ -113,4 +113,50 @@ abstract class AccountTestSupport {
         column: String,
         id: UUID,
     ): Int = jdbc.queryForObject("SELECT count(*) FROM $table WHERE $column = ?", Int::class.java, id)!!
+
+    /** An `ACTIVE` Play subscription of [shopId] linked by [linkedBy], with an encrypted token stand-in. */
+    protected fun linkedSubscription(
+        shopId: UUID,
+        linkedBy: UUID,
+    ): UUID {
+        val id = UUID.randomUUID()
+        val hash =
+            java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest
+                    .getInstance("SHA-256")
+                    .digest(id.toString().toByteArray()),
+            )
+        jdbc.update(
+            "INSERT INTO subscriptions (id, shop_id, purchase_token_hash, purchase_token_enc, product_id, base_plan_id, state, " +
+                "expires_at, linked_by, linked_at, last_verified_at) " +
+                "VALUES (?, ?, ?, ?, 'cetele_pro', 'monthly', 'ACTIVE', now() + interval '30 days', ?, now(), now())",
+            id,
+            shopId,
+            hash,
+            ByteArray(48).also { java.security.SecureRandom().nextBytes(it) },
+            linkedBy,
+        )
+        return id
+    }
+
+    protected fun subscription(id: UUID): Map<String, Any?> =
+        jdbc.queryForMap(
+            "SELECT shop_id, linked_by, state, purchase_token_enc, purchase_token_hash FROM subscriptions WHERE id = ?",
+            id,
+        )
+
+    /** `SYSTEM` completion rows of [action] written since [since] with `metadata.shops` = [shops]. */
+    protected fun completionRows(
+        action: String,
+        since: Instant,
+        shops: Int,
+    ): Int =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM audit_logs WHERE action = ? AND actor_type = 'SYSTEM' AND actor_id IS NULL " +
+                "AND target_id IS NULL AND at >= ? AND metadata = jsonb_build_object('shops', ?::int)",
+            Int::class.java,
+            action,
+            java.sql.Timestamp.from(since),
+            shops,
+        )!!
 }

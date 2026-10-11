@@ -18,6 +18,8 @@ data class ReminderState(
     val retryAtMillis: Long = 0,
     val retrySeconds: Int? = null,
     val smsUncertain: Boolean = false,
+    /** The last SMS was refused by `sms.quota_exceeded`. */
+    val quotaExceeded: Boolean = false,
 ) {
     val whatsappDisabledReason: Int?
         get() =

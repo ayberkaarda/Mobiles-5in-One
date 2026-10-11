@@ -211,6 +211,7 @@ object CeteleArchitectureRules {
                 "..reminders.web..",
                 "..media.web..",
                 "..account.web..",
+                "..billing.web..",
             ).and()
             .areMetaAnnotatedWith(RequestMapping::class.java)
             .should()

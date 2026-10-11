@@ -49,6 +49,34 @@
         },
         "type" : "object"
       },
+      "BillingState" : {
+        "properties" : {
+          "limits" : {
+            "$ref" : "#/components/schemas/PlanLimitsView"
+          },
+          "plan" : {
+            "enum" : [
+              "FREE",
+              "PRO"
+            ],
+            "type" : "string"
+          },
+          "subscription" : {
+            "oneOf" : [
+              {
+                "$ref" : "#/components/schemas/SubscriptionView"
+              },
+              {
+                "type" : "null"
+              }
+            ]
+          },
+          "usage" : {
+            "$ref" : "#/components/schemas/PlanUsageView"
+          }
+        },
+        "type" : "object"
+      },
       "ChangeView" : {
         "properties" : {
           "at" : {
@@ -266,6 +294,23 @@
             "type" : "string"
           },
           "phone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LinkPurchaseRequest" : {
+        "properties" : {
+          "productId" : {
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : "^[a-z0-9][a-z0-9._]*$",
+            "type" : "string"
+          },
+          "purchaseToken" : {
+            "maxLength" : 4096,
+            "minLength" : 1,
+            "pattern" : "^[A-Za-z0-9._-]+$",
             "type" : "string"
           }
         },
@@ -594,6 +639,46 @@
         },
         "type" : "object"
       },
+      "PlanLimitsView" : {
+        "properties" : {
+          "customers" : {
+            "format" : "int32",
+            "type" : [
+              "integer",
+              "null"
+            ]
+          },
+          "photosPerMonth" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "smsPerMonth" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PlanUsageView" : {
+        "properties" : {
+          "customers" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "month" : {
+            "type" : "string"
+          },
+          "photos" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sms" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ProblemFieldError" : {
         "properties" : {
           "code" : {
@@ -819,6 +904,55 @@
           },
           "url" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SubscriptionView" : {
+        "properties" : {
+          "autoRenewing" : {
+            "type" : "boolean"
+          },
+          "basePlanId" : {
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "entitled" : {
+            "type" : "boolean"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "linkedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "productId" : {
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [
+              "PENDING",
+              "ACTIVE",
+              "IN_GRACE_PERIOD",
+              "ON_HOLD",
+              "PAUSED",
+              "CANCELED",
+              "EXPIRED",
+              "REVOKED",
+              "REPLACED",
+              "ORPHANED"
+            ],
+            "type" : "string"
+          },
+          "testPurchase" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -1330,6 +1464,78 @@
         ]
       }
     },
+    "/v1/shops/{shopId}/billing" : {
+      "get" : {
+        "operationId" : "billingState",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/v1/shops/{shopId}/billing/link" : {
+      "post" : {
+        "operationId" : "linkPurchase",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "shopId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkPurchaseRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
     "/v1/shops/{shopId}/customers/{customerId}/statement.pdf" : {
       "get" : {
         "operationId" : "download_1",
@@ -1833,6 +2039,32 @@
         },
         "tags" : [
           "sync-controller"
+        ]
+      }
+    },
+    "/v1/webhooks/play-rtdn" : {
+      "post" : {
+        "operationId" : "receivePlayRtdn",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "play-rtdn-webhook-controller"
+        ]
+      }
+    },
+    "/v1/webhooks/sms-dlr" : {
+      "post" : {
+        "operationId" : "receiveSmsDlr",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "sms-delivery-webhook-controller"
         ]
       }
     }

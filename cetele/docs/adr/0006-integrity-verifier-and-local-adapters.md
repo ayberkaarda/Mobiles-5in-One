@@ -50,6 +50,14 @@ used by the Phase 3 debug app.
 (`PlayIntegrityVerifier`, service account, `decodeIntegrityToken`) and
 `CETELE_PLAY_SERVICE_ACCOUNT_JSON` arrive in Phase 4.
 
+Update (Phase 4): `play` is now implemented. `PlayIntegrityVerifier` calls the Play Integrity API
+through the port `PlayIntegrityApi` using the billing package's `GoogleServiceAccountTokens`; it fails
+at startup when the service account key is missing or unparsable, reads the nonce from
+`requestDetails` and compares it with `IntegrityNonce.of`, checks package name, app recognition,
+`MEETS_DEVICE_INTEGRITY` and verdict age, and fails closed with `auth.integrity_invalid`. It was
+exercised against a fake adapter and recorded fixtures only, never against the live API. The
+certificate digest and the licensing verdict are not checked.
+
 ### Local-only guard
 
 One object, `LocalOnlyAdapterGuard` in the `config` package, gates every stand-in:
