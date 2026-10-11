@@ -103,7 +103,9 @@ jobs:
 
   # OWASP Dependency-Check on the shipped classpaths of both Gradle roots. failBuildOnCVSS is 7.0
   # in both build files; a finding that is judged not exploitable is suppressed with a reason in
-  # cetele/ops/dependency-check/suppressions-*.xml.
+  # cetele/ops/dependency-check/suppressions-*.xml. Android runs one analysis per module (the
+  # release runtime classpaths, scope in cetele/android/build.gradle.kts); --continue lets every
+  # module report in the same run, and any failing module still fails the job.
   dependency-check:
     name: Dependency-Check (${{ matrix.root }})
     needs: changes
@@ -117,7 +119,7 @@ jobs:
           - root: server
             task: dependencyCheckAnalyze
           - root: android
-            task: dependencyCheckAnalyze
+            task: "dependencyCheckAnalyze --continue"
     defaults:
       run:
         working-directory: cetele/${{ matrix.root }}
@@ -170,7 +172,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cetele-dependency-check-${{ matrix.root }}
-          path: cetele/${{ matrix.root }}/build/reports/dependency-check-report.*
+          path: |
+            cetele/${{ matrix.root }}/build/reports/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/build/reports/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/*/build/reports/dependency-check-report.*
           if-no-files-found: warn
           retention-days: 30
 
