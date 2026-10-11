@@ -1,0 +1,94 @@
+name: Cetele restore drill
+
+# Monthly backup and restore drill (security checklist item 20, cetele/docs/ops/backup-restore.md).
+# cetele/ops/backup/drill-e2e.sh owns every container it uses: a private docker network, MinIO
+# and a source PostgreSQL 16 (the images of cetele/docker-compose.yml). It creates the backup
+# bucket with its 30-day rule, a write-only and a read-only identity and media bucket versioning
+# (bucket-setup.sh), applies the server migrations V1..Vn and the synthetic drill data,
+# fingerprints the source (exact row counts and the ledger balance checksum), runs backup.sh
+# (pg_dump -Fc | age, upload with the write-only identity), checks the identity denials, then runs
+# restore-drill.sh: newest dump with the read-only identity, age -d, pg_restore into a throwaway
+# PostgreSQL, invariants, and a line-by-line comparison with the source fingerprint. The output is
+# kept as an artifact for 30 days. A `services:` container would sit unused, so the job pre-pulls
+# the images and lets the script own them.
+#
+# Scope: this proves the mechanics on every run. It does not touch a production bucket: that
+# needs the R2 bucket, the read-only token and the offline age identity, which do not exist in
+# this repository (owner tasks in the runbook). Every credential and the age key pair are created
+# at run time by the script and never printed. The same dump and restore path is also covered by
+# BackupRestoreDrillTest (Testcontainers) in the server job of cetele-ci.yml.
+# Actions are pinned to full commit SHAs.
+
+on:
+  schedule:
+    - cron: "20 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cetele-restore-drill-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: cetele
+
+jobs:
+  drill:
+    name: Cetele restore drill (PostgreSQL 16, MinIO, age)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PG_IMAGE: postgres:16.15-alpine
+      MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+      MC_IMAGE: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # age from the Ubuntu archive (signed packages); the drill needs age and age-keygen.
+      - name: Install age
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends age
+          age --version
+
+      - name: Pull images
+        run: |
+          for image in "$PG_IMAGE" "$MINIO_IMAGE" "$MC_IMAGE"; do
+            docker pull --quiet "$image"
+          done
+
+      - name: Script configuration checks
+        run: sh ops/backup/checks.test.sh
+
+      - name: Run restore drill
+        shell: bash
+        env:
+          CETELE_DRILL_PG_IMAGE: ${{ env.PG_IMAGE }}
+          CETELE_DRILL_MINIO_IMAGE: ${{ env.MINIO_IMAGE }}
+          CETELE_BACKUP_MC_IMAGE: ${{ env.MC_IMAGE }}
+        run: |
+          set -o pipefail
+          {
+            echo "run: ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT}, commit ${GITHUB_SHA}"
+            echo "started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            docker --version
+          } | tee restore-drill-output.txt
+          sh ops/backup/drill-e2e.sh 2>&1 | tee -a restore-drill-output.txt
+          echo "finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a restore-drill-output.txt
+          grep -q '^RESULT: restore drill passed$' restore-drill-output.txt
+          grep -q '^RESULT: end-to-end drill passed$' restore-drill-output.txt
+
+      - name: Upload drill output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cetele-restore-drill-output
+          path: cetele/restore-drill-output.txt
+          retention-days: 30
+          if-no-files-found: error
