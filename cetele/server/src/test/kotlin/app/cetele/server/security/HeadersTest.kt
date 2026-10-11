@@ -82,6 +82,7 @@ class HeadersTest(
         assertEquals("nosniff", response.getHeader("X-Content-Type-Options"))
         assertEquals("strict-origin-when-cross-origin", response.getHeader("Referrer-Policy"))
         assertEquals("camera=(), geolocation=(), microphone=()", response.getHeader("Permissions-Policy"))
+        assertEquals("same-origin", response.getHeader("Cross-Origin-Resource-Policy"))
         assertEquals("DENY", response.getHeader("X-Frame-Options"))
     }
 }

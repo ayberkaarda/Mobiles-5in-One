@@ -40,6 +40,7 @@ class StatementPageTest : StatementTestSupport() {
             assertTrue(response.contentAsString.contains("Page Customer"))
             assertTrue(response.contentAsString.contains("Bread"))
             assertTrue(response.contentAsString.contains("₺100,00"))
+            assertEquals("same-origin", response.getHeader("Cross-Origin-Resource-Policy"))
             assertEquals("no-store", response.getHeader("Cache-Control"))
             assertEquals("no-cache", response.getHeader("Pragma"))
             assertEquals("noindex, nofollow", response.getHeader("X-Robots-Tag"))
@@ -67,7 +68,10 @@ class StatementPageTest : StatementTestSupport() {
                 ByteArray(32).also(java.security.SecureRandom()::nextBytes),
             )
         val responses = listOf(expired.token, revoked.token, deleted.token, "bad", unknown).map { open(it) }
-        responses.forEach { assertEquals(404, it.status) }
+        responses.forEach {
+            assertEquals(404, it.status)
+            assertEquals("same-origin", it.getHeader("Cross-Origin-Resource-Policy"))
+        }
         val bodies = responses.map { it.contentAsString.replace(Regex("nonce=\"[^\"]*\""), "nonce=\"\"") }
         assertEquals(1, bodies.toSet().size)
         assertTrue(bodies.first().contains("Hesap dökümü bulunamadı"))
