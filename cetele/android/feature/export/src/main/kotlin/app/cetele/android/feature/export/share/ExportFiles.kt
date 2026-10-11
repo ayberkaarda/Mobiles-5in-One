@@ -24,6 +24,11 @@ class ExportFiles(
         date: LocalDate,
     ): File = destination("cetele-${slug(shopName)}-${slug(customerName)}-${stamp(date)}.pdf")
 
+    fun backup(
+        shopName: String,
+        date: LocalDate,
+    ): File = destination("cetele-${slug(shopName)}-${stamp(date)}.cetele")
+
     fun cleanup(nowMillis: Long = System.currentTimeMillis()): Int {
         var removed = 0
         directory

@@ -1,0 +1,369 @@
+name: Cetele Security
+
+# Security checklist item 19 (dependency audit, SBOM) and the dynamic part of item 23 (OWASP ZAP).
+# Actions are pinned to full commit SHAs (same pins as cetele-ci.yml and askida-security.yml); the
+# ZAP image is pinned by digest in cetele/ops/zap/run-zap.sh. The workflow lives at the Git
+# repository root; Cetele is cetele/.
+#
+# It runs on every pull request and every push to main, without a path filter on the trigger, so
+# the single "Cetele Security gate" check always reports and can be a required status check on
+# main. The "changes" job decides whether the Cetele jobs have work to do (same pattern as
+# cetele-ci.yml): when nothing under cetele/, a cetele-* workflow, .gitleaks.toml or renovate.json
+# changed, they are skipped and the gate passes. The weekly schedule and manual runs run everything.
+#
+# Failing jobs (part of the gate): "dependency-check" (server and android, fails on a finding with
+# CVSS 7.0 or higher) and "sbom" (CycloneDX documents of both roots, uploaded as artifacts).
+# Informational jobs, NOT part of the gate: "versions" (a report of newer library versions) and
+# "zap" (starts the compose stack, only on the schedule, manual runs and pushes to main).
+#
+# NVD_API_KEY (repository secret, optional): without it the NVD download is throttled and the
+# dependency-check job can fail on the vulnerability database update, which is a failure of the
+# job and never a pass. The suppressions are in cetele/ops/dependency-check/ (a reason and an
+# expiry on every entry). See cetele/docs/security/scan-reports/.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, so new advisories and new ZAP rules surface without a change.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cetele-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Cetele changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cetele: ${{ steps.diff.outputs.cetele }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # Scheduled and manual runs have no range and run everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the Cetele
+      # pathspecs, not from parsing file names. --no-renames reports a file moved out of cetele/
+      # as a deletion inside it. Exit 0 means no Cetele change, 1 a change, anything else is an
+      # error and runs every Cetele job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No diff range for $EVENT_NAME; running every Cetele job."
+            cetele=true
+          else
+            set -- cetele/ ':(glob).github/workflows/cetele-*.yml' .gitleaks.toml renovate.json
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) cetele=false ;;
+              1) cetele=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Cetele job."
+                cetele=true
+                ;;
+            esac
+          fi
+          echo "cetele=$cetele" >> "$GITHUB_OUTPUT"
+          echo "Cetele jobs run: $cetele"
+
+  # OWASP Dependency-Check on the shipped classpaths of both Gradle roots. failBuildOnCVSS is 7.0
+  # in both build files; a finding that is judged not exploitable is suppressed with a reason in
+  # cetele/ops/dependency-check/suppressions-*.xml. Android runs one analysis per module (the
+  # release runtime classpaths, scope in cetele/android/build.gradle.kts); --continue lets every
+  # module report in the same run, and any failing module still fails the job.
+  dependency-check:
+    name: Dependency-Check (${{ matrix.root }})
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - root: server
+            task: dependencyCheckAnalyze
+          - root: android
+            task: "dependencyCheckAnalyze --continue"
+    defaults:
+      run:
+        working-directory: cetele/${{ matrix.root }}
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          build-root-directory: cetele/${{ matrix.root }}
+
+      # Fail early and readably: an empty key makes the NVD client throw "Invalid API Key, length of
+      # 0", and the job must not report a scan that did not run. The gate stays red until the
+      # repository secret exists (free key: https://nvd.nist.gov/developers/request-an-api-key).
+      - name: Require the NVD API key
+        run: |
+          if [ -z "${NVD_API_KEY}" ]; then
+            echo "::error title=NVD_API_KEY is not set::The repository secret NVD_API_KEY is missing, so the dependency scan did not run. Add it under Settings, Secrets and variables, Actions (or: gh secret set NVD_API_KEY)."
+            exit 1
+          fi
+
+      # The vulnerability database is large; the weekly key keeps the incremental update small.
+      - name: Cache the vulnerability database
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
+      - name: Dependency-Check
+        run: ./gradlew ${{ matrix.task }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cetele-dependency-check-${{ matrix.root }}
+          path: |
+            cetele/${{ matrix.root }}/build/reports/dependency-check/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/build/reports/dependency-check/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/*/build/reports/dependency-check/dependency-check-report.*
+          if-no-files-found: warn
+          retention-days: 30
+
+  # CycloneDX SBOM of both roots, uploaded as artifacts.
+  sbom:
+    name: SBOM (CycloneDX)
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate Gradle wrappers
+        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: SBOM of the server
+        working-directory: cetele/server
+        run: |
+          ./gradlew cyclonedxBom
+          test -s build/reports/cyclonedx/application.cdx.json
+
+      - name: SBOM of the android app
+        working-directory: cetele/android
+        run: |
+          ./gradlew cyclonedxBom
+          test -s build/reports/cyclonedx/bom.json
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cetele-sbom
+          path: |
+            cetele/server/build/reports/cyclonedx/application.cdx.json
+            cetele/android/build/reports/cyclonedx/bom.json
+            cetele/android/build/reports/cyclonedx/bom.xml
+          if-no-files-found: error
+          retention-days: 90
+
+  # Informational: libraries with a newer stable release. Not a gate.
+  versions:
+    name: Dependency updates (informational)
+    needs: changes
+    if: needs.changes.outputs.cetele == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Report (server)
+        working-directory: cetele/server
+        run: ./gradlew dependencyUpdates
+
+      - name: Report (android)
+        working-directory: cetele/android
+        run: ./gradlew dependencyUpdates
+
+      - name: Upload reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cetele-dependency-updates
+          path: |
+            cetele/server/build/dependencyUpdates/report.*
+            cetele/android/build/dependencyUpdates/report.*
+          if-no-files-found: warn
+          retention-days: 30
+
+  # Informational, schedule, manual and main pushes only: ZAP API scan of the OpenAPI document
+  # (cetele/docs/api/openapi.json) against the compose stack, with a token minted at run time by
+  # the real sign-in flow (OTP local echo of the local profile). Rules and the reason for every
+  # ignored alert: cetele/ops/zap/api-scan.conf. The result of the recorded local runs is in
+  # cetele/docs/security/scan-reports/zap-api-scan.md.
+  zap:
+    name: OWASP ZAP (informational)
+    needs: changes
+    if: >-
+      needs.changes.outputs.cetele == 'true' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          build-root-directory: cetele/server
+
+      # The compose file names the image cetele-server:local; jib builds it into the runner's
+      # Docker daemon.
+      - name: Build the server image
+        working-directory: cetele/server
+        run: ./gradlew jibDockerBuild
+
+      - name: ZAP API scan
+        env:
+          CETELE_ZAP_MAX_MINUTES: "30"
+        run: cetele/ops/zap/run-zap.sh
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cetele-zap-reports
+          path: cetele/docs/security/scan-reports/zap/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Server log on failure
+        if: failure()
+        run: docker compose -p cetele-zap logs --no-color --tail 200 server || true
+
+  # The only security check to mark as required on main. "changes" must succeed and report
+  # cetele=true or cetele=false. true: dependency-check and sbom must succeed. false: both must
+  # be skipped. Any other result fails the gate. "versions" and "zap" are informational and
+  # deliberately left out of "needs". When a job is added, add it to "needs" and to the checks.
+  gate:
+    name: Cetele Security gate
+    needs: [changes, dependency-check, sbom]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CETELE_CHANGED: ${{ needs.changes.outputs.cetele }}
+          DEPCHECK_RESULT: ${{ needs.dependency-check.result }}
+          SBOM_RESULT: ${{ needs.sbom.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (cetele=${CETELE_CHANGED:-<none>})"
+          echo "dependency-check: ${DEPCHECK_RESULT:-<none>}"
+          echo "sbom: ${SBOM_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Cetele Security failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$CETELE_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Cetele Security failed: change detection reported no valid cetele output."
+              exit 1
+              ;;
+          esac
+          for result in "$DEPCHECK_RESULT" "$SBOM_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Cetele Security failed: cetele=$CETELE_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Cetele Security passed (cetele=$CETELE_CHANGED, all jobs $expected)."

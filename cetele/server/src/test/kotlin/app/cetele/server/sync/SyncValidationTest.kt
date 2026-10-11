@@ -80,6 +80,30 @@ class SyncValidationTest : SyncTestSupport() {
     }
 
     @Test
+    fun `a NUL character or control characters in text fields are invalid_format, not a conflict`() {
+        val world = world()
+        val c = ledger().customer(world.shopId)
+        val requests =
+            listOf(
+                customer(1).let { it.copy(customer = it.customer!!.copy(name = "Ali\u0000Usta")) },
+                customer(2).let { it.copy(customer = it.customer!!.copy(name = "Ali\u0007Usta")) },
+                customer(3).let { it.copy(customer = it.customer!!.copy(note = "not\u0000")) },
+                customer(4).let { it.copy(customer = it.customer!!.copy(tag = "t\u0000")) },
+                entry(5, c).let { it.copy(entry = it.entry!!.copy(note = "not\u0000")) },
+                customer(6).let { it.copy(customer = it.customer!!.copy(note = "satir\nsonu")) },
+            )
+        val result = push(world, requests)
+        assertEquals(List(5) { "validation.failed" } + listOf(null), result.results.map { it.code })
+        val fieldCodes = result.results.take(5).map { row -> row.errors!!.map { it.field to it.code } }
+        assertEquals(listOf("customer.name" to "invalid_format"), fieldCodes[0])
+        assertEquals(listOf("customer.name" to "invalid_format"), fieldCodes[1])
+        assertEquals(listOf("customer.note" to "invalid_format"), fieldCodes[2])
+        assertEquals(listOf("customer.tag" to "invalid_format"), fieldCodes[3])
+        assertEquals(listOf("entry.note" to "invalid_format"), fieldCodes[4])
+        assertEquals(OperationStatus.APPLIED, result.results.last().status)
+    }
+
+    @Test
     fun `unknown operation properties and kinds reject before applying`() {
         val world = world()
         val op = mapper.writeValueAsString(customer(1))

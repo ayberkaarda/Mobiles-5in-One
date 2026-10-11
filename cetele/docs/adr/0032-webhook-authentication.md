@@ -83,7 +83,10 @@ Order of checks:
 
 The notification body is never trusted for state: processing always re-reads the purchase through
 the Play Developer API (ADR-0031). A replayed old message is stopped by `exp` and by the
-`messageId` row, and even a new message cannot do more than make the server ask Play again.
+`messageId` row. A new message makes the server ask Play again, with one exception set by ADR-0031
+("Refund and revocation"): a `SUBSCRIPTION_REVOKED` notification (type 12) or a
+`voidedPurchaseNotification` for a known token sets `REVOKED` for ever without asking Play. A
+validly authenticated message can therefore revoke Pro but never grant it (pentest finding F-03).
 
 Key sources:
 

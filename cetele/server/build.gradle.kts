@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.jib)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.dependency.check)
+    alias(libs.plugins.versions.report)
+    alias(libs.plugins.cyclonedx)
 }
 
 group = "app.cetele"
@@ -136,5 +139,38 @@ jib {
         ports = listOf("8080")
         user = "65532:65532"
         jvmFlags = listOf("-XX:MaxRAMPercentage=75")
+    }
+}
+
+// Dependency scanning and reporting (spec items 19 and 23). None of these tasks is part of
+// `check`: the vulnerability database download is slow and needs the network, so CI runs them in
+// the "Cetele security" workflow (.github/workflows/cetele-security.yml) and developers on demand.
+//   ./gradlew dependencyCheckAnalyze   fails on any finding with CVSS 7.0 or higher
+//   ./gradlew dependencyUpdates        newer versions report (build/dependencyUpdates)
+//   ./gradlew cyclonedxBom             CycloneDX SBOM (build/reports/cyclonedx)
+// The NVD API key is optional and read from the environment (NVD_API_KEY); without it the
+// NVD download is rate limited and can take a long time.
+val nvdApiKey: String? = System.getenv("NVD_API_KEY")
+val suppressions: String = file("../ops/dependency-check/suppressions-server.xml").path
+
+dependencyCheck {
+    failBuildOnCVSS = 7.0f
+    suppressionFile = suppressions
+    formats = listOf("HTML", "JSON")
+    nvd {
+        // Set only when present: an empty key is rejected by the client.
+        if (!nvdApiKey.isNullOrBlank()) apiKey = nvdApiKey
+    }
+    // Scanned: the runtime classpath only; the test and tool classpaths do not ship.
+    scanConfigurations = listOf("runtimeClasspath")
+}
+
+tasks.dependencyUpdates {
+    revision = "release"
+    gradleReleaseChannel = "current"
+    outputFormatter = "json,plain"
+    rejectVersionIf {
+        val unstable = Regex("(?i).*(alpha|beta|rc|cr|m|preview|snapshot|dev)[.-]?[0-9]*$")
+        unstable.matches(candidate.version) && !unstable.matches(currentVersion)
     }
 }

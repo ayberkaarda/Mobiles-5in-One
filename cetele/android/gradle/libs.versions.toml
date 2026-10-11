@@ -35,6 +35,9 @@ play-integrity = "1.6.0"
 play-billing = "8.3.0"
 okhttp = "5.5.0"
 compose-lint = "1.6.0"
+dependency-check = "13.0.0"
+versions-report = "0.65.0"
+cyclonedx = "3.5.1"
 
 [libraries]
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
@@ -131,6 +134,9 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dependency-check = { id = "org.owasp.dependencycheck", version.ref = "dependency-check" }
+versions-report = { id = "io.github.ben-manes.versions", version.ref = "versions-report" }
+cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 
 # Convention plugins from build-logic.
 cetele-android-application = { id = "cetele.android.application" }
