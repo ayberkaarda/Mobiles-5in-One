@@ -126,6 +126,7 @@ class AdminConsoleService(
                 smsMonth = month.format(MONTH),
                 smsUsed = smsUsed(shopId, month),
                 ownerDeactivated = members.any { it.role == "OWNER" && it.deactivated },
+                subscription = currentSubscription(shopId),
             )
         audit.record(AuditActorType.ADMIN, admin.id, AuditAction.SHOP_VIEWED, AuditTargetType.SHOP, shopId)
         return view
@@ -285,6 +286,26 @@ class AdminConsoleService(
             .resultList
             .firstOrNull()
             ?.let(::userRow)
+
+    /** The shop's current subscription row; the projection never selects the token, its ciphertext or its hash. */
+    private fun currentSubscription(shopId: UUID): ShopSubscriptionView? =
+        em
+            .createQuery(
+                "SELECT s.productId AS productId, s.basePlanId AS basePlanId, s.state AS state, s.expiresAt AS expiresAt, " +
+                    "s.testPurchase AS testPurchase FROM Subscription s WHERE s.boundShopId = :shopId AND s.supersededAt IS NULL",
+                Tuple::class.java,
+            ).setParameter("shopId", shopId)
+            .resultList
+            .firstOrNull()
+            ?.let {
+                ShopSubscriptionView(
+                    productId = it.get("productId", String::class.java),
+                    basePlanId = it.get("basePlanId", String::class.java),
+                    state = it.get("state").toString(),
+                    expiresAt = ConsoleFormat.time(it.get("expiresAt", Instant::class.java)),
+                    testPurchase = it.get("testPurchase", Boolean::class.javaObjectType),
+                )
+            }
 
     private fun smsUsed(
         shopId: UUID,

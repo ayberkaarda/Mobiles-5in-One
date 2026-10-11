@@ -48,10 +48,41 @@ data class ShopDetailView(
     val smsMonth: String,
     val smsUsed: Int,
     val ownerDeactivated: Boolean,
+    val subscription: ShopSubscriptionView?,
 ) {
     val memberCount: Int get() = members.size
     val ownerCount: Int get() = members.count { it.role == "OWNER" }
     val staffCount: Int get() = members.count { it.role == "STAFF" }
+}
+
+/**
+ * The current Play subscription of a shop on its console page (ADR-0031 states). Never the purchase
+ * token, its ciphertext or its hash: the projection selects none of them.
+ */
+data class ShopSubscriptionView(
+    val productId: String,
+    val basePlanId: String?,
+    val state: String,
+    val expiresAt: String,
+    val testPurchase: Boolean,
+) {
+    val stateLabel: String get() = STATE_LABELS[state] ?: state
+
+    companion object {
+        private val STATE_LABELS =
+            mapOf(
+                "PENDING" to "Ödeme bekleniyor",
+                "ACTIVE" to "Etkin",
+                "IN_GRACE_PERIOD" to "Ek süre (ödeme sorunu)",
+                "ON_HOLD" to "Askıda (ödeme alınamadı)",
+                "PAUSED" to "Duraklatıldı",
+                "CANCELED" to "İptal edildi, süre sonuna kadar geçerli",
+                "EXPIRED" to "Süresi doldu",
+                "REVOKED" to "İade edildi",
+                "REPLACED" to "Yenisiyle değiştirildi",
+                "ORPHANED" to "Dükkân silindi",
+            )
+    }
 }
 
 data class UserRowView(
