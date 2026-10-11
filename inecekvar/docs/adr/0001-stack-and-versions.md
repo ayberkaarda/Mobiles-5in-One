@@ -119,7 +119,7 @@ sites to the API so the browser origins stay same-origin.
 ### Phase 0 evidence
 
 Logs of every command are kept outside the repository by the Phase 0 run; the results are
-summarised here.
+summarised here and traced to commits and log files in the appendix below.
 
 | # | Step | Command | Result |
 | - | ---- | ------- | ------ |
@@ -155,7 +155,52 @@ Not exercised:
   only `lefthook validate` ran).
 - `not exercised: the APK on an emulator or device` (build only; the Capacitor smoke is Phase 3).
 - `not exercised: dev servers behind Caddy` (`nx serve web|mobile` were not started; Caddy
-  answered 502 for `/`, as expected without them).
+  answered 502 for `/`, as expected without them). Known limit, left for Phase 1.
+- `not exercised: brand icons in the apps` (the SSR favicon and the Android launcher icons and
+  splash images are still the Angular and Capacitor defaults; the brand icon set in `brand/icons`
+  is not wired in yet). Known limit, left for Phase 1.
+
+### Scope deviation from section 4
+
+Section 4 describes a compose stack for local development. In Phase 0 `docker-compose.yml` runs
+only the data and proxy services (PostgreSQL with PostGIS, Redis, MinIO with its init job,
+Mailpit, Caddy). The API, the web dev server and the mobile dev server run on the host, and Caddy
+reaches them through `host.docker.internal`; there is no worker yet (arq arrives with the first
+background job in Phase 1). `docker compose up` therefore does not start the whole development
+environment; the host commands are in `CONTRIBUTING.md`.
+
+### Appendix: evidence trace
+
+The logs are kept outside the repository, in the owner's local job folder for this run
+(`jobs/b7093590/tmp/iv` under the owner's user profile), one file per step. They are
+not committed, so the results above are not independently re-verifiable from the repository
+alone. Most steps ran on the working tree before it was committed; the commit named is the one
+that recorded that tree.
+
+| Rows | Commit the step ran on | Log files |
+| ---- | ---------------------- | --------- |
+| 1 | tree before `318622e4` (no commit yet) | `spike-01-tools.log`, `spike-02-npm-latest.log` |
+| 2 | `318622e4` | `spike-03-nx-generate-mobile.log`, `spike-04-nx-generate-web-libs.log` |
+| 3 to 6 | `f380fd9a` | `gate-final-01-install-tokens-prettier.log`, `gate-final-02-nx-run-many.log` |
+| 7 | `f380fd9a` | `spike-11-ssr.log`, `spike-11-ssr-server.log` |
+| 8, 13 | `58ffe171` | `spike-07-uv.log`, `spike-08-uvicorn.log` |
+| 9 to 12 | `58ffe171`; 9 and 10 again on `f380fd9a` | `gate-api.log`; `gate-final-04-api.log` |
+| 14 | `9020980b`; again on `f380fd9a` | `gate-compose-config.log`; `gate-final-05-compose-config.log` |
+| 15, 16 | `9020980b` | `spike-09-compose-up.log`, `spike-10-uvicorn.log`, `spike-10-caddy-proxy-and-service-db.log` |
+| 17, 18 | `318622e4`; again on `f380fd9a` | `spike-05-cap-add-android.log`, `spike-06-assembleDebug.log`; `gate-final-03-cap-sync-assembleDebug.log` |
+| 19, 20 | `a2ea6c95` | `gate-actionlint.log`, `gate-renovate-validate.log`, `gate-renovate-validate-main.log` |
+| 21 | `a2ea6c95` | no log file kept (console output only) |
+| 22 | `82e5d2a5` (6 branch commits) | `gate-final-06-gitleaks.log` |
+
+Integrated tree. After the docs and brand branches were merged (`12af2f04`), the workspace gate
+passed (`gate-final-07-nx-after-merges.log`) and prettier flagged two Markdown files, fixed by
+`99fb8eff`. After the audit fixes, the lead re-ran the gates on the integrated tree at `4ad3960a`:
+`pnpm exec prettier --check .` exit 0, `node brand/scripts/build-tokens.mjs --check` exit 0,
+`pnpm nx run-many -t lint test build --skip-nx-cache` exit 0 (12 tests),
+`uv run ruff check .`, `uv run ruff format --check .` and `uv run mypy --strict app tests` exit 0,
+`uv run pytest` 3 passed, and the SSR smoke (`/` 200, `Host: evil.example` 400, listening on
+127.0.0.1 only) (`gate-fix-01-workspace.log`, `gate-fix-02-api.log`,
+`gate-fix-03-ssr-smoke.log`).
 
 ## Consequences
 
