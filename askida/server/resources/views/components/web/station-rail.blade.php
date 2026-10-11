@@ -6,13 +6,13 @@
     ],
     'heading' => 'h3',
 ])
-{{-- The station rail of design section 4: three tags on one rail (Bırak, Askıda, Al), one sentence under each. --}}
+{{-- The station rail: one rail, three hooks. The receipt (paid), the crust tag (hanging), the code tag (taken); one sentence under each. --}}
 <figure {{ $attributes->class(['station-rail']) }}>
-<svg viewBox="0 0 360 128" aria-hidden="true" focusable="false"><path class="sr-rail" stroke-width="2" stroke-linecap="round" d="M8 10H352M60 10V26M180 10V26M300 10V18"/><path class="sr-tag" fill-rule="evenodd" d="M34 26H86A6 6 0 0 1 92 32V100A6 6 0 0 1 86 106H34A6 6 0 0 1 28 100V32A6 6 0 0 1 34 26ZM55 40A5 5 0 1 0 65 40A5 5 0 1 0 55 40ZM274 38H326A6 6 0 0 1 332 44V112A6 6 0 0 1 326 118H274A6 6 0 0 1 268 112V44A6 6 0 0 1 274 38ZM295 52A5 5 0 1 0 305 52A5 5 0 1 0 295 52Z"/><path class="sr-tag-on" fill-rule="evenodd" d="M154 26H206A6 6 0 0 1 212 32V100A6 6 0 0 1 206 106H154A6 6 0 0 1 148 100V32A6 6 0 0 1 154 26ZM175 40A5 5 0 1 0 185 40A5 5 0 1 0 175 40Z"/><path class="sr-glyph" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M60 65V83M51 74H69M300 76V96M293 89L300 96L307 89"/><path class="sr-arrow" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M117 60L123 66L117 72M237 60L243 66L237 72"/></svg>
+<svg class="art" viewBox="0 0 720 220" aria-hidden="true" focusable="false"><path d="M4 12H716"/><path class="f-paper" fill-rule="evenodd" d="M70 48H170V196l-10 8-10-8-10 8-10-8-10 8-10-8-10 8-10-8-10 8-10-8ZM114 66A6 6 0 1 0 126 66A6 6 0 1 0 114 66Z"/><path class="thin" d="M88 98H152M88 116H136M88 134H148"/><path class="thin dash" d="M88 158H152"/><path class="f-crust" fill-rule="evenodd" d="M320 48H400A10 10 0 0 1 410 58V190A10 10 0 0 1 400 200H320A10 10 0 0 1 310 190V58A10 10 0 0 1 320 48ZM354 66A6 6 0 1 0 366 66A6 6 0 1 0 354 66Z"/><path class="on-crust" d="M324 152c0-22 16-34 36-34s36 12 36 34c0 10-10 14-36 14s-36-4-36-14ZM344 148l7-10M357 148l7-10M370 148l7-10"/><path class="f-paper" fill-rule="evenodd" d="M524 48H676A14 14 0 0 1 690 62V182A14 14 0 0 1 676 196H524A14 14 0 0 1 510 182V62A14 14 0 0 1 524 48ZM593 66A7 7 0 1 0 607 66A7 7 0 1 0 593 66Z"/><path class="f-sand thin" d="M517 104h16v26h-16ZM537 104h16v26h-16ZM557 104h16v26h-16ZM577 104h16v26h-16ZM609 104h16v26h-16ZM629 104h16v26h-16ZM649 104h16v26h-16ZM669 104h16v26h-16Z"/><path class="thin" d="M530 160H670M530 176H616"/><path d="M113 16V12A7 7 0 0 1 127 12L113 62A7 7 0 0 0 127 62V58M353 16V12A7 7 0 0 1 367 12L353 62A7 7 0 0 0 367 62V58M593 16V12A7 7 0 0 1 607 12L593 62A7 7 0 0 0 607 62V58"/></svg>
 <figcaption>
 <ol>
 @foreach ($steps as [$title, $sentence])
-<li><{{ $heading }} class="title3">{{ $title }}</{{ $heading }}><p>{{ $sentence }}</p></li>
+<li><{{ $heading }}>{{ $title }}</{{ $heading }}><p>{{ $sentence }}</p></li>
 @endforeach
 </ol>
 </figcaption>
