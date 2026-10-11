@@ -11,6 +11,9 @@ object LockPolicy {
     ): Boolean {
         require(timeoutSeconds >= 0)
         return coldStart ||
-            (backgroundedAt != null && now - backgroundedAt >= timeoutSeconds.toLong() * MILLIS_PER_SECOND)
+            (
+                backgroundedAt != null &&
+                    (now < backgroundedAt || now - backgroundedAt >= timeoutSeconds.toLong() * MILLIS_PER_SECOND)
+            )
     }
 }

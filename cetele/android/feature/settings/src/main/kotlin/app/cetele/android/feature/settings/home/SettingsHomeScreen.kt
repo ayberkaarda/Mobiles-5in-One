@@ -50,6 +50,11 @@ internal fun SettingsHomeScreen(
             onOpen(SettingsRoutes.Profile)
         }, style = ButtonStyle.Text)
         Text(stringResource(R.string.settings_home_shop))
+        CeteleButton(
+            stringResource(R.string.settings_devices_title),
+            { onOpen(SettingsRoutes.Devices) },
+            style = ButtonStyle.Text,
+        )
         state.shop?.let { Text(it.name) }
         PlanSection(state.shop, onOpenBilling)
         CeteleButton(

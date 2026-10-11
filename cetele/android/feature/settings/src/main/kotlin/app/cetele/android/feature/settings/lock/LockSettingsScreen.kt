@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import app.cetele.android.core.designsystem.SecurePinWindow
 import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.domain.validation.Limits
@@ -29,6 +30,7 @@ internal fun LockSettingsScreen(
     onSave: (String, String, String, Boolean, Int, Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
+    SecurePinWindow()
     var oldPin by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
     var repeat by remember { mutableStateOf("") }

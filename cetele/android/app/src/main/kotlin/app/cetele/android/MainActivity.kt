@@ -1,29 +1,46 @@
 package app.cetele.android
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cetele.android.core.data.lock.LockController
+import app.cetele.android.core.data.lock.LockState
 import app.cetele.android.core.data.settings.ThemeMode
 import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.designsystem.SecureWindowPolicy
 import app.cetele.android.navigation.CeteleNavHost
 import app.cetele.android.navigation.startRoute
 import app.cetele.android.shell.ShellScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /** A [FragmentActivity] so the lock screen can show the biometric prompt. */
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
+    @Inject lateinit var lock: LockController
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { CeteleApp() }
+        setContent {
+            val lockState by lock.state.collectAsStateWithLifecycle()
+            LaunchedEffect(lockState) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val policy = SecureWindowPolicy(lockState != LockState.NoPin, Build.VERSION.SDK_INT)
+                    setRecentsScreenshotEnabled(policy.recentsScreenshotsEnabled)
+                }
+            }
+            CeteleApp()
+        }
     }
 }
 

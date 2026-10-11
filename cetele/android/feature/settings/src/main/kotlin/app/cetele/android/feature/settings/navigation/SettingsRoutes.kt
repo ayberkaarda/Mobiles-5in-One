@@ -9,6 +9,8 @@ object SettingsRoutes {
 
     @Serializable data object Lock
 
+    @Serializable data object Devices
+
     @Serializable data object SyncIssues
 
     @Serializable data object AccountDeletion

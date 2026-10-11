@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class LockPolicyTest {
+    @Test fun backwardsElapsedTimeLocks() {
+        assertTrue(LockPolicy.shouldLock(1000, 999, 120, false))
+    }
+
     @Test fun coldStartAlwaysLocks() {
         assertTrue(LockPolicy.shouldLock(null, 0, 120, true))
     }

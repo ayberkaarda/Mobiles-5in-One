@@ -6,6 +6,7 @@ import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
+import app.cetele.android.core.network.api.ReauthAction
 import app.cetele.android.core.network.api.ShopsApi
 import app.cetele.android.core.network.dto.shops.MemberView
 import app.cetele.android.core.network.dto.shops.OwnershipBody
@@ -81,8 +82,12 @@ class OwnershipTransferViewModel
         fun requestCode() =
             viewModelScope.launch {
                 if (state.value.busy || shopId == null) return@launch
+                if (shops.observeActive().first()?.let { it.id == shopId && it.role == ShopRole.OWNER } != true) {
+                    mutableState.value = state.value.copy(codeSent = false, error = SettingsError("forbidden"))
+                    return@launch
+                }
                 mutableState.value = state.value.copy(busy = true, error = null)
-                val result = auth.requestReauth()
+                val result = auth.requestReauth(ReauthAction.OWNERSHIP_TRANSFER, shopId)
                 mutableState.value =
                     state.value.copy(busy = false, codeSent = result is ApiResult.Success, error = result.error())
             }

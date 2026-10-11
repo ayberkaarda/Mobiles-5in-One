@@ -14,6 +14,8 @@ import androidx.navigation.compose.composable
 import app.cetele.android.feature.settings.about.AboutScreen
 import app.cetele.android.feature.settings.account.AccountDeletionScreen
 import app.cetele.android.feature.settings.account.AccountDeletionViewModel
+import app.cetele.android.feature.settings.devices.DevicesScreen
+import app.cetele.android.feature.settings.devices.DevicesViewModel
 import app.cetele.android.feature.settings.home.SettingsHomeScreen
 import app.cetele.android.feature.settings.home.SettingsHomeViewModel
 import app.cetele.android.feature.settings.lock.LockSettingsScreen
@@ -29,6 +31,20 @@ import app.cetele.android.feature.settings.sync.SyncIssuesViewModel
 
 @Suppress("LongMethod")
 fun NavGraphBuilder.settingsGraph(nav: SettingsNavigation) {
+    composable<SettingsRoutes.Devices> {
+        val model = hiltViewModel<DevicesViewModel>()
+        val state by model.state.collectAsStateWithLifecycle()
+        LaunchedEffect(model) { model.load() }
+        DevicesScreen(
+            state,
+            model::select,
+            { model.requestCode() },
+            { model.signOut(it) },
+            model::dismiss,
+            { model.load() },
+            nav.onBack,
+        )
+    }
     composable<SettingsRoutes.Home> {
         val model = hiltViewModel<SettingsHomeViewModel>()
         val state by model.state.collectAsStateWithLifecycle()

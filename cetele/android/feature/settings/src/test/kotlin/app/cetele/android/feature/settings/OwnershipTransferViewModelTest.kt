@@ -4,6 +4,7 @@ import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
+import app.cetele.android.core.network.api.ReauthAction
 import app.cetele.android.core.network.api.ShopsApi
 import app.cetele.android.core.network.dto.shops.MemberList
 import app.cetele.android.core.network.dto.shops.MemberView
@@ -48,9 +49,26 @@ class OwnershipTransferViewModelTest : SettingsTestSupport() {
                 ),
                 200,
             )
-        coEvery { auth.requestReauth() } returns ApiResult.Success(Unit, 202)
+        coEvery { auth.requestReauth(ReauthAction.OWNERSHIP_TRANSFER, "shop") } returns ApiResult.Success(Unit, 202)
         return OwnershipTransferViewModel(auth, api, shops)
     }
+
+    @Test fun codeRequestBindsActionAndRejectsChangedShop() =
+        runTest(dispatcher) {
+            val model = prepare()
+            model.load().join()
+            model.requestCode().join()
+            coVerify(exactly = 1) { auth.requestReauth(ReauthAction.OWNERSHIP_TRANSFER, "shop") }
+            active.value = shop().copy(id = "other")
+            model.requestCode().join()
+            assertFalse(model.state.value.codeSent)
+            assertEquals(
+                "forbidden",
+                model.state.value.error
+                    ?.code,
+            )
+            coVerify(exactly = 1) { auth.requestReauth(any(), any()) }
+        }
 
     @Test
     fun pickerOnlyListsStaffAndSuccessRefreshesCallerRole() =

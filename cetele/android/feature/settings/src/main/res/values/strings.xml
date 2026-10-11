@@ -68,4 +68,17 @@
     <string name="settings_common_back">Ayarlara dön</string>
     <string name="settings_common_retry">%1$d sn sonra tekrar deneyin.</string>
     <string name="settings_common_support">Destek kodu: %1$s</string>
+    <string name="settings_devices_title">Oturum açık cihazlar</string>
+    <string name="settings_devices_explanation">Bir cihazın oturumunu SMS onay koduyla kapatabilirsiniz. Erişimi en geç 15 dakika içinde sona erer.</string>
+    <string name="settings_devices_refresh">Yenile</string>
+    <string name="settings_devices_empty">Kayıtlı cihaz yok.</string>
+    <string name="settings_devices_unknown_model">Bilinmeyen cihaz</string>
+    <string name="settings_devices_version">Uygulama sürümü: %1$s</string>
+    <string name="settings_devices_last_seen">Son görülme: %1$s</string>
+    <string name="settings_devices_current">Bu cihaz</string>
+    <string name="settings_devices_signed_in">Oturum açık</string>
+    <string name="settings_devices_signed_out">Oturum kapalı</string>
+    <string name="settings_devices_sign_out">Cihaz oturumunu kapat</string>
+    <string name="settings_devices_confirmation">Seçili cihazın oturumunu kapatmak için onay kodu isteyin. Bu cihazı seçerseniz yerel verileriniz de temizlenir.</string>
+    <string name="settings_devices_cancel">Vazgeç</string>
 </resources>

@@ -68,4 +68,17 @@
     <string name="settings_common_back">Back to settings</string>
     <string name="settings_common_retry">Try again in %1$d seconds.</string>
     <string name="settings_common_support">Support code: %1$s</string>
+    <string name="settings_devices_title">Signed-in devices</string>
+    <string name="settings_devices_explanation">End a device session with an SMS confirmation code. Its access ends within 15 minutes.</string>
+    <string name="settings_devices_refresh">Refresh</string>
+    <string name="settings_devices_empty">No registered devices.</string>
+    <string name="settings_devices_unknown_model">Unknown device</string>
+    <string name="settings_devices_version">App version: %1$s</string>
+    <string name="settings_devices_last_seen">Last seen: %1$s</string>
+    <string name="settings_devices_current">This device</string>
+    <string name="settings_devices_signed_in">Signed in</string>
+    <string name="settings_devices_signed_out">Signed out</string>
+    <string name="settings_devices_sign_out">End device session</string>
+    <string name="settings_devices_confirmation">Request a code to end the selected device session. Selecting this device also clears your local data.</string>
+    <string name="settings_devices_cancel">Cancel</string>
 </resources>
