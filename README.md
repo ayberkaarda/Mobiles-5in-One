@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
+One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
@@ -26,14 +26,14 @@ One card per project. Kadro, Askıda and Cetele have applications. Each of the t
       <img src="kadro/docs/screenshots/mobile/03-matches-light.png" alt="Kadro mobile app: matches tab with two upcoming matches, sample data" width="32%">
       <img src="kadro/docs/screenshots/mobile/04-match-detail-rsvp-light.png" alt="Kadro mobile app: match detail with RSVP and fee share, sample data" width="32%">
       <img src="kadro/docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro mobile app: lineup on a pitch diagram with open places, sample data" width="32%"><br>
-      <sub><b>Kadro</b>: web pages and Android app screens (emulator, sample data); all planned phases merged</sub>
+      <sub><b>Kadro</b>: web pages and Android app screens (emulator, sample data); all planned phases merged · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/kadro/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/askida.png" alt="Askıda web home page and Android recipient screen (local stack, sample data)" width="100%"><br>
       <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda recipient mode: nearby shops, sample data" width="32%">
       <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda donor mode: item and quantity, sample data" width="32%">
       <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda merchant mode: shop home, sample data" width="32%"><br>
-      <sub><b>Askıda</b>: web home page and Android recipient screen (local stack, sample data)</sub>
+      <sub><b>Askıda</b>: web home page and Android recipient screen (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/askida/">web demo</a></sub>
     </td>
   </tr>
   <tr>
@@ -42,7 +42,7 @@ One card per project. Kadro, Askıda and Cetele have applications. Each of the t
       <img src="cetele/docs/release/screenshots/01-customers.png" alt="Cetele Android app: customer list with balances, sample customers, emulator" width="32%">
       <img src="cetele/docs/release/screenshots/02-customer-ledger.png" alt="Cetele Android app: one customer's ledger with debts, a payment and a reversed entry struck through, sample data, emulator" width="32%">
       <img src="cetele/docs/release/screenshots/03-dashboard.png" alt="Cetele Android app: dashboard with the total owed and the top debtors, sample data, emulator" width="32%"><br>
-      <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data)</sub>
+      <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
