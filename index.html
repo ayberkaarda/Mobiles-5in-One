@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mobiles-5in-One: tanıtım sayfaları</title>
+<meta name="description" content="Kadro, Askıda ve Çetele projelerinin tanıtım sitelerinin yerel derlemelerden alınmış statik görüntüleri.">
+<style>
+:root{--bg:#f6f5f0;--fg:#16231c;--muted:#566159;--card:#fff;--line:#d9d8cf;--accent:#0f5c33}
+@media (prefers-color-scheme:dark){:root{--bg:#121714;--fg:#eef1ec;--muted:#a3ada6;--card:#1b231e;--line:#2f3a33;--accent:#6fcf97}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:56rem;margin:0 auto;padding:3rem 1rem 4rem}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 .5rem}
+.lead{color:var(--muted);margin:0 0 2rem}
+.note{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:1rem 1.2rem;margin:0 0 2rem}
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+a.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem}
+a.card:hover,a.card:focus-visible{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:2px}
+.card h2{margin:0 0 .3rem;font-size:1.25rem;color:var(--accent)}.card p{margin:0;color:var(--muted)}
+footer a{color:var(--accent)}footer{margin-top:2.5rem;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Kadro, Askıda ve Çetele</h1>
+<p class="lead">Üç portföy projesinin tanıtım sitelerinin gerçek sayfaları, yerel derlemelerden alınmış statik görüntüler olarak.</p>
+<div class="note" role="note">
+<strong>Bunlar canlı bir hizmet değil.</strong> Sayfalar projelerin kendi sunucularından örnek veriyle (<code>[ÖRNEK]</code> etiketli) alındı. Giriş, form, arama ve ödeme gibi sunucu gerektiren yerler çalışmaz; indirme düğmeleri uygulamanın yayında olduğunu göstermez.
+</div>
+<div class="grid">
+<a class="card" href="kadro/"><h2>Kadro</h2><p>Halı saha maçı organizasyonu: kadroyu kur, eksiği kapat, ücreti böl. Expo uygulaması ve Next.js web.</p></a>
+<a class="card" href="askida/"><h2>Askıda</h2><p>Askıda ürün ağı: bağışçılar yerel dükkânlara önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır. Flutter ve Laravel.</p></a>
+<a class="card" href="cetele/"><h2>Çetele</h2><p>Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri. Kotlin, Jetpack Compose ve Spring Boot.</p></a>
+</div>
+<footer>Kaynak kod ve belgeler: <a href="https://github.com/ayberkaarda/Mobiles-5in-One">github.com/ayberkaarda/Mobiles-5in-One</a>. English: three portfolio projects, static snapshots of their real public pages from local builds with sample data; not a live service.</footer>
+</main>
+</body>
+</html>

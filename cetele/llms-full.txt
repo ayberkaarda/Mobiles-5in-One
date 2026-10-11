@@ -1,0 +1,922 @@
+# Çetele
+
+> Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını takip etmesi için tasarlanan Android veresiye defteridir. İnternet olmadan kayıt yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Bakkal, manav, kasap, berber ve kahvehane gibi dükkânlarda müşteri hesabını tarih, tutar ve notla tutmanıza; hesap dökümünü müşterinizle paylaşmanıza yardımcı olur. Sahip ve çalışan rolleri bulunur.
+
+- Uygulama: Çetele: Veresiye Defteri (Android, app.cetele.android)
+- Dil: Türkçe; para birimi: Türk lirası (TRY)
+- Durum: Çetele tek geliştiricinin portföy projesidir; şirket, adres veya vergi numarası yoktur. Android uygulaması Google Play'de yayına hazırlanıyor.
+
+## Kimler için
+
+Bakkal, manav, kasap, berber, kahvehane ve küçük esnaf; dükkân sahibi ve çalışanları, orta ve giriş seviyesi Android telefonlar, kesintili internet bağlantısı.
+
+## Özellikler
+
+- İnternet olmadan çalışır; bağlantı gelince kayıtları eşitler.
+- Dükkân sahibi ve çalışan rolleri; çalışan davet ile eklenir.
+- Müşteriler, borçlar ve tahsilatlar Türk lirası ile tutulur.
+- Kayıtlar değiştirilmez; hata ters kayıtla düzeltilir.
+- WhatsApp ile imzalı hesap dökümü bağlantısı paylaşılır.
+- SMS hatırlatması yalnızca onayı kayıtlı müşterilere, aylık kota ile gönderilir.
+- Hesap dökümü PDF, kayıtlar CSV olarak alınır.
+- Fiş ve not fotoğrafları kayda eklenir.
+- PIN ve biyometrik kilit.
+
+## Planlar
+
+- Free: ücretsiz; 100 müşteri, ayda 200 fotoğraf, ayda 30 SMS.
+- Pro: Google Play aboneliği (aylık veya yıllık); sınırsız müşteri, ayda 2000 fotoğraf, ayda 500 SMS ve öncelikli eşitleme. Pro fiyatları Google Play'de gösterilir; bu projede sabit bir fiyat yoktur.
+
+---
+
+# Çetele: Esnafın Dijital Veresiye Defteri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını takip etmesi için tasarlanan Android veresiye defteridir. İnternet olmadan kayıt yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Bakkal, manav, kasap, berber ve kahvehane gibi dükkânlarda müşteri hesabını tarih, tutar ve notla tutmanıza; hesap dökümünü müşterinizle paylaşmanıza yardımcı olur. Sahip ve çalışan rolleri bulunur.
+
+## Veresiyeyi unutma, Çetele'ye yaz.
+
+Kısaca: Veresiye defteri, müşteriye yazılan borçlarla alınan ödemelerin kaydıdır. Çetele bu kayıtları Android cihazınızda müşteri hesabına göre tutar.
+
+Bir müşteri farklı günlerde alışveriş yapıp borcunu parça parça ödeyebilir. Her alışverişi borç, her ödemeyi tahsilat olarak yazın. Müşteri hesabında bakiyeyi ve o bakiyeyi oluşturan kayıtları birlikte inceleyin. Tutarlar Türk lirası olarak tutulur.
+
+## Dükkândaki hesabı takip edin
+
+- **İnternetsiz kayıt:** Borç ve tahsilat yazın; bağlantı geldiğinde kayıtlar cihazlar arasında eşitlensin.
+- **Açıklamalı defter:** Kayda tarih, not ve isteğe bağlı fiş fotoğrafı ekleyin.
+- **Ayrı yetkiler:** Çalışanınız borç ve tahsilat kaydetsin, bakiyeleri görsün. Üye yönetimi dükkân sahibinde kalsın.
+- **Hesap dökümü:** Müşteri başına PDF alın, tüm kayıtları CSV olarak dışa aktarın.
+- **Hatırlatma:** WhatsApp ile imzalı hesap dökümü bağlantısı paylaşın. SMS için kayıtlı müşteri onayı ve aylık kota gerekir.
+
+Panelde bugünün borçlarını, tahsilatlarını ve toplam alacağı görebilirsiniz. Borçlara isteğe bağlı vade ekleyebilirsiniz. Uygulamada PIN ve biyometrik kilit seçenekleri bulunur.
+
+## Üç adımda defter tutun
+
+### 1. Müşteriyi kaydedin
+
+Müşterinin adını ekleyin. Telefon, not ve etiket alanlarını kullanarak hesabı ayırt etmenize yardımcı olacak bilgileri tutabilirsiniz.
+
+### 2. Borç ve tahsilatı yazın
+
+Veresiye tutarını borç, alınan ödemeyi tahsilat olarak kaydedin. Yanlış kayıt değiştirilemez; düzeltme için eski kayda bağlı ters kayıt oluşturulur.
+
+### 3. Hesabı inceleyip paylaşın
+
+Müşterinin bakiyesini ve hesap dökümünü kontrol edin. PDF döküm alın veya WhatsApp üzerinden döküm bağlantısı paylaşın. Müşteriniz bağlantıyı tarayıcıda açabilir.
+
+## Dükkânınıza uygun kullanımı okuyun
+
+[Bakkal](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal), [manav](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/manav), [kasap](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/kasap) ve [berber](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/berber) sayfalarında günlük hesap örneklerini bulabilirsiniz. Araçların tamamı için [özellikleri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), Free ve Pro sınırları için [planları](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) inceleyin.
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir. Uygulama Google Play'de yayına hazırlanıyor. Projenin kapsamını [hakkında sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda), iletişim durumunu [iletişim sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/iletisim) okuyabilirsiniz.
+
+---
+
+# Çetele Özellikleri: Borç ve Tahsilat Takibi
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnaf için müşteri, borç, tahsilat ve hesap dökümünü bir araya getiren Android veresiye defteridir. İnternet olmadan kayıt tutabilir, bağlantı geldiğinde kayıtları cihazlar arasında eşitleyebilirsiniz. Sahip ve çalışan rolleriyle dükkân hesabında çalışabilir, fiş fotoğrafı ekleyebilir ve müşterinizin hesabını paylaşabilirsiniz. Yanlış kayıtlar değiştirilmez, bağlı bir ters kayıtla düzeltilir.
+
+## Müşteri hesabı ve defter kayıtları
+
+Kısaca: Her müşterinin borçları, tahsilatları ve bakiyesi kendi hesabında takip edilir. Müşterileri isimle arayabilir, telefon, not ve etiket bilgisi ekleyebilirsiniz.
+
+Borç ve tahsilat kayıtlarında tutar, tarih, not ve isteğe bağlı fotoğraf bulunur. Tutarlar Türk lirasıdır. Fiş veya el yazısı not fotoğrafını ilgili kayda ekleyebilirsiniz. Hatalı kayıt değiştirilemez; düzeltme, ilk kayda bağlı ters kayıtla yapılır. Böylece eski işlem de defterde kalır.
+
+## İnternetsiz kullanım ve çalışan yetkileri
+
+Kısaca: Borç ve tahsilat kayıtlarını internet olmadan yazabilirsiniz. Bağlantı geldiğinde kayıtlar eşitlenir.
+
+Dükkân sahibi ve çalışan farklı cihazlardan dükkân hesabında çalışabilir. Çalışan borç ve tahsilat kaydeder, bakiyeleri görür. Müşteri silme, tüm kayıtları dışa aktarma ve üye yönetimi yetkileri dükkân sahibindedir. Çalışan daveti telefon numarasıyla yapılır.
+
+Uygulamada PIN ve biyometrik kilit seçenekleri bulunur. Giriş, telefon numarası ve SMS ile gelen tek kullanımlık kod üzerinden yapılır.
+
+## Günün hesabı ve vadeler
+
+Kısaca: Panel, bugünün borçlarını, tahsilatlarını ve toplam alacağı gösterir. En çok borçlu müşteriler ile bugün vadesi gelen kayıtlar da burada yer alır.
+
+Borçlara vade tarihi eklemek isteğe bağlıdır. Müşterinizle konuştuğunuz ödeme tarihini kaydedebilir, günlük hesap kontrolünde ilgili kayıtları inceleyebilirsiniz.
+
+## Döküm ve hatırlatma seçenekleri
+
+- Müşteri başına PDF hesap dökümü alın.
+- Tüm defter kayıtlarını CSV olarak dışa aktarın.
+- WhatsApp ile imzalı hesap dökümü bağlantısı paylaşın.
+- Yalnızca SMS onayı kayıtlı müşterilere, aylık kota içinde SMS hatırlatması gönderin.
+
+Müşteriniz döküm bağlantısını tarayıcıda açabilir. Telefon numarasının bulunması tek başına SMS gönderim onayı değildir; onayın kayıtlı olması gerekir. Hesap ve dükkân silme işlemleri uygulama içinden ve web üzerinden sunulur.
+
+## Kapsamı ve planları inceleyin
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir; uygulama Google Play'de yayına hazırlanıyor. Ürün kapsamındaki ödeme kaydı, dükkânda aldığınız tahsilatı deftere yazmaktır. Çetele ödeme işleme, POS entegrasyonu veya stok takibi sunmaz.
+
+Müşteri, fotoğraf ve SMS sınırları için [Free ve Pro planlarını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma), projenin durumunu anlamak için [hakkında sayfasını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyun. Günlük kullanıma ilişkin sorular için [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasına bakın.
+
+---
+
+# Çetele Free ve Pro Planları
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma
+Güncelleme: 2026-10-11
+
+Çetele'nin Free ve Pro planları, dijital veresiye defterinde müşteri sayısı, aylık fotoğraf kotası ve SMS kotasına göre ayrılır. Free plan sınırlı müşteri kaydı sunar; Pro plan sınırsız müşteri ve öncelikli senkronizasyon içerir. Pro, Google Play üzerinden aylık veya yıllık abonelik olarak tasarlanmıştır. Fiyatlar Google Play'de gösterilir; uygulama yayına hazırlanıyor.
+
+## Free ve Pro karşılaştırması
+
+Kısaca: Plan seçerken kayıtlı müşteri sayınızı, kayıtlara ekleyeceğiniz fotoğrafları ve onaylı müşterilere göndereceğiniz SMS hatırlatmalarını değerlendirin.
+
+| Özellik | Free | Pro |
+| --- | --- | --- |
+| Müşteri sınırı | 100 müşteri | Sınırsız müşteri |
+| Aylık fotoğraf kotası | 200 fotoğraf | 2000 fotoğraf |
+| Aylık SMS kotası | 30 SMS | 500 SMS |
+| Öncelikli senkronizasyon | Yok | Var |
+
+Fotoğraflar, borç ve tahsilat kayıtlarına isteğe bağlı eklenen fiş veya el yazısı not görüntüleridir. Her kayıt için fotoğraf eklemeniz gerekmez. Kayıt tutarken tutar, tarih ve not alanlarını da kullanabilirsiniz.
+
+## Plan seçimini dükkânınıza göre yapın
+
+Kısaca: Müşteri sınırı ile aylık kullanım kotaları farklı ölçülerdir. Müşteri sınırı kaydettiğiniz hesapları, fotoğraf ve SMS kotaları ilgili ayın kullanımını ifade eder.
+
+Müşteri listenizin büyüklüğünü değerlendirin. Fiş fotoğraflarını hangi alışverişlerde saklamak istediğinizi ve SMS hatırlatmasını ne kadar kullanacağınızı düşünün. Pro planında müşteri sayısı sınırsızdır; fotoğraf ve SMS için aylık sınırlar devam eder.
+
+İnternet olmadan borç ve tahsilat yazma, bağlantı geldiğinde kayıtları eşitleme Çetele'nin temel çalışma biçimidir. Pro planın farklarından biri öncelikli senkronizasyondur. Defterin diğer araçlarını [özellikler sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler) inceleyebilirsiniz.
+
+## SMS kotası ve müşteri onayı
+
+Kısaca: Her iki planda da SMS yalnızca onayı kayıtlı müşterilere gönderilebilir. Daha yüksek kota, onay koşulunu değiştirmez.
+
+Müşterinin telefon numarasını kaydetmeniz SMS onayı yerine geçmez. Hatırlatma seçeneklerinden WhatsApp paylaşımı ise imzalı hesap dökümü bağlantısı içerir. Müşteriniz bu bağlantıyı tarayıcıda açabilir. Hesabı paylaşırken hangi kanalı kullanacağınızı müşteri kaydı ve iletişim tercihinize göre değerlendirin.
+
+## Pro aboneliği ve fiyat bilgisi
+
+Kısaca: Pro, Google Play üzerinden aylık veya yıllık abonelik olarak tasarlanmıştır. Fiyatlar Google Play'de gösterilir.
+
+Bu projede sabit bir fiyat belirlenmemiştir. Çetele, tek geliştiricinin hazırladığı bir portföy projesidir ve Google Play'de yayına hazırlanıyor. Canlı abonelik satın alma süreci gerçek Google Play ortamında denenmemiştir.
+
+Projenin kapsamını [hakkında sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyabilir, planlarla ilgili diğer konular için [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasına bakabilirsiniz.
+
+---
+
+# Bakkal İçin Dijital Veresiye Defteri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal
+Güncelleme: 2026-10-11
+
+Çetele, bakkalınızda müşterilerin veresiye alışverişlerini ve ödemelerini kaydetmeniz için tasarlanan Android veresiye defteridir. İnternet olmadan borç ve tahsilat yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Müşterinin farklı günlerdeki alışverişleri aynı hesapta görünür. Not, fiş fotoğrafı ve hesap dökümüyle hangi tutarın nereden geldiğini takip edebilir, kalan borcu müşterinizle paylaşabilirsiniz.
+
+## Bakkalda günlük veresiye kaydı
+
+Kısaca: Çetele'de her veresiye alışverişini müşterinin hesabına borç, gelen ödemeyi tahsilat olarak yazarsınız. Böylece alışveriş ile ödeme ayrı kayıtlarda görünür ve kalan bakiye takip edilir.
+
+Bir müşteriniz ekmek ve sütü hesabına yazdırıp başka bir gün temizlik malzemesi alabilir. Bu tür alışverişlerde yalnızca toplamı hatırlamak yerine her alışverişin tutarını ve tarihini kaydedin. Not alanına alışverişi açıklayan kısa bir bilgi ekleyebilirsiniz. Çetele'de tutarlar Türk lirası olarak tutulur.
+
+Müşteri kaydında isim, telefon, not ve etiket alanları bulunur. Benzer isimli müşterileri ayırt etmek için müşteri notunu kullanabilirsiniz. Kasada hesap sorulduğunda müşteriyi arayıp bakiyesini ve o bakiyeyi oluşturan kayıtları inceleyebilirsiniz.
+
+## Borç ve tahsilatı ayrı yazın
+
+Kısaca: Müşteri borcunun bir kısmını ödediğinde eski alışveriş kaydını değiştirmeyin. Aldığınız tutarı yeni bir tahsilat olarak kaydedin.
+
+Parça parça ödemelerde hem ilk alışveriş hem de sonradan gelen tahsilatlar hesapta kalır. Müşteriniz yeniden veresiye aldığında da yeni bir borç kaydı eklersiniz. Böylece hesabı yalnızca son söylenen tutardan takip etmek zorunda kalmazsınız.
+
+- Borç kaydına tutar, tarih ve açıklama ekleyin.
+- Elinizde fiş veya el yazısı not varsa kayda fotoğraf iliştirin.
+- Ödeme geldiğinde alınan tutarı tahsilat olarak yazın.
+- Yanlış kayıt için ters kayıt oluşturun; eski kayıt değiştirilmez.
+
+## İnternet kesilse de deftere yazın
+
+Kısaca: Çetele, internet olmadan kayıt tutmak için tasarlanır. Bağlantı geldiğinde kayıtlar cihazlar arasında eşitlenir.
+
+Kasada bağlantı yokken borç ve tahsilat yazabilirsiniz. Siz ve çalışanınız farklı Android cihazlardan dükkân hesabında çalışabilirsiniz. Çalışan borç ve tahsilat kaydeder, bakiyeleri görür; müşteri silme, tüm kayıtları dışa aktarma ve üyeleri yönetme yetkileri dükkân sahibindedir.
+
+Gün sonunda bugünün borçlarını, tahsilatlarını ve toplam alacağı panelden inceleyebilirsiniz. Borca isteğe bağlı vade tarihi eklediğinizde bugün vadesi gelen kayıtları da takip edebilirsiniz.
+
+## Müşteriye hesabını gösterin
+
+Kısaca: Hesap dökümü, müşterinin alışverişlerini ve ödemelerini birlikte görmesine yardımcı olur. Müşteri başına PDF döküm alabilirsiniz.
+
+WhatsApp paylaşımı, imzalı hesap dökümü bağlantısı içeren bir hatırlatma mesajı hazırlamanıza olanak verir. Müşteriniz bağlantıyı tarayıcıda açabilir. SMS hatırlatması ise yalnızca onayı kayıtlı müşteriler için ve planın aylık kotası içinde kullanılabilir. Telefon numarasının kayıtlı olması tek başına SMS onayı anlamına gelmez.
+
+## Bakkalınız için seçenekleri inceleyin
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir; uygulama Google Play'de yayına hazırlanıyor. Free ve Pro planlarının müşteri, fotoğraf ve SMS sınırlarını [planlar sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) karşılaştırabilirsiniz.
+
+Defterin diğer araçları için [özellikleri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), ürünün kapsamı için [hakkında sayfasını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyun. Sık sorulan konulara [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasından ulaşabilirsiniz.
+
+---
+
+# Manav İçin Dijital Veresiye Defteri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/manav
+Güncelleme: 2026-10-11
+
+Çetele, manavınızda veresiye alışverişlerin tutarını ve müşterilerden aldığınız ödemeleri kaydetmek için tasarlanan Android defteridir. İnternet olmadan borç ve tahsilat yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Alışveriş notları, tarihler ve isteğe bağlı fotoğraflar müşteri hesabında tutulur. Farklı günlerdeki alışverişlerle parça parça ödemeleri birlikte görerek kalan alacağı takip edebilirsiniz.
+
+## Manavda günlük veresiye kaydı
+
+Kısaca: Çetele'de her veresiye alışverişini müşterinin hesabına borç, gelen ödemeyi tahsilat olarak yazarsınız. Farklı günlerde alınan sebze ve meyvelerin tutarları aynı müşteri hesabında toplanır.
+
+Bir müşteriniz pazı ve domatesi hesabına yazdırıp sonraki gelişinde meyve alabilir. Bu tür alışverişleri tarihleriyle ayrı kaydedin. Not alanına alışverişi hatırlatacak bir açıklama yazabilirsiniz. Çetele'de tutarlar Türk lirası olarak tutulur; deftere yazdığınız bilgi, müşteriye sattığınız alışverişin borç tutarıdır.
+
+Müşteri kaydında isim, telefon, not ve etiket alanları bulunur. Hesap sorulduğunda müşteriyi arayabilir, bakiyesini ve geçmiş kayıtlarını inceleyebilirsiniz. Müşteri notu, hesabı kime açtığınızı ayırt etmenize yardımcı olacak bilgiyi saklamak için kullanılabilir.
+
+## Borç ve tahsilatı ayrı yazın
+
+Kısaca: Müşteriniz biriken hesabın bir kısmını ödediğinde aldığınız tutarı tahsilat olarak kaydedin. Önceki alışverişlerin tutarlarını değiştirmeyin.
+
+Aynı gün hem ödeme hem yeni veresiye alışveriş olabilir. Önce alınan ödemeyi tahsilat, yeni alışverişi borç olarak yazarsınız. Bu ayrım, müşteriyle hesap konuşurken hangi tutarın ödeme, hangisinin alışveriş olduğunu görmenize yardımcı olur.
+
+- Alışverişin tutarını ve tarihini borç kaydına ekleyin.
+- Açıklama gerekiyorsa not alanını kullanın.
+- Fiş veya el yazısı not fotoğrafını isteğe bağlı ekleyin.
+- Yanlış kayıt için ters kayıt oluşturun; eski kayıt değiştirilmez.
+
+## İnternet kesilse de deftere yazın
+
+Kısaca: Çetele, internet olmadan kayıt tutmak için tasarlanır. Bağlantı geldiğinde kayıtlar cihazlar arasında eşitlenir.
+
+Tezgâhta bağlantı yokken borç ve tahsilat yazabilirsiniz. Siz ve çalışanınız dükkân hesabını farklı Android cihazlardan kullanabilirsiniz. Çalışan bakiyeleri görür, borç ve tahsilat kaydeder. Müşteri silme, tüm kayıtları dışa aktarma ve üyeleri yönetme yetkileri dükkân sahibindedir.
+
+Günün borçlarını, tahsilatlarını ve toplam alacağı panelden inceleyebilirsiniz. Bir borç için vade tarihi belirlemek isterseniz bu alanı kullanabilirsiniz. Bugün vadesi gelen kayıtlar da panelde yer alır.
+
+## Müşteriye hesabını gösterin
+
+Kısaca: Müşteri başına hesap dökümü, ayrı tarihlerdeki alışverişleri ve ödemeleri birlikte gösterir. PDF döküm alabilir, WhatsApp ile imzalı hesap dökümü bağlantısı paylaşabilirsiniz.
+
+Müşteriniz bu bağlantıyı tarayıcıda açabilir. Hatırlatmayı SMS ile yapmak isterseniz müşterinin kayıtlı onayı gerekir. SMS gönderimi planın aylık kotasıyla sınırlıdır. Telefon numarasını müşteri kaydına eklemek, SMS onayı kaydetmenin yerine geçmez.
+
+## Manavınız için seçenekleri inceleyin
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir; uygulama Google Play'de yayına hazırlanıyor. Müşteri sayısı, aylık fotoğraf ve SMS sınırlarını [planlar sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) karşılaştırın.
+
+Diğer araçları [özellikler sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), projenin kapsamını [hakkında sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyabilirsiniz. Kullanımla ilgili konular için [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasına bakın.
+
+---
+
+# Kasap İçin Dijital Veresiye Defteri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/kasap
+Güncelleme: 2026-10-11
+
+Çetele, kasabınızda veresiye satışları ve müşterilerden aldığınız ödemeleri kaydetmek için tasarlanan Android defteridir. Her satışın tutarını, tarihini ve açıklamasını müşteri hesabına yazabilirsiniz. İnternet olmadan kayıt tutar, bağlantı geldiğinde kayıtları eşitlersiniz. Fiş fotoğrafı ve hesap dökümü, farklı alışverişlerin borcunu ve sonradan yapılan tahsilatları birlikte takip etmenize yardımcı olur.
+
+## Kasapta günlük veresiye kaydı
+
+Kısaca: Çetele'de veresiye satışları borç, müşterinin yaptığı ödemeleri tahsilat olarak kaydedersiniz. Her kayıt müşteri hesabındaki bakiyenin nasıl oluştuğunu görmenize yardımcı olur.
+
+Müşteriniz bir gelişinde kıyma, başka bir gelişinde kuşbaşı alıp hesabına yazdırabilir. Satışın tutarını ve tarihini ayrı kaydedin. Not alanına alışverişi açıklayan bilgi ekleyebilirsiniz. Elinizde fiş ya da el yazısı not varsa fotoğrafını ilgili kayda iliştirebilirsiniz. Çetele'de tutarlar Türk lirası olarak tutulur.
+
+Müşteri kaydında isim, telefon, not ve etiket alanları bulunur. Müşteri hesabını sorunca arama yaparak bakiyesini ve borç kayıtlarını inceleyebilirsiniz. Hesap dökümü, yalnızca kalan tutarı söylemek yerine alışverişlerin ve ödemelerin sırasını göstermenize olanak verir.
+
+## Borç ve tahsilatı ayrı yazın
+
+Kısaca: Satış kaydı ile ödeme kaydı ayrı tutulur. Müşterinin parça parça yaptığı ödemeleri yeni tahsilatlar olarak yazarsınız.
+
+Müşteri önceki alışverişin bir bölümünü ödeyip yeni bir alışverişi veresiye alabilir. Bu durumda gelen para için tahsilat, yeni satış için borç kaydı oluşturun. Önceki satış kaydını kalan tutara indirerek değiştirmezsiniz. Böylece hesapta satışın tamamı ve alınan ödeme birlikte görünür.
+
+- Satış tutarını, tarihi ve gerekiyorsa açıklamayı yazın.
+- Fiş fotoğrafını isteğe bağlı olarak kayda ekleyin.
+- Alınan ödemeyi ayrı bir tahsilat olarak kaydedin.
+- Yanlış kayıt için ters kayıt oluşturun; eski kayıt değiştirilmez.
+
+## İnternet kesilse de deftere yazın
+
+Kısaca: Çetele, internet olmadan kayıt tutmak için tasarlanır. Bağlantı geldiğinde kayıtlar cihazlar arasında eşitlenir.
+
+Tezgâhta bağlantı yokken borç ve tahsilat yazabilirsiniz. Siz ve çalışanınız dükkân hesabında farklı Android cihazlardan çalışabilirsiniz. Çalışan bakiyeleri görür, borç ve tahsilat kaydeder. Müşteri silme, tüm kayıtları dışa aktarma ve üyeleri yönetme yetkileri dükkân sahibindedir.
+
+Panelde bugünün borçlarını, tahsilatlarını ve toplam alacağı inceleyebilirsiniz. Borca isteğe bağlı vade tarihi ekleyebilir, bugün vadesi gelen kayıtları görebilirsiniz. Vade bilgisi, müşterinizle konuştuğunuz ödeme tarihini kayda geçirmenize yardımcı olur.
+
+## Müşteriye hesabını gösterin
+
+Kısaca: Müşteri başına PDF hesap dökümü alabilir veya WhatsApp üzerinden imzalı hesap dökümü bağlantısı paylaşabilirsiniz. Müşteriniz bağlantıyı tarayıcıda açabilir.
+
+Hesabı hatırlatmak için SMS seçeneği de bulunur. Bu seçenek yalnızca SMS onayı kayıtlı müşteriler için ve planın aylık kotası içinde kullanılabilir. Müşterinin telefon numarasını kaydetmeniz, SMS onayının da bulunduğu anlamına gelmez.
+
+## Kasabınız için seçenekleri inceleyin
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir; uygulama Google Play'de yayına hazırlanıyor. Müşteri, fotoğraf ve SMS sınırlarını [planlar sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) karşılaştırın.
+
+Defter araçlarını [özellikler sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), projenin kapsamını [hakkında sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyabilirsiniz. Kullanım soruları için [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasına bakın.
+
+---
+
+# Berber İçin Dijital Veresiye Defteri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/berber
+Güncelleme: 2026-10-11
+
+Çetele, berber dükkânınızda müşterilerin hesabına yazdırdığı hizmetleri ve sonradan yaptığı ödemeleri kaydetmek için tasarlanan Android defteridir. Borç ve tahsilatları tarih ve notla müşteri hesabında tutabilirsiniz. İnternet olmadan kayıt yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Farklı ziyaretlerden kalan borçları hesap dökümünde göstererek müşterinizle hangi hizmetin ödendiğini konuşabilirsiniz.
+
+## Berberde günlük veresiye kaydı
+
+Kısaca: Çetele'de müşterinin hesabına yazdırdığı hizmeti borç, sonradan getirdiği ödemeyi tahsilat olarak kaydedersiniz. Farklı ziyaretlerin kayıtları aynı müşteri hesabında görünür.
+
+Müşteriniz saç kesimini hesabına yazdırıp sonraki ziyaretinde sakal tıraşı olabilir. Bu tür durumlarda her ziyaretin tutarını ve tarihini ayrı kaydedin. Not alanına hangi hizmetin verildiğini yazabilirsiniz. Çetele'de tutarlar Türk lirası olarak tutulur. Açıklama, daha sonra hesabı konuşurken kaydın hangi ziyarete ait olduğunu hatırlamanıza yardımcı olur.
+
+Müşteri kaydında isim, telefon, not ve etiket alanları bulunur. Benzer isimli müşterileri ayırt etmek için not alanını kullanabilirsiniz. Müşteriniz hesabını sorduğunda arama yapabilir, bakiyesini ve önceki ziyaretlerden gelen borç kayıtlarını inceleyebilirsiniz.
+
+## Borç ve tahsilatı ayrı yazın
+
+Kısaca: Önceki ziyaretin borcu ödenince yeni bir tahsilat kaydı oluşturun. Müşterinin yeniden hesabına yazdırdığı hizmet için de ayrı borç kaydı ekleyin.
+
+Müşteriniz biriken borcun bir kısmını ödeyebilir. Alınan tutarı tahsilat olarak kaydettiğinizde önceki hizmetlerin kayıtları hesapta kalır. Aynı ziyaret sırasında hem eski borç ödeniyor hem yeni hizmet veresiye yazılıyorsa iki işlemi ayrı tutun. Böylece ödeme ile hizmet tutarını birbirine karıştırmadan inceleyebilirsiniz.
+
+- Hizmetin tutarını ve verildiği tarihi yazın.
+- Açıklamaya saç kesimi veya sakal tıraşı gibi hizmet bilgisini ekleyin.
+- Alınan ödemeyi ayrı bir tahsilat olarak kaydedin.
+- Yanlış kayıt için ters kayıt oluşturun; eski kayıt değiştirilmez.
+
+## İnternet kesilse de deftere yazın
+
+Kısaca: Çetele, internet olmadan kayıt tutmak için tasarlanır. Bağlantı geldiğinde kayıtlar cihazlar arasında eşitlenir.
+
+Dükkânda bağlantı yokken borç ve tahsilat yazabilirsiniz. Siz ve çalışanınız farklı Android cihazlardan aynı dükkân hesabında çalışabilirsiniz. Çalışan borç ve tahsilat kaydeder, bakiyeleri görür. Müşteri silme, tüm kayıtları dışa aktarma ve üyeleri yönetme yetkileri dükkân sahibindedir.
+
+Panelde bugünün borçlarını, tahsilatlarını ve toplam alacağı görebilirsiniz. Müşterinizle ödeme tarihi belirlediyseniz borca isteğe bağlı vade ekleyebilirsiniz. Bugün vadesi gelen kayıtlar da panelde yer alır.
+
+## Müşteriye hesabını gösterin
+
+Kısaca: Müşteri başına PDF hesap dökümü alabilir veya WhatsApp üzerinden imzalı hesap dökümü bağlantısı paylaşabilirsiniz. Müşteriniz bağlantıyı tarayıcıda açabilir.
+
+Hesap dökümü, farklı ziyaretlerden gelen hizmet borçlarını ve yapılan ödemeleri birlikte incelemek için kullanılabilir. SMS hatırlatması yalnızca SMS onayı kayıtlı müşteriler için ve planın aylık kotası içinde kullanılabilir. Telefon numarasını kaydetmek, SMS onayını kaydetmenin yerine geçmez.
+
+## Berber dükkânınız için seçenekleri inceleyin
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir; uygulama Google Play'de yayına hazırlanıyor. Müşteri, fotoğraf ve SMS sınırlarını [planlar sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) karşılaştırın.
+
+Diğer araçlar için [özellikler sayfasını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), ürünün kapsamı için [hakkında sayfasını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) okuyun. Kullanım soruları için [sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) sayfasına bakın.
+
+---
+
+# Veresiye ve Alacak Takibi Rehberi
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber
+Güncelleme: 2026-10-11
+
+Bu rehberler, veresiye defterini düzenli tutmak, alacakları zamanında takip etmek ve müşteriye kırmadan hatırlatma yapmak isteyen bakkal, manav, kasap ve berberler için yazıldı. Her yazı kısa bir cevapla başlar, ardından adım adım uygulanabilir öneriler verir.
+
+- [Veresiye Defteri Nasıl Tutulur?](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/veresiye-defteri-nasil-tutulur)
+- [Alacak Takibi İçin 7 Kural](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/alacak-takibi-icin-7-kural)
+- [Müşteriye Borç Hatırlatma Mesajı Örnekleri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/musteriye-borc-hatirlatma-mesaji-ornekleri)
+- [KVKK: Müşteri Telefonunu Saklamak](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/kvkk-musteri-telefonunu-saklamak)
+- [Bakkal İçin Dijital Defter Nasıl Kullanılır?](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/bakkal-icin-dijital-defter)
+
+---
+
+# Veresiye Defteri Nasıl Tutulur?
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/veresiye-defteri-nasil-tutulur
+Güncelleme: 2026-10-11
+
+Veresiye defteri, müşterinin borcunu ve yaptığı ödemeleri ayrı kayıtlarla izlediğiniz hesap defteridir. Düzenli tutmak için her işlemi doğru müşteriye, tutarı ve tarihiyle yazın; tahsilatı da ayrıca kaydedin. Çetele, küçük esnaf için internetsiz çalışan dijital veresiye defteridir. Müşteri hesaplarını takip eder, internet bağlantısı geldiğinde kayıtları cihazlar arasında senkronize eder.
+
+## Veresiye kaydında ne bulunmalı?
+
+Veresiye defterini, her müşterinin borcu ile tahsilatını ayrı göreceğiniz şekilde tutun. İşlem sırasında müşteriyi seçin, tutarı ve işlem tarihini yazın. Gerektiğinde kısa bir not ekleyin. Ödeme geldiğinde önceki borcun üstünü kapatmak yerine tahsilatı ayrıca kaydedin. Böylece hesabı incelerken hangi borcun yazıldığını ve hangi ödemenin alındığını birlikte kontrol edebilirsiniz.
+
+Tezgâhın yoğun olduğu saatlerde yalnızca bir isim ve rakam yazıp ayrıntıyı sonraya bırakmayın. Kaydı tamamlamadan şu soruları cevaplayın: Bu işlem kimin hesabına ait? Borç mu yazıyorum, tahsilat mı alıyorum? Tutar ve tarih doğru mu? Notu birkaç gün sonra okuduğumda işlemi anlayabilecek miyim?
+
+## Önce müşterinin hesabını ayırın
+
+Her müşterinin işlemlerini kendi hesabında toplayın. Aynı isimde iki kişi varsa kaydı seçmeden önce ayırt edici bilgiyi kontrol edin. Çetele'de müşteriye isim, telefon, not ve etiket ekleyebilir, müşteriyi arayarak bulabilirsiniz. Telefona ihtiyaç duymadığınız bir kayıt için gereksiz bilgi toplamamayı tercih edin.
+
+Müşteri notunu kısa ve işe yarar tutun. Hesapları birbirinden ayırmaya yardımcı olacak bilgi kullanın; müşteriye ilişkin yorumları işlem açıklaması gibi yazmayın. Telefon bilgisini nasıl ele alacağınızla ilgili metne [KVKK aydınlatma sayfasından](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/kvkk-aydinlatma) ulaşabilirsiniz. Bu sayfadaki örnek metni kendi dükkânınızın uygulamaları yerine geçmiş saymayın.
+
+## Borcu işlem sırasında yazın
+
+Bir veresiye satışından sonra tutarı hafızanızda tutmak yerine kayda geçirin. Çetele'de borç kaydı için tutar, işlem tarihi ve not bulunur; isterseniz el yazısı notun veya fişin fotoğrafını ekleyebilirsiniz. Fotoğraf eklediğinizde de tutar ve tarih alanlarını kontrol edin. Fotoğrafı, kaydın açıklamasını destekleyen bir ayrıntı olarak kullanın.
+
+Notta işlemi ayırt edecek kadar bilgi verin. Bakkalda aynı müşterinin gün içindeki farklı alışverişlerini, berberde farklı tarihlerdeki işlemlerini birbirinden ayıracak açıklamalar seçin. Uzun bir anlatı yazmak yerine, hesabı açtığınızda hangi işlemi gördüğünüzü anlayacağınız bir ifade kullanın. Tarihi sonradan tahmin ederek doldurmak yerine işlem gününü kontrol edin.
+
+## Tahsilatı borçtan ayrı kaydedin
+
+Müşteri ödeme yaptığında tahsilatı doğru hesaba yazın. Kısmi ödeme varsa yalnızca aldığınız tutarı kaydedin; müşterinin söylediği kalan tutarı yeni bir borç gibi eklemeyin. Önce işlem kayıtlarına bakın, ardından hesabın kalanını kontrol edin. Aynı ödemenin iki kez yazılmadığından da emin olun.
+
+Çetele müşteri bakiyesini gösterir ve müşteri bazında hesap dökümü sunar. Bakiye üzerinde konuşurken yalnızca son rakama bakmayın. Müşteri bir ödemenin eksik olduğunu söylüyorsa ilgili tarih ve tahsilat kayıtlarını birlikte inceleyin. Tutar konusunda anlaşmadan hatırlatma göndermeyin; önce hesabın hangi işlemlerden oluştuğunu açıklığa kavuşturun.
+
+## Yanlış kaydı nasıl düzeltirsiniz?
+
+Çetele'de defter kayıtları değiştirilmez; düzeltme ters kayıtla yapılır. Yanlış tutarı fark ettiğinizde hangi işlemi düzelttiğinizi belirleyin. Aynı müşterinin benzer tutarlı başka kaydını seçmemek için tarihi ve notu da okuyun. Düzeltmeden sonra hesabı yeniden kontrol edin ve gerekiyorsa doğru işlemi kaydedin.
+
+Kâğıt defter kullanıyorsanız da düzeltmenin neye ait olduğunu anlaşılır bırakmayı tercih edin. Üst üste rakam yazıp ilk kaydı okunamaz hâle getirmek, müşteriyle hesabı gözden geçirirken açıklamayı zorlaştırabilir. Amaç, eski işlemin ve yapılan düzeltmenin izini takip edebilmektir. Çetele'deki ters kayıt yaklaşımını bu nedenle hesabı kontrol ederken dikkate alın.
+
+## Gün sonunda kısa bir kontrol yapın
+
+Dükkânı kapatmadan önce o gün yazılan borçları ve tahsilatları gözden geçirin. Kontrolü yalnızca toplam üzerinden yapmayın; müşteri ve işlem türünü de inceleyin. Çetele'nin panelinde bugünün borçları, tahsilatları, toplam alacak ve bugün vadesi gelenler bulunur. Borca vade eklemek isteğe bağlıdır; tarih belirlediyseniz kayıtta doğru göründüğünü kontrol edin.
+
+- Günün tahsilatları doğru müşterilere yazılmış mı?
+- Tutarı veya tarihi yeniden kontrol edilmesi gereken bir işlem var mı?
+- Notu eksik olduğu için anlaşılmayan bir kayıt bulunuyor mu?
+- Müşteriyle görüşmeden önce açıklığa kavuşturmanız gereken bir hesap var mı?
+
+## Çalışanla aynı kayıt düzenini kullanın
+
+Dükkânda birden fazla kişi kayıt giriyorsa işlem açıklamalarında ortak bir düzen belirleyin. Bir kişi borcu yazarken diğerinin aynı işlemi tekrar kaydetmemesi için aranızda açıkça konuşun. Çetele'de sahip ve çalışan rolleri bulunur; çalışan borç ve tahsilat kaydedebilir, bakiyeleri görebilir. İnternet olmadan kayıt yapılabilir; bağlantı geldiğinde kayıtlar senkronize olur.
+
+Müşteriye hesabını anlatmanız gerektiğinde müşteri başına PDF dökümünden yararlanabilirsiniz. Dükkân sahibi tüm kayıtları CSV olarak dışa aktarabilir. Günlük kontrolü düzenlemek için [alacak takibinin yedi kuralını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/alacak-takibi-icin-7-kural), görüşmede kullanacağınız ifadeler için [borç hatırlatma mesajlarını](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/musteriye-borc-hatirlatma-mesaji-ornekleri) okuyabilirsiniz.
+
+---
+
+# Alacak Takibi İçin 7 Kural
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/alacak-takibi-icin-7-kural
+Güncelleme: 2026-10-11
+
+Alacak takibi, müşteriye yazılan borçları, alınan ödemeleri ve kalan bakiyeyi düzenli kontrol etme işidir. Sağlam bir düzen için müşterileri ayırın, işlemleri zamanında yazın, tahsilatları kontrol edin ve hatırlatmadan önce hesabı doğrulayın. Çetele, küçük esnafın bu kayıtları internetsiz tutabildiği, bağlantı geldiğinde cihazlar arasında senkronize eden dijital veresiye defteridir.
+
+## 1. Her müşteriyi ayrı hesapta takip edin
+
+Alacak takibine doğru müşteriyi seçerek başlayın. Benzer isimli müşterilerin işlemlerini tek hesapta toplamayın. Bir borcu yazmadan veya ödeme kaydetmeden önce hesabın kime ait olduğunu kontrol edin. Çetele'de müşteri için isim, telefon, not ve etiket bulunur; arama ile müşteri hesabını bulabilirsiniz. Bu bilgileri hesabı ayırt etmek için kullanın.
+
+Tezgâhta aceleyle seçim yaptıysanız tutarı girmeden önce ismi yeniden okuyun. Müşteriyi tanıyor olmanız, seçtiğiniz hesabın doğru olduğunu tek başına göstermez. Notları da kısa tutun; hesabı açan çalışanınızın anlayacağı ifadeler seçin. Müşterinin telefonu değiştiğinde sonraki görüşmeden önce hangi bilginin güncel olduğunu kendisiyle doğrulayın.
+
+## 2. Borcu tutarı ve tarihiyle kaydedin
+
+Borç kaydını yalnızca rakamdan ibaret bırakmayın. Tutarı, işlem tarihini ve gerektiğinde kısa açıklamayı birlikte yazın. Çetele'de defter kaydına isteğe bağlı fotoğraf ekleyebilirsiniz. El yazısı notu veya fişi fotoğrafla ilişkilendirseniz bile tutarı ayrıca kontrol edin. Fotoğrafta gördüğünüz rakamla kayda yazdığınız rakamın aynı olduğundan emin olun.
+
+Kayıtları gün sonunda hatırlamaya çalışmak yerine işlem sırasında tamamlamayı alışkanlık hâline getirin. Yoğun saatlerde ara verdiğiniz bir kaydı bitirdiğinizde müşteriyi tekrar kontrol edin. Aynı işlem için iki borç kaydı açmayın. Hangi bilgilerin bulunması gerektiğini ayrıntılı görmek için [veresiye defteri tutma rehberine](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/veresiye-defteri-nasil-tutulur) bakabilirsiniz.
+
+## 3. Her tahsilatı ayrıca yazın
+
+Ödeme alındığında müşterinin borç kaydını değiştirmek yerine tahsilat kaydı oluşturun. Kısmi ödeme ile hesabın tamamının kapanmasını birbirinden ayırın. Yalnızca aldığınız tutarı kaydedin ve ardından kalan bakiyeyi kontrol edin. Müşteri birden fazla ödeme yaptıysa her işlemin tarihini gözden geçirin; konuştuğunuz ödemenin hangisi olduğunu belirleyin.
+
+Çetele'de borç ve tahsilat ayrı işlem türleridir. Müşteri bakiyesi ve hesap dökümü, kaydedilen işlemleri incelemenize yardımcı olur. Müşteri ödeme yaptığını söylediğinde hemen ikinci bir tahsilat eklemeyin. Önce ilgili kaydın zaten bulunup bulunmadığına bakın. Bir tereddüt varsa tutarı, tarihi ve işlem notunu birlikte değerlendirin.
+
+## 4. Vade belirlediyseniz kayda geçirin
+
+Ödeme günü konusunda müşteriyle konuştuysanız tarihi borç kaydında belirtin. Çetele'de borca vade eklemek isteğe bağlıdır; panelde bugün vadesi gelenler görülebilir. Vadesi bulunmayan bir kaydı, belirli bir ödeme günü kararlaştırılmış gibi değerlendirmeyin. Hatırlatma metninde de yalnızca konuşulmuş bir tarihi kullanın.
+
+Günün başında vadesi gelen hesapları incelerken son tahsilatları da kontrol edin. Müşteri ödeme yapmışsa eski bakiyeye göre mesaj hazırlamayın. Görüşmede yeni bir gün konuşulursa kendi takip düzeninizde bu bilgiyi açık tutun. Tarih konusunda kesinleşmemiş bir konuşmayı kesin söz gibi yazmak yerine müşteriden açıklama isteyin.
+
+## 5. Toplam alacağı işlem ayrıntılarıyla kontrol edin
+
+Toplam alacak, dükkânın hesaplarına genel bakış sağlar; tek müşterinin hesabını açıklamak için işlem ayrıntılarını da okuyun. Çetele'nin panelinde toplam alacak, bugünün borçları ve tahsilatları ile en çok borçlu müşteriler bulunur. Bu görünümü hangi hesaplara bakacağınızı belirlemek için kullanın, ardından ilgili müşterinin kayıtlarını açın.
+
+Gün sonu kontrolünde borç ve tahsilatları birbirine karıştırmayın. Bir tutarın beklediğinizden farklı görünmesi durumunda ilk olarak müşteri seçimini, işlem türünü ve tarihi inceleyin. Çalışanınızla aynı hesabı kontrol ediyorsanız hangi kayıt üzerinde konuştuğunuzu belirtin. Yalnızca toplam rakamı söylemek yerine açıklamayı ilgili işlemle ilişkilendirin.
+
+## 6. Hataları izlenebilir biçimde düzeltin
+
+Yanlış kaydı fark ettiğinizde önce hangi işlemin hatalı olduğunu belirleyin. Çetele'de defter kayıtları değiştirilemez; düzeltmeler ters kayıtla yapılır. Doğru müşteriyi, tarihi ve tutarı kontrol ederek düzeltmeye geçin. Ardından hesap dökümünü yeniden inceleyin. Hatalı işlemle ilgisi olmayan yeni bir tahsilat yazarak bakiyeyi dengelemeye çalışmayın.
+
+Dükkân sahibi ve çalışan aynı kayıt düzenini kullanmalıdır. Çetele'de çalışan borç ve tahsilat kaydedebilir, bakiyeleri görebilir; tüm kayıtların dışa aktarılması dükkân sahibinin yetkisindedir. İnternet yokken kayıt tutabilir, bağlantı geldiğinde senkronizasyonla devam edebilirsiniz. Başka cihazdaki hesapla konuşurken bağlantı durumunu ve son kayıtları kontrol etmeyi alışkanlık edinin.
+
+## 7. Hatırlatmayı açık ve nazik yapın
+
+Mesaj göndermeden önce doğru kişiyi ve güncel bakiyeyi kontrol edin. Dükkânınızı belirtin, hangi hesap için yazdığınızı açıklayın ve müşteriye yanıt verebileceği bir soru yöneltin. Ödeme gününü konuşmadıysanız belirlenmiş bir vade varmış gibi yazmayın. Suçlayıcı ifadeler yerine kayıtları birlikte gözden geçirmeyi teklif edin.
+
+Çetele'de imzalı hesap dökümü bağlantısıyla WhatsApp paylaşımı ve yalnızca onayı kayıtlı müşterilere, aylık kota kapsamında SMS hatırlatması bulunur. Bu özellikleri kullanırken de mesajdaki tutarı kontrol edin. Hazır ifadeleri [borç hatırlatma mesajı örneklerinden](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/musteriye-borc-hatirlatma-mesaji-ornekleri) seçebilirsiniz. Müşteri hesaba itiraz ederse yeni mesaj göndermeden önce işlem tarihlerini ve tahsilatları birlikte inceleyin.
+
+---
+
+# Müşteriye Borç Hatırlatma Mesajı Örnekleri
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/musteriye-borc-hatirlatma-mesaji-ornekleri
+Güncelleme: 2026-10-11
+
+Borç hatırlatma mesajı, müşteriye kalan hesabını açıkça bildiren ve ödeme hakkında görüşmeyi isteyen kısa bir metindir. İyi bir mesaj dükkânı belirtir, doğru hesaba dayanır ve müşteriye yanıt alanı bırakır. Göndermeden önce son tahsilatı kontrol edin; ödeme gününü birlikte belirlemediyseniz kesin bir tarih varmış gibi yazmayın. Aşağıdaki altı örneği duruma göre seçebilirsiniz.
+
+## Mesajdan önce hesabı kontrol edin
+
+Borç hatırlatırken kısa, nazik ve açık yazın. Önce doğru müşteri hesabına baktığınızdan, son ödemenin kaydedildiğinden ve kalan tutarın güncel olduğundan emin olun. Müşteriyle bir ödeme günü konuşmadıysanız mesajda vade geçtiğini söylemeyin. Hangi dükkândan yazdığınızı açıklayın ve yanıtlanması kolay bir soru sorun.
+
+Aşağıdaki metinler gerçek müşteri yazışmaları değildir, kopyalayarak uyarlayabileceğiniz örneklerdir. Somut isim veya tutar içermezler. İlk mesajınızı göndermeden önce dükkân adınızı yazının başına ekleyin. Tutar belirtmek istiyorsanız yalnızca kontrol ettiğiniz bakiyeyi kullanın. Müşterinin görmesini istediğiniz hesap bilgilerini başka bir müşterinin kaydıyla karıştırmayın.
+
+## Altı kısa mesaj örneği
+
+### 1. İlk hatırlatma
+
+> Merhaba, dükkânımızdaki açık hesabınız için yazıyoruz. Kalan bakiyeyi birlikte kontrol edebiliriz. Ödeme için uygun olduğunuz günü paylaşabilir misiniz? Teşekkür ederiz.
+
+Bu metni ödeme tarihi daha önce konuşulmamış bir hesap için kullanabilirsiniz. Müşterinin borcu bildiğini varsayarak sert bir giriş yapmak yerine görüşmeyi açar. Göndermeden önce açık hesap bulunduğunu doğrulayın; ödeme kaydı eksikse önce kaydı tamamlayın. Tarih sorusunu, müşterinin yanıtına göre konuşmayı sürdürebileceğiniz zaman gönderin.
+
+### 2. Konuşulmuş ödeme günü için
+
+> Merhaba, birlikte konuştuğumuz ödeme gününü hatırlatmak istedik. Dükkânımızdaki hesabınızın son durumunu paylaşabiliriz. Bugün ödeme yapmanız uygun olur mu? Teşekkür ederiz.
+
+Bu örneği yalnızca bugün için gerçekten bir ödeme günü konuştuysanız seçin. Müşterinin söylemediği bir tarihi kendi kararınızla bu mesaja dönüştürmeyin. Gün değişmişse metni güncel görüşmeye göre düzenleyin. Mesajın amacı konuşulmuş tarihi hatırlatmak ve müşterinin durumunu öğrenmektir; ödeme yapılacağını kesin kabul etmeyin.
+
+### 3. Hesap dökümünü paylaşırken
+
+> Merhaba, dükkânımızdaki hesabınızın dökümünü paylaşıyoruz. Borç ve ödeme kayıtlarını inceleyebilirsiniz. Farklı gördüğünüz bir işlem varsa bildirir misiniz? Birlikte kontrol edelim.
+
+Döküm eklediğiniz veya bağlantısını paylaştığınız zaman bu ifadeyi kullanın. Ek göndermediğiniz bir mesajda dökümü paylaştığınızı söylemeyin. Müşterinin inceleyeceği kaydın kendisine ait olduğunu kontrol edin. Bir tutar farklı görünüyorsa önce ilgili işlem tarihini öğrenin; yalnızca toplam bakiye üzerinden tartışmayı sürdürmek yerine işlem ayrıntısına dönün.
+
+### 4. Kısmi ödeme sonrasında
+
+> Merhaba, ödemeniz için teşekkür ederiz. Dükkânımızdaki hesabınızda kalan bakiye bulunuyor. Kalan ödeme için uygun olduğunuz günü konuşabilir miyiz? İsterseniz hesap dökümünü de paylaşabiliriz.
+
+Bu mesajı ödeme kaydını girdikten ve kalan hesabı kontrol ettikten sonra kullanın. Müşteri hesabın tamamını kapattıysa bu metni göndermeyin. Ödenen tutarı ayrıca yazmak isterseniz tahsilat kaydından doğrulayın. Teşekkür cümlesini, henüz alınmamış bir ödeme için kullanmayın; müşterinin yaptığı ödeme ile beklenen ödemeyi açıkça ayırın.
+
+### 5. Yanıt gelmeyen bir hatırlatma sonrası
+
+> Merhaba, hesabınızla ilgili önceki mesajımızı yeniden hatırlatmak istedik. Uygun olduğunuzda ödeme günü hakkında dönüş yapabilir misiniz? Hesabı birlikte incelemek isterseniz yardımcı olabiliriz.
+
+Bu örneği önceki mesajınıza yanıt gelmediğinde değerlendirebilirsiniz. Yanıt verilmemesini borcun kabulü veya ödeme yapmama kararı gibi yorumlamayın. Alıcı bilgisini tekrar kontrol edin. Arka arkaya aynı mesajı göndermek yerine müşterinin dönüşünü beklemek için alan bırakın; bir yanıt geldiğinde konuşmayı o yanıt üzerinden sürdürün.
+
+### 6. Hesapta farklılık söylendiğinde
+
+> Merhaba, belirttiğiniz farkı birlikte kontrol edelim. Hangi tarihli borç veya ödeme kaydını incelememizi istersiniz? Hesap dökümüne bakarak ilgili işlemi netleştirebiliriz. Teşekkür ederiz.
+
+Müşteri tutarın yanlış olduğunu söylediğinde önce ayrıntı isteyin. Hemen yeni bir borç veya tahsilat kaydı açmayın. İşlemin tarihini, tutarını ve açıklamasını inceleyin. Yanlış kayıt varsa Çetele'de düzeltmenin ters kayıtla yapıldığını dikkate alın. Kontrol tamamlanmadan müşteriye hesabın kesin olarak doğru olduğunu söylemeyin.
+
+## Hangi bilgileri eklemelisiniz?
+
+Metni seçtikten sonra dükkân adınızı, gerekiyorsa kontrol edilmiş tutarı ve konuşulmuş tarihi ekleyin. Kısa cümleler kullanın. Bir mesajın içine eski görüşmeleri, bütün alışverişleri ve uzun açıklamaları doldurmak yerine hesap dökümünü incelemeyi teklif edin. Müşteriye hangi konuda dönüş yapmasını istediğinizi tek bir açık soruyla belirtin.
+
+Çetele'de imzalı hesap dökümü bağlantısıyla WhatsApp paylaşımı ve yalnızca onayı kayıtlı müşteriler için aylık kota kapsamında SMS hatırlatması bulunur. Kanalı seçerken bu koşulları dikkate alın. Mesaj örneğini kopyalamak, alıcının bilgisini veya hesabın doğruluğunu kontrol etmenin yerini tutmaz. Gönderimden önce son kez müşteri adını ve metni okuyun.
+
+## Görüşmeyi kayıtlarla sürdürün
+
+Müşteri ödeme yaptığını belirtiyorsa ilgili tahsilatı araştırın. Henüz kaydetmediğiniz bir ödeme varsa hesabı yeniden kontrol edin. Bir tarih öneriyorsa anladığınız günü açıkça teyit edin. Yanıtı olmayan bir müşteriye tehdit, suçlama veya çevresine haber verme ifadesi kullanmayın. Görüşmeyi müşteriyle kendi hesabı hakkında yürütün.
+
+Dükkânda çalışanınız da hesapla ilgileniyorsa müşteriye farklı bakiyeler söylenmemesi için aynı kayıtları inceleyin. Günlük düzeni kurmak için [alacak takibi için yedi kuralı](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/alacak-takibi-icin-7-kural), kayıt ayrıntıları için [veresiye defteri tutma rehberini](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/veresiye-defteri-nasil-tutulur) okuyabilirsiniz. Açık iletişimin dayanağı, kontrol edilmiş borç ve tahsilat kayıtlarıdır.
+
+---
+
+# KVKK: Müşteri Telefonunu Saklamak
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/kvkk-musteri-telefonunu-saklamak
+Güncelleme: 2026-10-11
+
+Müşteri telefonunu saklamak, veresiye hesabındaki iletişim bilgisini düzenli tutmaktır; numaranın kayıtlı olması SMS onayı yerine geçmez. Çetele, müşteri telefonunu ve SMS onayının tarihini, kaynağını ayrı kaydeder. Bu rehber, küçük esnafın kayıt düzenini düşünmesine yardımcı olan genel bilgidir, hukuki danışmanlık değildir. Dükkânınıza özgü hukuki değerlendirme için uzman desteği alınız.
+
+## Telefon kaydı ile SMS onayını ayırın
+
+Kısaca: Müşterinin telefonunu deftere yazmanız, ona SMS hatırlatması göndermek için onay kaydettiğiniz anlamına gelmez. Çetele'de telefon bilgisi ile SMS onay kaydı ayrı tutulur. SMS hatırlatması yalnızca onayı kayıtlı müşteriler için kullanılabilir.
+
+Bu yazı genel bilgi niteliğindedir, hukuki danışmanlık değildir. Çetele bir portföy projesidir. Buradaki açıklamalar veya uygulamadaki bir alan, dükkânınızın hukuki yükümlülüklerini yerine getirdiğine dair güvence vermez. Sitedeki yasal metinler de örnektir; kendi işinize uygun metin ve uygulama için uzman değerlendirmesi alınız.
+
+Bakkalda borç yazarken bir müşterinin adını ve telefonunu aynı kayıtta görmek, hesabı takip etmenize yardımcı olur. Yine de numarayı hangi iş için tuttuğunuzu açıkça düşününüz. Borç hesabına ilişkin iletişim ile başka amaçlarla mesaj göndermeyi aynı işlem gibi ele almayınız. Bu rehber belirli bir saklama süresi veya her durum için geçerli bir onay metni önermez.
+
+## Müşteri kaydını sade tutun
+
+Kısaca: Veresiye hesabına lazım olan bilgiyi düzenli kaydedin. Çetele'nin müşteri kaydında ad, telefon, not ve etiket alanları bulunur; telefon alanı isteğe bağlıdır. Telefon yazmadan da müşteri hesabını borç ve tahsilat kayıtlarıyla takip edebilirsiniz.
+
+Numara eklemeden önce doğru kişiyi açtığınızı kontrol ediniz. Aynı isimli iki müşterinin hesabını karıştırmamak için kayıtları dikkatle inceleyiniz. Not alanını hesabı anlamanıza yardımcı olacak kısa açıklamalar için kullanınız. Başka kişilere ait telefonları veya hesapla ilgisi olmayan ayrıntıları alışkanlıkla eklemekten kaçınınız.
+
+Müşterinizle konuşurken numaranın veresiye hesabındaki iletişim bilgisi olarak tutulacağını sade bir dille açıklamak, kayıt amacını anlaşılır kılar. Bu açıklamanın hangi hukuki metinle ve nasıl yapılması gerektiği ise dükkânınıza özgü bir konudur. Örnek bir sayfayı kendi koşullarınızı incelemeden hazır çözüm saymayınız.
+
+## SMS onayının tarihini ve kaynağını kaydedin
+
+Kısaca: Çetele'deki SMS onay kaydı, onay durumunun yanında tarih ve kaynak bilgisini de tutar. Hatırlatma göndermeden önce yalnızca telefon alanına bakmak yerine bu kaydı da kontrol ediniz. Onay kaydı olmayan müşteriye uygulama üzerinden SMS hatırlatması gönderilmez.
+
+Kaynak bilgisi, onayın nereden geldiğini kayıtta belirtmek içindir. Bu alana gerçekte olmayan bir açıklama yazmayınız. Müşterinin numarasını vermesinden, daha önce alışveriş yapmasından veya borcunun bulunmasından kendiliğinden SMS onayı çıkarmayınız. Kayıt ile yaşanan konuşmanın birbirini karşılamasına dikkat ediniz.
+
+Onay alanının bulunması, tek başına hukuki uygunluk kanıtı değildir. Hangi onayın gerektiği, nasıl alınacağı ve nasıl belgeleneceği konusunda bu yazı karar vermez. [KVKK aydınlatma örneğini](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/kvkk-aydinlatma) inceleyebilirsiniz; örnek metni kullanmadan önce kendi dükkânınız açısından değerlendirtiniz.
+
+## Çalışan erişimini ve telefon kilidini düşünün
+
+Kısaca: Müşteri bilgilerine kimlerin ulaşacağını iş düzeninizle birlikte ele alın. Çetele'de dükkân sahibi ve çalışan rolleri vardır. Çalışan müşteri kayıtlarını görebilir, oluşturabilir ve güncelleyebilir; borç ve tahsilat yazabilir. Müşteri silme ve bütün kayıtları dışa aktarma yetkisi ise çalışanda bulunmaz.
+
+Çalışan davet ederken bu erişimin müşteri bilgilerini de kapsadığını hesaba katınız. Dükkândaki herkesin aynı hesabı kullanmasını bir çalışma alışkanlığına dönüştürmek yerine, sahip ve çalışan rollerinin sunduğu ayrımı değerlendirin. Rol ayrımı, kayıtların kimler tarafından görülebildiğini düşünmenin bir parçasıdır.
+
+Uygulamada PIN ve biyometrik kilit bulunur. Telefonda tutulan veriler şifreli yerel veritabanında saklanır. Bunlar erişimi korumaya yönelik özelliklerdir; telefonunuzu tezgahta açık bırakmamak ve kilit bilgisini paylaşmamak gibi günlük dikkatin yerini tutan bir garanti olarak görülmemelidir.
+
+## Döküm ve fotoğraf paylaşmadan önce kontrol edin
+
+Kısaca: Bir hesap dökümünü paylaşırken doğru müşteri hesabında olduğunuzu kontrol ediniz. Çetele, müşteri başına PDF döküm ve WhatsApp üzerinden imzalı hesap dökümü bağlantısı paylaşımı sunar. Tüm kayıtların CSV olarak dışa aktarılması da dükkân sahibinin yetkileri arasındadır.
+
+Dökümü göndermeden önce müşteri adını, borç ve tahsilatları gözden geçiriniz. CSV dosyasını tek müşteriye ait dökümle karıştırmayınız; bütün kayıtları içeren dosya daha geniş bilgi taşır. Paylaşacağınız dosyayı veya bağlantıyı doğru kişiye yönlendirmek, uygulama dışında da özen gerektirir.
+
+Borç ya da tahsilat kaydına fiş veya el yazısı not fotoğrafı ekleyebilirsiniz. Fotoğraf seçerken kayda konu olmayan kişilerin bilgilerinin görüntüde yer alıp almadığına bakınız. Fotoğraf eklemek isteğe bağlıdır; her işlem için görüntü saklamak zorunda olduğunuzu varsaymayınız.
+
+## Silme işlemini ayrı değerlendirin
+
+Kısaca: Çetele'de hesap ve dükkân silme uygulama içinden ve web üzerinden başlatılabilir. Silme sürecinde yeniden SMS koduyla doğrulama ve 14 günlük bekleme süresi bulunur. [Hesap silme sayfası](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme), bu işlemi incelemek için başlangıç noktasıdır.
+
+Hesabı silmek ile bir borç kaydındaki hatayı düzeltmek farklı işlemlerdir. Çetele'de defter kayıtları değiştirilmez, yanlış işlem ters kayıtla düzeltilir. Müşteri bilgileri, paylaşılmış dökümler ve dükkânın kayıt ihtiyacı hakkında karar verirken bu ayrımı koruyunuz. Hukuki saklama yükümlülüğünüz veya belirli bir talebe vereceğiniz yanıt için bu rehberden kesin sonuç çıkarmayınız.
+
+---
+
+# Bakkal İçin Dijital Defter Nasıl Kullanılır?
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/bakkal-icin-dijital-defter
+Güncelleme: 2026-10-11
+
+Bakkal için dijital defter, müşterinin veresiye alışverişlerini ve yaptığı ödemeleri aynı hesapta takip etmenizi sağlayan kayıt düzenidir. Çetele, Android telefonda internet olmadan borç ve tahsilat yazmanıza, bağlantı gelince kayıtları eşitlemenize yardımcı olur. Müşteri bakiyesi, hesap dökümü ve çalışan rolleriyle dükkânın günlük veresiye işlerini bir arada tutar.
+
+## Önce hangi hesabı tuttuğunuzu belirleyin
+
+Kısaca: Dijital veresiye defteri, müşterinizin borcunu ve ödemesini takip etmek içindir. Çetele'de müşteri hesabına borç veya tahsilat kaydı eklersiniz. Uygulama stok takibi, POS bağlantısı, ödeme işleme veya e-Fatura işlemi sunmaz. Bakkalın veresiye düzenini bu sınırlar içinde kurunuz.
+
+Tezgâhta veresiye alışverişi kaydederken hangi müşterinin hesabına yazdığınızı kontrol ediniz. Daha sonra gelen ödeme aynı müşterinin hesabında tahsilat olarak yer almalıdır. Borç yazmak ile ödeme almak iki ayrı kayıt türüdür. Tutarlar Türk lirasıyla tutulur; başka para birimlerinde hesap takibi kapsamda değildir.
+
+Kâğıt defterde alışık olduğunuz müşteri hesabı mantığı burada da geçerlidir. Günlük işinizi düzenlerken ürün listesini veya stok miktarını veresiye hesabının yerine koymayınız. Çetele'nin amacı, kimin ne kadar borcu olduğunu ve hangi tahsilatların kaydedildiğini aynı hesap üzerinden izleyebilmenizdir.
+
+## Müşteriyi bulun, sonra borcu yazın
+
+Kısaca: Her veresiye işlemini ilgili müşteriye bağlayın. Çetele'de müşterileri ad, telefon, not ve etiketle kaydedebilir, arama yapabilir ve bakiyelerini görebilirsiniz. Müşteri hesabını açıp tutarı, işlem tarihini ve gerekiyorsa kısa notu girerek borç kaydı oluşturabilirsiniz.
+
+İsimleri birbirine benzeyen müşterilerde kaydı aceleyle seçmeyiniz. Not ve etiket alanlarını sizin anlayacağınız tutarlı bir düzenle kullanınız. Telefon bilgisi isteğe bağlıdır; numara kaydetmek ile SMS hatırlatması için onay kaydetmek ayrı işlerdir. Müşterinin telefonunu yazdığınızda onay verdiğini varsaymayınız.
+
+İşlem notunu daha sonra hesabı açıklayabilecek kadar açık tutunuz. Borç kaydına isteğe bağlı fiş veya el yazısı not fotoğrafı ekleyebilirsiniz. Fotoğraf, tutar ve tarih alanlarının yerini almaz. Hesabı kontrol ederken önce bu bilgileri karşılaştırmak, görüntünün hangi işleme ait olduğunu anlamanıza yardımcı olur.
+
+## Ödemeyi tahsilat olarak kaydedin
+
+Kısaca: Müşteriniz ödeme yaptığında hesabına tahsilat ekleyin. Borç ve tahsilat aynı müşteri hesabının bakiyesinde birlikte değerlendirilir. Ödeme kaydında da tutar, tarih, not ve isteğe bağlı fotoğraf bulunur. Her işlemin doğru türle yazıldığını kaydetmeden önce kontrol ediniz.
+
+Müşteriniz hesabının bir bölümünü ödüyorsa aldığınız tutarı tahsilat olarak yazınız. Borcun tamamı kapanmış gibi not düşmek yerine, kaydın gerçekten alınan ödemeyi göstermesine dikkat ediniz. Dökümü incelerken borç satırları ile tahsilat satırlarını ayrı ayrı okuyunuz; yalnızca son bakiyeye bakmak yanlış girilmiş bir tutarı fark etmeyi zorlaştırabilir.
+
+Çetele ödeme işleyen bir hizmet değildir. Uygulamaya tahsilat yazmanız, müşteriden para çekildiği veya bir banka işlemi yapıldığı anlamına gelmez. Siz dükkânda aldığınız ödemeyi deftere kaydedersiniz. Bu ayrımı çalışanlarınıza da açıklayarak günlük kayıt alışkanlığını aynı biçimde sürdürünüz.
+
+## Yanlış işlemi ters kayıtla düzeltin
+
+Kısaca: Çetele'de borç ve tahsilat kayıtları sonradan değiştirilmez. Bir hata olduğunda düzeltme, yanlış işleme bağlı ters kayıt oluşturularak yapılır. Böylece ilk işlem ile onu düzelten kayıt birlikte izlenebilir. Yanlış tutarı sessizce değiştirmek yerine kayıt geçmişini koruyan bu yolu kullanınız.
+
+Önce müşteriyi, işlem türünü, tutarı ve tarihi kontrol ederek hangi kaydın yanlış olduğunu belirleyiniz. Ters işlemle düzeltme yaparken başka bir doğru kaydı seçmemeye dikkat ediniz. Gerekiyorsa doğru bilgileri taşıyan yeni işlemi ayrıca yazınız. Sonrasında müşteri dökümüne dönüp hesabı yeniden inceleyiniz.
+
+Çalışanınız bir hatayı fark ettiğinde ne yapacağını önceden konuşunuz. Aynı yanlış işlem için birbirinizden habersiz düzeltme yapmamak adına hangi kayda müdahale edildiğini paylaşınız. Düzeltme düzeni, yalnızca bakiyeyi değiştirme işi olarak görülmemeli; hesapta olanı sonradan açıklayabilmenizi de sağlamalıdır.
+
+## İnternet yokken kayda devam edin
+
+Kısaca: Çetele internet olmadan borç ve tahsilat kaydı tutar. Kayıtlar telefonda saklanır, bağlantı geldiğinde eşitlenir. Dükkân sahibi ve çalışan farklı cihazlardan aynı dükkânın hesabıyla çalışabilir. Ancak internet yokken başka telefondaki yeni işlemi hemen görmeyi beklemeyiniz.
+
+Bağlantı kesildiğinde veresiye işlemini daha sonra hatırlamaya bırakmak yerine kayda geçirebilirsiniz. Günün sonunda hesapları karşılaştırırken cihazların yeniden internete bağlanmış olmasına dikkat ediniz. Henüz eşitlenmemiş bir telefondaki kayıt, diğer cihazın ekranında bulunmayabilir; bu durumu eksik tahsilatla karıştırmayınız.
+
+Çalışan müşteri bilgilerini ve bakiyeleri görebilir, borç ve tahsilat yazabilir. Müşteri silme, bütün kayıtları dışa aktarma ve üyeleri yönetme yetkileri çalışanda bulunmaz. Dükkân sahibi olarak davet edeceğiniz kişiye bu sınırları açıklayınız. Telefon erişimi için PIN veya biyometrik kilidi de günlük kullanım düzeninizin parçası yapınız.
+
+## Dökümü paylaşın, plan sınırlarını bilin
+
+Kısaca: Müşteri hesabını PDF dökümle paylaşabilir, WhatsApp üzerinden imzalı hesap dökümü bağlantısı gönderebilirsiniz. SMS hatırlatması yalnızca onayı kayıtlı müşteriler içindir. Dükkân sahibi bütün kayıtları CSV olarak dışa aktarabilir. Göndermeden önce müşteri adını ve hesap hareketlerini kontrol ediniz.
+
+Ücretsiz planda 100 müşteri, ayda 200 fotoğraf ve 30 SMS sınırı vardır. Pro planda müşteri sayısı sınırsızdır; aylık fotoğraf sınırı 2000, SMS sınırı 500 olur ve öncelikli eşitleme bulunur. İhtiyacınızı değerlendirirken müşteri sayısını ve aylık fotoğraf, SMS kullanımını birlikte düşününüz.
+
+Pro aylık veya yıllık Google Play aboneliği olarak tasarlanmıştır; fiyatlar Google Play'de gösterilir. Çetele bir portföy projesidir ve Google Play'de yayına hazırlanıyor. [Bakkal sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal) kullanım alanlarını, [sık sorulan sorularda](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss) ise kilit, cihaz ve hesap işlemlerini inceleyebilirsiniz.
+
+---
+
+# Çetele Hakkında Sık Sorulan Sorular
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını Android telefonda takip ettiği, internet olmadan da kayıt tutan dijital veresiye defteridir. Bu sayfa, dükkân sahiplerinin cihaz, kilit, çalışan erişimi, paylaşım ve plan sınırları hakkındaki sorularını yanıtlar. Çetele bir portföy projesidir; Google Play'de yayına hazırlanıyor ve burada sabit bir abonelik fiyatı belirtilmiyor.
+
+Çetele hakkında en sık sorulan konular, dükkânda kaydı ne zaman yazabileceğiniz, müşterinin hesabını nasıl paylaşacağınız ve çalışanınızın hangi işlemleri yapabileceğidir. Bu sayfadaki yanıtlar, bakkal, manav, kasap, berber ve kahvehane gibi küçük işletmelerde veresiye hesabını takip ederken karşılaşabileceğiniz sorulara odaklanır. Önce günlük kayıt düzeninizi düşününüz: müşteriyi seçmek, borç veya tahsilat tutarını doğru yazmak, işlem tarihini kontrol etmek ve hesap dökümünü gözden geçirmek aynı işin birbirini tamamlayan adımlarıdır. İnternet bağlantınız kesilse de telefonda kayıt tutabilirsiniz; farklı cihazlardaki işlemlerin görünmesi ise bağlantı geldikten sonraki eşitlemeye bağlıdır. Bu nedenle dükkân sahibi ile çalışan aynı hesabı incelerken cihazlarının bağlantı durumunu da hesaba katmalıdır. Yanlış işlem için kullanılan ters kayıt, bir satırın geçmişini değiştirmeden hesabı düzeltmeye yarar. Paylaşım tarafında müşteri başına PDF ile bütün kayıtları içeren CSV'nin farklı amaçları olduğunu bilmek önemlidir. WhatsApp üzerinden hesap dökümü bağlantısı paylaşımı ve SMS hatırlatması da ayrı seçeneklerdir; SMS için müşterinin onay kaydı ve aylık gönderim sınırı birlikte değerlendirilir. Telefon numarası, tek başına onay kaydı sayılmaz. Fotoğraf eklemek isteğe bağlıdır ve planın aylık fotoğraf sınırına tabidir. Ücretsiz plan ile Pro'yu karşılaştırırken yalnızca müşteri sayısını değil, bu fotoğraf ve SMS sınırlarını da dikkate alınız. PIN, biyometrik kilit ve çalışan yetkileriyle ilgili yanıtlar, müşteri bilgilerine erişim düzenini anlamanıza yardımcı olur. Hesap silme, kayıp telefon ve henüz eşitlenmemiş kayıtlar hakkındaki açıklamaları da karar vermeden önce okuyunuz. Çetele bir portföy projesidir; yayımlanmış bir hizmet veya hukuki uygunluk güvencesi olarak sunulmaz. Özelliklerin günlük işinizdeki yerini [özellikler sayfasından](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), plan kapsamını [fiyatlandırma sayfasından](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma), silme sürecini [hesap silme sayfasından](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme) inceleyebilirsiniz. Buradaki açıklamalar, dükkânınız için hangi kayıt alışkanlığını kuracağınızı düşünürken ürünün kapsamını ve sınırlarını birlikte görmenizi sağlar.
+
+### Çetele internet olmadan kullanılabilir mi?
+
+Evet, Çetele internet olmadan müşteri, borç ve tahsilat kaydı tutar. Kayıtlar telefonda saklanır ve bağlantı geldiğinde eşitlenir. İnternet yokken başka cihazda yazılan yeni işlemlerin sizin telefonunuzda hemen görünmesini beklemeyiniz.
+
+### Müşteri bilgilerinin güvenliği için neler var?
+
+Telefondaki kayıtlar şifreli yerel veritabanında tutulur. Dükkân verilerine erişim üyelik ve yetkiyle sınırlandırılır; PIN ve biyometrik kilit de bulunur. Çetele bir portföy projesidir; bu özellikler mutlak güvenlik veya hukuki uygunluk garantisi anlamına gelmez.
+
+### PIN ve biyometrik kilit nasıl çalışır?
+
+Çetele'de altı haneli uygulama PIN'i veya biyometrik kilit kullanabilirsiniz. Uygulama yeniden açılırken ve arka planda iki dakika kaldıktan sonra kilit uygulanır. PIN telefonda tutulur, sunucuya gönderilmez; kilit bilginizi başkalarıyla paylaşmayınız.
+
+### Çalışanım için ayrı hesap açabilir miyim?
+
+Dükkân sahibi çalışanı telefon numarasıyla davet edebilir. Çalışan müşteri bilgilerini ve bakiyeleri görür, borç ve tahsilat kaydeder. Müşteri silme, bütün kayıtları dışa aktarma ve dükkân üyelerini yönetme yetkileri çalışanda bulunmaz.
+
+### Ücretsiz plan ile Pro arasındaki sınırlar nelerdir?
+
+Ücretsiz plan 100 müşteri, ayda 200 fotoğraf ve 30 SMS sunar. Pro'da müşteri sayısı sınırsızdır; aylık sınırlar 2000 fotoğraf ve 500 SMS olur. Pro ayrıca öncelikli eşitleme içerir, aylık veya yıllık abonelik olarak tasarlanmıştır.
+
+### Telefonu kayıtlı her müşteriye SMS gönderebilir miyim?
+
+Hayır, SMS hatırlatması yalnızca onayı kayıtlı müşteriler için kullanılabilir. Çetele onay durumuyla birlikte tarih ve kaynak bilgisini de tutar. Telefon numarasının kayıtlı olması SMS onayı yerine geçmez; gönderimler ayrıca aylık plan sınırına tabidir.
+
+### Borç kaydına fiş fotoğrafı ekleyebilir miyim?
+
+Evet, borç veya tahsilat kaydına isteğe bağlı fiş ya da el yazısı not fotoğrafı ekleyebilirsiniz. Fotoğraf, işlem tutarı ve tarihinin yerini almaz. Aylık fotoğraf sınırı ücretsiz planda 200, Pro'da 2000 adettir.
+
+### Müşteriye hesap dökümü nasıl gönderilir?
+
+Müşteri başına PDF hesap dökümü oluşturabilir ve paylaşabilirsiniz. WhatsApp paylaşımı imzalı hesap dökümü bağlantısı içerir; müşteri bu bağlantıyı tarayıcıda açabilir. Paylaşmadan önce doğru müşteri hesabını seçtiğinizi, borç ve tahsilat kayıtlarını kontrol ediniz.
+
+### Bütün kayıtları dışa aktarabilir miyim?
+
+Dükkân sahibi bütün defter kayıtlarını CSV olarak dışa aktarabilir. Tek müşterinin hesabı için PDF döküm de bulunur. Çalışanın bütün kayıtları dışa aktarma yetkisi yoktur; paylaşacağınız dosyanın hangi müşterilerin bilgilerini içerdiğini kontrol ediniz.
+
+### Hesabımı ve dükkânımı nasıl silebilirim?
+
+Silme işlemi uygulamadaki ayarlardan veya web'deki hesap silme sayfasından başlatılabilir. Yeniden SMS koduyla doğrulama ve 14 günlük bekleme süresi vardır. Pro aboneliği sunucudan iptal edilemez; aboneliğin iptalini Google Play üzerinden ayrıca yapmanız gerekir.
+
+### Aynı dükkânı birden fazla cihazda kullanabilir miyim?
+
+Evet, Çetele dükkân sahibi ve çalışan arasında cihazlar arası eşitleme için tasarlanmıştır. Her cihaz internet olmadan kayıt tutabilir; bağlantı geldiğinde işlemler eşitlenir. Bağlantısız cihazlardaki yeni kayıtların diğer telefonlarda görünmesi için eşitleme gerekir.
+
+### Yanlış yazdığım borcu veya tahsilatı değiştirebilir miyim?
+
+Defter kayıtları sonradan değiştirilmez. Yanlış işlem, ilk kayda bağlı ters kayıt oluşturularak düzeltilir; böylece işlem geçmişi korunur. Düzeltme yapmadan önce müşteriyi, tutarı ve işlem türünü kontrol ediniz, ardından hesap dökümünü yeniden inceleyiniz.
+
+### Telefonumu kaybedersem kayıtlarım ne olur?
+
+Kayıtlar internet geldiğinde sunucuyla eşitlenir; henüz eşitlenmemiş işlemler kayıp telefonda kalabilir. Bu yüzden bütün kayıtların geri geleceğini garanti etmek doğru olmaz. PIN ve biyometrik kilit erişimi korumaya yardımcı olur; eşitleme durumunu düzenli kontrol ediniz.
+
+### Çetele Pro'nun fiyatı nedir?
+
+Pro aylık veya yıllık Google Play aboneliği olarak tasarlanmıştır; fiyatlar Google Play'de gösterilir. Bu projede sabit fiyat belirtilmez. Çetele bir portföy projesidir ve Google Play'de yayına hazırlanıyor; yayımlanmış bir mağaza uygulaması olarak sunulmaz.
+
+### Hangi cihazlar desteklenir?
+
+Çetele Android uygulamasıdır; ürün kapsamındaki en düşük sürüm Android 8.0'dır. iOS uygulaması bu sürümün kapsamına dahil değildir. Belirli bir telefon modelinde sorunsuz çalışma garantisi verilmez; cihazlara ilişkin gerçek kullanım doğrulamalarının sınırları ayrıca değerlendirilmelidir.
+
+---
+
+# Çetele Hakkında: Bir Geliştiricinin Portföy Projesi
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını takip etmesi için tek geliştirici tarafından hazırlanan bir portföy projesidir. Android veresiye defteri, internet olmadan kayıt tutma ve bağlantı geldiğinde eşitleme üzerine kuruludur. Bakkal, manav, kasap, berber ve kahvehane gibi dükkânlar için tasarlanır. Ticari bir hizmet olarak işletilmez; Google Play'de yayına hazırlanıyor.
+
+## Çetele'nin amacı
+
+Kısaca: Çetele, veresiye alışverişlerle alınan ödemeleri müşteri hesabında tutmak için tasarlanan bir Android projesidir. Geliştiricisi Ayberk'tir.
+
+Proje, kodu, testleri, mimari kararları ve yerel gösterimleriyle yazılım geliştirme çalışmasını ortaya koymak amacıyla hazırlanır. Çetele ticari bir hizmet olarak işletilmez. Ürünün arkasında bir şirket bulunmaz.
+
+Adı, esnafın eskiden borçları çentik atarak kaydettiği çetele sopasından gelir. “Veresiyeyi unutma, Çetele'ye yaz.” sözü bu defter fikrini anlatır. Ürün dili dükkân sahibine saygılı, sade Türkçedir.
+
+## Hangi hesaplar için tasarlanıyor?
+
+Kısaca: Çetele'nin odağı, küçük dükkânlarda müşteriye yazılan borç ile sonradan alınan tahsilattır. Tutarlar Türk lirası olarak tutulur.
+
+Müşteri bilgileri, borçlar, tahsilatlar ve hesap dökümleri aynı ürün kapsamında yer alır. Borç ve ödeme kayıtlarına tarih, not ve isteğe bağlı fotoğraf eklenebilir. Kayıtlar değiştirilmez; yanlış işlem bağlı bir ters kayıtla düzeltilir.
+
+İnternet olmadan kayıt yazma ve bağlantı geldiğinde cihazlar arasında eşitleme, ürünün temel çalışma biçimidir. Dükkân sahibi ve çalışan için ayrı roller bulunur. Çalışan borç ve tahsilat kaydeder, bakiyeleri görür; üye yönetimi ve tüm kayıtları dışa aktarma dükkân sahibindedir.
+
+## Yayın ve deneme durumu
+
+Kısaca: Uygulama Google Play'de yayına hazırlanıyor. Portföy çalışmasındaki yerel denemeler, gerçek hizmet sağlayıcılarıyla yapılmış denemeler anlamına gelmez.
+
+Canlı SMS gönderimi, gerçek Google Play abonelik satın alımı ve gerçek WhatsApp istemcisinin mesajı alması denenmemiştir. Bu kanallara yönelik ürün özellikleri ve yerel doğrulamalar, projenin kapsamı içinde ele alınır. Bu sayfalardaki plan bilgileri, yayımlanmış bir mağaza teklifini ifade etmez.
+
+Sitedeki hukuki metinler örnek olarak hazırlanır. Gerçek bir hukuki inceleme yapılmış olduğu veya yasal uygunluk sağlandığı iddia edilmez. Bu metinlerin örnek niteliği ilgili sayfalarda belirtilir.
+
+## Ürünü yakından tanıyın
+
+Araçları [özellikler sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler), müşteri ve aylık kullanım sınırlarını [Free ve Pro planlarında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma) inceleyebilirsiniz. Dükkânınızdaki hesap alışkanlıkları için [bakkal](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal), [manav](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/manav), [kasap](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/kasap) ve [berber](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/berber) sayfalarını okuyun.
+
+Proje deposunun adı ayberkaarda/cetele'dir. İletişim kanalının mevcut durumunu ve depo bilgisini [iletişim sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/iletisim) bulabilirsiniz.
+
+---
+
+# Gizlilik Metni Örneği
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/gizlilik
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnafın müşteri, borç ve tahsilat kayıtlarını internetsiz tutabildiği bir Android veresiye defteridir. Kayıtlar telefonda saklanır, bağlantı geldiğinde sunucuyla eşitlenir. Bu örnek gizlilik metni, hesap bilgilerinin, müşteri telefonlarının, defter kayıtlarının, fotoğrafların ve hatırlatma bilgilerinin hangi işlevlerde kullanıldığını açıklar. Proje henüz ticari bir hizmet olarak işletilmemektedir.
+
+**Örnek metin:** Bu sayfa açıklama amacıyla hazırlanmış temsili bir metindir. Çetele bir portföy projesidir. Metin herhangi bir şirketi temsil etmez, hukuki uygunluk iddiası taşımaz ve hukuki danışmanlık değildir.
+
+## Hangi bilgiler tutulur?
+
+Kısaca: Çetele, girişinizi doğrulamak ve dükkânınızın veresiye defterini çalıştırmak için hesap ve dükkân kayıtlarını tutar. Hesapta telefon numarası ve görünen ad; dükkânda ad, tür, il, ilçe ve sahip veya çalışan üyeliği bulunur. Çalışan davetinde telefon numarası ve davetin geçerlilik bilgisi saklanır.
+
+Müşteri kartlarında ad, isteğe bağlı telefon numarası, not ve etiket yer alır. SMS onayı kaydedildiğinde onayın durumu, tarihi ve kaynağı da tutulur. Müşterinin Çetele hesabı açması gerekmez. Bu bilgileri siz veya dükkânınızdaki yetkili çalışan girersiniz.
+
+Defterde borç ve tahsilat türü, Türk lirası tutarı, işlem tarihi, isteğe bağlı vade, not, fotoğraf bağlantısı ve kaydı oluşturan kullanıcı bilgisi tutulur. Hatalı kayıt değiştirilmez; düzeltme için bağlı bir ters kayıt eklenir. Bu nedenle eski kayıt da defter geçmişinde kalır.
+
+## Telefon ve sunucu
+
+Kısaca: Çevrimdışı kayıtlar telefondaki şifreli veritabanında tutulur. İnternet geldiğinde müşteri ve defter değişiklikleri sunucuya gönderilir. Sunucu, cihazlar arasındaki eşitleme için değişiklik günlüğü ve işlemlerin uygulanma bilgilerini saklar.
+
+Hesaba bağlı cihaz kimliği, model, uygulama sürümü ve son görülme bilgisi de sunucu kayıtları arasındadır. Giriş kodu ve oturum yenileme bilgileri doğrulama amacıyla tutulur. Uygulama PIN'i sunucuya gönderilmez; telefonda özeti saklanır. Biyometrik kilit cihazın doğrulama işlevini kullanır.
+
+## Fotoğraf ve hatırlatma paylaşımı
+
+Kısaca: Eklediğiniz fiş veya el yazısı fotoğrafı özel dosya deposunda saklanır. Sunucu fotoğrafı yeniden işler, boyutunu sınırlar ve konum dahil fotoğraf üstverisini kaldırır. Fotoğrafın içinde görünen ad ve tutarlar ise görüntünün parçası olarak kalabilir.
+
+SMS hatırlatması için müşteri numarası ve mesaj SMS sağlayıcısına gönderilir. Sunucudaki hatırlatma kaydı; müşteri bağlantısı, kanal, şablon, durum, sağlayıcı mesaj kimliği ve gönderim veya teslim zamanlarını içerir. WhatsApp paylaşımı, seçtiğiniz uygulamaya mesaj ve hesap dökümü bağlantısını aktarır. Sunucudaki SMS kaydı, WhatsApp mesajının teslim edildiğini göstermez.
+
+Hesap dökümü bağlantısının süresi 30 gündür. Sunucu bağlantının özetini, süresini, açılma zamanını ve sayısını tutar. Bağlantıyı elinde bulunduran kişi, geçerli olduğu sürece ilgili dökümü okuyabilir.
+
+## Saklama ve silme
+
+Kısaca: Müşteri ve defter kayıtları için belgelerde sabit bir genel saklama yılı belirtilmemiştir. Günlük bakım, bir günden eski giriş kodlarını; süresi dolmuş veya iptal edilmiş oturum yenileme kayıtlarını 30 gün sonra; süresi dolmuş davetleri yedi gün sonra temizler. Süresi dolmuş veya iptal edilmiş döküm bağlantıları 90 gün sonra kaldırılır.
+
+İşletim günlükleri için 30 günlük saklama öngörülür. Yedeklerin 30 günlük saklanması bir dağıtım planıdır; gerçek barındırma ve yedek hizmeti kurulmamıştır. Önceden alınmış yedekler ve sağlayıcıların kendi SMS kayıtları için tamamlanmış silme doğrulaması yoktur. Hesap ve dükkân silmenin kapsamını ve 14 günlük beklemeyi [hesap silme sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme) okuyabilirsiniz.
+
+---
+
+# KVKK Aydınlatma Metni Örneği
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/kvkk-aydinlatma
+Güncelleme: 2026-10-11
+
+Çetele, dükkân sahiplerinin ve çalışanlarının müşteri bilgilerini, borçları ve tahsilatları kaydettiği dijital veresiye defteridir. Müşteri bilgilerini uygulamaya dükkân girer; müşteri ayrıca hesap açmaz. Bu örnek aydınlatma metni, müşteri telefonu, işlem geçmişi, fotoğraf ve SMS onayı gibi kayıtların ürün içindeki kullanımını anlatır. Gerçek bir hizmetin aydınlatma metni olarak sunulmaz.
+
+**Örnek metin:** Bu sayfa açıklama amacıyla hazırlanmış temsili bir metindir. Herhangi bir şirket adına yayımlanmaz. Hukuki uygunluk veya mevzuata uyum iddiası taşımaz; gerçek bir aydınlatma metninin ya da hukuki danışmanlığın yerine geçmez.
+
+## Dükkânın müşteri bilgileriyle ilişkisi
+
+Kısaca: Çetele'nin ürün tanımında, müşteri bilgilerini toplayıp deftere giren dükkân veri sorumlusu olarak ele alınır. Müşterinin adını, telefonunu, notunu ve borç kayıtlarını siz veya yetkili çalışanınız yazarsınız. Bu örnek, gerçek işletmenin kimliğini, iletişim yolunu veya hukuki dayanağını belirlemez.
+
+Çetele ticari bir hizmet olarak işletilmeyen bir portföy projesidir. Gerçek kullanıma geçilmeden önce işletmenin kimliği, veri işleme dayanakları, saklama süreleri ve başvuru yolu ayrıca belirlenmelidir. Bu sayfada şirket adı, adres veya gerçek bir başvuru makamı bulunmamasının nedeni budur.
+
+## Kaydedilen bilgiler ve kullanım amacı
+
+Kısaca: Müşteri adı, telefon numarası, not ve etiket; müşteri kartını bulmak, bakiyeyi takip etmek ve hesap dökümünü hazırlamak için kullanılır. Telefon alanı isteğe bağlıdır. SMS göndermek için müşterinin telefonunun ve kayıtlı onayının bulunması gerekir.
+
+Borç ve tahsilat kayıtları tutar, tarih, isteğe bağlı vade, not ve fotoğraf bağlantısını içerir. Para Türk lirası olarak tutulur. Kayıtlar sonradan değiştirilmez; yanlış işlem ters kayıtla düzeltilir. Müşterinin geçmiş işlemleri ve düzeltmeleri bu yüzden birlikte görülebilir.
+
+Fiş ve el yazısı fotoğrafları ad veya tutar içerebilir. Fotoğraflar sunucuda yeniden işlenirken konum dahil üstveri kaldırılır. Görüntü içindeki müşteri bilgileri bu işlemle silinmez. Kayıtlar telefondaki şifreli veritabanında ve eşitleme için sunucuda tutulur.
+
+## SMS onayı ve hesap dökümü
+
+Kısaca: SMS onayı; durum, tarih ve kaynak bilgisiyle saklanır. Sunucu bu kayıt yoksa müşteri hatırlatması göndermez. Sistemde onay işaretlenmesi, onayın hukuken geçerli olduğuna dair bir değerlendirme değildir.
+
+Temsili onay ifadesi: “Veresiye hesabımla ilgili borç hatırlatmalarının bu telefon numarasına SMS ile gönderilmesini kabul ediyorum.” Bu ifade örnektir; işletmenizin kullanacağı onay metni olarak onaylanmış değildir. Müşterinin telefonunu deftere yazmak, tek başına SMS onayı kaydetmek anlamına gelmez.
+
+SMS gönderiminde müşteri numarası ve mesaj sağlayıcıya iletilir. Sunucu gönderim durumu, sağlayıcı mesaj kimliği ve zaman bilgilerini saklar. WhatsApp paylaşımında mesaj ve döküm bağlantısı seçtiğiniz uygulamaya aktarılır. Döküm bağlantısı 30 gün geçerlidir; bağlantıyı alan başka biri de bu sürede dökümü açabilir.
+
+## Saklama, silme ve sınırlar
+
+Kısaca: Ürün belgelerinde müşteri ve defter kayıtları için sabit bir genel saklama süresi yoktur. Süresi dolmuş veya iptal edilmiş döküm bağlantıları 90 gün sonra temizlenir. Hesap ve dükkân silmede 14 günlük geri dönüş süresi uygulanır; tamamlandığında ilgili müşteri, defter, fotoğraf ve hatırlatma kayıtları kaldırılır.
+
+Sunucu günlükleri için 30 günlük saklama planlanır. Gerçek sunucu ve dosya deposunun bölgesi belirlenmemiştir; verilerin Türkiye'de tutulduğu iddia edilmez. Sağlayıcıların kendi SMS kayıtları ve eski yedeklerdeki silme davranışı gerçek hizmetlerde doğrulanmamıştır. Ayrıntılar için [gizlilik metnine](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/gizlilik) ve [hesap silme açıklamasına](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme) bakabilirsiniz.
+
+---
+
+# Hesap ve Dükkân Silme Açıklaması
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme
+Güncelleme: 2026-10-11
+
+Çetele'de hesap ve dükkân silme, telefonunuza gelen kodla yeniden doğrulanan ve 14 günlük geri dönüş süresi bulunan bir işlemdir. Süre içinde talebi iptal edebilirsiniz. Dükkân silindiğinde müşteri, defter, fotoğraf, hatırlatma ve hesap dökümü bağlantıları kaldırılır. Bu örnek sayfa silmenin kapsamını açıklar; Google Play aboneliği ayrıca yönetilir.
+
+**Örnek metin:** Bu sayfa açıklama amacıyla hazırlanmış temsili bir metindir. Herhangi bir şirket adına sunulmaz ve hukuki uygunluk iddiası taşımaz. Portföy projesinin silme akışını anlatır; bu metnin okunması silme talebi oluşturmaz.
+
+## Silme talebini nasıl başlatırsınız?
+
+Kısaca: Uygulamada Ayarlar içindeki hesap ve dükkân silme bölümünden ilerlersiniz. Telefonunuza gelen tek kullanımlık kodla yeniden doğrulama yapılır. Talep kaydedildiğinde başlangıç ve 14 günlük geri dönüş süresinin bitiş bilgileri tutulur.
+
+Ürün kapsamı web üzerinden de silme talebi alınmasını içerir. Bu örnek içerik, çalışan bir web başvuru formu veya tamamlanmış mağaza bildirimi olduğunu ileri sürmez. Gerçek bir hizmet ve Play Console hesabı bulunmadığından mağazaya verilmiş hesap silme bildirimi yoktur.
+
+Hesabınız ile dükkânınız aynı şey değildir. Çalışan hesabını silmek, başka bir sahibin dükkânındaki müşterileri ve defterini silmez. Sahibi olduğunuz dükkânın verilerinin kaldırılması, dükkân silme kapsamına bağlıdır.
+
+## 14 günlük geri dönüş süresi
+
+Kısaca: Talep sonrası hesabınız bu süre boyunca kullanılabilir. Silme tamamlanmadan önce açık hesap silme talebini iptal edebilirsiniz. Hesap talebiyle birlikte oluşturulan dükkân silme talepleri de iptal edilir. Daha önce ayrı başlatılmış bir dükkân talebi ise açık kalır.
+
+Süre dolunca sunucunun saatlik silme işi talebi işler. Bu nedenle verilerin tam olarak on dördüncü günün aynı dakikasında kaldırılacağı söylenmez. Fotoğraf deposunda silme başarısız olursa işlem tamamlanmaz; sunucu sonraki çalışmada yeniden dener.
+
+## Dükkânda başka çalışanlar varsa
+
+Kısaca: Başka üyeleri bulunan bir dükkânın sahibiyseniz, sahipliği devretmeniz veya dükkânın tamamının silinmesini açıkça seçmeniz gerekir. Sahipliği devrederseniz dükkânın müşteri ve defter kayıtları yeni sahip için kalır.
+
+Bekleme sırasında dükkâna yeni bir üye katılırsa silme engellenebilir. Sunucu tamamlamadan önce üyelik ve sahiplik durumunu yeniden kontrol eder. Sahiplik devri, ilgili eski dükkân silme talebini iptal eder. Böylece yeni sahibi olan dükkân önceki sahibin talebiyle kaldırılmaz.
+
+## Hangi kayıtlar kaldırılır?
+
+Kısaca: Dükkân silindiğinde müşteriler, borç ve tahsilat kayıtları, ters kayıtlar, fotoğraflar, hatırlatma kayıtları, döküm bağlantıları, davetler, üyelikler ve eşitleme kayıtları kaldırılır. Fotoğrafların dosya deposundaki yükleme ve işlenmiş kopyaları da silinir.
+
+Hesap silindiğinde hesap telefonu ve görünen adı, cihaz kayıtları, oturum yenileme kayıtları, telefonla ilişkili giriş kodları ve davetler kaldırılır. Ürün akışı ayrıca telefondaki yerel veritabanının temizlenmesini ve şifreleme anahtarının yok edilmesini içerir. Sunucunun tamamlanma kaydı, telefondaki temizliğin gerçekleştiğine tek başına kanıt değildir.
+
+Silme talebinin kimlik ve zaman bilgileri, tamamlanma kanıtı olarak kalır. Dükkânın sunucudaki hatırlatma satırları silinir; genel ürün tanımındaki SMS günlüğü anonimleştirme, dış sağlayıcının kendi kayıtlarının silindiği anlamına gelmez. Gerçek sağlayıcı kayıtları ve önceden alınmış yedekler üzerinde silme doğrulanmamıştır.
+
+## Pro aboneliğinizi ayrıca yönetin
+
+Kısaca: Hesap veya dükkân silmek Google Play aboneliğini iptal etmez. Aboneliğinizi Google Play'deki abonelik yönetiminden ayrıca iptal etmeniz gerekir. Silinen dükkânla abonelik bağlantısı kaldırılır; sunucudaki bakım işi abonelik kaydını bağlantısız olarak işaretler ve şifreli satın alma belirtecini temizler. Yeniden bağlamayı önleyen belirteç özeti kalır.
+
+Saklama sürelerinin diğer ayrıntıları [gizlilik metninde](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/gizlilik) açıklanır. Bu projede gerçek abonelik satın alımı veya sağlayıcı üzerinden canlı silme sınaması yapılmış olduğu iddia edilmez.
+
+---
+
+# Çetele İletişim: Proje Deposu ve İletişim Durumu
+
+URL: https://ayberkaarda.github.io/Mobiles-5in-One/cetele/iletisim
+Güncelleme: 2026-10-11
+
+Çetele, küçük esnaf için tek geliştiricinin hazırladığı Android veresiye defteri portföy projesidir. Projeye ait iletişim kanalı henüz kurulmadı. Çalışmayı incelemek için GitHub üzerindeki ayberkaarda/cetele deposuna bakabilirsiniz. Ürün özellikleri, plan sınırları ve projenin kapsamı bu sitedeki ilgili sayfalarda açıklanır. Uygulama Google Play'de yayına hazırlanıyor ve ticari bir hizmet olarak işletilmiyor.
+
+## İletişim kanalının durumu
+
+Kısaca: Çetele için iletişim kanalı henüz kurulmadı. Bu nedenle şu anda bu sayfa üzerinden bir destek başvurusu veya mesaj gönderimi yapılamaz.
+
+Çetele, tek geliştiricinin hazırladığı bir portföy projesidir. Ticari bir hizmet olarak işletilmez. Burada bir destek ekibi, yanıt süresi veya başvuru takibi taahhüdü bulunmaz. Projenin amacı ve ürünün kapsamı [hakkında sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda) açıklanır.
+
+Uygulama Google Play'de yayına hazırlanıyor. Bu sayfadaki bilgiler, uygulamanın mağazada yayımlandığı anlamına gelmez. Planlarla ilgili bilgiler de proje kapsamında tasarlanan seçenekleri anlatır.
+
+## Proje deposunu inceleyin
+
+Kısaca: Projenin deposu GitHub üzerinde ayberkaarda/cetele adıyla bulunur. Depoyu incelemek için GitHub'da bu adı arayabilirsiniz.
+
+Çetele'nin ürün tanımı, kodu ve geliştirme belgeleri aynı depo içinde yer alır. Türkçe ürün özeti README.tr.md dosyasında, ayrıntılı ürün tanımı 02-cetele-kotlin-android.md dosyasında bulunur. Mimari kararlar docs/adr altında tutulur. Projenin portföy kapsamı ve gerçek hizmetlerle yapılmamış denemeler de bu belgelerde açıklanır.
+
+Depo, ürünün nasıl ele alındığını incelemek için kaynak sunar. İletişim kanalı henüz kurulmadığından depo incelemesini bir destek başvurusu veya yanıt garantisi olarak değerlendirmeyin.
+
+## Aradığınız ürün bilgisini bulun
+
+Kısaca: Borç kaydı, tahsilat, hesap dökümü ve hatırlatma seçenekleri için ilgili bilgi sayfalarını kullanabilirsiniz.
+
+- [Özellikler](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler): İnternetsiz defter, çalışan rolleri, PDF ve CSV dışa aktarma, hatırlatma seçenekleri.
+- [Planlar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma): Free ve Pro müşteri sınırları, aylık fotoğraf ve SMS kotaları.
+- [Sorular ve cevaplar](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss): Ürünün kullanımına ilişkin açıklamalar.
+- [Hesap silme](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme): Hesap ve dükkân silme konusundaki bilgiler.
+
+SMS hatırlatması için müşterinin kayıtlı onayı gerekir. WhatsApp paylaşımı imzalı hesap dökümü bağlantısı içerir. Bu özelliklerin kapsamını anlamak için önce ilgili ürün sayfalarını inceleyebilirsiniz.
+
+Dükkânınıza yönelik örnekler için [bakkal](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal), [manav](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/manav), [kasap](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/kasap) ve [berber](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/berber) sayfalarını okuyun. Genel ürün tanımına [ana sayfadan](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/) ulaşabilirsiniz.
+

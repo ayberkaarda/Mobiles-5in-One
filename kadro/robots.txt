@@ -1,0 +1,12 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /mac/
+Disallow: /giris
+Disallow: /sifremi-unuttum
+Disallow: /sifre-sifirla
+Disallow: /e-posta-dogrula
+Disallow: /hesap-silme
+
+Sitemap: https://ayberkaarda.github.io/Mobiles-5in-One/kadro/sitemap.xml

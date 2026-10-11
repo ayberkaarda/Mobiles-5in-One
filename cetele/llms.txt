@@ -1,0 +1,60 @@
+# Çetele
+
+> Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını takip etmesi için tasarlanan Android veresiye defteridir. İnternet olmadan kayıt yazabilir, bağlantı geldiğinde kayıtları eşitleyebilirsiniz. Bakkal, manav, kasap, berber ve kahvehane gibi dükkânlarda müşteri hesabını tarih, tutar ve notla tutmanıza; hesap dökümünü müşterinizle paylaşmanıza yardımcı olur. Sahip ve çalışan rolleri bulunur.
+
+- Uygulama: Çetele: Veresiye Defteri (Android, app.cetele.android)
+- Dil: Türkçe; para birimi: Türk lirası (TRY)
+- Durum: Çetele tek geliştiricinin portföy projesidir; şirket, adres veya vergi numarası yoktur. Android uygulaması Google Play'de yayına hazırlanıyor.
+
+## Kimler için
+
+Bakkal, manav, kasap, berber, kahvehane ve küçük esnaf; dükkân sahibi ve çalışanları, orta ve giriş seviyesi Android telefonlar, kesintili internet bağlantısı.
+
+## Özellikler
+
+- İnternet olmadan çalışır; bağlantı gelince kayıtları eşitler.
+- Dükkân sahibi ve çalışan rolleri; çalışan davet ile eklenir.
+- Müşteriler, borçlar ve tahsilatlar Türk lirası ile tutulur.
+- Kayıtlar değiştirilmez; hata ters kayıtla düzeltilir.
+- WhatsApp ile imzalı hesap dökümü bağlantısı paylaşılır.
+- SMS hatırlatması yalnızca onayı kayıtlı müşterilere, aylık kota ile gönderilir.
+- Hesap dökümü PDF, kayıtlar CSV olarak alınır.
+- Fiş ve not fotoğrafları kayda eklenir.
+- PIN ve biyometrik kilit.
+
+## Planlar
+
+- Free: ücretsiz; 100 müşteri, ayda 200 fotoğraf, ayda 30 SMS.
+- Pro: Google Play aboneliği (aylık veya yıllık); sınırsız müşteri, ayda 2000 fotoğraf, ayda 500 SMS ve öncelikli eşitleme. Pro fiyatları Google Play'de gösterilir; bu projede sabit bir fiyat yoktur.
+
+## Sayfalar
+
+- [Çetele: Esnafın Dijital Veresiye Defteri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/): Çetele, küçük esnaf için internetsiz çalışan Android veresiye defteridir. Müşteri borçlarını, tahsilatları ve hesap dökümlerini aynı defterde takip edin.
+- [Çetele Özellikleri: Borç ve Tahsilat Takibi](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/ozellikler): Çetele'nin müşteri hesabı, borç ve tahsilat kaydı, internetsiz kullanım, hesap dökümü ve hatırlatma özelliklerini dükkânınıza göre inceleyin.
+- [Çetele Free ve Pro Planları](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/fiyatlandirma): Çetele Free ve Pro planlarının müşteri, fotoğraf ve SMS sınırlarını karşılaştırın. Pro abonelik seçenekleri ve fiyatların nerede gösterildiğini okuyun.
+- [Çetele Hakkında Sık Sorulan Sorular](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/sss): Çetele'nin internetsiz kullanımı, PIN kilidi, çalışan hesapları, ücretsiz ve Pro sınırları, SMS onayı ve hesap silme hakkında soruların yanıtları.
+- [Çetele Hakkında: Bir Geliştiricinin Portföy Projesi](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hakkinda): Çetele, tek geliştiricinin hazırladığı Android veresiye defteri projesidir. Küçük esnafa yönelik ürün kapsamını ve yayın durumunu açık biçimde okuyun.
+- [Çetele İletişim: Proje Deposu ve İletişim Durumu](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/iletisim): Çetele için iletişim kanalı henüz kurulmadı. Tek geliştiricinin hazırladığı portföy projesinin depo bilgisini ve ürünle ilgili bilgi sayfalarını bulun.
+
+## Esnaf için
+
+- [Bakkal İçin Dijital Veresiye Defteri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/bakkal): Bakkalınızda müşterilerin borçlarını ve parça parça ödemelerini Çetele ile kaydedin. İnternetsiz kayıt, hesap dökümü ve hatırlatma seçeneklerini tanıyın.
+- [Manav İçin Dijital Veresiye Defteri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/manav): Manavınızda farklı günlerdeki veresiye alışverişlerini ve tahsilatları müşteri hesabında izleyin. Çetele'nin internetsiz defter özelliklerini inceleyin.
+- [Kasap İçin Dijital Veresiye Defteri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/kasap): Kasabınızda veresiye satışları, fiş notlarını ve ödemeleri Çetele ile takip edin. Hesap dökümü ve internetsiz kayıt seçeneklerini tanıyın.
+- [Berber İçin Dijital Veresiye Defteri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/esnaf-icin/berber): Berber dükkânınızda hesabına yazdıran müşterilerin borçlarını ve ödemelerini takip edin. Çetele'nin not, döküm ve internetsiz kayıt araçlarını tanıyın.
+
+## Rehber
+
+- [Veresiye ve Alacak Takibi Rehberi](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber): Veresiye defteri tutma, alacak takibi, borç hatırlatma mesajları ve müşteri telefonunu saklama üzerine esnafa yönelik pratik rehberler.
+- [Veresiye Defteri Nasıl Tutulur?](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/veresiye-defteri-nasil-tutulur): Müşteri borcunu, tahsilatı ve tarihi düzenli kaydedin. Esnaf için veresiye defteri tutma, hesap kontrolü ve yanlış kayıt düzeltme adımlarını öğrenin.
+- [Alacak Takibi İçin 7 Kural](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/alacak-takibi-icin-7-kural): Esnaf için alacak takibini yedi adımda düzenleyin: doğru müşteri, açık kayıt, tahsilat kontrolü, vade takibi ve nazik borç hatırlatma.
+- [Müşteriye Borç Hatırlatma Mesajı Örnekleri](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/musteriye-borc-hatirlatma-mesaji-ornekleri): Müşteriye nazik ve açık borç hatırlatması için altı kısa mesaj örneği. Göndermeden önce bakiye, tarih ve alıcı kontrolünü nasıl yapacağınızı okuyun.
+- [KVKK: Müşteri Telefonunu Saklamak](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/kvkk-musteri-telefonunu-saklamak): Müşteri telefonunu veresiye kaydında kullanırken amaç, erişim ve SMS onayını ayrı düşünün. Esnaf için genel bilgi ve Çetele'deki kayıt düzeni.
+- [Bakkal İçin Dijital Defter Nasıl Kullanılır?](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/rehber/bakkal-icin-dijital-defter): Bakkalda müşteri borcunu, tahsilatı ve hesap dökümünü Çetele ile takip edin. İnternetsiz kayıt, ters işlem ve çalışan yetkileri için pratik rehber.
+
+## Yasal metinler (örnek metinler)
+
+- [Gizlilik Metni Örneği](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/gizlilik): Çetele'nin telefonda ve sunucuda tuttuğu hesap, müşteri, defter ve fotoğraf verilerini açıklayan örnek gizlilik metni.
+- [KVKK Aydınlatma Metni Örneği](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/kvkk-aydinlatma): Müşteri telefonları, borç kayıtları ve SMS onayının Çetele'deki kullanımını anlatan, hukuki uygunluk iddiası taşımayan örnek metin.
+- [Hesap ve Dükkân Silme Açıklaması](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme): Çetele'de hesap ve dükkân silme talebini, 14 günlük geri dönüş süresini, kaldırılan kayıtları ve abonelik sınırlarını açıklayan örnek metin.
+
