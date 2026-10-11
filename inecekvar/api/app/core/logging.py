@@ -19,7 +19,8 @@ from app.core.settings import Settings
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 _COORDINATE = re.compile(r"([?&](?:lat|lng|lon)=)(-?\d+\.\d{4,})(?=[&#\s\"']|$)", re.I)
-_PRIVATE_PATH = re.compile(r"(/v1/(?:auth/[^?\s\"']*|traces[^?\s\"']*))\?[^\s\"']*")
+# Query strings are never logged: they can carry tokens, emails or exact coordinates.
+_QUERY = re.compile(r"(/[^\s\"'?]*)\?[^\s\"']*")
 _HEADER_VALUE = re.compile(
     r"\b(authorization|cookie|set-cookie|x-csrf-token)\s*[:=]\s*[^\r\n]+", re.I
 )
@@ -53,8 +54,11 @@ def mask_sensitive(settings: Settings) -> Processor:
     settings.require_secret("log_hash_key")
 
     def text(value: str) -> str:
+        # Strip queries before and after decoding, so an encoded space or quote cannot end
+        # the match early and leave the rest of the query in the line.
+        value = _QUERY.sub(r"\1", value)
         value = unquote(value)
-        value = _PRIVATE_PATH.sub(r"\1", value)
+        value = _QUERY.sub(r"\1", value)
         value = _HEADER_VALUE.sub(r"\1: [redacted]", value)
         value = _COORDINATE.sub(lambda match: match[1] + f"{float(match[2]):.3f}", value)
         return _EMAIL.sub(lambda match: "email_hash=" + hash_for_log(settings, match[0]), value)
@@ -106,6 +110,23 @@ def json_formatter(log_hash_key: str) -> structlog.stdlib.ProcessorFormatter:
     )
 
 
+class UvicornAccessFilter(logging.Filter):
+    """Replaces the client address of uvicorn access records by its keyed digest before the
+    record is formatted; the path is masked by the formatter like any other text."""
+
+    def __init__(self, log_hash_key: str) -> None:
+        super().__init__()
+        self.settings = Settings(env="local", log_hash_key=SecretStr(log_hash_key))
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name == "uvicorn.access" and isinstance(record.args, tuple) and record.args:
+            client = str(record.args[0])
+            host = client.rsplit(":", 1)[0] if ":" in client else client
+            digest = "client_ip_hash=" + hash_for_log(self.settings, host)
+            record.args = (digest, *record.args[1:])
+        return True
+
+
 def uvicorn_log_config(settings: Settings) -> dict[str, object]:
     return {
         "version": 1,
@@ -116,11 +137,18 @@ def uvicorn_log_config(settings: Settings) -> dict[str, object]:
                 "log_hash_key": settings.require_secret("log_hash_key").decode(),
             },
         },
+        "filters": {
+            "uvicorn_access": {
+                "()": "app.core.logging.UvicornAccessFilter",
+                "log_hash_key": settings.require_secret("log_hash_key").decode(),
+            },
+        },
         "handlers": {
             "stdout": {
                 "class": "logging.StreamHandler",
                 "stream": "ext://sys.stdout",
                 "formatter": "json",
+                "filters": ["uvicorn_access"],
             },
         },
         "root": {"handlers": ["stdout"], "level": settings.log_level},
@@ -175,8 +203,7 @@ class AccessLogMiddleware:
                 client_ip = resolve_client_ip(
                     client[0] if client else None, Headers(scope=scope), self.settings
                 )
-            query = scope.get("query_string", b"").decode("latin-1")
-            path = scope["path"] + ("?" + query if query else "")
+            path = scope["path"]
             event = self.mask(
                 None,
                 "info",

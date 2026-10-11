@@ -68,7 +68,8 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    env: Environment = "local"
+    # Required: a missing INECEKVAR_ENV must never fall back to the local defaults.
+    env: Environment
 
     # --- Storage -------------------------------------------------------------------------
     database_url: SecretStr | None = None
@@ -166,6 +167,8 @@ class Settings(BaseSettings):
             missing.append("jwt_public_key_pem|jwt_public_key_path")
         if missing:
             raise ValueError("missing required settings: " + ", ".join(missing))
+        if self.env == "production" and not self.smtp_use_tls:
+            raise ValueError("smtp_use_tls must be true in production (magic links travel by mail)")
         named = (("csrf_secret", self.csrf_secret), ("log_hash_key", self.log_hash_key))
         for name, secret in named:
             if secret is not None and len(secret.get_secret_value()) < 32:

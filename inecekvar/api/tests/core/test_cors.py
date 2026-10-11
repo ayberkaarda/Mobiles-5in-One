@@ -87,7 +87,7 @@ async def test_preflight_explicit_lists(client: httpx.AsyncClient) -> None:
     ("env", "allowed"), [("local", True), ("test", False), ("production", False)]
 )
 async def test_local_origins_only_in_local_env(services: Services, env: str, allowed: bool) -> None:
-    settings = make_test_settings(env=env)
+    settings = make_test_settings(env=env, smtp_use_tls=True)
     transport = httpx.ASGITransport(app=make_core_app(settings, services))
     async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
         response = await client.options(

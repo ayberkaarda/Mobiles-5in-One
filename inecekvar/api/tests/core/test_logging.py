@@ -48,9 +48,11 @@ def log_stream(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> Iterator[
         ({"path": "/v1/traces?lat=41.0123456"}, {"path": "/v1/traces"}),
         (
             {"path": "/v1/near?lat=41.0123456&lng=29.0987654"},
-            {"path": "/v1/near?lat=41.012&lng=29.099"},
+            {"path": "/v1/near"},
         ),
-        ({"path": "/v1/near?lon=-29.0987654"}, {"path": "/v1/near?lon=-29.099"}),
+        ({"path": "/v1/near?lon=-29.0987654"}, {"path": "/v1/near"}),
+        ({"path": "/v1/auth/login?x=%20&token=private"}, {"path": "/v1/auth/login"}),
+        ({"path": "/v1/near?q=%22&token=private"}, {"path": "/v1/near"}),
     ],
 )
 def test_mask_sensitive_unit(
@@ -88,5 +90,6 @@ def test_uvicorn_access_log_masked(log_stream: io.StringIO) -> None:
     assert "a@b.example" not in line
     assert "@" not in line
     assert "41.0123456" not in line
-    assert "41.012" in line
-    assert "email_hash" in line
+    assert "?" not in line
+    assert "203.0.113.10" not in line
+    assert "client_ip_hash=" in line
