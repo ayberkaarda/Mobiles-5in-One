@@ -161,8 +161,16 @@ dependencyCheck {
         // Set only when present: an empty key is rejected by the client.
         if (!nvdApiKey.isNullOrBlank()) apiKey = nvdApiKey
     }
-    // Scanned: the runtime classpath only; the test and tool classpaths do not ship.
+    // Scanned: the runtime classpath only (what jib copies into the image); the test, Kotlin
+    // compiler, ktlint and build script classpaths do not ship and are not scanned.
     scanConfigurations = listOf("runtimeClasspath")
+    scanBuildEnv = false
+    // The test group filter is off on purpose. The Spring Boot plugin makes runtimeClasspath
+    // extend developmentOnly, which extends testAndDevelopmentOnly; the plugin's test name check
+    // walks that hierarchy, matched "testAndDevelopmentOnly" and silently skipped runtimeClasspath,
+    // so the scan analysed zero dependencies and still reported success. Test classpaths stay out
+    // because scanConfigurations names runtimeClasspath only.
+    skipTestGroups = false
 }
 
 tasks.dependencyUpdates {
