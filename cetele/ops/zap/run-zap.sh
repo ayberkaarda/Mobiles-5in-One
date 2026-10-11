@@ -12,6 +12,7 @@
 #   CETELE_ZAP_KEEP_STACK    1 leaves the stack running   (default: stack is removed with volumes)
 #   CETELE_ZAP_NO_STACK      1 scans an already running server on CETELE_SERVER_PORT
 #   CETELE_ZAP_FAIL          1 fails the run on FAIL-NEW and WARN-NEW (default: informational, -I)
+#   CETELE_ZAP_HOST_NETWORK  1 runs ZAP in the host network (Linux runners, see below)
 # Output: cetele/docs/security/scan-reports/zap/ (HTML, JSON, Markdown; gitignored by the
 # scan-reports/.gitignore), the numbers are copied into zap-api-scan.md by hand.
 #
@@ -81,6 +82,16 @@ chmod -R 0777 "$work"
 
 fail_flag="-I"
 [ "${CETELE_ZAP_FAIL:-0}" != "1" ] || fail_flag=""
+
+# The server port is published on 127.0.0.1 only. Docker Desktop forwards host.docker.internal to
+# the host loopback, a Linux engine does not: host-gateway is the bridge address, where nothing
+# listens, and every request of the scan was refused (CI run 38128569625). On Linux the ZAP
+# container therefore shares the host network and host.docker.internal names 127.0.0.1, so the
+# scan context and the 127.0.0.1 binding stay as they are.
+net_args=(--add-host=host.docker.internal:host-gateway)
+if [ "${CETELE_ZAP_HOST_NETWORK:-0}" = "1" ]; then
+  net_args=(--network host --add-host=host.docker.internal:127.0.0.1)
+fi
 
 set +e
 # shellcheck disable=SC2086

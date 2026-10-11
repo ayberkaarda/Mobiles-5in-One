@@ -312,6 +312,8 @@ jobs:
       - name: ZAP API scan
         env:
           CETELE_ZAP_MAX_MINUTES: "30"
+          # The server port is bound to 127.0.0.1; ZAP shares the host network to reach it.
+          CETELE_ZAP_HOST_NETWORK: "1"
         run: cetele/ops/zap/run-zap.sh
 
       - name: Upload reports
