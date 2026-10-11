@@ -29,11 +29,11 @@ One card per project. Kadro, Askıda and Cetele have applications. The Kadro car
       <sub><b>Kadro</b>: web pages and Android app screens (emulator, sample data); all planned phases merged</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askıda: brand system and foundation" width="100%"><br>
+      <img src="docs/readme/askida.png" alt="Askıda web home page and Android recipient screen (local stack, sample data)" width="100%"><br>
       <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda recipient mode: nearby shops, sample data" width="32%">
       <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda donor mode: item and quantity, sample data" width="32%">
       <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda merchant mode: shop home, sample data" width="32%"><br>
-      <sub><b>Askıda</b>: brand system and Android app screens (sample data)</sub>
+      <sub><b>Askıda</b>: web home page and Android recipient screen (local stack, sample data)</sub>
     </td>
   </tr>
   <tr>

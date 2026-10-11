@@ -29,11 +29,11 @@ Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var.
       <sub><b>Kadro</b>: web sayfaları ve Android uygulama ekranları (emülatör, örnek veri); planlanan tüm fazlar birleşti</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı" width="100%"><br>
+      <img src="docs/readme/askida.png" alt="Askıda web ana sayfası ve Android alıcı ekranı (yerel yığın, örnek veri)" width="100%"><br>
       <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda alan kişi modu: yakındaki dükkânlar, örnek veri" width="32%">
       <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda bağışçı modu: ürün ve adet, örnek veri" width="32%">
       <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda esnaf modu: dükkân paneli, örnek veri" width="32%"><br>
-      <sub><b>Askıda</b>: marka sistemi ve Android uygulama ekranları (örnek veri)</sub>
+      <sub><b>Askıda</b>: web ana sayfası ve Android alıcı ekranı (yerel yığın, örnek veri)</sub>
     </td>
   </tr>
   <tr>
