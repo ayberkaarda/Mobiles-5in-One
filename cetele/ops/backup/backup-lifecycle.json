@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "cetele-dumps-expire-after-30-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "cetele/"
+      },
+      "Expiration": {
+        "Days": 30
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}
