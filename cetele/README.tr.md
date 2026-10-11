@@ -53,9 +53,9 @@ Slogan: "Veresiyeyi unutma, Çetele'ye yaz."
 
 ## Durum
 
-7 fazdan 0-3 birleşti: depo temeli, Spring Boot sunucusu (kimlik doğrulama ve güvenlik tabanı, değişiklik günlüğüyle senkronizasyon, defter, hatırlatma, medya hattı, hesap ve dükkân silme) ve Android uygulaması (çevrimdışı defter, senkronizasyon motoru, PIN ve biyometrik kilit, hatırlatma, PDF ve CSV dışa aktarma, ayarlar). İlerleme yaklaşık %57. Faturalama ve webhook, web ve yönetim alanı ile yayın sertleştirmesi (Phase 4-6) başlamadı.
+7 fazdan 0-4 birleşti: depo temeli, Spring Boot sunucusu (kimlik doğrulama ve güvenlik tabanı, değişiklik günlüğüyle senkronizasyon, defter, hatırlatma, medya hattı, hesap ve dükkân silme) ve Android uygulaması (çevrimdışı defter, senkronizasyon motoru, PIN ve biyometrik kilit, hatırlatma, PDF ve CSV dışa aktarma, ayarlar), Play faturalaması (satın alma bağlama ve yetkilendirme), Play RTDN ve SMS teslim raporu webhook'leri, TOTP ve denetim kaydıyla yönetim konsolu, Android'de Play Billing ve Pro plan ekranları. İlerleme yaklaşık %71. Herkese açık web (SEO ve GEO, Phase 5) ile yayın sertleştirmesi (Phase 6) henüz birleşmedi.
 
-Şimdiye kadarki doğrulama yalnızca JVM birim testleri ve CI. Android uygulaması cihazda veya emülatörde çalıştırılmadı, sunucu gerçek bir istemciyle denenmedi; bu yüzden biyometri, kamera çekimi, gerçek PDF çıktısı, WhatsApp ve canlı SMS denenmiş değil. Phase 3'ten açık kalanlar: KVKK aydınlatma bağlantısı (ürün kararı) ve dashboard yenileme göstergesi için çalışan senkronizasyon sinyali.
+Şimdiye kadarki doğrulama yalnızca JVM birim testleri ve CI; Play Developer API, RTDN imza anahtarları ve Play Integrity sahte adaptörler ve kayıtlı örneklerle çalıştı, Play hesabı yok. Android uygulaması cihazda veya emülatörde çalıştırılmadı, sunucu gerçek bir istemciyle denenmedi; bu yüzden biyometri, kamera çekimi, gerçek PDF çıktısı, WhatsApp ve canlı SMS denenmiş değil. Açık kalanlar: KVKK aydınlatma bağlantısı (ürün kararı), dashboard yenileme göstergesi için çalışan senkronizasyon sinyali ve senkron sorunları ekranında yükseltme düğmesi.
 
 ## Kurulum
 
