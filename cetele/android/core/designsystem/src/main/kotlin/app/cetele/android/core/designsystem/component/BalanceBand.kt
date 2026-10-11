@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.cetele.android.core.designsystem.CeteleSpacing
@@ -58,7 +60,7 @@ fun LedgerCover(
                     label,
                     style = CeteleTextStyles.body,
                     color = cover.contentMuted,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 TallyMark(ink = cover.contentMuted, cross = cover.notch)
             }

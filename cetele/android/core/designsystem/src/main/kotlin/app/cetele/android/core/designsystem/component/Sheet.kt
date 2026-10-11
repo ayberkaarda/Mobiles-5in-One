@@ -129,7 +129,7 @@ fun NavRow(
                     },
             )
             if (supporting != null) {
-                Text(supporting, style = CeteleTextStyles.caption, color = colors.textMuted)
+                Text(supporting, style = CeteleTextStyles.body, color = colors.textMuted)
             }
         }
         when (selected) {
@@ -156,7 +156,7 @@ fun InfoRow(
     ) {
         Text(text, style = CeteleTextStyles.bodyStrong, color = CeteleTheme.colors.text)
         if (supporting != null) {
-            Text(supporting, style = CeteleTextStyles.caption, color = CeteleTheme.colors.textMuted)
+            Text(supporting, style = CeteleTextStyles.body, color = CeteleTheme.colors.textMuted)
         }
     }
 }

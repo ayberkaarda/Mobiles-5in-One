@@ -46,7 +46,7 @@ fun AmountText(
             if (large) {
                 TextAutoSize.StepBased(CeteleTextStyles.amountLargeMinSize, CeteleTextStyles.amountLarge.fontSize)
             } else {
-                null
+                TextAutoSize.StepBased(CeteleTextStyles.body.fontSize, CeteleTextStyles.amount.fontSize)
             },
         color =
             color.takeOrElse {

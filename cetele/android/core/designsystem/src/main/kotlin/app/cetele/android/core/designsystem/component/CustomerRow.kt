@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import app.cetele.android.core.designsystem.CeteleSpacing
@@ -28,6 +29,8 @@ fun CustomerRow(
     phone: String? = null,
     tag: String? = null,
 ) {
+    val configuration = LocalConfiguration.current
+    val showAvatar = configuration.screenWidthDp >= COMPACT_WIDTH_DP && configuration.fontScale < COMPACT_FONT_SCALE
     Row(
         modifier =
             modifier
@@ -38,13 +41,13 @@ fun CustomerRow(
         horizontalArrangement = Arrangement.spacedBy(CeteleSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CustomerAvatar(name)
+        if (showAvatar) CustomerAvatar(name)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 name,
                 style = CeteleTextStyles.bodyStrong,
                 color = CeteleTheme.colors.text,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (phone != null) {
@@ -67,3 +70,6 @@ fun CustomerRow(
         AmountText(balance, tone = balanceTone(balance))
     }
 }
+
+private const val COMPACT_WIDTH_DP = 320
+private const val COMPACT_FONT_SCALE = 1.3f
