@@ -27,6 +27,7 @@ class SiteWebTest(
     @Autowired private val mvc: MockMvc,
     @Autowired private val content: SiteContent,
     @Autowired private val properties: SiteProperties,
+    @Autowired private val pages: SitePages,
 ) {
     private val json = JsonMapper.builder().build()
     private val base = SiteProperties.DEFAULT_BASE_URL
@@ -125,6 +126,49 @@ class SiteWebTest(
         assertTrue(html.contains("<h2>Gövdede birinci düzey başlık</h2>"))
         assertTrue(html.contains("<time datetime=\"2026-10-11\">11 Ekim 2026</time>"))
         assertTrue(html.contains("<meta property=\"og:type\" content=\"article\">"))
+    }
+
+    @Test
+    fun `pages carry the layout structure of the stylesheet`() {
+        val home = get("/").response.contentAsString
+        assertTrue(home.contains("<body class=\"page-home\">"))
+        val heading = "<h1><span class=\"kicker\">Çetele:</span> <span class=\"main\">Esnafın Dijital Veresiye Defteri</span></h1>"
+        assertTrue(home.contains(heading))
+        val lead = content.of("/").lead
+        val (intro, more) = SitePageView.splitLead(lead)
+        assertEquals(lead, intro + " " + more)
+        assertTrue(home.contains("<span class=\"intro\">${escape(intro)}</span> <span class=\"more\">${escape(more!!)}</span>"))
+        assertTrue(home.contains("<img src=\"/assets/site/screens/musteri-hesabi.png\""))
+        assertTrue(home.contains("<figcaption>${Screen.CAPTION}</figcaption>"), "a screenshot is labelled as sample data")
+        assertTrue(home.contains("<a class=\"shop\" href=\"/esnaf-icin/bakkal\">"))
+
+        val faq = get("/sss").response.contentAsString
+        assertTrue(faq.contains("<body class=\"page-faq\">"))
+        assertEquals(content.of("/sss").faq.size, Regex("<details>").findAll(faq).count())
+        assertTrue(faq.contains("<summary>Çetele internet olmadan kullanılabilir mi?</summary>"))
+        assertFalse(faq.contains("<figure"), "no screenshot on the questions page")
+
+        assertTrue(get("/ozellikler").response.contentAsString.contains("/assets/site/screens/panel.png"))
+        SiteRoutes.trades.forEach { route ->
+            assertTrue(get(route.path).response.contentAsString.contains("/assets/site/screens/musteriler.png"), route.path)
+        }
+        listOf("/assets/site/screens/musteri-hesabi.png", "/assets/site/defter.svg", "/assets/site/cetele-cubugu.svg").forEach {
+            assertEquals(200, get(it).response.status, it)
+        }
+        assertTrue(get("/rehber/yok-boyle-bir-yazi").response.contentAsString.contains("<body class=\"page-missing\">"))
+    }
+
+    @Test
+    fun `the lead splits after its first sentence and a heading at its first colon`() {
+        assertEquals("Bir cümle." to "İkinci cümle. Üçüncü.", SitePageView.splitLead("Bir cümle. İkinci cümle. Üçüncü."))
+        assertEquals("Tek cümle, 2.5 değil." to null, SitePageView.splitLead("Tek cümle, 2.5 değil."))
+        val page = pages.notFound("/rehber/yok-boyle-bir-yazi")
+        assertNull(page.headingKicker)
+        assertEquals("Sayfa bulunamadı", page.headingMain)
+        val features = pages.view(SiteRoutes.get("/ozellikler"))
+        assertEquals("Çetele Özellikleri:", features.headingKicker)
+        assertEquals("Borç ve Tahsilat Takibi", features.headingMain)
+        assertEquals(features.heading, features.headingKicker + " " + features.headingMain)
     }
 
     @Test
@@ -240,7 +284,7 @@ class SiteWebTest(
         assertTrue(css.contentAsByteArray.size < CSS_BUDGET, "stylesheet under ${CSS_BUDGET / 1024} KiB")
         assertFalse(css.contentAsString.contains("@import"))
         assertSiteHeaders(css, "site.css")
-        val fonts = listOf("inter-400", "inter-600", "manrope-700").map { get("/assets/site/fonts/$it.woff2").response }
+        val fonts = listOf("bricolage-grotesque", "figtree").map { get("/assets/site/fonts/$it.woff2").response }
         fonts.forEach { assertEquals(200, it.status) }
         assertTrue(fonts.sumOf { it.contentAsByteArray.size } < FONT_BUDGET, "fonts under ${FONT_BUDGET / 1024} KiB")
         val og = get("/assets/site/og-cetele.png").response
@@ -309,6 +353,8 @@ class SiteWebTest(
         assertNull(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN), path)
     }
 
+    private fun escape(text: String) = text.replace("&", "&amp;").replace("'", "&#39;").replace("\"", "&quot;")
+
     private fun unescape(text: String) =
         text
             .replace("&#39;", "'")
@@ -319,7 +365,7 @@ class SiteWebTest(
 
     companion object {
         private val counter = AtomicInteger()
-        const val CSS_BUDGET = 10 * 1024
+        const val CSS_BUDGET = 14 * 1024
         const val FONT_BUDGET = 100 * 1024
 
         /** Every request from its own address, so the per-address bucket of one test never touches another. */

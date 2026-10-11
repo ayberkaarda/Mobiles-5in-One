@@ -25,6 +25,39 @@ data class NavLink(
     val label: String,
 )
 
+/**
+ * One of the app screenshots under `/assets/site/screens/`: emulator captures with sample data
+ * (`docs/release/screenshots`), always printed with [caption], which says so.
+ */
+data class Screen(
+    val src: String,
+    val alt: String,
+) {
+    val caption: String get() = CAPTION
+
+    companion object {
+        const val CAPTION = "Emülatör görüntüsü, örnek verilerle"
+        const val WIDTH = 540
+        const val HEIGHT = 1200
+
+        val LEDGER =
+            Screen(
+                "/assets/site/screens/musteri-hesabi.png",
+                "Çetele'de bir müşterinin hesabı: güncel bakiye, borç ve tahsilat kayıtları, düzeltilen kayıt üstü çizili.",
+            )
+        val DASHBOARD =
+            Screen(
+                "/assets/site/screens/panel.png",
+                "Çetele paneli: bugünün borç ve tahsilatı, toplam alacak ve en çok borçlu müşteriler.",
+            )
+        val CUSTOMERS =
+            Screen(
+                "/assets/site/screens/musteriler.png",
+                "Çetele müşteri listesi: müşteriler ve güncel bakiyeleri, arama ve müşteri ekleme.",
+            )
+    }
+}
+
 /** Everything a site template prints for one page; the templates hold no logic beyond conditions and loops. */
 data class SitePageView(
     val path: String,
@@ -50,9 +83,32 @@ data class SitePageView(
     val footerProduct: List<NavLink>,
     val footerTrades: List<NavLink>,
     val footerLegal: List<NavLink>,
+    val screen: Screen? = null,
 ) {
     val home: Boolean get() = kind == PageKind.HOME
     val guide: Boolean get() = kind == PageKind.GUIDE
+
+    /** The `body` class the stylesheet keys page layouts on: `page-home`, `page-faq`, `page-missing` for the 404. */
+    val bodyClass: String get() = "page-" + (kind?.name?.lowercase()?.replace('_', '-') ?: "missing")
+
+    /** The first sentence of the lead, set large; [leadMore] is the rest, both print the lead unchanged. */
+    val leadIntro: String get() = splitLead(lead).first
+
+    val leadMore: String? get() = splitLead(lead).second
+
+    /** A heading with a colon is set on two lines: [headingKicker] keeps the colon, [headingMain] the rest. */
+    val headingKicker: String? get() = heading.indexOf(": ").takeIf { it > 0 }?.let { heading.substring(0, it + 1) }
+
+    val headingMain: String get() = headingKicker?.let { heading.substring(it.length + 1) } ?: heading
+
+    companion object {
+        private val SENTENCE_END = Regex("""(?<=[.!?]) (?=\p{Lu})""")
+
+        fun splitLead(lead: String): Pair<String, String?> {
+            val parts = lead.split(SENTENCE_END, limit = 2)
+            return parts[0] to parts.getOrNull(1)
+        }
+    }
 }
 
 /** Builds the [SitePageView] of a route from the registry, the content and the configuration. */
@@ -95,6 +151,7 @@ class SitePages(
             footerProduct = FOOTER_PRODUCT,
             footerTrades = FOOTER_TRADES,
             footerLegal = FOOTER_LEGAL,
+            screen = SCREENS[route.path] ?: if (route.kind == PageKind.TRADE) Screen.CUSTOMERS else null,
         )
     }
 
@@ -185,5 +242,8 @@ class SitePages(
         val FOOTER_TRADES: List<NavLink> = SiteRoutes.trades.map { NavLink(it.path, it.label) }
 
         val FOOTER_LEGAL: List<NavLink> = SiteRoutes.legal.map { NavLink(it.path, it.label) }
+
+        /** Pages that show an app screenshot next to their lead; every trade page shows the customer list. */
+        val SCREENS: Map<String, Screen> = mapOf(SiteRoutes.HOME to Screen.LEDGER, "/ozellikler" to Screen.DASHBOARD)
     }
 }
