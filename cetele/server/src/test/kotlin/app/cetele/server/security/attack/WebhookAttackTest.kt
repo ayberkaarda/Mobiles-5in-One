@@ -116,6 +116,18 @@ class WebhookAttackTest : AttackSupport() {
     }
 
     @Test
+    fun `a captured push token is accepted again with another message inside its lifetime`() {
+        // Finding F-03: the token is not bound to the body; what a new message may do is decided by processing.
+        val authorization = valid()
+        val ids = List(2) { messageId() }
+        ids.forEach { id ->
+            val body = envelope("""{"version":"1.0","packageName":"app.cetele.android","testNotification":{"version":"1.0"}}""", id)
+            assertEquals(200, push(body, authorization).status)
+        }
+        assertEquals(listOf(1, 1), ids.map { events(it) })
+    }
+
+    @Test
     fun `a replayed rtdn message is stored once`() {
         val id = messageId()
         val body = envelope("""{"version":"1.0","packageName":"app.cetele.android","testNotification":{"version":"1.0"}}""", id)

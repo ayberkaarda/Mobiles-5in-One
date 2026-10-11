@@ -191,6 +191,7 @@ class AttackSuiteTest : AttackSupport() {
                 entryCreate(5, UUID.randomUUID(), ownCustomer, extra = ""","reverses":"${victim.entry}""""),
                 entryCreate(6, UUID.randomUUID(), ownCustomer, extra = ""","photoKey":"media/${victim.shopId}/${victim.mediaId}.jpg""""),
             )
+        // Finding F-06: a foreign id answers conflict where an unknown id answers not_found (UUIDv7 ids keep this unguessable).
         val response = call("POST", "$own/sync/push", owner, pushBody(*ops.toTypedArray()))
         assertEquals(200, response.status, response.toString())
         assertEquals(

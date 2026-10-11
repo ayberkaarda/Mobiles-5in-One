@@ -285,6 +285,8 @@ class AuthAttackTest : AttackSupport() {
         assertProblem(refresh(session.access), 422, "validation.failed", "access token as refresh token")
         assertEquals(204, call("POST", "/v1/auth/logout", "Bearer ${session.access}").status)
         assertProblem(refresh(session.refresh), 401, "auth.refresh_invalid", "refresh after logout")
+        // Finding F-05, accepted by ADR-0005: the stateless access token lives on until its 15 minutes end.
+        assertEquals(200, get("/v1/me", "Bearer ${session.access}").status)
     }
 
     @Test
