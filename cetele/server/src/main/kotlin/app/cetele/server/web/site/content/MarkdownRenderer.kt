@@ -50,9 +50,13 @@ object MarkdownRenderer {
         return SafeHtml(renderer.render(document))
     }
 
-    /** Site paths, anchors and the web and mail schemes; everything else, relative or not, is refused. */
+    /**
+     * Site paths, anchors and the web and mail schemes; everything else, relative or not, is refused.
+     * Tabs and line breaks are dropped and a backslash counts as a slash first, as browsers parse
+     * URLs, so `/\host` and `/<tab>/host` are refused like `//host`.
+     */
     fun isSafe(destination: String): Boolean {
-        val target = destination.trim()
+        val target = destination.trim().filterNot { it == '\t' || it == '\n' || it == '\r' }.replace('\\', '/')
         if (target.startsWith("//")) return false
         if (target.startsWith("/") || target.startsWith("#")) return true
         val scheme = target.substringBefore(':', missingDelimiterValue = "").lowercase()
