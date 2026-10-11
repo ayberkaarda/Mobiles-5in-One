@@ -20,7 +20,8 @@ from app.core.settings import Settings
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 _COORDINATE = re.compile(r"([?&](?:lat|lng|lon)=)(-?\d+\.\d{4,})(?=[&#\s\"']|$)", re.I)
 # Query strings are never logged: they can carry tokens, emails or exact coordinates.
-_QUERY = re.compile(r"(/[^\s\"'?]*)\?[^\s\"']*")
+# An encoded question mark (%3F) starts a query too, so decoding cannot reveal one later.
+_QUERY = re.compile(r"(/[^\s\"?]*?)(?:\?|%3[Ff])[^\s\"]*")
 _HEADER_VALUE = re.compile(
     r"\b(authorization|cookie|set-cookie|x-csrf-token)\s*[:=]\s*[^\r\n]+", re.I
 )
@@ -203,7 +204,7 @@ class AccessLogMiddleware:
                 client_ip = resolve_client_ip(
                     client[0] if client else None, Headers(scope=scope), self.settings
                 )
-            path = scope["path"]
+            path = scope["path"].split("?", 1)[0]
             event = self.mask(
                 None,
                 "info",

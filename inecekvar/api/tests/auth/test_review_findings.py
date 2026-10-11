@@ -89,3 +89,22 @@ async def test_delete_me_reauthentication_is_rate_limited(
     )
     assert response.status_code == 429
     assert int(response.headers["retry-after"]) > 0
+
+
+async def test_registration_verify_password_attempts_are_rate_limited(
+    client: httpx.AsyncClient, mail: RecordingMailSender
+) -> None:
+    await client.post(
+        "/v1/auth/register", json={"email": EMAIL, "password": PASSWORD, "mode": "bearer"}
+    )
+    token = mailed_token(mail)
+    for _ in range(5):
+        response = await client.post(
+            "/v1/auth/magic-link/verify",
+            json={"token": token, "mode": "bearer", "password": "wrong-password-1"},
+        )
+        assert response.status_code == 401
+    response = await client.post(
+        "/v1/auth/magic-link/verify", json={"token": token, "mode": "bearer", "password": PASSWORD}
+    )
+    assert response.status_code == 429

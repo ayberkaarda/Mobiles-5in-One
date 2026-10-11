@@ -53,6 +53,8 @@ def log_stream(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> Iterator[
         ({"path": "/v1/near?lon=-29.0987654"}, {"path": "/v1/near"}),
         ({"path": "/v1/auth/login?x=%20&token=private"}, {"path": "/v1/auth/login"}),
         ({"path": "/v1/near?q=%22&token=private"}, {"path": "/v1/near"}),
+        ({"path": "/v1/near%3Fq=%20&token=private"}, {"path": "/v1/near"}),
+        ({"path": "/v1/near?q='&token=private"}, {"path": "/v1/near"}),
     ],
 )
 def test_mask_sensitive_unit(

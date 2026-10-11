@@ -142,7 +142,7 @@ async def password_login(
 ) -> User:
     user = await db.scalar(select(User).where(User.email == email).with_for_update())
     stored = user.password_hash if user is not None and user.password_hash else None
-    ok, rehash = await verify_password(password, stored or dummy_hash(settings), settings)
+    ok, rehash = await verify_password(password, stored or await dummy_hash(settings), settings)
     if user is None or user.password_hash is None or not ok or user.deactivated_at is not None:
         structlog.get_logger().info("auth.login.failed")
         raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
@@ -232,7 +232,7 @@ async def request_deletion(
         if password is None or not ok:
             raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     else:
-        await verify_password(password or "", dummy_hash(settings), settings)
+        await verify_password(password or "", await dummy_hash(settings), settings)
         created: datetime | None
         if principal.auth_mode == "cookie":
             created = await db.scalar(

@@ -42,10 +42,18 @@ def _dummy_hash(time_cost: int, memory_cost: int, parallelism: int) -> str:
     return _hasher(time_cost, memory_cost, parallelism).hash("unavailable-account-verification")
 
 
-def dummy_hash(settings: Settings) -> str:
-    """A hash with the configured cost, verified when no real hash exists (equal timing)."""
-    return _dummy_hash(
-        settings.argon2_time_cost, settings.argon2_memory_cost_kib, settings.argon2_parallelism
+async def dummy_hash(settings: Settings) -> str:
+    """A hash with the configured cost, verified when no real hash exists (equal timing).
+
+    Built once per parameter set in a worker thread, never on the event loop."""
+    return await anyio.to_thread.run_sync(
+        partial(
+            _dummy_hash,
+            settings.argon2_time_cost,
+            settings.argon2_memory_cost_kib,
+            settings.argon2_parallelism,
+        ),
+        limiter=_slots(),
     )
 
 
