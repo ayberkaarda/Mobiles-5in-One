@@ -7,8 +7,8 @@ import java.util.UUID
 /**
  * Decodes a Play Integrity token sent with `POST /v1/auth/otp/request`.
  *
- * Phase 1 ships only [FakeIntegrityVerifier] (local and test profiles). The Google-calling
- * verifier (`decodeIntegrityToken` with a service account) arrives in Phase 4.
+ * [FakeIntegrityVerifier] serves the local and test profiles; [PlayIntegrityVerifier] calls
+ * Google's `decodeIntegrityToken` with a service account (`CETELE_INTEGRITY_MODE=play`).
  */
 interface IntegrityVerifier {
     /**

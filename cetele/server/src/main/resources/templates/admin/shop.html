@@ -30,6 +30,17 @@
       <li><span class="label" th:text="'SMS kullanımı (' + ${detail.smsMonth} + ')'">SMS kullanımı</span><strong th:text="${detail.smsUsed}"></strong></li>
     </ul>
   </section>
+  <section aria-labelledby="shop-subscription">
+    <h2 id="shop-subscription">Abonelik</h2>
+    <p th:if="${detail.subscription == null}">Bu dükkânın bağlı bir Google Play aboneliği yok.</p>
+    <dl class="facts" th:if="${detail.subscription != null}">
+      <dt>Ürün</dt><dd th:text="${detail.subscription.productId}"></dd>
+      <dt>Temel plan</dt><dd th:text="${detail.subscription.basePlanId != null} ? ${detail.subscription.basePlanId} : '-'"></dd>
+      <dt>Durum</dt><dd th:text="${detail.subscription.stateLabel} + ' (' + ${detail.subscription.state} + ')'"></dd>
+      <dt>Bitiş</dt><dd th:text="${detail.subscription.expiresAt}"></dd>
+      <dt>Test satın alması</dt><dd th:text="${detail.subscription.testPurchase} ? 'Evet' : 'Hayır'"></dd>
+    </dl>
+  </section>
   <section aria-labelledby="shop-members">
     <h2 id="shop-members">Üyeler</h2>
     <p th:text="${detail.memberCount} + ' üye: ' + ${detail.ownerCount} + ' sahip, ' + ${detail.staffCount} + ' çalışan'"></p>

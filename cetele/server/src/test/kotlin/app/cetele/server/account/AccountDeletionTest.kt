@@ -2,6 +2,12 @@ package app.cetele.server.account
 
 import app.cetele.server.account.deletion.DeletionExecutor
 import app.cetele.server.account.deletion.DeletionRequestRepository
+import app.cetele.server.admin.AdminAccountRepository
+import app.cetele.server.admin.AdminPasswords
+import app.cetele.server.admin.AdminTestSupport
+import app.cetele.server.admin.audit.AuditLogService
+import app.cetele.server.admin.totp.TotpCipher
+import app.cetele.server.admin.totp.TotpService
 import app.cetele.server.auth.UserStore
 import app.cetele.server.config.JobLocks
 import app.cetele.server.config.StorageProperties
@@ -12,12 +18,14 @@ import app.cetele.server.statements.link.StatementLinkService
 import app.cetele.server.support.IntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.web.servlet.get
 import software.amazon.awssdk.services.s3.S3Client
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @IntegrationTest
@@ -40,6 +48,16 @@ class AccountDeletionTest : AccountTestSupport() {
 
     @Autowired private lateinit var jobs: JobLocks
 
+    @Autowired private lateinit var audit: AuditLogService
+
+    @Autowired private lateinit var adminAccounts: AdminAccountRepository
+
+    @Autowired private lateinit var adminPasswords: AdminPasswords
+
+    @Autowired private lateinit var totpCipher: TotpCipher
+
+    @Autowired private lateinit var totp: TotpService
+
     @Test
     fun `storage failure preserves database and request for the next run`() {
         val user = actor()
@@ -60,6 +78,7 @@ class AccountDeletionTest : AccountTestSupport() {
                 org.springframework.jdbc.core.simple.JdbcClient
                     .create(jdbc),
                 jobs,
+                audit,
                 checkNotNull(tx.transactionManager),
                 Clock.systemUTC(),
             )
@@ -159,12 +178,51 @@ class AccountDeletionTest : AccountTestSupport() {
             UUID.randomUUID(),
             customerId,
         )
+        val deviceRow = UUID.randomUUID()
         jdbc.update(
             "INSERT INTO devices (id, user_id, device_id, model, app_version, last_seen_at) VALUES (?, ?, ?, 'Test phone', '1.0', now())",
-            UUID.randomUUID(),
+            deviceRow,
             user.actor.id,
             user.deviceId,
         )
+        // A linked Play subscription of the shop, and a support case in the console: audit rows naming the user, the
+        // shop and the user's device.
+        val subscriptionId = linkedSubscription(shopId, user.actor.id)
+        val admins = AdminTestSupport(mvc, adminAccounts, adminPasswords, totpCipher, totp, jdbc)
+        val admin = admins.admin()
+        val adminIp = admins.randomIp()
+        val session = admins.signIn(admin, adminIp)
+        assertEquals(
+            200,
+            mvc
+                .get("/admin/users/${user.actor.id}") { this.session = session }
+                .andReturn()
+                .response.status,
+        )
+        assertEquals(
+            200,
+            mvc
+                .get("/admin/shops/$shopId") { this.session = session }
+                .andReturn()
+                .response.status,
+        )
+        AdminTestSupport.assertRedirect(
+            admins.post("/admin/users/${user.actor.id}/devices/$deviceRow/revoke", session, adminIp).response,
+            "/admin/users/${user.actor.id}",
+        )
+        val namedRows =
+            listOf("USER" to user.actor.id, "SHOP" to shopId, "DEVICE" to deviceRow).map { (type, id) ->
+                jdbc.queryForObject(
+                    "SELECT count(*) FROM audit_logs WHERE actor_id = ? AND target_type = ? AND target_id = ?",
+                    Int::class.java,
+                    admin.id,
+                    type,
+                    id,
+                )!!
+            }
+        assertTrue(namedRows.all { it >= 1 }, namedRows.toString())
+        val adminRowsBefore = admins.auditRows(admin.id).size
+        val startedAt = Instant.now().minusSeconds(1)
         jdbc
             .update(
                 "INSERT INTO refresh_tokens (id, token_hash, user_id, device_id, family_id, expires_at, family_expires_at) VALUES (?, ?, ?, ?, ?, now() + interval '60 days', now() + interval '180 days')",
@@ -243,5 +301,24 @@ class AccountDeletionTest : AccountTestSupport() {
         )
         executor.run(Instant.now())
         assertEquals(2, count("deletion_requests", "user_id", user.actor.id))
+        // The subscription left the shop in the deletion transaction: ORPHANED, no encrypted token, hash kept.
+        val orphan = subscription(subscriptionId)
+        assertEquals("ORPHANED", orphan["state"])
+        assertNull(orphan["purchase_token_enc"])
+        assertNull(orphan["shop_id"])
+        assertNull(orphan["linked_by"])
+        assertNotNull(orphan["purchase_token_hash"])
+        // The admin's rows stay, unnamed; the completion is audited without a target or any personal data.
+        val adminRows = admins.auditRows(admin.id)
+        assertEquals(adminRowsBefore, adminRows.size)
+        listOf("USER_VIEWED", "SHOP_VIEWED", "DEVICE_REVOKED").forEach { action ->
+            val row = adminRows.single { it["action"] == action }
+            assertNull(row["target_type"], action)
+            assertNull(row["target_id"], action)
+        }
+        // SHOP requests run first, so the shop's own row counts it and the account row counts no further shop. Rows
+        // carry no target, so other tests' due requests completed in the same run may add rows: at least one each.
+        assertTrue(completionRows("SHOP_DELETION_COMPLETED", startedAt, 1) >= 1)
+        assertTrue(completionRows("ACCOUNT_DELETION_COMPLETED", startedAt, 0) >= 1)
     }
 }
