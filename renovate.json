@@ -190,8 +190,9 @@
       "automerge": false
     },
     {
-      "description": "node-forge (ADR-0043) and braces (ADR-0078) carry the two advisories ignored in pnpm-workspace.yaml; no patched release exists, so no update is proposed until the ADRs are reviewed.",
+      "description": "Kadro: node-forge (ADR-0043) and braces (ADR-0078) carry the two advisories ignored in kadro/pnpm-workspace.yaml; no patched release exists, so no update is proposed until the ADRs are reviewed. Scoped to kadro/** so the other products keep their updates.",
       "matchManagers": ["npm"],
+      "matchFileNames": ["kadro/**"],
       "matchPackageNames": ["node-forge", "braces"],
       "enabled": false
     }
