@@ -4,10 +4,26 @@
       "ID": "cetele-media-noncurrent-versions-expire-after-30-days",
       "Status": "Enabled",
       "Filter": {
-        "Prefix": ""
+        "Prefix": "media/"
       },
       "NoncurrentVersionExpiration": {
         "NoncurrentDays": 30
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      "ID": "cetele-uploads-noncurrent-versions-expire-after-1-day",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "uploads/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
       },
       "Expiration": {
         "ExpiredObjectDeleteMarker": true
