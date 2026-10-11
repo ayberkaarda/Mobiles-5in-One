@@ -7,6 +7,7 @@ settings and services; the module-level `app` reads the environment.
 
 from fastapi import APIRouter, FastAPI
 
+from app.auth.router import router as auth_router
 from app.core.deps import Services
 from app.core.errors import ProblemError, problem_response
 from app.core.health import router as health_router
@@ -15,7 +16,7 @@ from app.core.settings import Settings, load_settings
 API_PREFIX = "/v1"
 
 # Fixed registration list: routers are mounted in this order and nowhere else.
-ROUTERS: tuple[APIRouter, ...] = (health_router,)
+ROUTERS: tuple[APIRouter, ...] = (health_router, auth_router)
 
 
 def create_app(settings: Settings | None = None, services: Services | None = None) -> FastAPI:
