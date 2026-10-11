@@ -8,6 +8,10 @@ interface CustomerNavigation {
     val syncStatus: Flow<SyncStatusSummary>
     val customerLimitRejected: Flow<Boolean>
 
+    /** Opens the Çetele Pro screen from the customer limit banner (owner only); `null` hides the button. */
+    val onOpenBilling: (() -> Unit)?
+        get() = null
+
     fun onCustomerSelected(customerId: String)
 
     fun onAddCustomer()

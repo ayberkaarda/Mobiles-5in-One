@@ -11,4 +11,8 @@ object ReminderRoutes {
 
 interface ReminderNavigation {
     fun onBack()
+
+    /** Opens the Çetele Pro screen after `sms.quota_exceeded` (owner only); `null` hides the button. */
+    val onOpenBilling: (() -> Unit)?
+        get() = null
 }

@@ -18,11 +18,13 @@ import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.designsystem.component.CeteleTopBar
 import app.cetele.android.core.designsystem.component.ConfirmSheet
+import app.cetele.android.core.designsystem.component.PlanUpgradeAction
 import app.cetele.android.core.domain.format.DateFormats
 import app.cetele.android.core.domain.model.EntryType
 import app.cetele.android.core.domain.model.LedgerEntry
 import app.cetele.android.feature.ledger.R
 import app.cetele.android.feature.ledger.photo.EntryPhotoStatus
+import app.cetele.android.feature.ledger.photo.uploadFailed
 import app.cetele.android.core.designsystem.R as DesignR
 
 @Composable
@@ -95,8 +97,12 @@ private fun EntryDetails(
         entry.note?.let { Text(it) }
         if (state.photoStatus != EntryPhotoStatus.Absent) photoContent(entry)
         if (state.photoStatus == EntryPhotoStatus.Uploading) Text(stringResource(R.string.ledger_photo_uploading))
-        if (state.photoStatus == EntryPhotoStatus.Failed) {
+        if (state.photoStatus.uploadFailed) {
             Text(stringResource(R.string.ledger_photo_failed))
+            if (state.photoStatus == EntryPhotoStatus.LimitReached) {
+                Text(stringResource(DesignR.string.error_plan_photo_limit))
+                PlanUpgradeAction(state.shop, actions.onUpgrade)
+            }
             CeteleButton(
                 stringResource(R.string.ledger_photo_send_without),
                 actions.onSendWithoutPhoto,

@@ -18,6 +18,7 @@ fun EntryDetailRoute(
     onBack: () -> Unit,
     onEntrySelected: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onUpgrade: (() -> Unit)? = null,
     viewModel: EntryDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -32,6 +33,7 @@ fun EntryDetailRoute(
                 viewModel::confirmReversal,
                 viewModel::dismissReversal,
                 viewModel::sendWithoutPhoto,
+                onUpgrade,
             ),
         modifier = modifier,
         photoContent = { entry ->

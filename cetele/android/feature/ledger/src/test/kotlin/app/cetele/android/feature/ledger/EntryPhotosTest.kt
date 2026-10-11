@@ -39,6 +39,10 @@ class EntryPhotosTest {
             assertEquals(EntryPhotoStatus.Uploading, subject.observe(entry).first())
             state.value = PhotoUploadState.Failed("media.invalid")
             assertEquals(EntryPhotoStatus.Failed, subject.observe(entry).first())
+            state.value = PhotoUploadState.Failed("plan.photo_limit")
+            assertEquals(EntryPhotoStatus.LimitReached, subject.observe(entry).first())
+            state.value = PhotoUploadState.Failed(null)
+            assertEquals(EntryPhotoStatus.Failed, subject.observe(entry).first())
             state.value = PhotoUploadState.Ready
             assertEquals(EntryPhotoStatus.Ready, subject.observe(entry).first())
         }

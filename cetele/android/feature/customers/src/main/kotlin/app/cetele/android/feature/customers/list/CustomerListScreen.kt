@@ -22,6 +22,7 @@ import app.cetele.android.core.designsystem.component.CeteleTextField
 import app.cetele.android.core.designsystem.component.CeteleTopBar
 import app.cetele.android.core.designsystem.component.CustomerRow
 import app.cetele.android.core.designsystem.component.EmptyState
+import app.cetele.android.core.designsystem.component.PlanUpgradeAction
 import app.cetele.android.core.designsystem.component.StatusBanner
 import app.cetele.android.core.designsystem.component.SyncStatusSummary
 import app.cetele.android.core.domain.model.ShopPlan
@@ -36,6 +37,7 @@ fun CustomerListScreen(
     modifier: Modifier = Modifier,
     syncStatus: SyncStatusSummary = SyncStatusSummary(),
     customerLimitRejected: Boolean = false,
+    onUpgrade: (() -> Unit)? = null,
 ) {
     Scaffold(
         modifier = modifier,
@@ -60,7 +62,9 @@ fun CustomerListScreen(
                 StatusBanner(BannerKind.Offline, stringResource(R.string.customers_list_offline))
             }
             if (customerLimitRejected && state.shop?.plan == ShopPlan.FREE) {
-                StatusBanner(BannerKind.Warning, stringResource(R.string.customers_list_limit))
+                StatusBanner(BannerKind.Warning, stringResource(R.string.customers_list_limit)) {
+                    PlanUpgradeAction(state.shop, onUpgrade)
+                }
             }
             CustomerResults(state, onCustomerSelected, Modifier.weight(1f))
         }

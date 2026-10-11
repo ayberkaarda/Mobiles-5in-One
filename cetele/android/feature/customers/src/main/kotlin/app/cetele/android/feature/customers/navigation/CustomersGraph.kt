@@ -29,6 +29,7 @@ fun NavGraphBuilder.customersGraph(nav: CustomerNavigation) {
             nav::onAddCustomer,
             syncStatus = sync,
             customerLimitRejected = limited,
+            onUpgrade = nav.onOpenBilling,
         )
     }
     composable<CustomerRoutes.Edit> {

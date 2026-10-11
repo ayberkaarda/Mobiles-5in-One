@@ -7,6 +7,6 @@ import app.cetele.android.feature.reminders.sheet.ReminderSheetRoute
 
 fun NavGraphBuilder.remindersGraph(nav: ReminderNavigation) {
     composable<ReminderRoutes.Sheet> {
-        ReminderSheetRoute(viewModel = hiltViewModel(), onDismiss = nav::onBack)
+        ReminderSheetRoute(viewModel = hiltViewModel(), onDismiss = nav::onBack, onUpgrade = nav.onOpenBilling)
     }
 }

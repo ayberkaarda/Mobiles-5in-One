@@ -13,6 +13,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.domain.model.Shop
+import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.feature.ledger.entry.EntryDetailActions
 import app.cetele.android.feature.ledger.entry.EntryDetailScreen
 import app.cetele.android.feature.ledger.entry.EntryDetailState
@@ -138,6 +140,49 @@ class EntryDetailScreenTest {
         compose.onNodeWithText("Fotoğraf yükleniyor").assertDoesNotExist()
         compose.onNodeWithText("Fotoğrafsız gönder").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, released) }
+    }
+
+    @Test
+    fun photoLimitLetsTheOwnerOpenTheProScreenAndStillSendWithoutPhoto() {
+        var opened = 0
+        var released = 0
+        showLimit(LedgerFixtures.shop(), onUpgrade = { opened++ }, onRelease = { released++ })
+        compose.onNodeWithText("Bu ayki fotoğraf sınırına ulaştınız").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Çetele Pro'ya geç").performScrollTo().performClick()
+        compose.onNodeWithText("Fotoğrafsız gönder").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(1, opened)
+            assertEquals(1, released)
+        }
+    }
+
+    @Test
+    fun photoLimitTellsStaffThatTheOwnerCanUpgrade() {
+        showLimit(LedgerFixtures.shop().copy(role = ShopRole.STAFF), onUpgrade = {}, onRelease = {})
+        compose.onNodeWithText("Dükkân sahibi Çetele Pro'ya geçebilir").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Çetele Pro'ya geç").assertDoesNotExist()
+    }
+
+    private fun showLimit(
+        shop: Shop,
+        onUpgrade: () -> Unit,
+        onRelease: () -> Unit,
+    ) {
+        compose.setContent {
+            CeteleTheme {
+                EntryDetailScreen(
+                    EntryDetailState(
+                        entry = LedgerFixtures.entry(),
+                        shop = shop,
+                        loading = false,
+                        photoStatus = EntryPhotoStatus.LimitReached,
+                    ),
+                    actions(onSelected = {}, onRequest = {})
+                        .copy(onSendWithoutPhoto = onRelease, onUpgrade = onUpgrade),
+                    photoContent = {},
+                )
+            }
+        }
     }
 
     @Test

@@ -19,7 +19,11 @@ fun NavGraphBuilder.ledgerGraph(
         EntryEditRoute(onBack = nav::onBack)
     }
     composable<LedgerRoutes.EntryDetail> {
-        EntryDetailRoute(onBack = nav::onBack, onEntrySelected = nav::onEntrySelected)
+        EntryDetailRoute(
+            onBack = nav::onBack,
+            onEntrySelected = nav::onEntrySelected,
+            onUpgrade = nav.onOpenBilling,
+        )
     }
     composable<LedgerRoutes.Dashboard> {
         val syncing by refreshing.collectAsStateWithLifecycle(initialValue = false)
