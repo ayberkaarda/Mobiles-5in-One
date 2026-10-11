@@ -1,8 +1,8 @@
-# Çetele — Security Verification Matrix (final form, not fully done: 15 of 23 rows `partial`)
+# Çetele — Security Verification Matrix (final form, not fully done: 14 of 23 rows `partial`)
 
 |                |                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status         | **Final form after Phase 6 (hardening and release readiness). 8 done, 15 partial, 0 not-started.** `done`: 1, 3, 4, 7, 8, 13, 15, 16. `partial`: 2, 5, 6, 9, 10, 11, 12, 14, 17, 18, 19, 20, 21, 22, 23. The matrix is **not** 23 of 23 done. The merged Phase 6 server gate failed once on one test (`DeletionBlockedTest`, an unexplained flake that did not reproduce in isolation or in a full rerun, which passed; row 21 and the run record). Phase 6 moved 1, 3, 4, 7, 13, 15 and 16 to `done` and 2, 19, 20 and 23 from `not-started` to `partial`. |
+| Status         | **Final form after Phase 6 (hardening and release readiness). 9 done, 14 partial, 0 not-started.** `done`: 1, 3, 4, 7, 8, 13, 15, 16, 19. `partial`: 2, 5, 6, 9, 10, 11, 12, 14, 17, 18, 20, 21, 22, 23. The matrix is **not** 23 of 23 done. The merged Phase 6 server gate failed once on one test (`DeletionBlockedTest`, an unexplained flake that did not reproduce in isolation or in a full rerun, which passed; row 21 and the run record). Phase 6 moved 1, 3, 4, 7, 13, 15 and 16 to `done` and 2, 19, 20 and 23 from `not-started` to `partial`; row 19 moved on to `done` on 2026-10-11 (run record, "Row 19 re-grade"). |
 | Source         | Product spec section 6, the 23-item checklist. The item text and its `Verify:` clause are the acceptance criteria.                                                                                                                                                                                                                                                                                                                                    |
 | Status words   | `done`, `partial`, `not-started`, as defined in [ADR-0004](../adr/0004-portfolio-delivery-scope.md). In this final form `done` means: the `Verify:` clause was executed with real output (cited in the row) and the residual left in the row is not material to the clause. A row that depends on a fake provider is `done` only when the clause itself is satisfied by the run.                                                                         |
 | Merged tree    | Branch `feat/cetele-p6` at `09fce5df` (Phases 0 to 6). Test counts per class are read from the JUnit XML of the merged gate run (section "Run record", Phase 6).                                                                                                                                                                                                                                                                                       |
@@ -40,8 +40,8 @@
 
 | Status        | Items                                                    | Count |
 | ------------- | -------------------------------------------------------- | ----- |
-| `done`        | 1, 3, 4, 7, 8, 13, 15, 16                                | 8     |
-| `partial`     | 2, 5, 6, 9, 10, 11, 12, 14, 17, 18, 19, 20, 21, 22, 23   | 15    |
+| `done`        | 1, 3, 4, 7, 8, 13, 15, 16, 19                            | 9     |
+| `partial`     | 2, 5, 6, 9, 10, 11, 12, 14, 17, 18, 20, 21, 22, 23       | 14    |
 | `not-started` | none                                                     | 0     |
 
 Re-graded in Phase 6: 1 (`partial` to `done`: full-history gitleaks run on the merged tree and green
@@ -67,6 +67,22 @@ validator tests outside the gate command), 17 (F-03), 18 (untested self and last
 | D-7 | **Proposed acceptances F-02, F-03, F-04, F-06.** Accept each with the reason in the pentest report, or ask for the fix named there. | [pentest-report.md](pentest-report.md) section 3 | Row 23 cannot meet "all findings closed or accepted with reason". |
 
 ## Run record
+
+### Row 19 re-grade (2026-10-11)
+
+Row 19 moved from `partial` to `done` on 2026-10-11 because the earlier "green" server
+dependency scan had analysed zero dependencies: the plugin's test-group filter
+(`skipTestGroups = true`) walked the hierarchy of `runtimeClasspath`, matched the Spring Boot
+parent `testAndDevelopmentOnly` and skipped the whole classpath, so the job reported "0
+vulnerabilities" for an empty report. Fix: commit `d8a045b9` (`skipTestGroups = false`, scope
+kept by `scanConfigurations = runtimeClasspath`, `scanBuildEnv = false`). The first real scan
+(GitHub run 38128569625, 198 dependencies) found Tomcat 11.0.24 with nine CVEs of CVSS 7.5 to 9.8
+and Netty 4.2.17 with CVE-2026-89044 (6.5); commit `b92d05cb` raised them to Tomcat 11.0.26 and
+Netty 4.2.19.Final in the server catalog. Green runs with both roots scanned: 38129509783 and
+38130178599 (server 199 dependencies, 0 findings; Android 0 findings, two justified
+suppressions), NVD data of 2026-10-11. The workflow step "Require analysed dependencies" now fails
+the job when any JSON report lists no dependency. Counts recounted from the status column of the
+table: 9 done, 14 partial, 0 not-started.
 
 ### Phase 6
 

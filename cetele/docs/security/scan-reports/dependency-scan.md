@@ -75,6 +75,8 @@ Scope, set in `cetele/server/build.gradle.kts`: `scanConfigurations = listOf("ru
 
 **Evidence of the real scan** (run 38129509783): 199 report entries, among them `spring-boot-4.1.1`, `spring-security-core-7.1.1`, `hibernate-core-7.4.5.Final`, `jackson-databind-2.22.1` and `3.1.5`, `postgresql-42.7.13`, `flyway-core-12.4.0`, `nimbus-jose-jwt-10.10` (and its shaded `gson` and `jcip-annotations`), `tomcat-embed-core-11.0.26`, `commonmark-0.30.1`, `thymeleaf-3.1.5`, `pdfbox-3.0.8`, `bcprov-jdk18on-1.86`, `s3-2.55.11` and the Netty modules of the AWS client. The SBOM lists more components (327) because it also counts BOMs and modules without a jar.
 
+**Lesson and guard.** A gate that analysed nothing looked green for a day (2026-10-10 to 2026-10-11): "Found 0 vulnerabilities" said nothing about an empty report. The job now has the step "Require analysed dependencies", which fails when any `dependency-check-report.json` of the root lists no dependency (it prints the count of every report).
+
 **First real result** (run [38128569625](https://github.com/ayberkaarda/Mobiles-5in-One/actions/runs/38128569625), 198 entries, job failed as it should): 36 matches, all real version matches, no false positive among them.
 
 | Package | CVE ids | CVSS | Decision |
