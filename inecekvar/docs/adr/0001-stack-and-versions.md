@@ -24,7 +24,8 @@ Use the latest stable releases, pinned exactly in `package.json` (no ranges) and
 
 1. **Ionic 9, not Ionic 8.** Section 4 says "Ionic 8", section 0.8 says "latest stable at scaffold
    time". Ionic 9.0.7 is the latest stable release and supports Angular 22 standalone and zoneless
-   apps, so section 0.8 wins. The README still says Ionic 8 and should be aligned.
+   apps, so section 0.8 wins. Both READMEs name Ionic 9; section 4 of the specification keeps
+   its original "Ionic 8" text and this decision overrides it.
 2. **Angular 22.2.2 above the Nx default.** The Nx 23.3.0 scaffolding installs Angular 22.1; the
    workspace was raised to 22.2.2, which the `@nx/angular` peer range (`>= 20 < 23`) allows. An
    Angular 23 upgrade waits for an Nx release that accepts it.
@@ -164,4 +165,4 @@ Not exercised:
 - An Angular 23 or Nx 24 upgrade is a deliberate step: Nx's peer range bounds Angular, and Nx 24
   drops the two executors named in decision 4.
 - Gradle commands on this machine must set `JAVA_HOME` to JDK 21 in the same shell command.
-- The README's "Ionic 8" line and any later document that names versions should follow this ADR.
+- Any later document that names versions should follow this ADR.

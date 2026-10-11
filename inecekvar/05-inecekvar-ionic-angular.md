@@ -55,7 +55,7 @@ Section map: identity §2 · scope §3 · architecture §4 · data and API §5 �
 6. Moderation: queue with map diff, approve → new `line_version` (immutable), reject with reason, rollback to any version; contributors cannot approve their own proposals; reputation increases per accepted proposal; proposal volume is rate-limited by reputation (§6.5).
 7. Favorites: local for guests, synced for signed-in users.
 8. **Plus** (RevenueCat, native only; web stays free): unlimited offline cities, supporter badge; entitlement enforced server-side for pack downloads beyond the first city.
-9. Open data: weekly public export per city (GeoJSON, CC BY 4.0 — licence decided in ADR-0003) at `/veri`; contributors accept the licence on first submission.
+9. Open data: weekly public export per city (GeoJSON, proposed CC BY 4.0, legal approval pending (ADR-0003)) at `/veri`; contributors accept the licence on first submission.
 10. Account deletion in-app and on web (`/hesap-silme`); contributions stay under the licence, anonymized.
 11. Web (Angular SSR): city hubs, line/stop programmatic pages with server-rendered SVG maps, guides, legal pages, admin/moderation UI.
 
