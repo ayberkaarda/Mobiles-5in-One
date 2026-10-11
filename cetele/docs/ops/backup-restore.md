@@ -14,7 +14,7 @@ the mechanics ran locally against MinIO and scratch PostgreSQL containers, with 
 | ------------------------- | ------------------------------------------------------------------ | ----------------------------------------- | ------------------- | -------------------------------------------- |
 | Logical dump              | daily `pg_dump -Fc`, encrypted with `age` before it leaves the host | backup bucket `cetele-backups`, `cetele/` | 30 days (lifecycle) | built and run against MinIO                  |
 | WAL archive (PITR)        | pgBackRest `archive-push` of every WAL segment, weekly full backup  | pgBackRest repository in the backup bucket | 4 weekly fulls      | documented only, see "WAL archiving"         |
-| Photos                    | bucket versioning on `cetele-media`                                 | media bucket                              | noncurrent 30 days  | built and run against MinIO; R2 not verified |
+| Photos                    | bucket versioning on `cetele-media`                                 | media bucket                              | media/ 30 days; uploads/ 1 day | built and run against MinIO; R2 not verified |
 | Android local export      | `.cetele` file, AES-256-GCM, Argon2id passphrase (spec item 20)     | the phone                                 | user-managed        | outside this runbook (Android work)          |
 
 Files, all under `cetele/ops/backup/`:
@@ -30,7 +30,7 @@ Files, all under `cetele/ops/backup/`:
 | `drill-invariants.sql`        | reversal links and tenancy of ledger entries on a restored database                                          |
 | `drill-seed.sql`              | synthetic drill data (3 shops, 60 customers, 630 entries with 30 reversal pairs)                              |
 | `backup-lifecycle.json`       | dumps expire after 30 days, incomplete uploads after 1 day                                                   |
-| `media-lifecycle.json`        | noncurrent photo versions expire after 30 days                                                               |
+| `media-lifecycle.json`        | noncurrent media/ versions expire after 30 days; uploads/ after 1 day                                         |
 | `minio/backup-*-policy.json`  | writer: `s3:PutObject` under the prefix only; reader: list the prefix and `s3:GetObject`                     |
 | `checks.test.sh`              | configuration checks of the scripts (no Docker needed)                                                       |
 | `lib.sh`                      | shared helpers (sourced)                                                                                     |
@@ -133,19 +133,25 @@ the write-only dump identity; a PITR restore is `pgbackrest --stanza=cetele --ty
 Ledger photos live in the private `cetele-media` bucket ([ADR-0017](../adr/0017-media-pipeline.md)).
 They are not in the dump; the dump holds only their keys (`ledger_entries.photo_key`,
 `media_objects.photo_key`). Protection is bucket versioning: an overwrite or delete leaves a
-noncurrent version, which `media-lifecycle.json` expires after 30 days (the same window as the
-dumps), and expired delete markers are cleaned up.
+noncurrent version. `media-lifecycle.json` scopes the 30-day expiry to processed photos under
+`media/` (the same window as the dumps). Raw uploads under `uploads/`, which can contain EXIF
+and location data, expire after one noncurrent day. Day-boundary rounding means removal can
+take up to one to two days after deletion. Both rules clean up expired delete markers and abort
+incomplete multipart uploads after one day.
 
-- MinIO (local and drill): `bucket-setup.sh` enables versioning and imports the rule; the drill
-  output shows `versioning is enabled` and the 30-day noncurrent rule.
+- MinIO (local and drill): `bucket-setup.sh` enables versioning and imports both rules; the drill
+  output shows `versioning is enabled` and the prefix-specific noncurrent rules.
+  `MediaLifecycleTest` checks both prefixes, retention periods and cleanup settings.
 - Cloudflare R2 (production): `not verified`. Whether R2 offers S3 object versioning was not
   checked against a real account. If it does not, the fallback is a daily `mc mirror` of
   `cetele-media` into a second, separately keyed bucket with the same 30-day expiry; this is an
   owner decision before launch.
 - Deletion interplay: account and shop deletion ([ADR-0018](../adr/0018-account-and-shop-deletion.md))
-  deletes the objects; with versioning on, their bytes survive as noncurrent versions for up to 30
-  days, exactly like the database rows inside the dumps. The privacy notice must state this
-  retention.
+  deletes the objects; processed photos survive as noncurrent versions for up to 30 days,
+  like the database rows inside pre-deletion dumps. Deleted raw uploads have the shorter
+  one-day noncurrent expiry, with removal taking at most one to two days. The privacy notice
+  must state both periods. Restores are for failures only; post-dump deletions must be applied
+  again before reopening traffic.
 
 ## Keys and identities
 
