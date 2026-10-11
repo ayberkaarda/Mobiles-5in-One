@@ -76,6 +76,14 @@ dependencies {
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.gfm.tables)
     runtimeOnly(libs.postgresql)
+    // Security patch levels above the Boot BOM (versions and CVE ids in the catalog). Constraints
+    // only raise the version of what the starters already bring; they add no library.
+    implementation(platform(libs.netty.bom))
+    constraints {
+        implementation(libs.tomcat.embed.core)
+        implementation(libs.tomcat.embed.el)
+        implementation(libs.tomcat.embed.websocket)
+    }
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)
