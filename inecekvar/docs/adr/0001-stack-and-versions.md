@@ -140,7 +140,7 @@ summarised here.
 | 19 | Workflow lint | `go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/inecekvar-ci.yml` | exit 0 (shellcheck not installed, so the embedded scripts were not shell-linted) |
 | 20 | Renovate | `renovate-config-validator renovate.json` (renovate 41) | the new Inecek Var rules validate; the file as a whole reports two errors that already exist on main (Askida composer and pub rules combine `matchUpdateTypes` with `rangeStrategy`) |
 | 21 | Hooks | `lefthook validate` (lefthook 2.1.15) | "All good" |
-| 22 | Secrets | `gitleaks git --pre-commit --staged` before each commit, `gitleaks git` over the branch | no leaks found |
+| 22 | Secrets | gitleaks 8.30.1: `git --pre-commit --staged` before each commit; `git --log-opts="origin/main..HEAD"` | no leaks found on the branch commits. A `--log-opts="--all"` scan reports 1 finding, in a local Kadro branch outside this work (`kadro/apps/worker/test/backup-verify.test.ts`) |
 
 Not exercised:
 
