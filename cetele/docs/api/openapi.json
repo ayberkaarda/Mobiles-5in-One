@@ -226,6 +226,39 @@
         },
         "type" : "object"
       },
+      "DeviceSession" : {
+        "properties" : {
+          "appVersion" : {
+            "type" : "string"
+          },
+          "current" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "lastSeenAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "signedIn" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "DeviceSignOutRequest" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EntryInput" : {
         "properties" : {
           "amountMinor" : {
@@ -680,6 +713,76 @@
         },
         "type" : "object"
       },
+      "ProblemBody" : {
+        "properties" : {
+          "code" : {
+            "enum" : [
+              "auth.unauthenticated",
+              "auth.integrity_required",
+              "auth.integrity_invalid",
+              "auth.otp_invalid",
+              "auth.refresh_invalid",
+              "forbidden",
+              "not_found",
+              "validation.failed",
+              "conflict",
+              "membership.owner_locked",
+              "membership.already_member",
+              "rate_limited",
+              "payload_too_large",
+              "unsupported_media_type",
+              "server_error",
+              "auth.reauth_invalid",
+              "customer.deleted",
+              "ledger.already_reversed",
+              "ledger.reversal_mismatch",
+              "plan.customer_limit",
+              "plan.photo_limit",
+              "billing.purchase_invalid",
+              "billing.token_in_use",
+              "billing.already_subscribed",
+              "billing.unavailable",
+              "sms.quota_exceeded",
+              "sms.daily_cap_reached",
+              "sms.consent_missing",
+              "sms.phone_missing",
+              "sms.provider_failed",
+              "reminder.no_balance",
+              "statement.link_limit",
+              "media.invalid",
+              "media.not_uploaded",
+              "media.too_large",
+              "media.not_ready",
+              "account.owner_of_shared_shop",
+              "account.deletion_pending",
+              "shop.deletion_pending",
+              "shop.limit_reached",
+              "webhook.unauthenticated"
+            ],
+            "type" : "string"
+          },
+          "errors" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProblemFieldError"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "traceId" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ProblemFieldError" : {
         "properties" : {
           "code" : {
@@ -756,6 +859,27 @@
           "code" : {
             "pattern" : "[0-9]{6}",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReauthRequest" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "ACCOUNT_DELETE",
+              "SHOP_DELETE",
+              "OWNERSHIP_TRANSFER",
+              "DEVICE_SIGN_OUT"
+            ],
+            "type" : "string"
+          },
+          "shopId" : {
+            "format" : "uuid",
+            "type" : [
+              "string",
+              "null"
+            ]
           }
         },
         "type" : "object"
@@ -1167,6 +1291,16 @@
     "/v1/auth/reauth/request" : {
       "post" : {
         "operationId" : "request",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReauthRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "202" : {
             "description" : "Accepted"
@@ -1326,6 +1460,63 @@
         ]
       }
     },
+    "/v1/me/devices" : {
+      "get" : {
+        "operationId" : "listDevices",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DeviceSession"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "device-controller"
+        ]
+      }
+    },
+    "/v1/me/devices/{id}/sign-out" : {
+      "post" : {
+        "operationId" : "signOutDevice",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeviceSignOutRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "device-controller"
+        ]
+      }
+    },
     "/v1/shops" : {
       "post" : {
         "operationId" : "create",
@@ -1349,6 +1540,16 @@
               }
             },
             "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemBody"
+                }
+              }
+            },
+            "description" : "account.deletion_pending or shop.limit_reached"
           }
         },
         "tags" : [
@@ -1903,6 +2104,16 @@
               }
             },
             "description" : "Created"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemBody"
+                }
+              }
+            },
+            "description" : "rate_limited, sms.quota_exceeded or sms.daily_cap_reached"
           }
         },
         "tags" : [

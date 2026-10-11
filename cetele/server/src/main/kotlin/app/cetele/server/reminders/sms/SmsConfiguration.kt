@@ -1,5 +1,6 @@
 package app.cetele.server.reminders.sms
 
+import app.cetele.server.config.HttpsEndpoints
 import app.cetele.server.config.LocalOnlyAdapterGuard
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.context.annotation.Bean
@@ -30,6 +31,9 @@ class SmsConfiguration {
                     "CETELE_SMS_PROVIDER=netgsm needs CETELE_NETGSM_USERNAME, _PASSWORD and _MSGHEADER"
                 }
                 val factory = SimpleClientHttpRequestFactory()
+                if (!LocalOnlyAdapterGuard.isAllowed(environment)) {
+                    HttpsEndpoints.require("Netgsm endpoint", properties.endpoint())
+                }
                 factory.setConnectTimeout(properties.connectTimeout)
                 factory.setReadTimeout(properties.readTimeout)
                 val client =

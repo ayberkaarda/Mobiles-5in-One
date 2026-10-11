@@ -163,6 +163,28 @@ class WebhookAttackTest : AttackSupport() {
 
     private fun plan(shopId: UUID): String = jdbc.queryForObject("SELECT plan FROM shops WHERE id = ?", String::class.java, shopId)!!
 
+    @Test
+    fun `captured push token with forged revocation keeps an active subscription pro`() {
+        val owner = tenancy.actor()
+        val shopId = tenancy.shop(owner)
+        val token = FakePlayDeveloperApi.token("active", shopId, "revoke")
+        val body = """{"productId":"cetele_pro","purchaseToken":"$token"}"""
+        assertEquals(200, post("/v1/shops/$shopId/billing/link", body, owner.bearer).status)
+        val authorization = valid()
+        val id = messageId()
+        assertEquals(200, push(envelope(subscriptionNotification(token, 12), id), authorization).status)
+        processor.processDue(clock.instant())
+        assertEquals("PRO", plan(shopId))
+        assertEquals(
+            "ACTIVE",
+            jdbc.queryForObject("SELECT state FROM subscriptions WHERE shop_id = ?", String::class.java, shopId),
+        )
+        assertEquals(
+            "revoke_unconfirmed",
+            jdbc.queryForObject("SELECT outcome FROM webhook_events WHERE event_id = ?", String::class.java, id),
+        )
+    }
+
     private fun report(
         providerId: String,
         status: String = "DELIVERED",

@@ -9,6 +9,7 @@ import app.cetele.server.support.TestUsers
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.test.web.servlet.MockMvc
 import tools.jackson.databind.ObjectMapper
@@ -24,9 +25,31 @@ class OtpRequestTest(
     @Autowired private val json: ObjectMapper,
     @Autowired sms: SmsGateway,
     @Autowired private val auth: TestAuth,
+    @Autowired private val jdbc: JdbcTemplate,
 ) {
     private val fakeSms = sms as FakeSmsGateway
     private val api = AuthApi(mvc, json, fakeSms)
+
+    @Test
+    fun `eleventh daily login code is refused without an SMS`() {
+        val phone = TestUsers.phone()
+        repeat(10) { index ->
+            jdbc.update(
+                "INSERT INTO otp_codes (id, phone_e164, device_id, purpose, code_hmac, created_at, expires_at, consumed_at) " +
+                    "VALUES (?, ?, ?, 'LOGIN', ?, now() - interval '2 hours' + (? * interval '1 minute'), " +
+                    "now() - interval '1 hour', now())",
+                UUID.randomUUID(),
+                phone,
+                UUID.randomUUID(),
+                ByteArray(32),
+                index,
+            )
+        }
+        val response = api.requestOtp(phone, UUID.randomUUID())
+        assertProblem(response, 429, "rate_limited")
+        assertTrue(assertNotNull(response.getHeader(HttpHeaders.RETRY_AFTER)).toLong() in 79_000..79_200)
+        assertTrue(fakeSms.messagesTo(phone).isEmpty())
+    }
 
     @Test
     fun `a valid request is accepted with an empty body and sends one code`() {

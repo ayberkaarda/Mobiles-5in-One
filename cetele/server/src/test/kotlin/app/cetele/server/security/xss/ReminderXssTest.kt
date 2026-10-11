@@ -47,13 +47,8 @@ class ReminderXssTest(
 ) {
     private val url = "https://cetele.app/s/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE"
 
-    private fun visible(value: String): String =
-        value.filterNot { Character.isISOControl(it) || Character.getType(it) == Character.FORMAT.toInt() }.trim()
-
     private fun assertPlain(
         text: String,
-        customer: String,
-        shop: String,
         balanceMinor: Long,
         where: String,
     ) {
@@ -68,23 +63,24 @@ class ReminderXssTest(
             "$where: the statement link ends the text: $text",
         )
         assertTrue(text.contains("güncel borcunuz ${MoneyFormat.format(balanceMinor)}."), "$where: amount")
-        val name = visible(customer)
-        val prefix = name.substring(0, name.offsetByCodePoints(0, minOf(name.codePointCount(0, name.length), NAME_LIMIT)))
-        assertTrue(text.startsWith("Sayın $prefix, "), "$where: customer name as text")
-        val shopName = visible(shop)
-        val shopPrefix =
-            shopName.substring(
-                0,
-                shopName.offsetByCodePoints(0, minOf(shopName.codePointCount(0, shopName.length), NAME_LIMIT)),
+        val names = text.substringBefore(" defterinizdeki ").removePrefix("Sayın ").split(", ")
+        assertEquals(2, names.size, "$where: two names")
+        names.forEach { name ->
+            assertTrue(name.isNotBlank(), "$where: neutral fallback")
+            assertTrue(name.codePointCount(0, name.length) <= NAME_LIMIT, "$where: bounded name")
+            assertTrue(
+                name.codePoints().allMatch { Character.isLetterOrDigit(it) || it in " '&-".map(Char::code) },
+                "$where: permitted characters only",
             )
-        assertTrue(text.contains(", $shopPrefix defterinizdeki "), "$where: shop name as text")
+            assertTrue(name.codePoints().filter { Character.isDigit(it) }.count() < 7, "$where: no phone number")
+        }
     }
 
     @Test
-    fun `template keeps every corpus payload literal and strips invisible characters`() {
+    fun `template filters every corpus payload and strips invisible characters`() {
         XssCorpus.all.forEach { payload ->
             val text = ReminderTemplates.balance(payload, payload, 12_500L, url)
-            assertPlain(text, payload, payload, 12_500L, "template [$payload]")
+            assertPlain(text, 12_500L, "template [$payload]")
             assertTrue(text.endsWith("Hesap dökümü: $url"))
         }
     }
@@ -149,7 +145,7 @@ class ReminderXssTest(
                     .response
             assertEquals(201, sent.status, sent.contentAsString)
             val message = (gateway as FakeSmsGateway).lastMessageTo(phone)!!
-            assertPlain(message.text, payload, payload, 12_500L, "sms [$payload]")
+            assertPlain(message.text, 12_500L, "sms [$payload]")
         }
     }
 

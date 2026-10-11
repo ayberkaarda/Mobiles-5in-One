@@ -11,6 +11,7 @@ import app.cetele.server.billing.SubscriptionKey
 import app.cetele.server.billing.SubscriptionState
 import app.cetele.server.billing.SubscriptionWriter
 import app.cetele.server.billing.play.PlayDeveloperApi
+import app.cetele.server.billing.play.PlaySubscriptionPurchase
 import app.cetele.server.billing.play.PlaySubscriptionResult
 import app.cetele.server.config.JobLocks
 import app.cetele.server.web.problem.ProblemException
@@ -42,8 +43,8 @@ private data class Outcome(
 /**
  * Processes stored RTDN rows (ADR-0031 "Notification processing"): right after a delivery is
  * stored and every 30 seconds, under the `billing.rtdn` job lock and behind `CETELE_JOBS_ENABLED`.
- * The notification type never decides the state: the token is read again from Play, except type 12
- * (`SUBSCRIPTION_REVOKED`) and a voided purchase, which revoke a known token for ever. Play failures
+ * Every known token is read again from Play. Type 12 and voided purchases revoke only when Play
+ * confirms expiry or no longer knows the token. Play failures
  * are retried after 1, 5, 15, 60 and 360 minutes, then the row is `FAILED`.
  */
 @Component
@@ -146,22 +147,21 @@ class RtdnProcessor(
         if (ref != null) {
             val shopId = ref.shopId ?: return Outcome(WebhookEventStatus.IGNORED, "orphaned")
             val key = SubscriptionKey(shopId, ref.id)
-            if (type == null || type == RtdnEnvelope.SUBSCRIPTION_REVOKED) {
-                return if (writer.revoke(key, now, PlanChangeReason.RTDN, type)) {
-                    Outcome(WebhookEventStatus.PROCESSED, "revoked")
-                } else {
-                    Outcome(WebhookEventStatus.IGNORED, "shop_gone")
-                }
-            }
+            val revocation = type == null || type == RtdnEnvelope.SUBSCRIPTION_REVOKED
+            val readAt = clock.instant()
             return when (val result = play.getSubscription(token)) {
                 is PlaySubscriptionResult.Found -> {
-                    writer.refresh(key, result.purchase, now, PlanChangeReason.RTDN, type)
+                    if (revocation && result.purchase.subscriptionState == PlaySubscriptionPurchase.STATE_EXPIRED) {
+                        return confirmedRevocation(key, now, type, readAt)
+                    }
+                    writer.refresh(key, result.purchase, now, PlanChangeReason.RTDN, type, readAt)
                     if (result.purchase.acknowledgementPending) writer.acknowledgeIfDue(key, token, now)
-                    Outcome(WebhookEventStatus.PROCESSED, "verified")
+                    Outcome(WebhookEventStatus.PROCESSED, if (revocation) "revoke_unconfirmed" else "verified")
                 }
 
                 PlaySubscriptionResult.NotFound -> {
-                    writer.refresh(key, null, now, PlanChangeReason.RTDN, type)
+                    if (revocation) return confirmedRevocation(key, now, type, readAt)
+                    writer.refresh(key, null, now, PlanChangeReason.RTDN, type, readAt)
                     Outcome(WebhookEventStatus.PROCESSED, "not_found")
                 }
 
@@ -174,11 +174,24 @@ class RtdnProcessor(
         return replacement(token, now)
     }
 
+    private fun confirmedRevocation(
+        key: SubscriptionKey,
+        now: Instant,
+        type: Int?,
+        readAt: Instant,
+    ): Outcome =
+        if (writer.revoke(key, now, PlanChangeReason.RTDN, type, readAt)) {
+            Outcome(WebhookEventStatus.PROCESSED, "revoked")
+        } else {
+            Outcome(WebhookEventStatus.IGNORED, "not_applied")
+        }
+
     /** An unknown token can only replace the current row its `linkedPurchaseToken` names; the owner's link verifies the rest. */
     private fun replacement(
         token: String,
         now: Instant,
     ): Outcome {
+        val readAt = clock.instant()
         val purchase =
             when (val result = play.getSubscription(token)) {
                 is PlaySubscriptionResult.Found -> result.purchase
@@ -195,7 +208,7 @@ class RtdnProcessor(
             }
         val result =
             try {
-                writer.insert(shopId, token, purchase, state, null, now, PlanChangeReason.RTDN, replacementOnly = true)
+                writer.insert(shopId, token, purchase, state, null, now, PlanChangeReason.RTDN, replacementOnly = true, readAt = readAt)
             } catch (_: DataAccessException) {
                 return Outcome(WebhookEventStatus.PROCESSED, "already_linked")
             } catch (_: PersistenceException) {

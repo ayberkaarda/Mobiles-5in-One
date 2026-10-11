@@ -1,6 +1,8 @@
 package app.cetele.server.security.attack
 
 import app.cetele.server.auth.integrity.FakeIntegrityVerifier
+import app.cetele.server.auth.otp.OtpPurpose
+import app.cetele.server.auth.otp.OtpService
 import app.cetele.server.auth.token.RefreshTokenService
 import app.cetele.server.reminders.sms.FakeSmsGateway
 import app.cetele.server.reminders.sms.SmsGateway
@@ -18,6 +20,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.transaction.support.TransactionTemplate
 import java.security.SecureRandom
 import java.time.Duration
 import java.util.Base64
@@ -36,6 +39,10 @@ import kotlin.test.assertTrue
 @AttackTest
 class AuthAttackTest : AttackSupport() {
     @Autowired lateinit var gateway: SmsGateway
+
+    @Autowired private lateinit var otp: OtpService
+
+    @Autowired private lateinit var tx: TransactionTemplate
 
     private val sms: FakeSmsGateway get() = gateway as FakeSmsGateway
 
@@ -110,12 +117,22 @@ class AuthAttackTest : AttackSupport() {
     }
 
     @Test
-    fun `an attacker rotating client addresses gets fifteen guesses per phone in ten minutes`() {
-        // Measures finding F-01: the per-phone budget is 3 codes x 5 attempts; no longer ceiling exists.
+    fun `an attacker rotating addresses gets at most ten codes and fifty evaluated guesses per day`() {
         val phone = TestUsers.phone()
         val device = id()
         var evaluated = 0
-        repeat(3) { round ->
+        // Earlier requests are spaced outside the ten-minute window; their rows still spend the daily budget.
+        repeat(8) { round ->
+            val now = clock.instant().minus(Duration.ofHours(2)).plusSeconds(round * 600L)
+            val text = checkNotNull(tx.execute { otp.issue(phone, device, OtpPurpose.LOGIN, now) })
+            val code = CODE.find(text)!!.value
+            otp.deliver(phone, text)
+            repeat(5) {
+                tx.execute { otp.check(phone, device, OtpPurpose.LOGIN, otherCode(code), now) }
+                evaluated++
+            }
+        }
+        repeat(2) { round ->
             assertEquals(202, requestOtp(phone, device).status, "code ${round + 1}")
             val code = lastCode(phone)
             repeat(5) {
@@ -123,10 +140,13 @@ class AuthAttackTest : AttackSupport() {
                 evaluated++
             }
         }
-        assertProblem(requestOtp(phone, device), 429, "rate_limited", "fourth code inside the window")
-        assertEquals(15, evaluated)
+        val refused = requestOtp(phone, device)
+        assertProblem(refused, 429, "rate_limited", "eleventh code inside the daily window")
+        assertTrue(assertNotNull(refused.header("Retry-After")).toLong() > 600)
+        assertEquals(10, sms.messagesTo(phone).size)
+        assertEquals(50, evaluated)
         assertEquals(
-            15,
+            50,
             jdbc.queryForObject("SELECT coalesce(sum(attempts), 0) FROM otp_codes WHERE phone_e164 = ?", Int::class.java, phone),
         )
     }
@@ -295,7 +315,8 @@ class AuthAttackTest : AttackSupport() {
         val shopId = tenancy.shop(owner)
         val device = id()
         val bearer = auth.bearer(owner.id, device)
-        assertEquals(202, call("POST", "/v1/auth/reauth/request", bearer).status)
+        val scopeBody = """{"action":"SHOP_DELETE","shopId":"$shopId"}"""
+        assertEquals(202, call("POST", "/v1/auth/reauth/request", bearer, scopeBody).status)
         val code = lastCode(owner.phone)
         repeat(5) {
             val guess = call("DELETE", "/v1/shops/$shopId", bearer, """{"code":"${otherCode(code)}"}""")
@@ -308,7 +329,7 @@ class AuthAttackTest : AttackSupport() {
             "right code after five guesses",
         )
         // The code is bound to the device that asked for it: another session of the same user cannot use a fresh one.
-        assertEquals(202, call("POST", "/v1/auth/reauth/request", bearer).status)
+        assertEquals(202, call("POST", "/v1/auth/reauth/request", bearer, scopeBody).status)
         val fresh = lastCode(owner.phone)
         val otherDevice = auth.bearer(owner.id, id())
         assertProblem(call("DELETE", "/v1/shops/$shopId", otherDevice, """{"code":"$fresh"}"""), 403, "auth.reauth_invalid", "other device")

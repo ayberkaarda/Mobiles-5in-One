@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Doğrulama uygulaması sıfırlandı')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: nav}"></header>
+<main id="main" class="narrow">
+  <h1>Doğrulama uygulaması sıfırlandı</h1>
+  <dl class="facts">
+    <dt>E-posta</dt><dd th:text="${created.email}"></dd>
+    <dt>Rol</dt><dd th:text="${created.role}"></dd>
+    <dt>Tek kullanımlık parola</dt><dd><code class="secret" th:text="${created.oneTimePassword}"></code></dd>
+  </dl>
+  <p>Hesap sahibi bu parolayla doğrulama uygulamasını yeniden kurmalı ve parolasını değiştirmeli.</p>
+  <p class="warning" role="alert">Bu parola yeniden gösterilmez. Hesap sahibine e-posta dışında güvenli bir kanaldan iletin.</p>
+  <p><a href="/admin/admins">Yöneticilere dön</a></p>
+</main>
+</body>
+</html>

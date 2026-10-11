@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import app.cetele.android.core.designsystem.CeteleSpacing
+import app.cetele.android.core.designsystem.SecurePinWindow
 import app.cetele.android.core.designsystem.component.PinPad
 import app.cetele.android.feature.auth.R
 import app.cetele.android.feature.auth.common.AuthPage
@@ -25,6 +26,7 @@ fun PinSetupScreen(
     onBiometricChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    SecurePinWindow()
     val context = LocalContext.current
     val available =
         remember(context) {

@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import app.cetele.android.core.designsystem.CeteleTextStyles
 import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.designsystem.SecurePinWindow
 import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.designsystem.component.ConfirmSheet
@@ -27,6 +28,7 @@ fun LockScreen(
     onDismissSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    SecurePinWindow()
     AuthPage(stringResource(R.string.auth_lock_title), modifier, centered = true) {
         PinPad(
             onComplete = onPin,

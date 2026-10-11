@@ -63,6 +63,15 @@ class AccountStore(
             .list()
             .map { checkNotNull(it) }
 
+    fun activeOwnedCount(userId: UUID): Long =
+        jdbc
+            .sql(
+                "SELECT count(*) FROM memberships m JOIN shops s ON s.id = m.shop_id " +
+                    "WHERE m.user_id = :id AND m.role = 'OWNER' AND s.deleted_at IS NULL",
+            ).param("id", userId)
+            .query(Long::class.java)
+            .single()
+
     fun shared(shopId: UUID): Boolean =
         jdbc
             .sql("SELECT count(*) FROM memberships WHERE shop_id = :shopId")
@@ -103,7 +112,41 @@ class AccountStore(
             .optional()
             .orElse(null)
 
+    fun ownsActiveShop(
+        shopId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbc
+            .sql(
+                "SELECT count(*) FROM memberships m JOIN shops s ON s.id = m.shop_id " +
+                    "WHERE m.shop_id = :shopId AND m.user_id = :id AND m.role = 'OWNER' AND s.deleted_at IS NULL",
+            ).param("shopId", shopId)
+            .param("id", userId)
+            .query(Long::class.java)
+            .single() == 1L
+
     fun transfer(
+        shopId: UUID,
+        callerId: UUID,
+        targetId: UUID,
+        targetLeaving: Boolean,
+    ) {
+        requireTransfer(shopId, callerId, targetId, targetLeaving)
+        jdbc
+            .sql("UPDATE memberships SET role = 'STAFF' WHERE shop_id = :shopId AND user_id = :id AND role = 'OWNER'")
+            .param("shopId", shopId)
+            .param("id", callerId)
+            .update()
+        val promoted =
+            jdbc
+                .sql("UPDATE memberships SET role = 'OWNER' WHERE shop_id = :shopId AND user_id = :id AND role = 'STAFF'")
+                .param("shopId", shopId)
+                .param("id", targetId)
+                .update()
+        check(promoted == 1) { "ownership transfer could not complete" }
+    }
+
+    fun requireTransfer(
         shopId: UUID,
         callerId: UUID,
         targetId: UUID,
@@ -117,19 +160,7 @@ class AccountStore(
                 .param("id", targetId)
                 .query(Long::class.java)
                 .single() == 1L
-        // A target whose account deletion is due (grace over) is not eligible: it would take the shop with it.
+        // Any open account deletion request makes the target ineligible, including its grace period.
         if (!active || targetLeaving || role(shopId, targetId) != "STAFF") throw ProblemException(ProblemCode.NOT_FOUND)
-        jdbc
-            .sql("UPDATE memberships SET role = 'STAFF' WHERE shop_id = :shopId AND user_id = :id AND role = 'OWNER'")
-            .param("shopId", shopId)
-            .param("id", callerId)
-            .update()
-        val promoted =
-            jdbc
-                .sql("UPDATE memberships SET role = 'OWNER' WHERE shop_id = :shopId AND user_id = :id AND role = 'STAFF'")
-                .param("shopId", shopId)
-                .param("id", targetId)
-                .update()
-        check(promoted == 1) { "ownership transfer could not complete" }
     }
 }

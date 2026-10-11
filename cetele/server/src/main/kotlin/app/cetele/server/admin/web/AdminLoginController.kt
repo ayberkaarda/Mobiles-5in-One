@@ -1,6 +1,7 @@
 package app.cetele.server.admin.web
 
 import app.cetele.server.admin.AdminLoginService
+import app.cetele.server.admin.AdminManagementService
 import app.cetele.server.admin.AdminPrincipal
 import app.cetele.server.admin.AdminSecurityConfig
 import app.cetele.server.admin.AdminSessionPolicy
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import java.io.Serializable
 import java.time.Clock
+import java.time.Instant
 import java.util.UUID
 
 /** The pre-authentication state kept in the session between login steps; it grants no role. */
@@ -30,6 +32,7 @@ data class PendingLogin(
     val email: String,
     val stage: LoginStage,
     val enrollSecret: String? = null,
+    val startedAt: Instant,
 ) : Serializable {
     companion object {
         private const val serialVersionUID = 1L
@@ -90,6 +93,7 @@ class AdminLoginController(
     private val totp: TotpService,
     private val contextRepository: HttpSessionSecurityContextRepository,
     private val clock: Clock,
+    private val management: AdminManagementService,
 ) {
     @GetMapping("/admin/login")
     fun loginPage(): String {
@@ -111,13 +115,16 @@ class AdminLoginController(
         AdminSessions.end(request)
         val session = request.getSession(true)
         AdminSessionPolicy.start(session, clock.instant())
-        AdminSessions.setPending(request, PendingLogin(result.adminId, result.email, result.next))
+        AdminSessions.setPending(
+            request,
+            PendingLogin(result.adminId, result.email, result.next, startedAt = checkNotNull(result.startedAt)),
+        )
         return "redirect:" + AdminSessions.path(result.next)
     }
 
     @GetMapping("/admin/login/totp")
     fun totpPage(request: HttpServletRequest): String {
-        AdminSessions.pending(request, LoginStage.TOTP_VERIFY) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
+        currentPending(request, LoginStage.TOTP_VERIFY) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         return TOTP_VIEW
     }
 
@@ -128,9 +135,9 @@ class AdminLoginController(
         response: HttpServletResponse,
         model: Model,
     ): String {
-        val pending = AdminSessions.pending(request, LoginStage.TOTP_VERIFY) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
+        val pending = currentPending(request, LoginStage.TOTP_VERIFY) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         limits.consume(RateLimit.ADMIN_LOGIN_IP, ClientIp.of(request))
-        val result = login.totpStep(pending.adminId, code.take(MAX_CODE))
+        val result = login.totpStep(pending.adminId, code.take(MAX_CODE), pending.startedAt)
         return next(result, pending, request, response, model, TOTP_VIEW)
     }
 
@@ -139,7 +146,7 @@ class AdminLoginController(
         request: HttpServletRequest,
         model: Model,
     ): String {
-        val pending = AdminSessions.pending(request, LoginStage.TOTP_ENROLL) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
+        val pending = currentPending(request, LoginStage.TOTP_ENROLL) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         addEnrollment(request, pending, model)
         return ENROLL_VIEW
     }
@@ -151,10 +158,10 @@ class AdminLoginController(
         response: HttpServletResponse,
         model: Model,
     ): String {
-        val pending = AdminSessions.pending(request, LoginStage.TOTP_ENROLL) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
+        val pending = currentPending(request, LoginStage.TOTP_ENROLL) ?: return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         val secret = pending.enrollSecret ?: return "redirect:/admin/totp/enroll"
         limits.consume(RateLimit.ADMIN_LOGIN_IP, ClientIp.of(request))
-        val result = login.enrollStep(pending.adminId, secret, code.take(MAX_CODE))
+        val result = login.enrollStep(pending.adminId, secret, code.take(MAX_CODE), pending.startedAt)
         if (result is LoginStepResult.Rejected && !result.restart) addEnrollment(request, pending, model)
         return next(result, pending, request, response, model, ENROLL_VIEW)
     }
@@ -164,7 +171,7 @@ class AdminLoginController(
         request: HttpServletRequest,
         model: Model,
     ): String {
-        val forced = AdminSessions.pending(request, LoginStage.PASSWORD_CHANGE) != null
+        val forced = currentPending(request, LoginStage.PASSWORD_CHANGE) != null
         if (!forced && signedIn() == null) return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         model.addAttribute("forced", forced)
         return PASSWORD_VIEW
@@ -179,14 +186,14 @@ class AdminLoginController(
         response: HttpServletResponse,
         model: Model,
     ): String {
-        val pending = AdminSessions.pending(request, LoginStage.PASSWORD_CHANGE)
+        val pending = currentPending(request, LoginStage.PASSWORD_CHANGE)
         val admin = signedIn()
         if (pending == null && admin == null) return "redirect:" + AdminSecurityConfig.LOGIN_PATH
         model.addAttribute("forced", pending != null)
         if (newPassword != confirmPassword) return invalid(response, model, "Yeni parola ile tekrarı aynı değil.")
         val result =
             if (pending != null) {
-                login.forcedPasswordChange(pending.adminId, newPassword)
+                login.forcedPasswordChange(pending.adminId, newPassword, pending.startedAt)
             } else {
                 login.changePassword(checkNotNull(admin).id, currentPassword, newPassword)
             }
@@ -196,7 +203,8 @@ class AdminLoginController(
             }
 
             PasswordChangeResult.Restart -> {
-                failedLogin(request, response, model)
+                AdminSessions.end(request)
+                "redirect:" + AdminSecurityConfig.LOGIN_PATH
             }
 
             is PasswordChangeResult.Changed -> {
@@ -296,6 +304,16 @@ class AdminLoginController(
         response.status = HttpServletResponse.SC_BAD_REQUEST
         model.addAttribute("error", message)
         return PASSWORD_VIEW
+    }
+
+    private fun currentPending(
+        request: HttpServletRequest,
+        stage: LoginStage,
+    ): PendingLogin? {
+        val pending = AdminSessions.pending(request, stage) ?: return null
+        if (management.isPendingCurrent(pending.adminId, pending.startedAt)) return pending
+        AdminSessions.end(request)
+        return null
     }
 
     private fun signedIn(): AdminPrincipal? = AdminPrincipal.of(SecurityContextHolder.getContext().authentication)

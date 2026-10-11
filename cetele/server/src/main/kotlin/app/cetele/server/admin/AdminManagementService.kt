@@ -8,6 +8,8 @@ import app.cetele.server.admin.console.ConsoleFormat
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /** A row of the admin list. Never the password hash or the TOTP secret. */
@@ -23,7 +25,7 @@ data class AdminAccountView(
     val createdAt: String,
 )
 
-/** A new admin and its one-time password, shown once to the creating `ADMIN`. */
+/** An account and its one-time password, shown once to the acting `ADMIN`. */
 data class CreatedAdmin(
     val id: UUID,
     val email: String,
@@ -132,23 +134,41 @@ class AdminManagementService(
         audit.record(AuditActorType.ADMIN, actor.id, AuditAction.ADMIN_USER_ENABLED, AuditTargetType.ADMIN_USER, target.id)
     }
 
-    /** Clears the authenticator; the admin enrolls a new one at the next login. */
+    /** Replaces the password and clears the authenticator for a fresh enrollment. */
     @Transactional
     fun resetTotp(
         actor: AdminPrincipal,
         targetId: UUID,
-    ) {
+    ): CreatedAdmin {
         refuseSelf(actor, targetId)
         val target = accounts.lockById(targetId) ?: throw AdminNotFoundException()
+        val oneTime = passwords.oneTimePassword()
+        target.passwordHash = passwords.hash(oneTime)
+        target.passwordChangedAt = clock.instant().truncatedTo(ChronoUnit.MICROS)
+        target.mustChangePassword = true
         target.clearTotp()
         audit.record(AuditActorType.ADMIN, actor.id, AuditAction.ADMIN_TOTP_RESET, AuditTargetType.ADMIN_USER, target.id)
+        return CreatedAdmin(target.id, target.email, target.role, oneTime)
     }
 
-    /** Whether the signed-in [principal] still matches an enabled account with the same role. */
+    /** Whether the account and its credentials still match the signed-in [principal]. */
     @Transactional(readOnly = true)
     fun isCurrent(principal: AdminPrincipal): Boolean {
         val account = accounts.findById(principal.id) ?: return false
-        return account.enabled && account.role == principal.role
+        return account.enabled && account.role == principal.role && account.enrolled &&
+            !account.isLocked(clock.instant()) &&
+            account.passwordChangedAt?.isAfter(principal.authenticatedAt) != true &&
+            account.totpEnrolledAt?.isAfter(principal.authenticatedAt) != true
+    }
+
+    @Transactional(readOnly = true)
+    fun isPendingCurrent(
+        adminId: UUID,
+        startedAt: Instant,
+    ): Boolean {
+        val account = accounts.findById(adminId) ?: return false
+        return account.enabled && !account.isLocked(clock.instant()) &&
+            account.passwordChangedAt?.isAfter(startedAt) != true
     }
 
     private fun refuseSelf(

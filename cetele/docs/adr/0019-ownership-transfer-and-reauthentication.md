@@ -20,9 +20,26 @@ account.
 ### Re-authentication (`REAUTH`)
 
 - `POST /v1/auth/reauth/request` takes a bearer token (`isAuthenticated()`), no integrity token and
-  no body. It sends a six-digit code to the caller's own phone through the shared SMS gateway
+  a required body `{action, shopId?}` with `action` one of `ACCOUNT_DELETE`, `SHOP_DELETE`,
+  `OWNERSHIP_TRANSFER`, `DEVICE_SIGN_OUT`; shop actions need `shopId` and an `OWNER` caller of a live
+  shop, otherwise 404 and no SMS. A request without a body is refused and sends no SMS. This is a
+  breaking change of the hardening round; Android ships the matching call in package P5. It sends
+  a six-digit code to the caller's own phone through the shared SMS gateway
   ([ADR-0016](0016-sms-reminders-and-netgsm-client.md)) and answers 202 with an empty body. Limits:
-  `reauth.request.user` 3 per 10 minutes, and the existing phone bucket `otp.phone` after it.
+  `reauth.request.user` 3 per 10 minutes and 10 re-authentication codes per phone in 24 hours
+  (counted in `otp_codes`, [ADR-0005](0005-session-model.md)); the request no longer charges the
+  sign-in bucket `otp.phone`.
+- The code row stores its scope (`otp_codes.scope`, `ACTION` or `ACTION:shopId`, migration V9, which
+  also closed every open `REAUTH` code), and `ReauthVerifier.require` accepts it only for the same
+  action and shop; a scope mismatch counts as a wrong attempt and answers the same 403
+  `auth.reauth_invalid`. The SMS names the action, says that it is not a sign-in code and carries
+  no user-controlled text (no shop or user name).
+  - `ReauthTest`: `missing body invalid action and unowned shop send no SMS`
+  - `ReauthTest`: `shop and action mismatches count as wrong attempts and leave the correct scope usable`
+  - `ReauthTest`: `three reauth requests leave the login phone bucket available`
+  - `ReauthOtpTest`: `reauth SMS names every action and distinguishes the login code`
+  - `ReauthOtpTest`: `fifth scope mismatch closes the code even when its digits and device match`
+  - `V9ReauthScopeSchemaTest`: `V9 closes old open reauth codes and preserves login and consumed rows`
 - The code is an `otp_codes` row with `purpose = REAUTH`; the column check has allowed the value
   since Phase 1. `OtpService.issue` and `check` take the purpose, and the lookup of the newest open
   code is per `(phone, purpose)`: a `LOGIN` code is never accepted as `REAUTH` and the other way
@@ -32,7 +49,8 @@ account.
   - `ReauthOtpTest`: `login and reauth can be open together and cannot replace each other`
   - `ReauthOtpTest`: `reauth expires at five minutes and closes on the fifth wrong attempt`
 - The code travels in the body of `DELETE /v1/me`, `DELETE /v1/shops/{shopId}` and
-  `POST /v1/shops/{shopId}/ownership-transfer`. `ReauthVerifier.require` charges
+  `POST /v1/shops/{shopId}/ownership-transfer`, and since the hardening round of
+  `POST /v1/me/devices/{id}/sign-out` ([ADR-0005](0005-session-model.md)). `ReauthVerifier.require` charges
   `reauth.verify.user` (10 per 10 minutes), checks the code, and on failure answers
   **`403 auth.reauth_invalid`**, not 401: the session is valid, the step-up failed, and a 401 would
   make the app sign the user out. The failed attempt is committed before the 403, as at sign-in.
@@ -40,15 +58,21 @@ account.
   - `ReauthTest`: `login code is refused and wrong attempts commit before correct verification`
   - `ReauthTest`: `fourth request and eleventh verification are rate limited`
 - A code is consumed by the first successful check, so every destructive call needs its own fresh
-  code, and a request that fails for another reason after the check (for example a transfer to a user
-  who is not a member) has already used it.
+  code. State checks (open request, shared shop, role, target eligibility) run before the code is
+  checked, so a refusal for another reason leaves the code usable; only a race between the
+  pre-check and the locked re-check can still consume it.
+  - `ReauthTest`: `pending account refusal preserves code for use after cancellation`
+  - `ReauthTest`: `shared shop refusal preserves code for explicit deletion choice`
+  - `ReauthTest`: `pending shop refusal preserves code after cancellation`
 
 ### Ownership transfer
 
 `POST /v1/shops/{shopId}/ownership-transfer` (`MEMBERS_MANAGE`, body `{userId, code}`; no new
-action) answers 200 `{shopId, ownerUserId, previousOwnerUserId}`. Checks in order: the `REAUTH`
-code; a target equal to the caller is `409 membership.owner_locked`; a target that is not an active
-`STAFF` member of this shop is 404 (a member of another shop and an unknown id look the same). The transaction first locks both user rows in ascending id order and then the shop, the same
+action) answers 200 `{shopId, ownerUserId, previousOwnerUserId}`. Checks in order, all before the
+`REAUTH` code (scope `OWNERSHIP_TRANSFER:shopId`) is checked: a target equal to the caller is
+`409 membership.owner_locked`; a target that is not an active `STAFF` member of this shop, or has any
+open account deletion request, inside or after its grace period, is 404 (a member of another shop
+and an unknown id look the same). The transaction first locks both user rows in ascending id order and then the shop, the same
 order as the deletion executor, and re-checks the target's eligibility (active `STAFF` member,
 account not being deleted) under those locks; if the target is gone or no longer eligible the
 answer is 404. Then the caller is demoted to `STAFF` first and the target promoted to `OWNER`, because
@@ -63,6 +87,8 @@ promotion fails the demotion is rolled back and the caller stays `OWNER`.
 - `OwnershipTransferTest`: `foreign target self and wrong code never alter ownership`
 - `OwnershipTransferTest`: `database rejection of promotion rolls back demotion`
 - `OwnershipTransferRaceTest`: `transfer to a user whose account deletion is running waits and then finds the user gone`
+- `OwnershipTransferTest`: `target with open account deletion is refused during and after grace without consuming code`
+- `OwnershipTransferTest`: `ineligible and self targets preserve the transfer code`
 - `OneOwnerInvariantTest` (Phase 1) still holds.
 
 ### Product spec
@@ -80,5 +106,8 @@ after the gate: `POST auth/reauth/request`, `DELETE me/deletion`, `DELETE shops/
 - The REAUTH SMS costs money and has its own small bucket; it does not count toward the reminder
   quota (only `REMINDER` sends do, [ADR-0016](0016-sms-reminders-and-netgsm-client.md)).
 - Real SMS delivery of the code is not exercised (`not exercised: fake gateway only`, G4).
+- Known limitation: the target does not accept a transfer; an owner can only hand a shop to a member
+  it already trusts as `STAFF`, and the target can transfer it back. A two-step offer and accept
+  flow was judged out of proportion for this scope.
 - Evidence: `ReauthTest`, `ReauthOtpTest`, `OwnershipTransferTest`, `OwnershipTransferRaceTest`, `OneOwnerInvariantTest`,
-  `AccountPermissionTest`, `AccountLogSampleTest`.
+  `AccountPermissionTest`, `AccountLogSampleTest`, `V9ReauthScopeSchemaTest`.

@@ -51,12 +51,12 @@ class AccountPermissionTest : AccountTestSupport() {
                         else -> actor()
                     }
                 if (action == "cancel") {
-                    assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to code(owner))).status)
+                    assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to shopCode(owner, shopId))).status)
                 }
                 val response =
                     when (action) {
                         "delete" -> {
-                            delete("/v1/shops/$shopId", caller, mapOf("code" to code(caller)))
+                            delete("/v1/shops/$shopId", caller, mapOf("code" to shopCode(caller, shopId)))
                         }
 
                         "cancel" -> {
@@ -69,7 +69,7 @@ class AccountPermissionTest : AccountTestSupport() {
                                 caller,
                                 mapOf(
                                     "userId" to target.actor.id,
-                                    "code" to code(caller),
+                                    "code" to transferCode(caller, shopId),
                                 ),
                             )
                         }
@@ -106,7 +106,7 @@ class AccountPermissionTest : AccountTestSupport() {
             val caller = if (role == "OWNER") owner else actor()
             val shopId = fixtures.shop(owner.actor)
             if (role == "STAFF") fixtures.addStaff(shopId, caller.actor)
-            assertEquals(202, post("/v1/auth/reauth/request", caller).status)
+            assertEquals(202, post("/v1/auth/reauth/request", caller, mapOf("action" to "ACCOUNT_DELETE")).status)
             assertEquals(202, delete("/v1/me", caller, mapOf("code" to code(caller), "deleteOwnedShops" to true)).status)
             assertEquals(204, delete("/v1/me/deletion", caller).status)
         }

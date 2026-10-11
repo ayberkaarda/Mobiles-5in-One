@@ -23,7 +23,7 @@ class AccountLogSampleTest : AccountTestSupport() {
     fun `deletion logs contain outcomes without phone code or token`(output: CapturedOutput) {
         val user = actor()
         fixtures.shop(user.actor)
-        assertEquals(202, post("/v1/auth/reauth/request", user).status)
+        assertEquals(202, post("/v1/auth/reauth/request", user, mapOf("action" to "ACCOUNT_DELETE")).status)
         val value = Regex("[0-9]{6}").find(checkNotNull(sms.lastMessageTo(user.actor.phone)).text)!!.value
         assertEquals(202, delete("/v1/me", user, mapOf("code" to value)).status)
         expire(user)

@@ -74,6 +74,7 @@ class SessionManager
         private val lock: LockController,
         // Optional only to keep the earlier constructor shape; the injected graph always provides it.
         private val retryAfter: RetryAfterPolicy? = null,
+        private val wipers: Set<@JvmSuppressWildcards LocalDataWiper> = emptySet(),
     ) : TokenRefresher {
         private companion object {
             const val EVENT_CAPACITY = 8
@@ -146,7 +147,7 @@ class SessionManager
         @Suppress("TooGenericExceptionCaught")
         private suspend fun wipe(reason: SignOutReason) {
             val actions: List<suspend () -> Unit> =
-                listOf(
+                listOf<suspend () -> Unit>(
                     { work.cancelAll() },
                     { tokens.clear() },
                     { databases.wipe() },
@@ -155,7 +156,7 @@ class SessionManager
                     { settings.clearSession() },
                     { lock.reset() },
                     { retryAfter?.clear() },
-                )
+                ) + wipers.map<LocalDataWiper, suspend () -> Unit> { wiper -> { wiper.wipe() } }
             var failure: Exception? = null
             for (action in actions) {
                 try {

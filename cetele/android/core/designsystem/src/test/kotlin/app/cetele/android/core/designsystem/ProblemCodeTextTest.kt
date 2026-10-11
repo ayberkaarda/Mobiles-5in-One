@@ -12,6 +12,18 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 class ProblemCodeTextTest {
+    @Test fun shopLimitHasSpecificCopyInBothLanguages() {
+        assertEquals(R.string.error_shop_limit_reached, ProblemCodeText.resIdOrGeneric(ProblemCodes.SHOP_LIMIT_REACHED))
+        assertEquals(
+            "Sahip olabileceğiniz dükkân sayısının sınırına ulaştınız.",
+            strings("values")["error_shop_limit_reached"],
+        )
+        assertEquals(
+            "You have reached the limit of shops you can own.",
+            strings("values-en")["error_shop_limit_reached"],
+        )
+    }
+
     private val sourceRoot =
         File(requireNotNull(System.getProperty("cetele.brandTokens")))
             .toPath()

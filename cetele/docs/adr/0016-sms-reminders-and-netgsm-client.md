@@ -37,12 +37,14 @@ uniform ([ADR-0005](0005-session-model.md)).
 `failNextSend(reason)` for tests and a balance of 1000 credits. `SmsConfiguration` selects it for
 `fake` and builds the Netgsm client for `netgsm`. `netgsm` without username, password and sender
 name fails startup with `CETELE_SMS_PROVIDER=netgsm needs CETELE_NETGSM_USERNAME, _PASSWORD and _MSGHEADER`;
-`fake` under `staging` fails startup too.
+`fake` under `staging` fails startup too. Outside the `local` and `test` profiles the Netgsm base URL
+must be an `https` URI with a host and no user info, or startup fails (`HttpsEndpoints`).
 
 - `SmsConfigurationTest`: `netgsm requires every credential with the contract startup message`
 - `SmsConfigurationTest`: `fake is refused in staging`
 - `SmsConfigurationTest`: `netgsm credentials build the real adapter without contacting the provider`
 - `SmsConfigurationTest`: `blank base URL uses the documented host and timeout defaults`
+- `SmsConfigurationTest`: `production rejects unsafe endpoints and local permits http`
 
 ### Netgsm client
 
@@ -72,8 +74,10 @@ name fails startup with `CETELE_SMS_PROVIDER=netgsm needs CETELE_NETGSM_USERNAME
 `out_of_range`, the `DUE_TODAY` column value is reserved). In order: rate bucket `reminder.user` (30
 per 10 minutes), channel and template check, then transaction 1 under the shop row lock: customer
 lookup (deleted or foreign is 404), no phone is `409 sms.phone_missing`, no consent is
-`409 sms.consent_missing`, balance at or below zero is `409 reminder.no_balance`, the daily cap
-reservation, one quota slot reserved, a statement link issued
+`409 sms.consent_missing`, balance at or below zero is `409 reminder.no_balance`, the
+per-recipient bucket `reminder.phone` (3 per day for one E.164 number across all shops, in memory,
+[ADR-0009](0009-rate-limiting-and-client-ip.md); the fourth is `429 rate_limited` with no SMS and
+no quota used), the daily cap reservation, one quota slot reserved, a statement link issued
 ([ADR-0015](0015-statement-links-and-public-page.md)) and the `reminders` row inserted as `QUEUED`.
 The send happens after that commit, outside any transaction. Transaction 2 marks the row `SENT` with
 `sent_at` and `provider_msg_id` when the provider accepted it. A definitive provider refusal
@@ -91,6 +95,7 @@ the monthly quota (accepted, see the consequences).
 - `ReminderFlowTest`: `unknown outcome commits failure, keeps quota used and answers bad gateway`
 - `ReminderFlowTest`: `definitive provider rejection refunds quota and stays out of the daily count`
 - `ReminderFlowTest`: `link limit rolls back reservation and does not send`
+- `ReminderFlowTest`: `recipient ceiling spans shops and refuses the fourth send without quota or gateway effects`
 
 ### Quota, daily cap, template
 
@@ -117,7 +122,15 @@ the monthly quota (accepted, see the consequences).
   - `ReminderFlowTest`: `lowered global daily cap blocks sends across shops`
 - The text is `Sayın {customerName}, {shopName} defterinizdeki güncel borcunuz {amount}. Hesap dökümü: {url}`.
   Names are trimmed, stripped of control characters and clipped to 40 characters without splitting
-  a surrogate pair (`ReminderTemplatesTest`).
+  a surrogate pair (`ReminderTemplatesTest`). In the SMS text, shop and customer names keep letters,
+  digits, spaces and `' & -` only; other characters become spaces, digits are dropped when a name
+  holds seven or more, and a name that ends up empty is replaced by a neutral phrase ("Sayın
+  müşterimiz", "dükkânınız"), so no URL, e-mail address or phone number can be formed in a message
+  sent under the Çetele sender name. Input is not refused; only the SMS text is filtered.
+  - `ReminderTemplatesTest`: `names cannot insert URLs email addresses or phone numbers`
+  - `ReminderTemplatesTest`: `empty filtered names use neutral phrases`
+  - `ReminderTemplatesTest`: `Turkish letters permitted punctuation and fewer than seven digits remain`
+  - `ReminderXssTest`: `template filters every corpus payload and strips invisible characters`
 
 ### Consent
 
@@ -152,6 +165,10 @@ customer is a legal text owned by the shop and the owner of the project
   quota and the daily cap until retention removes it; there is no reconciler. Accepted
   ([threat model](../security/threat-model.md) 4.10).
 - Switching provider changes one adapter and its configuration keys, as ADR-0003 intended.
+- Open: STOP replies and a block list need inbound SMS from the provider (G4) and a legal reading
+  of whether İYS applies to balance reminders; until then the per-recipient cap (3 per day, in
+  memory, reset by a restart, [ADR-0009](0009-rate-limiting-and-client-ip.md)) is the only
+  recipient-side limit. Consent evidence stays the sender's own statement by design.
 - Evidence: `NetgsmSmsGatewayTest`, `SmsConfigurationTest`, `SmsQuotaServiceTest`, `DailyCapTest`,
   `ReminderTemplatesTest`, `ReminderFlowTest`, `ReminderPermissionTest`, `ReminderLogSampleTest`,
   `SmsLogSampleTest`, `V5ServicesSchemaTest`.

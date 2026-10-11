@@ -45,6 +45,7 @@ object ProblemCodeText {
             ProblemCodes.MEDIA_NOT_READY to R.string.error_media_not_ready,
             ProblemCodes.ACCOUNT_OWNER_OF_SHARED_SHOP to R.string.error_account_owner_of_shared_shop,
             ProblemCodes.ACCOUNT_DELETION_PENDING to R.string.error_account_deletion_pending,
+            ProblemCodes.SHOP_LIMIT_REACHED to R.string.error_shop_limit_reached,
             ProblemCodes.SHOP_DELETION_PENDING to R.string.error_shop_deletion_pending,
         )
 

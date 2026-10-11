@@ -65,7 +65,11 @@ internal fun SettingsHomeScreen(
                 )
             }
         }
-        Sheet { NavRow(stringResource(R.string.settings_home_profile), { onOpen(SettingsRoutes.Profile) }) }
+        Sheet {
+            NavRow(stringResource(R.string.settings_home_profile), { onOpen(SettingsRoutes.Profile) })
+            SheetRule(Modifier.padding(start = CeteleSpacing.regular))
+            NavRow(stringResource(R.string.settings_devices_title), { onOpen(SettingsRoutes.Devices) })
+        }
         GroupLabel(stringResource(R.string.settings_home_shop))
         ShopSheet(state.shop, onOpenBilling)
         Sheet {

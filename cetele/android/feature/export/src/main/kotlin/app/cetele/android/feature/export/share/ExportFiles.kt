@@ -10,6 +10,7 @@ import java.util.UUID
 
 class ExportFiles(
     private val cacheDir: File,
+    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     private val directory: File get() = File(cacheDir, "exports")
 
@@ -51,7 +52,35 @@ class ExportFiles(
         return removed
     }
 
+    fun wipe() {
+        if (!directory.exists()) return
+        java.nio.file.Files.walkFileTree(
+            directory.toPath(),
+            object : java.nio.file.SimpleFileVisitor<java.nio.file.Path>() {
+                override fun visitFile(
+                    file: java.nio.file.Path,
+                    attributes: java.nio.file.attribute.BasicFileAttributes,
+                ): java.nio.file.FileVisitResult {
+                    java.nio.file.Files
+                        .delete(file)
+                    return java.nio.file.FileVisitResult.CONTINUE
+                }
+
+                override fun postVisitDirectory(
+                    directory: java.nio.file.Path,
+                    exception: IOException?,
+                ): java.nio.file.FileVisitResult {
+                    if (exception != null) throw exception
+                    java.nio.file.Files
+                        .delete(directory)
+                    return java.nio.file.FileVisitResult.CONTINUE
+                }
+            },
+        )
+    }
+
     private fun destination(name: String): File {
+        cleanup(nowMillis())
         val folder = File(directory, UUID.randomUUID().toString())
         if (!folder.mkdirs() && !folder.isDirectory) throw IOException("Export directory unavailable")
         return File(folder, name)

@@ -22,12 +22,14 @@ sealed interface PinVerdict {
 }
 
 @Singleton
+@Suppress("TooManyFunctions")
 class PinStore
     @Inject
     constructor(
         private val vault: Vault,
         private val hasher: PinHasher,
         private val clock: Clock,
+        private val elapsed: ElapsedClock,
     ) {
         fun isSet(): Boolean = vault.get(VaultKeys.PIN_HASH) != null
 
@@ -40,9 +42,9 @@ class PinStore
         }
 
         @Synchronized fun verify(pin: CharArray): PinVerdict {
-            val until = number(VaultKeys.PIN_DELAY_UNTIL)
+            val remaining = remainingDelay()
             return when {
-                clock.millis() < until -> PinVerdict.Delayed(until)
+                remaining > 0 -> PinVerdict.Delayed(Math.addExact(clock.millis(), remaining))
                 matches(pin) -> PinVerdict.Ok.also { resetFailures() }
                 else -> recordFailure()
             }
@@ -60,11 +62,45 @@ class PinStore
             val failures = (number(VaultKeys.PIN_FAILURES) + 1).coerceAtMost(MAX_FAILURES)
             putNumber(VaultKeys.PIN_FAILURES, failures)
             if (failures < FAILURE_LIMIT) return PinVerdict.Wrong(FAILURE_LIMIT - failures.toInt())
-            val level = (failures - FAILURE_LIMIT).toInt().coerceAtMost(MAX_DELAY_LEVEL)
-            val delay = (INITIAL_DELAY_MILLIS * (1L shl level)).coerceAtMost(MAX_DELAY_MILLIS)
-            val next = Math.addExact(clock.millis(), delay)
-            putNumber(VaultKeys.PIN_DELAY_UNTIL, next)
-            return PinVerdict.Delayed(next)
+            val delay = delayFor(failures)
+            startDelay(delay)
+            return PinVerdict.Delayed(Math.addExact(clock.millis(), delay))
+        }
+
+        private fun delayFor(failures: Long): Long {
+            val level = (failures - FAILURE_LIMIT).coerceIn(0, MAX_DELAY_LEVEL.toLong()).toInt()
+            return (INITIAL_DELAY_MILLIS * (1L shl level)).coerceAtMost(MAX_DELAY_MILLIS)
+        }
+
+        private fun startDelay(delay: Long) {
+            putNumber(VaultKeys.PIN_DELAY_MILLIS, delay)
+            putNumber(VaultKeys.PIN_DELAY_ELAPSED, Math.addExact(elapsed.millis(), delay))
+            putNumber(VaultKeys.PIN_DELAY_BOOT, elapsed.bootCount())
+        }
+
+        private fun remainingDelay(): Long {
+            val delay = number(VaultKeys.PIN_DELAY_MILLIS)
+            return if (delay <= 0) {
+                migrateLegacyDelay()
+            } else {
+                val until = number(VaultKeys.PIN_DELAY_ELAPSED)
+                val now = elapsed.millis()
+                val boot = elapsed.bootCount()
+                if (boot < 0 || number(VaultKeys.PIN_DELAY_BOOT) != boot || now < until - delay) {
+                    startDelay(delay)
+                    delay
+                } else {
+                    (until - now).coerceAtLeast(0)
+                }
+            }
+        }
+
+        private fun migrateLegacyDelay(): Long {
+            if (vault.get(VaultKeys.PIN_DELAY_UNTIL) == null) return 0
+            val delay = delayFor(number(VaultKeys.PIN_FAILURES))
+            startDelay(delay)
+            vault.remove(VaultKeys.PIN_DELAY_UNTIL)
+            return delay
         }
 
         fun clear() {
@@ -76,6 +112,9 @@ class PinStore
         private fun resetFailures() {
             vault.remove(VaultKeys.PIN_FAILURES)
             vault.remove(VaultKeys.PIN_DELAY_UNTIL)
+            vault.remove(VaultKeys.PIN_DELAY_ELAPSED)
+            vault.remove(VaultKeys.PIN_DELAY_MILLIS)
+            vault.remove(VaultKeys.PIN_DELAY_BOOT)
         }
 
         private fun number(key: String): Long = vault.get(key)?.toString(Charsets.UTF_8)?.toLongOrNull() ?: 0

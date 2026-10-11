@@ -60,7 +60,11 @@ class AccountService(
     ): AccountDeletionReceipt {
         // Microsecond precision, as stored: linked SHOP rows are found again by an exact requested_at match.
         val now = clock.instant().truncatedTo(ChronoUnit.MICROS)
-        reauth.require(caller, code, now)
+        if (requests.openAccount(caller.userId) != null) throw ProblemException(ProblemCode.ACCOUNT_DELETION_PENDING)
+        if (!deleteOwnedShops && store.owned(caller.userId).any(store::shared)) {
+            throw ProblemException(ProblemCode.ACCOUNT_OWNER_OF_SHARED_SHOP)
+        }
+        reauth.require(caller, code, now, ReauthAction.ACCOUNT_DELETE.scope())
         return tx.execute {
             store.lockUser(caller.userId)
             if (requests.openAccount(caller.userId) != null) throw ProblemException(ProblemCode.ACCOUNT_DELETION_PENDING)
@@ -100,7 +104,9 @@ class AccountService(
         code: String,
     ): DeletionReceipt {
         val now = clock.instant()
-        reauth.require(caller, code, now)
+        if (store.role(shopId, caller.userId) != "OWNER") throw ProblemException(ProblemCode.FORBIDDEN)
+        if (requests.openShop(shopId) != null) throw ProblemException(ProblemCode.SHOP_DELETION_PENDING)
+        reauth.require(caller, code, now, ReauthAction.SHOP_DELETE.scope(shopId))
         return tx.execute {
             store.lockShop(shopId)
             if (store.role(shopId, caller.userId) != "OWNER") throw ProblemException(ProblemCode.FORBIDDEN)
@@ -132,13 +138,14 @@ class AccountService(
         targetId: UUID,
         code: String,
     ): OwnershipReceipt {
-        reauth.require(caller, code, clock.instant())
+        store.requireTransfer(shopId, caller.userId, targetId, requests.openAccount(targetId) != null)
+        reauth.require(caller, code, clock.instant(), ReauthAction.OWNERSHIP_TRANSFER.scope(shopId))
         return tx.execute {
             // Both user rows before the shop, as DeletionExecutor does: a target whose account deletion is running
             // holds its row until it is gone, and every eligibility check below is read under these locks.
             store.lockUsers(caller.userId, targetId)
             store.lockShop(shopId)
-            val targetLeaving = requests.openAccount(targetId)?.let { !it.graceUntil.isAfter(clock.instant()) } ?: false
+            val targetLeaving = requests.openAccount(targetId) != null
             store.transfer(shopId, caller.userId, targetId, targetLeaving)
             requests.openAccount(caller.userId)?.let {
                 it.blockedAt = null

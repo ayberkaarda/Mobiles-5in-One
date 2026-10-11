@@ -66,7 +66,9 @@ restore_env() {
 
 expect "backup: --help prints the usage" 0 'Daily logical backup' -- sh "${script_dir}/backup.sh" --help
 expect "backup: unknown argument is refused" 2 'unknown argument' -- sh "${script_dir}/backup.sh" --now
-expect "backup: missing environment names every key" 2 'CETELE_BACKUP_AGE_RECIPIENT, CETELE_BACKUP_S3_ENDPOINT, CETELE_BACKUP_S3_WRITE_ACCESS_KEY, CETELE_BACKUP_S3_WRITE_SECRET_KEY' -- \
+missing_keys='CETELE_BACKUP_AGE_RECIPIENT, CETELE_BACKUP_S3_ENDPOINT, '
+missing_keys="${missing_keys}CETELE_BACKUP_S3_WRITE_ACCESS_KEY, CETELE_BACKUP_S3_WRITE_SECRET_KEY"
+expect "backup: missing environment names every key" 2 "${missing_keys}" -- \
   env -i PATH="${PATH}" sh "${script_dir}/backup.sh"
 expect "backup: a private age identity is refused as recipient" 2 'holds a private identity' -- \
   backup_env CETELE_BACKUP_AGE_RECIPIENT="${secret_identity}" sh "${script_dir}/backup.sh"
@@ -98,6 +100,26 @@ expect "restore: a target name with SQL is refused" 2 'CETELE_RESTORE_PG_DATABAS
 expect "restore-drill: --help prints the usage" 0 'Restore drill' -- sh "${script_dir}/restore-drill.sh" --help
 expect "restore-drill: an empty expected file is refused" 2 'CETELE_DRILL_EXPECTED is not a non-empty file' -- \
   restore_env CETELE_DRILL_EXPECTED="${out_file}.missing" sh "${script_dir}/restore-drill.sh"
+
+endpoint_check() {
+  sh -c '. "$1/lib.sh"; check_endpoint endpoint "$2" "$3"; echo accepted' sh "${script_dir}" "$1" "$2"
+}
+
+expect "endpoint: localhost suffix is remote" 2 'must use https' -- endpoint_check 'http://localhost.example.com' ''
+expect "endpoint: numeric loopback suffix is remote" 2 'must use https' -- endpoint_check 'http://127.0.0.1.example.com' ''
+expect "endpoint: docker host suffix is remote" 2 'must use https' -- endpoint_check 'http://host.docker.internal.evil.com' ''
+expect "endpoint: dotted remote host is refused with network" 2 'must use https' -- endpoint_check 'http://evil.com' 'backup'
+expect "endpoint: single label needs network" 2 'must use https' -- endpoint_check 'http://minio:9000' ''
+expect "endpoint: single label with network" 0 'accepted' -- endpoint_check 'http://minio:9000' 'backup'
+expect "endpoint: loopback with port" 0 'accepted' -- endpoint_check 'http://localhost:9000' ''
+expect "endpoint: numeric loopback" 0 'accepted' -- endpoint_check 'http://127.0.0.1:9000' ''
+expect "endpoint: IPv6 loopback" 0 'accepted' -- endpoint_check 'http://[::1]:9000' ''
+expect "endpoint: docker host" 0 'accepted' -- endpoint_check 'http://host.docker.internal:9000' ''
+expect "endpoint: secure remote host" 0 'accepted' -- endpoint_check 'https://backup.example.test' ''
+expect "endpoint: user info is refused" 2 'must not contain user info' -- endpoint_check 'http://u:p@localhost' ''
+expect "endpoint: secure user info is refused" 2 'must not contain user info' -- endpoint_check 'https://u:p@evil.com' ''
+expect "endpoint: missing host is refused" 2 'must have a host' -- endpoint_check 'https:///dump' ''
+expect "endpoint: malformed port is refused" 2 'invalid port' -- endpoint_check 'http://localhost:bad' ''
 
 echo "checks: ${passed} passed, ${failed} failed"
 [ "${failed}" -eq 0 ]

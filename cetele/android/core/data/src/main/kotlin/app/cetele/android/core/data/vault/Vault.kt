@@ -21,6 +21,9 @@ object VaultKeys {
     const val PIN_SALT = "pin_salt"
     const val PIN_FAILURES = "pin_failures"
     const val PIN_DELAY_UNTIL = "pin_delay_until"
+    const val PIN_DELAY_ELAPSED = "pin_delay_elapsed"
+    const val PIN_DELAY_MILLIS = "pin_delay_millis"
+    const val PIN_DELAY_BOOT = "pin_delay_boot"
     const val USER_ID = "user_id"
     const val PHONE = "phone"
 }

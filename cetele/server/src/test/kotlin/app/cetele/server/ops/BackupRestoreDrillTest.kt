@@ -89,7 +89,7 @@ class BackupRestoreDrillTest {
         assertEquals(sourceFingerprint, restored)
         assertTrue("rows ledger_entries 630" in restored, "600 entries and 30 reversals expected, got $restored")
         assertTrue("rows customers 60" in restored)
-        assertTrue("rows flyway_schema_history 8" in restored, "the migration history must survive the restore")
+        assertTrue("rows flyway_schema_history 9" in restored, "the migration history must survive the restore")
         assertTrue(restored.any { it.startsWith("ledger_balance shops=3 ") }, "three shops carry a balance")
     }
 

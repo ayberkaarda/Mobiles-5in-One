@@ -1,5 +1,6 @@
 package app.cetele.server.billing
 
+import app.cetele.server.billing.play.PlaySubscriptionPurchase
 import app.cetele.server.support.IntegrationTest
 import app.cetele.server.support.LogCapture
 import app.cetele.server.support.assertContains
@@ -8,6 +9,7 @@ import app.cetele.server.tenancy.TenancyFixtures.Companion.expectProblem
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.system.CapturedOutput
+import java.time.Duration
 import java.util.Base64
 import kotlin.test.assertTrue
 
@@ -29,6 +31,7 @@ class BillingLogSampleTest : BillingTestSupport() {
         val body = envelope(subscriptionNotification(token, 12))
         push(body, "Bearer $pushToken").andExpect { status { isOk() } }
         push(body, "Bearer x$pushToken").expectProblem(401, "webhook.unauthenticated")
+        fake.put(token, fake.purchase(PlaySubscriptionPurchase.STATE_EXPIRED, world.shopId, Duration.ofDays(-1), autoRenewing = false))
         processor.processDue(clock.instant())
         sweeper.sweep(clock.instant())
 

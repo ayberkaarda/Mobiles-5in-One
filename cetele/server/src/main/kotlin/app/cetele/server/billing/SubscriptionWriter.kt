@@ -95,6 +95,7 @@ class SubscriptionWriter(
         now: Instant,
         reason: PlanChangeReason,
         replacementOnly: Boolean,
+        readAt: Instant = now,
     ): InsertResult =
         checkNotNull(
             tx.execute {
@@ -123,9 +124,9 @@ class SubscriptionWriter(
                         state = state,
                         linkedBy = linkedBy ?: replaced?.linkedBy,
                         linkedAt = now,
-                        lastVerifiedAt = now,
+                        lastVerifiedAt = readAt,
                     )
-                row.apply(purchase, now)
+                row.apply(purchase, now, readAt)
                 val saved = subscriptions.save(row)
                 index.flush()
                 replaced?.replacedBy = saved.subscriptionId
@@ -134,40 +135,48 @@ class SubscriptionWriter(
             },
         )
 
-    /** Applies what Play says about a stored row; a `null` [purchase] (Play no longer knows it) only stamps the check. */
+    /**
+     * Applies a Play answer unless [readAt] predates the stored verification, checked under the lock.
+     * A `null` [purchase] (Play no longer knows it) only stamps the check; [now] is the write and entitlement time.
+     */
     fun refresh(
         key: SubscriptionKey,
         purchase: PlaySubscriptionPurchase?,
         now: Instant,
         reason: PlanChangeReason,
         notificationType: Int? = null,
+        readAt: Instant = now,
     ): SubscriptionState? =
         tx.execute {
             val shop = entitlement.lock(key.shopId) ?: return@execute null
             val row = subscriptions.lockInShop(key.shopId, key.id) ?: return@execute null
+            if (row.lastVerifiedAt > readAt) return@execute row.state
             notificationType?.let { row.lastNotificationType = it }
             if (purchase != null) {
-                row.apply(purchase, now)
+                row.apply(purchase, now, readAt)
             } else {
-                row.lastVerifiedAt = now
+                row.lastVerifiedAt = readAt
                 row.updatedAt = now
             }
             entitlement.recompute(shop, now, reason)
             row.state
         }
 
-    /** Refund or revocation: `REVOKED` for ever, whatever Play says afterwards. */
+    /** A Play-confirmed revocation stays sticky; an answer older than the stored verification is ignored. */
     fun revoke(
         key: SubscriptionKey,
         now: Instant,
         reason: PlanChangeReason,
         notificationType: Int? = null,
+        readAt: Instant = now,
     ): Boolean =
         tx.execute {
             val shop = entitlement.lock(key.shopId) ?: return@execute false
             val row = subscriptions.lockInShop(key.shopId, key.id) ?: return@execute false
+            if (row.lastVerifiedAt > readAt) return@execute false
             notificationType?.let { row.lastNotificationType = it }
             row.revoke(now)
+            row.lastVerifiedAt = readAt
             entitlement.recompute(shop, now, reason)
             true
         } == true

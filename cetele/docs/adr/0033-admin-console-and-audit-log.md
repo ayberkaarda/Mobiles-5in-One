@@ -98,6 +98,10 @@ password from the creating `ADMIN` (shown once, out of band) with `must_change_p
 - Enrollment is forced at the first login and after a reset: the page shows the `otpauth://` URI as
   a QR code (`data:image/png` from the library's ZXing generator, allowed by `img-src data:`) and as
   text, and the secret is stored only when a code from it verifies.
+- A TOTP reset also sets a new one-time password, shown once to the resetting `ADMIN` on a
+  `no-store` result page, and `must_change_password`, so the old password no longer opens the
+  account; the next login goes through enrollment and then the forced password change. The audit
+  row `ADMIN_TOTP_RESET` keeps no metadata.
 
 ### Login and session
 
@@ -119,10 +123,18 @@ password from the creating `ADMIN` (shown once, out of band) with `must_change_p
   Thymeleaf adds to `th:action` forms. No state change on `GET`.
 - Sessions live in the server's memory; a restart signs every admin out. Accepted for one instance
   ([ADR-0002](0002-hosting.md)).
+- A console session is current only while the account is enabled, not locked, keeps its role, is
+  enrolled, and neither the password nor the authenticator changed after the session signed in
+  (`AdminPrincipal.authenticatedAt`): a reset or a password change ends every other session, and
+  the session that changed its own password gets a new session id. A half-finished login carries
+  its start time and is refused when the password changed after it. Wrong current passwords on
+  the password change form count toward the five-failure lockout and end the session at the lock.
 - First admin: when no enabled `ADMIN` exists and `CETELE_ADMIN_BOOTSTRAP_EMAIL` and
   `CETELE_ADMIN_BOOTSTRAP_PASSWORD` are both set, startup creates that `ADMIN` with
   `must_change_password = true` and no TOTP (audited as `ADMIN_BOOTSTRAPPED`, actor `SYSTEM`). The
-  operator removes both variables afterwards. Otherwise the variables are ignored.
+  operator removes both variables afterwards. Otherwise the variables are ignored. Bootstrap
+  recovers an existing row only when its role is `ADMIN`; a `SUPPORT` row with the bootstrap email
+  is left unchanged and logged as an error, and startup continues.
 
 ### Security chain and pages
 
@@ -152,7 +164,9 @@ style without the nonce; CSS is `static/assets/admin/admin.css`. Copy is Turkish
 | `GET` and `POST /admin/account/password`                | Y     | Y       | `ADMIN_PASSWORD_CHANGED`                    |
 
 An `ADMIN` cannot disable, demote or reset themselves, and the last enabled `ADMIN` cannot be
-disabled or demoted (409 console message).
+disabled or demoted (409 console message). `AdminManagementTest`:
+`self disable demotion and reset return 409 without changing credentials`,
+`last enabled admin cannot be disabled or demoted and conflicts map to 409`.
 
 ### What the console shows and never shows
 
@@ -235,6 +249,9 @@ audit retention 365 days.
   subscription view is added only after billing exists in the same tree (handoff 002, wiring step).
 - Losing the TOTP device needs another `ADMIN`. The last `ADMIN` who loses it is recovered by the
   operator: disable the row in the database and use the bootstrap variables again, which is audited.
+- Deactivating a user does not hold that user's pending account deletion
+  ([ADR-0018](0018-account-and-shop-deletion.md)); the audit rows of a deleted user stay without
+  personal data. A supervised, time-limited hold for fraud review is required before commercial use.
 - Required tests: `AdminLoginTest` (`password then totp grants the role`, `totp code is single use`,
   `five failures lock for fifteen minutes`, `unknown email and wrong password look the same`,
   `forced enrollment and password change come before any page`), `AdminSessionTest` (cookie name
@@ -243,4 +260,10 @@ audit retention 365 days.
   the table for `ADMIN`, `SUPPORT` and anonymous), `AdminAuditTest` (one row per action of the
   table, no PII in `metadata`), `AdminBoundaryTest` (the ArchUnit rule and the rendering test
   above), `AdminBootstrapTest`, `V8AdminSchemaTest`, `AdminHeadersTest` (CSP nonce on every page,
-  `no-store`, `X-Robots-Tag`).
+  `no-store`, `X-Robots-Tag`). Added in the hardening round: `AdminLoginTest`
+  (`reset replaces the old password and requires enrollment then password change`,
+  `five wrong current passwords lock the account and end the session`), `AdminSessionTest`
+  (`password change rotates its session and ends other sessions and pending logins`,
+  `totp reset ends authenticated and pending sessions while the operator stays signed in`),
+  `AdminBootstrapTest` (`bootstrap never promotes or changes a support account`),
+  `AdminManagementTest`.

@@ -39,6 +39,8 @@ class OtpCode(
     val expiresAt: Instant,
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+    @Column(name = "scope", updatable = false)
+    val scope: String? = null,
 ) {
     @Id
     @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
@@ -53,6 +55,18 @@ class OtpCode(
 
 interface OtpCodeRepository : Repository<OtpCode, UUID> {
     fun save(code: OtpCode): OtpCode
+
+    fun countByPhoneE164AndPurposeAndCreatedAtAfter(
+        phoneE164: String,
+        purpose: OtpPurpose,
+        createdAt: Instant,
+    ): Long
+
+    fun findFirstByPhoneE164AndPurposeAndCreatedAtAfterOrderByCreatedAtAsc(
+        phoneE164: String,
+        purpose: OtpPurpose,
+        createdAt: Instant,
+    ): OtpCode?
 
     /** The newest open code of a phone, locked so concurrent guesses are counted one by one. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

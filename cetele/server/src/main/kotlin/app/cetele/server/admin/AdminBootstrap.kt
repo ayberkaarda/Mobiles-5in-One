@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.temporal.ChronoUnit
 
 /**
  * Creates the first `ADMIN` (ADR-0033): only when no enabled `ADMIN` exists and both bootstrap
@@ -39,14 +40,18 @@ class AdminBootstrapService(
         }
         val normalized =
             checkNotNull(AdminLoginService.normalizeEmail(email)) { "CETELE_ADMIN_BOOTSTRAP_EMAIL is not a valid email address" }
-        check(passwords.isAcceptable(password)) { "CETELE_ADMIN_BOOTSTRAP_PASSWORD must be 12 to 128 characters" }
         val existing = accounts.findByEmail(normalized)?.let { accounts.lockById(it.id) }
+        if (existing != null && existing.role != AdminRole.ADMIN) {
+            log.error("bootstrap email belongs to a non-ADMIN account")
+            return false
+        }
+        check(passwords.isAcceptable(password)) { "CETELE_ADMIN_BOOTSTRAP_PASSWORD must be 12 to 128 characters" }
         val account =
             if (existing == null) {
                 accounts.save(AdminAccount(normalized, passwords.hash(password), AdminRole.ADMIN, null, clock.instant()))
             } else {
                 existing.passwordHash = passwords.hash(password)
-                existing.role = AdminRole.ADMIN
+                existing.passwordChangedAt = clock.instant().truncatedTo(ChronoUnit.MICROS)
                 existing.disabledAt = null
                 existing.lockedUntil = null
                 existing.failedAttempts = 0

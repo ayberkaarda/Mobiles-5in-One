@@ -1,5 +1,7 @@
 package app.cetele.server.reminders
 
+import app.cetele.server.auth.ratelimit.RateLimit
+import app.cetele.server.auth.ratelimit.RateLimiter
 import app.cetele.server.config.logging.Masking
 import app.cetele.server.ledger.customer.CustomerRepository
 import app.cetele.server.ledger.entry.LedgerEntryRepository
@@ -55,6 +57,7 @@ class ReminderService(
     private val gateway: SmsGateway,
     private val clock: Clock,
     transactionManager: PlatformTransactionManager,
+    private val limiter: RateLimiter,
 ) {
     private val log = LoggerFactory.getLogger(ReminderService::class.java)
     private val transaction =
@@ -85,6 +88,7 @@ class ReminderService(
                     if (!customer.smsConsent) throw ProblemException(ProblemCode.SMS_CONSENT_MISSING)
                     val balance = Balance.of(entries.balanceLines(shopId, customer.id))
                     if (balance <= 0) throw ProblemException(ProblemCode.REMINDER_NO_BALANCE)
+                    limiter.consume(RateLimit.REMINDER_PHONE, RateLimiter.phoneSubject(phone))
                     quota.reserveDailyCap(now)
                     val reserved = quota.reserve(shopId, shop.plan, now)
                     val link = links.issue(shopId, customer.id, requestedBy, now = now)

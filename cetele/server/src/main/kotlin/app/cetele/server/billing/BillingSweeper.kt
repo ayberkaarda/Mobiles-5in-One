@@ -60,15 +60,16 @@ class BillingSweeper(
             var unavailable = 0
             index.reverifyCandidates(now, now.minus(STALE_AFTER), BATCH).forEach { key ->
                 val token = writer.token(key)
+                val readAt = clock.instant()
                 val answer = token?.let { play.getSubscription(it) }
                 when (answer) {
                     is PlaySubscriptionResult.Found -> {
-                        writer.refresh(key, answer.purchase, now, PlanChangeReason.SWEEP)
+                        writer.refresh(key, answer.purchase, now, PlanChangeReason.SWEEP, readAt = readAt)
                         reverified++
                     }
 
                     PlaySubscriptionResult.NotFound -> {
-                        writer.refresh(key, null, now, PlanChangeReason.SWEEP)
+                        writer.refresh(key, null, now, PlanChangeReason.SWEEP, readAt = readAt)
                         reverified++
                     }
 

@@ -1,5 +1,8 @@
 package app.cetele.server.auth.device
 
+import app.cetele.server.auth.token.RefreshTokenRepository
+import app.cetele.server.web.problem.ProblemCode
+import app.cetele.server.web.problem.ProblemException
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -41,13 +44,34 @@ interface DeviceRepository : Repository<Device, UUID> {
         userId: UUID,
         deviceId: UUID,
     ): Device?
+
+    fun findByUserIdOrderByLastSeenAtDescIdAsc(userId: UUID): List<Device>
+
+    fun findByUserIdAndId(
+        userId: UUID,
+        id: UUID,
+    ): Device?
 }
 
 /** Keeps the `devices` rows current. Callers run inside their own transaction. */
 @Service
 class DeviceService(
     private val devices: DeviceRepository,
+    private val tokens: RefreshTokenRepository,
 ) {
+    fun list(userId: UUID): List<Device> = devices.findByUserIdOrderByLastSeenAtDescIdAsc(userId)
+
+    /** The client ids among [userId]'s devices that still hold a live refresh token at [now]. */
+    fun signedInDeviceIds(
+        userId: UUID,
+        now: Instant,
+    ): Set<UUID> = tokens.signedInDeviceIds(userId, now).toSet()
+
+    fun findOwned(
+        userId: UUID,
+        rowId: UUID,
+    ): Device = devices.findByUserIdAndId(userId, rowId) ?: throw ProblemException(ProblemCode.NOT_FOUND)
+
     /** Records a sign-in: creates or updates the row of ([userId], [deviceId]). */
     fun recordSignIn(
         userId: UUID,

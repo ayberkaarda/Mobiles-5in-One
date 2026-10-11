@@ -4,6 +4,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import java.io.Serializable
+import java.time.Instant
 import java.util.UUID
 
 /** The signed-in admin, kept in the console session. Holds no secret. */
@@ -11,6 +12,7 @@ data class AdminPrincipal(
     val id: UUID,
     val email: String,
     val role: AdminRole,
+    val authenticatedAt: Instant,
 ) : Serializable {
     val isAdmin: Boolean get() = role == AdminRole.ADMIN
 

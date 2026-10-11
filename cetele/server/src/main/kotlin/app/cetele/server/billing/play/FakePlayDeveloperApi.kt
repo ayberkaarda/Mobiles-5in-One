@@ -108,7 +108,7 @@ class FakePlayDeveloperApi(
             "canceled" -> found(purchase(PlaySubscriptionPurchase.STATE_CANCELED, shopId, days(10), autoRenewing = false))
             "hold" -> found(purchase(PlaySubscriptionPurchase.STATE_ON_HOLD, shopId, days(-1)))
             "paused" -> found(purchase(PlaySubscriptionPurchase.STATE_PAUSED, shopId, days(-1)))
-            "expired" -> found(purchase(PlaySubscriptionPurchase.STATE_EXPIRED, shopId, days(-1), autoRenewing = false))
+            "revoked", "expired" -> found(purchase(PlaySubscriptionPurchase.STATE_EXPIRED, shopId, days(-1), autoRenewing = false))
             "pending" -> found(purchase(PlaySubscriptionPurchase.STATE_PENDING, shopId, expiry = null))
             "otherproduct" -> found(purchase(PlaySubscriptionPurchase.STATE_ACTIVE, shopId, days(30), product = OTHER_PRODUCT))
             "unavailable" -> PlaySubscriptionResult.Unavailable(FAKE_REASON)

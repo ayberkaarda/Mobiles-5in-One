@@ -165,7 +165,7 @@ of our own:
 | `SUBSCRIPTION_STATE_EXPIRED`                   | `EXPIRED`             | no                               |
 | `SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED` | `EXPIRED`             | no                               |
 | `SUBSCRIPTION_STATE_UNSPECIFIED`               | not stored            | `422 billing.purchase_invalid`   |
-| (refund or revocation, see below)              | `REVOKED`             | no, sticky                       |
+| (Play-confirmed revocation, see below)         | `REVOKED`             | no, sticky                       |
 | (replaced by a newer token)                    | `REPLACED`            | no, sticky                       |
 | (shop deleted)                                 | `ORPHANED`            | no, sticky                       |
 
@@ -177,9 +177,13 @@ of our own:
 - **Account hold** and **pause** are FREE immediately; a later `RECOVERED` or `RESTARTED`
   notification brings PRO back after re-verification.
 - **Cancellation** keeps PRO until the paid period ends, then the sweep turns the row `EXPIRED`.
-- **Refund and revocation**: notification type 12 (`SUBSCRIPTION_REVOKED`) or a
-  `voidedPurchaseNotification` for the token sets `REVOKED` with `revoked_at`, whatever the API
-  says afterwards. A revoked token never entitles again.
+- **Refund and revocation**: a type 12 (`SUBSCRIPTION_REVOKED`) or a `voidedPurchaseNotification`
+  for a known token makes the server read the token from Play like every other type. Only when Play
+  answers not found or `SUBSCRIPTION_STATE_EXPIRED` does the row become `REVOKED` with `revoked_at`,
+  sticky for ever; when Play still reports an entitled state the answer is applied as a normal
+  refresh (outcome `revoke_unconfirmed`), and when Play is unavailable the notification is retried
+  and nothing is revoked. A revoked token never entitles again. Real Play behaviour (that a revoked
+  subscription reads as `EXPIRED` in the v2 API) is `not exercised: no Play Console account` (G1).
 - `shops.plan` is derived and never set directly: `PRO` when the current row of the shop entitles
   at that instant, else `FREE`. `EntitlementService.recompute(shopId, now)` runs under the billing
   lock after every link, every processed notification and every sweep change, and logs
@@ -245,9 +249,16 @@ An authenticated RTDN ([ADR-0032](0032-webhook-authentication.md)) is stored as 
   (`foreign_package`), a `testNotification` (`test`), a `oneTimeProductNotification`
   (`one_time_product`) and a subscription id other than the Pro product (`foreign_product`);
 - for a `subscriptionNotification` of any type, **never uses the type to decide the state**: it
-  re-reads the token through `subscriptionsv2.get` and applies the table above, except type 12,
-  which sets `REVOKED`;
-- for a `voidedPurchaseNotification` whose token is known, sets `REVOKED`;
+  re-reads the token through `subscriptionsv2.get` and applies the table above; type 12 sets
+  `REVOKED` only when Play confirms it (not found or `EXPIRED`, see "Refund and revocation");
+- for a `voidedPurchaseNotification` whose token is known, re-reads it the same way and sets
+  `REVOKED` only on that confirmation;
+- takes the instant of every Play read (`readAt`, just before the call, in the processor and the
+  sweep alike) and applies the answer under the row lock only when it is not older than the row's
+  `last_verified_at`, which then becomes `readAt`; a sweep and a notification therefore cannot
+  overwrite a newer answer with an older one (`BillingSweeperTest`:
+  `older active and missing answers cannot overwrite a newer hold answer`,
+  `older confirmed revocation cannot overwrite a newer active answer`);
 - for a token with no row: reads it from Play; when `linkedPurchaseToken` matches the current row of
   a shop and the obfuscated account id matches that shop, the new token replaces it exactly as in
   link step 6; otherwise `IGNORED` with `unknown_token` (the owner's link call will verify it);
@@ -374,6 +385,9 @@ not found`, `repeat link is idempotent`, `token of another shop is refused befor
   `second subscription while entitled is already subscribed`), `EntitlementTest` (one test per row
   of the state table, the one-hour leeway, `revoked is sticky`), `DowngradeTest` (`over limit
 customers stay readable and writable but no new customer`, `photo and sms limits drop at once`),
-  `RtdnProcessingTest`, `BillingSweeperTest`, `HttpPlayDeveloperApiTest` (fixtures labelled "shape
+  `RtdnProcessingTest` (including `expired play answer confirms revocation for ever`,
+  `active play answer refuses both revocation notification kinds`,
+  `unavailable play answer retries both revocation notification kinds without revoking`),
+  `BillingSweeperTest`, `HttpPlayDeveloperApiTest` (fixtures labelled "shape
   per provider documentation, not verified against the live API"), `BillingConfigurationTest`,
   `V6BillingSchemaTest`, `BillingLogSampleTest` (no token or hash in logs).

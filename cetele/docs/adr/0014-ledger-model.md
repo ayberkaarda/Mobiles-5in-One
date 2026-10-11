@@ -104,5 +104,9 @@ the per-operation result `plan.customer_limit`.
 - Last writer wins loses the earlier of two concurrent edits of the same customer. For a shop
   customer record (name, phone, note) that is accepted; entries are never merged.
 - A customer tombstone cannot be undone from the client; a recreated customer gets a new id.
+- `occurredOn` has no lower bound: back-dated entries are legitimate when a paper ledger is moved
+  in, writing entries is a `STAFF` right, statements are live views
+  ([ADR-0015](0015-statement-links-and-public-page.md)), and every entry keeps its server
+  `created_at` for review (accepted, threat FC-16).
 - Evidence: `BalanceTest`, `MoneyFormatTest`, `ReversalRulesTest`, `CustomerLimitTest`,
   `SyncConvergenceTest`, `V4LedgerSchemaTest`, `SharedLimitsTest`.

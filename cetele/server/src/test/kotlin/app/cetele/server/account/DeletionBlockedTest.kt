@@ -14,6 +14,20 @@ class DeletionBlockedTest : AccountTestSupport() {
     @Autowired private lateinit var executor: DeletionExecutor
 
     @Test
+    fun `open account deletion refuses shop creation during and after grace and cancellation restores it`() {
+        val owner = actor()
+        assertEquals(202, delete("/v1/me", owner, mapOf("code" to code(owner))).status)
+        val input = mapOf("name" to "Yeni Bakkal", "type" to "BAKKAL", "il" to "İstanbul", "ilce" to "Kadıköy")
+        problem(post("/v1/shops", owner, input), 409, "account.deletion_pending")
+        assertEquals(0, count("shops", "created_by", owner.actor.id))
+        expire(owner)
+        problem(post("/v1/shops", owner, input), 409, "account.deletion_pending")
+        assertEquals(0, count("memberships", "user_id", owner.actor.id))
+        assertEquals(204, delete("/v1/me/deletion", owner).status)
+        assertEquals(201, post("/v1/shops", owner, input).status)
+    }
+
+    @Test
     fun `shared shop requires explicit deletion choice`() {
         val owner = actor()
         val shopId = fixtures.shop(owner.actor)
@@ -28,15 +42,18 @@ class DeletionBlockedTest : AccountTestSupport() {
     @Test
     fun `new shared ownership during grace blocks account and transfer clears block`() {
         val owner = actor()
+        val shopId = fixtures.shop()
         assertEquals(202, delete("/v1/me", owner, mapOf("code" to code(owner))).status)
-        val shopId = fixtures.shop(owner.actor)
+        // Simulate ownership acquired after the deletion choice without opening a shop through the API.
+        jdbc.update("UPDATE memberships SET user_id = ? WHERE shop_id = ? AND role = 'OWNER'", owner.actor.id, shopId)
         val staff = actor()
         fixtures.addStaff(shopId, staff.actor)
         expire(owner)
         executor.run(Instant.now())
         assertTrue(json.readTree(me(owner).contentAsString)["deletion"]["blocked"].asBoolean())
         assertEquals(1, count("users", "id", owner.actor.id))
-        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to code(owner)))
+        val transferValue = transferCode(owner, shopId)
+        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to transferValue))
         assertEquals(200, response.status)
         assertFalse(json.readTree(me(owner).contentAsString)["deletion"]["blocked"].asBoolean())
         executor.run(Instant.now())
@@ -68,7 +85,8 @@ class DeletionBlockedTest : AccountTestSupport() {
                 shopId,
             ),
         )
-        val transfer = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to code(owner)))
+        val transferValue = transferCode(owner, shopId)
+        val transfer = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to transferValue))
         assertEquals(200, transfer.status, transfer.contentAsString)
         // The transfer itself cancels the previous owner's shop request, before any executor run.
         assertEquals(
@@ -96,8 +114,10 @@ class DeletionBlockedTest : AccountTestSupport() {
     @Test
     fun `shop becoming empty of other members clears block on next run`() {
         val owner = actor()
+        val shopId = fixtures.shop()
         assertEquals(202, delete("/v1/me", owner, mapOf("code" to code(owner))).status)
-        val shopId = fixtures.shop(owner.actor)
+        // Simulate ownership acquired after the deletion choice without opening a shop through the API.
+        jdbc.update("UPDATE memberships SET user_id = ? WHERE shop_id = ? AND role = 'OWNER'", owner.actor.id, shopId)
         val staff = fixtures.addStaff(shopId)
         expire(owner)
         executor.run(Instant.now())

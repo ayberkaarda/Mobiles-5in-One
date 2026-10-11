@@ -29,8 +29,8 @@ class ExportFilesTest {
 
     @Test
     fun cleanupDeletesOnlyExportsStrictlyOlderThanOneDay() {
-        val files = ExportFiles(cache.toFile())
         val now = 2 * ExportFiles.RETENTION_MILLIS
+        val files = ExportFiles(cache.toFile()) { 0L }
         val old =
             files.csv("old", date).apply {
                 writeText("old")
@@ -72,5 +72,31 @@ class ExportFilesTest {
             }
         assertEquals(1, files.cleanup(ExportFiles.RETENTION_MILLIS + 2))
         assertFalse(old.exists())
+    }
+
+    @Test fun everyNewExportCleansExpiredFilesAndKeepsRecentFiles() {
+        var now = 2 * ExportFiles.RETENTION_MILLIS
+        val files = ExportFiles(cache.toFile()) { now }
+        val old = files.csv("old", date).apply { writeText("old") }
+        assertTrue(old.setLastModified(now - ExportFiles.RETENTION_MILLIS - 1))
+        val recent = files.pdf("shop", "customer", date).apply { writeText("recent") }
+        assertFalse(old.exists())
+        assertTrue(recent.setLastModified(now))
+        now += ExportFiles.RETENTION_MILLIS + 1
+        files.backup("shop", date)
+        assertFalse(recent.exists())
+    }
+
+    @Test fun wipeDeletesExportTreeAndPreservesOtherCacheFiles() {
+        val files = ExportFiles(cache.toFile())
+        files.csv("shop", date).writeText("private")
+        files.pdf("shop", "customer", date).writeText("private")
+        cache.resolve("exports/legacy.csv").toFile().writeText("private")
+        val other = cache.resolve("other.txt").toFile().apply { writeText("keep") }
+        files.wipe()
+        assertFalse(cache.resolve("exports").toFile().exists())
+        assertTrue(other.exists())
+        files.wipe()
+        assertTrue(files.csv("new", date).parentFile!!.isDirectory)
     }
 }

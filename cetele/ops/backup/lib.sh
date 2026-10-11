@@ -61,7 +61,8 @@ check_bucket() {
 }
 
 check_prefix() {
-  printf '%s' "$1" | grep -Eq '^([A-Za-z0-9._-]+/)*$' || die_config "prefix must be empty or end with '/' and use letters, digits, '.', '_', '-': $1"
+  printf '%s' "$1" | grep -Eq '^([A-Za-z0-9._-]+/)*$' ||
+    die_config "prefix must be empty or end with '/' and use letters, digits, '.', '_', '-': $1"
 }
 
 check_identifier() {
@@ -75,10 +76,47 @@ check_container_name() {
 # check_endpoint VAR VALUE NETWORK: https, or plain http only for local addresses or a name
 # that resolves on the given docker network.
 check_endpoint() {
+  endpoint_authority="${2#*://}"
+  endpoint_authority="${endpoint_authority%%/*}"
+  case "$2" in
+    *@*) die_config "$1 must not contain user info" ;;
+  esac
+  case "${endpoint_authority}" in
+    \[*\]*)
+      endpoint_host="${endpoint_authority%%]*}]"
+      endpoint_port="${endpoint_authority#*]}"
+      ;;
+    *)
+      endpoint_host="${endpoint_authority%%:*}"
+      endpoint_port="${endpoint_authority#"${endpoint_host}"}"
+      ;;
+  esac
+  [ -n "${endpoint_host}" ] || die_config "$1 must have a host"
+  case "${endpoint_host}" in
+    '[::1]') ;;
+    *) printf '%s' "${endpoint_host}" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$' || die_config "$1 has an invalid host" ;;
+  esac
+  case "${endpoint_port}" in
+    "") ;;
+    :*)
+      endpoint_port="${endpoint_port#:}"
+      case "${endpoint_port}" in
+        "" | *[!0-9]*) die_config "$1 has an invalid port" ;;
+      esac
+      ;;
+    *) die_config "$1 has an invalid authority" ;;
+  esac
   case "$2" in
     https://*) ;;
-    http://localhost* | http://127.0.0.1* | http://host.docker.internal*) ;;
-    http://*) [ -n "$3" ] || die_config "$1 must use https (plain http only for local addresses or a name on the docker network)" ;;
+    http://*)
+      case "${endpoint_host}" in
+        localhost | 127.0.0.1 | '[::1]' | host.docker.internal) ;;
+        *)
+          [ -n "$3" ] && printf '%s' "${endpoint_host}" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9_-]*$' ||
+            die_config "$1 must use https (plain http only for exact local hosts or single-label docker names)"
+          ;;
+      esac
+      ;;
     *) die_config "$1 must be an http(s) URL" ;;
   esac
 }

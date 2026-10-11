@@ -148,5 +148,17 @@ verification matrix therefore keeps item 21 `partial`.
   time before completion.
 - A shop that gains a member during grace is never destroyed silently, at the price of an account
   that stays in the blocked state until the owner decides.
+- While an account deletion request is open, during or after its grace period, `POST /v1/shops`
+  answers 409 `account.deletion_pending`, so no shop can be created outside the scope the user saw;
+  cancelling the request restores it (`DeletionBlockedTest`:
+  `open account deletion refuses shop creation during and after grace and cancellation restores it`).
+- Deactivating a user does not hold a pending deletion: a deletion request is the data subject's
+  right and the product has no legal-hold process; a supervised, time-limited hold is required
+  before commercial use.
+- The executor compares membership and request times from one JVM clock, which holds for one
+  instance ([ADR-0009](0009-rate-limiting-and-client-ip.md)); a multi-instance deployment must move
+  `joinedAfter` to the database clock first.
+- Local exports (`cache/exports`) are deleted with the local database on sign-out and account
+  deletion (Android package P5, branch `fix/sec-p5`; its gate result is not recorded here).
 - Evidence: `AccountDeletionTest`, `DeletionBlockedTest`, `DeletionCancelTest`, `ShopDeletionTest`,
   `RetentionSweeperTest`, `AccountPermissionTest`, `AccountLogSampleTest`, `V5ServicesSchemaTest`.

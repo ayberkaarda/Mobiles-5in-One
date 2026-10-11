@@ -89,4 +89,5 @@
     <string name="error_field_date_out_of_range">The record date cannot be later than tomorrow</string>
     <string name="error_field_due_invalid">A due date can only be added to a debt record</string>
     <string name="error_field_photo_invalid">A correction record cannot have a photo</string>
+    <string name="error_shop_limit_reached">You have reached the limit of shops you can own.</string>
 </resources>
