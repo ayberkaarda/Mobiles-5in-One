@@ -31,6 +31,8 @@ class SiteContentFilesTest {
         val content = load(SiteProperties.DEFAULT_CONTENT_LOCATION)
         assertLimits(content)
         assertTrue(content.of("/sss").faq.size >= 1)
+        val home = content.of("/").html.value
+        assertEquals(3, Regex("<h3>").findAll(home).count(), "the three steps of the home page get one to three tally marks")
     }
 
     @Test

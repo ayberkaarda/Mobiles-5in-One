@@ -17,6 +17,23 @@ object CeteleSpacing {
     val screenGutter = regular
     val fabSize = 56.dp
 
+    /** Component sizes on the 4-pt grid (not part of the spacing scale). */
+    val buttonHeight = 52.dp
+    val keyHeight = 60.dp
+    val avatar = 44.dp
+    val notchWidth = 16.dp
+    val notchHeight = 28.dp
+    val notchStroke = 4.dp
+    val pinDot = 16.dp
+    val hairline = 1.dp
+    val navRowHeight = 56.dp
+    val iconBadge = 64.dp
+    val brandMark = 48.dp
+
+    /** Where the rule between list rows starts: past the avatar or notch, under the text column. */
+    val listRuleInset = 72.dp
+    val entryRuleInset = 44.dp
+
     val scale =
         mapOf(
             "0" to none,

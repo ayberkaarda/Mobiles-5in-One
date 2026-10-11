@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.CeteleTextStyles
 import app.cetele.android.core.designsystem.CeteleTheme
@@ -33,12 +34,19 @@ fun CustomerRow(
                 .fillMaxWidth()
                 .heightIn(min = CeteleSpacing.rowMinHeight)
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(CeteleSpacing.screenGutter),
+                .padding(horizontal = CeteleSpacing.regular, vertical = CeteleSpacing.medium),
         horizontalArrangement = Arrangement.spacedBy(CeteleSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        CustomerAvatar(name)
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = CeteleTextStyles.bodyStrong)
+            Text(
+                name,
+                style = CeteleTextStyles.bodyStrong,
+                color = CeteleTheme.colors.text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (phone != null) {
                 Text(
                     text = PhoneFormat.toE164Tr(phone)?.let(PhoneFormat::display) ?: phone,
@@ -46,7 +54,15 @@ fun CustomerRow(
                     color = CeteleTheme.colors.textMuted,
                 )
             }
-            if (tag != null) Text(tag, style = CeteleTextStyles.caption, color = CeteleTheme.colors.textMuted)
+            if (tag != null) {
+                Text(
+                    tag,
+                    style = CeteleTextStyles.caption,
+                    color = CeteleTheme.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         AmountText(balance, tone = balanceTone(balance))
     }
