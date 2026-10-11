@@ -23,7 +23,10 @@ Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var.
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/kadro.png" alt="Kadro: web ana sayfası ve mobil diziliş ekranı, örnek veri" width="100%"><br>
-      <sub><b>Kadro</b>: geliştirme aşamasında</sub>
+      <img src="kadro/docs/screenshots/mobile/03-matches-light.png" alt="Kadro mobil uygulaması: iki yaklaşan maçlı Maçlar sekmesi, örnek veri" width="32%">
+      <img src="kadro/docs/screenshots/mobile/04-match-detail-rsvp-light.png" alt="Kadro mobil uygulaması: katılım yanıtı ve ücret payıyla maç detayı, örnek veri" width="32%">
+      <img src="kadro/docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro mobil uygulaması: saha şemasında diziliş ve boş yerler, örnek veri" width="32%"><br>
+      <sub><b>Kadro</b>: web sayfaları ve Android uygulama ekranları (emülatör, örnek veri); planlanan tüm fazlar birleşti</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı" width="100%"><br>
