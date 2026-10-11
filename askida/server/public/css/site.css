@@ -300,8 +300,8 @@ svg { display: block; max-width: 100%; height: auto; }
 
 @media (max-width: 899px) {
   .site-header .wrap { flex-wrap: wrap; min-height: 0; padding-top: var(--space-2); }
-  .nav { width: calc(100% + 2 * var(--gutter)); margin-inline: calc(-1 * var(--gutter)); overflow-x: auto; scrollbar-width: none; }
-  .nav ul { gap: 0 var(--space-3); padding-inline: var(--gutter); }
+  .nav { width: 100%; }
+  .nav ul { flex-wrap: wrap; gap: 0 var(--space-3); }
   .nav a { font-size: var(--fs-label); }
 }
 
@@ -491,15 +491,15 @@ svg { display: block; max-width: 100%; height: auto; }
 
 /* A ledger of terms: label left, terms right. */
 
-.facts-list { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); column-gap: var(--space-8); border-top: var(--stroke-rail) solid var(--text); }
-.facts-list dt, .facts-list dd { padding-block: var(--space-4); border-bottom: var(--stroke-border) solid var(--border); }
-.facts-list dt { font: 600 var(--fs-title3) / var(--lh-title3) var(--font-text); }
-.facts-list dd { font-size: 17px; line-height: 26px; }
+.facts-list { container: facts / inline-size; display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); column-gap: var(--space-8); border-top: var(--stroke-rail) solid var(--text); }
+.facts-list dt, .facts-list dd { grid-column: 1 / -1; padding-block: var(--space-4); border-bottom: var(--stroke-border) solid var(--border); }
+.facts-list dt { font: 600 var(--fs-title3) / var(--lh-title3) var(--font-text); border-bottom: 0; padding-bottom: 0; }
+.facts-list dd { font-size: 17px; line-height: 26px; padding-top: var(--space-1); overflow-wrap: anywhere; }
 
-@media (max-width: 639px) {
-  .facts-list { grid-template-columns: minmax(0, 1fr); }
-  .facts-list dt { border-bottom: 0; padding-bottom: 0; }
-  .facts-list dd { padding-top: var(--space-1); }
+@container facts (min-width: 32rem) {
+  .facts-list dt, .facts-list dd { grid-column: auto; }
+  .facts-list dt { border-bottom: var(--stroke-border) solid var(--border); padding-bottom: var(--space-4); }
+  .facts-list dd { padding-top: var(--space-4); }
 }
 
 .statement { font: 700 var(--fs-headline) / var(--lh-headline) var(--font-display); max-width: 26ch; text-wrap: balance; }
