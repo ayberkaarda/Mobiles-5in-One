@@ -106,13 +106,21 @@ class PayloadAttackTest : AttackSupport() {
     }
 
     @Test
-    fun `duplicate json keys resolve to the last value inside the caller's own shop`() {
-        // Accepted finding: Jackson keeps the last duplicate; no intermediary parses the body, so there is no parser differential.
+    fun `duplicate json keys are refused without changing the shop`() {
         val shop = shop()
-        val response = call("POST", shop.push, shop.bearer, """{"operations":[], "operations":[${upsert(1)}]}""")
-        assertEquals(200, response.status, response.toString())
-        assertEquals(listOf("APPLIED"), JsonPath.read<List<String>>(response.text, "$.results[*].status"))
-        assertEquals(1, rows("customers", shop.id))
+        val bodies =
+            listOf(
+                """{"operations":[], "operations":[${upsert(1)}]}""",
+                """{"operations":[{"clientId":"${id()}","clientSeq":1,"kind":"CUSTOMER_UPSERT","customer":{"id":"${id()}","name":"First","name":"Second","smsConsent":false}}]}""",
+            )
+        bodies.forEach { body ->
+            val response = call("POST", shop.push, shop.bearer, body)
+            assertProblem(response, 422, "validation.failed")
+            assertEquals(setOf("type", "title", "status", "code"), shape(response).keys)
+            listOf("operations", "name", "First", "Second").forEach { assertFalse(response.text.contains(it)) }
+        }
+        assertEquals(0, rows("customers", shop.id))
+        assertEquals(0, rows("change_log", shop.id))
     }
 
     @Test

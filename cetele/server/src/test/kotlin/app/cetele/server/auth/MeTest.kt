@@ -11,9 +11,11 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
+import tools.jackson.core.JacksonException
 import tools.jackson.databind.ObjectMapper
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 @IntegrationTest
@@ -74,6 +76,36 @@ class MeTest(
                 jsonPath("$.displayName") { value("Ali Usta") }
             }
         assertEquals("Ali Usta", jdbc.queryForObject("SELECT display_name FROM users WHERE id = ?", String::class.java, user))
+    }
+
+    @Test
+    fun `patch me rejects duplicate keys without changing the display name`() {
+        val user = auth.user(displayName = "Original")
+        val response =
+            mvc
+                .patch("/v1/me") {
+                    header(HttpHeaders.AUTHORIZATION, auth.bearer(user))
+                    contentType = MediaType.APPLICATION_JSON
+                    content = """{"displayName":"First","displayName":"Second"}"""
+                }.andExpect {
+                    status { isUnprocessableEntity() }
+                    content { contentType(MediaType.APPLICATION_PROBLEM_JSON) }
+                    jsonPath("$.code") { value("validation.failed") }
+                    jsonPath("$.status") { value(422) }
+                    jsonPath("$.errors") { doesNotExist() }
+                }.andReturn()
+                .response
+        listOf("displayName", "First", "Second").forEach { assertFalse(response.contentAsString.contains(it)) }
+        assertEquals("Original", jdbc.queryForObject("SELECT display_name FROM users WHERE id = ?", String::class.java, user))
+    }
+
+    @Test
+    fun `the mapper bean rejects duplicate keys at every object depth`() {
+        listOf(
+            """{"name":"a","name":"b"}""",
+            """{"customer":{"name":"a","name":"b"}}""",
+        ).forEach { body -> assertFailsWith<JacksonException> { json.readTree(body) } }
+        assertEquals("b", json.readTree("""{"first":{"name":"a"},"second":{"name":"b"}}""")["second"]["name"].asString())
     }
 
     @Test

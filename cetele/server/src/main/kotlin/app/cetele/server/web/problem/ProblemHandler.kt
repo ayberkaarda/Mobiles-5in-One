@@ -35,6 +35,8 @@ import org.springframework.web.servlet.HandlerMapping
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import tools.jackson.core.JacksonException
+import tools.jackson.core.exc.InputCoercionException
+import tools.jackson.core.exc.StreamReadException
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.exc.InvalidFormatException
 import tools.jackson.databind.exc.MismatchedInputException
@@ -158,6 +160,10 @@ class ProblemHandler(
         request: HttpServletRequest,
     ): ResponseEntity<ProblemBody> {
         causeOfType<ProblemException>(ex)?.let { return render(request, it) }
+        // A syntax error (a duplicated key included) has no field to report; its path would only echo the body.
+        if (causeOfType<StreamReadException>(ex)?.takeIf { it !is InputCoercionException } != null) {
+            return respond(request, ProblemCode.VALIDATION_FAILED)
+        }
         val jackson = causeOfType<JacksonException>(ex)
         val field = jackson?.let { jsonPath(it) }?.takeIf { it.isNotEmpty() }
         val fieldCode =
