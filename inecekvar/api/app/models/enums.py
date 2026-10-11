@@ -86,6 +86,11 @@ class RefreshRevokeReason(StrEnum):
     ACCOUNT_DELETED = "account_deleted"
 
 
+class MagicLinkPurpose(StrEnum):
+    LOGIN = "login"
+    REGISTER = "register"
+
+
 class DeletionState(StrEnum):
     SCHEDULED = "scheduled"
     CANCELLED = "cancelled"

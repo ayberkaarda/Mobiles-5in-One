@@ -286,3 +286,35 @@ async def test_email_lowercase(connection: asyncpg.Connection[asyncpg.Record]) -
     with pytest.raises(asyncpg.PostgresError) as exc:
         await user(connection, uppercase=True)
     assert exc.value.sqlstate == "23514"
+
+
+async def magic_link(
+    connection: asyncpg.Connection[asyncpg.Record],
+    *,
+    purpose: str,
+    password_hash: str | None,
+) -> None:
+    await connection.execute(
+        "INSERT INTO magic_links (id, email, token_hash, expires_at, purpose, password_hash) "
+        "VALUES ($1, $2, $3, now() + interval '15 minutes', $4, $5)",
+        uuid7(),
+        "link@example.invalid",
+        uuid.uuid4().bytes + uuid.uuid4().bytes,
+        purpose,
+        password_hash,
+    )
+
+
+async def test_registration_link_holds_only_argon2id(
+    connection: asyncpg.Connection[asyncpg.Record],
+) -> None:
+    await magic_link(connection, purpose="register", password_hash="$argon2id$v=19$m=65536")
+    await magic_link(connection, purpose="login", password_hash=None)
+    for purpose, password_hash in (
+        ("login", "$argon2id$v=19$m=65536"),
+        ("register", "plain-text-password"),
+        ("signup", None),
+    ):
+        with pytest.raises(asyncpg.PostgresError) as exc:
+            await magic_link(connection, purpose=purpose, password_hash=password_hash)
+        assert exc.value.sqlstate == "23514"

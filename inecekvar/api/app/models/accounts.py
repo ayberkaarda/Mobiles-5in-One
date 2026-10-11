@@ -16,7 +16,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Timestamps, UUIDPrimaryKey
-from app.models.enums import DeletionState, RefreshRevokeReason, UserRole, enum_check
+from app.models.enums import (
+    DeletionState,
+    MagicLinkPurpose,
+    RefreshRevokeReason,
+    UserRole,
+    enum_check,
+)
 
 
 class User(UUIDPrimaryKey, Timestamps, Base):
@@ -109,6 +115,15 @@ class MagicLink(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("email = lower(email)", name="email_lowercase"),
         CheckConstraint("octet_length(token_hash) = 32", name="token_hash_length"),
         CheckConstraint("expires_at > created_at", name="expiry_after_creation"),
+        CheckConstraint(
+            "password_hash IS NULL OR password_hash LIKE '$argon2id$%'",
+            name="password_hash_format",
+        ),
+        CheckConstraint(
+            "purpose = 'register' OR password_hash IS NULL",
+            name="password_only_for_register",
+        ),
+        enum_check("purpose", MagicLinkPurpose),
         UniqueConstraint("token_hash"),
         Index("ix_magic_links_email", "email"),
     )
@@ -122,6 +137,10 @@ class MagicLink(UUIDPrimaryKey, Timestamps, Base):
     token_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A registration is held on its link until the mailbox owner confirms it; no unverified
+    # user row exists (ADR-0007).
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'login'"))
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class Favorite(Base):
