@@ -122,7 +122,8 @@ async def test_register_then_verify_creates_verified_user(
     async with session_factory() as db:
         assert await db.scalar(select(User).where(User.email == EMAIL)) is None
     response = await client.post(
-        "/v1/auth/magic-link/verify", json={"token": mailed_token(mail), "mode": "cookie"}
+        "/v1/auth/magic-link/verify",
+        json={"token": mailed_token(mail), "mode": "cookie", "password": PASSWORD},
     )
     result = CookieOut.model_validate(response.json())
     assert result.user.email_verified

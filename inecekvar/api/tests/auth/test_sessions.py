@@ -18,6 +18,7 @@ from tests.auth.conftest import (
     cookie_headers,
     create_user,
     login_user,
+    mailed_token,
     register_user,
 )
 from tests.support.app import FixedClock, RecordingMailSender
@@ -179,9 +180,13 @@ async def test_deactivated_user_cannot_authenticate(
     )
     assert response.status_code == 401
     assert response.json()["code"] == "auth.invalid_credentials"
-    before = len(mail.sent)
+    # Same path as any address (no timing signal), but the link cannot sign the account in.
     assert (await client.post("/v1/auth/magic-link", json={"email": EMAIL})).status_code == 202
-    assert len(mail.sent) == before
+    response = await client.post(
+        "/v1/auth/magic-link/verify", json={"token": mailed_token(mail), "mode": "bearer"}
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] == "auth.token_invalid"
 
 
 async def test_cookie_session_rolls_on_me_and_csrf(

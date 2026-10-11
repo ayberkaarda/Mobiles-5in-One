@@ -49,6 +49,8 @@ class MagicLinkIn(Schema):
 class VerifyIn(Schema):
     token: OpaqueToken
     mode: AuthMode
+    # Required for a registration link: the password chosen at registration.
+    password: Password | None = None
 
 
 class RefreshIn(Schema):

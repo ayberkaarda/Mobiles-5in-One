@@ -11,7 +11,7 @@ from app.core.settings import Settings
 
 
 def magic_link_mail(email: str, token: str, settings: Settings) -> OutgoingMail:
-    link = settings.magic_link_base_url + "?" + urlencode({"token": token})
+    link = settings.magic_link_base_url + "#" + urlencode({"token": token})
     return OutgoingMail(
         to=email,
         subject="İnecek Var giriş bağlantınız",
@@ -20,7 +20,7 @@ def magic_link_mail(email: str, token: str, settings: Settings) -> OutgoingMail:
 
 
 def account_exists_mail(email: str, token: str, settings: Settings) -> OutgoingMail:
-    link = settings.magic_link_base_url + "?" + urlencode({"token": token})
+    link = settings.magic_link_base_url + "#" + urlencode({"token": token})
     return OutgoingMail(
         to=email,
         subject="İnecek Var hesabınıza giriş",

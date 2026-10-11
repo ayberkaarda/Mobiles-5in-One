@@ -116,7 +116,7 @@ async def client(services: Services) -> AsyncIterator[httpx.AsyncClient]:
 
 
 def mailed_token(mail: RecordingMailSender) -> str:
-    match = re.search(r"[?&]token=([A-Za-z0-9_-]+)", mail.sent[-1].text)
+    match = re.search(r"#token=([A-Za-z0-9_-]+)", mail.sent[-1].text)
     assert match is not None
     return match.group(1)
 
@@ -134,7 +134,8 @@ async def register_user(
     )
     assert response.status_code == 202
     response = await client.post(
-        "/v1/auth/magic-link/verify", json={"token": mailed_token(mail), "mode": mode}
+        "/v1/auth/magic-link/verify",
+        json={"token": mailed_token(mail), "mode": mode, "password": PASSWORD},
     )
     assert response.status_code == 200
     return response
@@ -163,7 +164,9 @@ async def create_user(
         user = User(
             id=uuid7(),
             email=email,
-            password_hash=hash_password(password, settings) if password is not None else None,
+            password_hash=(
+                await hash_password(password, settings) if password is not None else None
+            ),
             role=role.value,
             email_verified_at=clock.now(),
             created_at=clock.now(),

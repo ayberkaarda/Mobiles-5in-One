@@ -122,7 +122,7 @@ async def magic_link_verify(
     if body.mode == "cookie":
         check_cookie_origin(request, settings)
     now = clock.now()
-    user = await verify_link(db, body.token, now)
+    user = await verify_link(db, settings, body.token, body.password, now)
     output = await issue_session(db, settings, request, response, user, body.mode, now)
     structlog.get_logger().info("auth.magic_link.verified", user_id=str(user.id))
     return output
@@ -256,8 +256,11 @@ async def delete_me(
     principal: PrincipalDep,
     db: DbDep,
     settings: SettingsDep,
+    limiter: RateLimiterDep,
     clock: ClockDep,
 ) -> StatusOut:
+    # Re-authentication shares the login budget, keyed by account, before any hashing.
+    await enforce_rate_limit(limiter, "auth.login", "reauth:" + str(principal.user_id))
     user = await locked_user(db, principal.user_id)
     await request_deletion(db, settings, principal, user, body.password, clock.now())
     if principal.auth_mode == "cookie":

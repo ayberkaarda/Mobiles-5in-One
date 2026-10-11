@@ -1,6 +1,8 @@
 import hmac
 import unicodedata
+from functools import cache, partial
 
+import anyio
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from argon2.low_level import Type
@@ -9,31 +11,68 @@ from app.core.deps import BreachChecker
 from app.core.errors import ProblemError
 from app.core.settings import Settings
 
-DUMMY_HASH = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=1).hash(
-    "unavailable-account-verification"
-)
+# Argon2 runs in worker threads so it never blocks the event loop; at most this many hashes
+# run at once per process, which also bounds the memory used by concurrent requests.
+HASH_CONCURRENCY = 4
+_hash_slots: anyio.CapacityLimiter | None = None
+
+
+def _slots() -> anyio.CapacityLimiter:
+    global _hash_slots
+    if _hash_slots is None:
+        _hash_slots = anyio.CapacityLimiter(HASH_CONCURRENCY)
+    return _hash_slots
 
 
 def password_hasher(settings: Settings) -> PasswordHasher:
-    return PasswordHasher(
-        time_cost=settings.argon2_time_cost,
-        memory_cost=settings.argon2_memory_cost_kib,
-        parallelism=settings.argon2_parallelism,
-        type=Type.ID,
+    return _hasher(
+        settings.argon2_time_cost, settings.argon2_memory_cost_kib, settings.argon2_parallelism
     )
 
 
-def hash_password(password: str, settings: Settings) -> str:
+@cache
+def _hasher(time_cost: int, memory_cost: int, parallelism: int) -> PasswordHasher:
+    return PasswordHasher(
+        time_cost=time_cost, memory_cost=memory_cost, parallelism=parallelism, type=Type.ID
+    )
+
+
+@cache
+def _dummy_hash(time_cost: int, memory_cost: int, parallelism: int) -> str:
+    return _hasher(time_cost, memory_cost, parallelism).hash("unavailable-account-verification")
+
+
+def dummy_hash(settings: Settings) -> str:
+    """A hash with the configured cost, verified when no real hash exists (equal timing)."""
+    return _dummy_hash(
+        settings.argon2_time_cost, settings.argon2_memory_cost_kib, settings.argon2_parallelism
+    )
+
+
+def _hash_sync(password: str, settings: Settings) -> str:
     return password_hasher(settings).hash(unicodedata.normalize("NFC", password))
 
 
-def verify_password(password: str, password_hash: str, settings: Settings) -> tuple[bool, bool]:
+def _verify_sync(password: str, password_hash: str, settings: Settings) -> tuple[bool, bool]:
     hasher = password_hasher(settings)
     try:
         hasher.verify(password_hash, unicodedata.normalize("NFC", password))
     except (VerificationError, InvalidHashError):
         return False, False
     return True, hasher.check_needs_rehash(password_hash)
+
+
+async def hash_password(password: str, settings: Settings) -> str:
+    return await anyio.to_thread.run_sync(partial(_hash_sync, password, settings), limiter=_slots())
+
+
+async def verify_password(
+    password: str, password_hash: str, settings: Settings
+) -> tuple[bool, bool]:
+    """Returns (matches, needs_rehash)."""
+    return await anyio.to_thread.run_sync(
+        partial(_verify_sync, password, password_hash, settings), limiter=_slots()
+    )
 
 
 async def check_password_policy(

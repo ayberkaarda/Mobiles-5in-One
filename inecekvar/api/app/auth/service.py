@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.mail import account_exists_mail, magic_link_mail
-from app.auth.passwords import DUMMY_HASH, hash_password, verify_password
+from app.auth.passwords import dummy_hash, hash_password, verify_password
 from app.auth.schemas import RefreshOut
 from app.auth.sessions import new_refresh, refresh_output, revoke_family, revoke_user
 from app.auth.tokens import opaque_token, token_hash
@@ -59,10 +59,10 @@ async def send_link(
     now: datetime,
     password: str | None = None,
 ) -> None:
-    password_hash = hash_password(password, settings) if password is not None else None
+    password_hash = await hash_password(password, settings) if password is not None else None
+    # A deactivated account still gets a link (verify refuses it), so every address takes the
+    # same path and the same time.
     user = await db.scalar(select(User).where(User.email == email))
-    if user is not None and user.deactivated_at is not None and password is None:
-        return
     raw = opaque_token()
     purpose = (
         MagicLinkPurpose.REGISTER
@@ -87,7 +87,13 @@ async def send_link(
     await mail.send(builder(email, raw, settings))
 
 
-async def verify_link(db: AsyncSession, raw: str, now: datetime) -> User:
+async def verify_link(
+    db: AsyncSession, settings: Settings, raw: str, password: str | None, now: datetime
+) -> User:
+    """Consume a link. A registration link activates its stored password only when the
+    verifying client repeats that password, so a link opened by someone who did not start the
+    registration cannot activate a password chosen by somebody else (account pre-hijacking).
+    """
     link = await db.scalar(
         select(MagicLink)
         .where(
@@ -99,6 +105,13 @@ async def verify_link(db: AsyncSession, raw: str, now: datetime) -> User:
     )
     if link is None:
         raise ProblemError(AUTH_TOKEN_INVALID, 401)
+    if link.purpose == MagicLinkPurpose.REGISTER and link.password_hash is not None:
+        existing = await db.scalar(select(User.id).where(User.email == link.email))
+        if existing is None:
+            ok, _ = await verify_password(password or "", link.password_hash, settings)
+            if password is None or not ok:
+                await db.rollback()
+                raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     link.used_at = now
     link.updated_at = now
     await db.execute(
@@ -128,13 +141,13 @@ async def password_login(
     db: AsyncSession, settings: Settings, email: str, password: str, now: datetime
 ) -> User:
     user = await db.scalar(select(User).where(User.email == email).with_for_update())
-    stored = user.password_hash if user is not None and user.password_hash else DUMMY_HASH
-    ok, rehash = verify_password(password, stored, settings)
+    stored = user.password_hash if user is not None and user.password_hash else None
+    ok, rehash = await verify_password(password, stored or dummy_hash(settings), settings)
     if user is None or user.password_hash is None or not ok or user.deactivated_at is not None:
         structlog.get_logger().info("auth.login.failed")
         raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     if rehash:
-        user.password_hash = hash_password(password, settings)
+        user.password_hash = await hash_password(password, settings)
         user.updated_at = now
     return user
 
@@ -155,8 +168,10 @@ async def rotate_refresh(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    if token is None or token.expires_at <= now:
+    if token is None:
         raise ProblemError(AUTH_TOKEN_INVALID, 401)
+    # Reuse is checked before expiry: replaying an expired, already rotated token still
+    # revokes the family that descends from it.
     if token.used_at is not None or token.revoked_at is not None:
         await revoke_family(db, token.family_id, now, RefreshRevokeReason.REUSE_DETECTED)
         token.revoked_at = now
@@ -166,6 +181,8 @@ async def rotate_refresh(
         structlog.get_logger().warning(
             "auth.refresh.reuse_detected", family_id=str(token.family_id)
         )
+        raise ProblemError(AUTH_TOKEN_INVALID, 401)
+    if token.expires_at <= now:
         raise ProblemError(AUTH_TOKEN_INVALID, 401)
     if user is None or user.deactivated_at is not None:
         raise ProblemError(AUTH_TOKEN_INVALID, 401)
@@ -211,11 +228,11 @@ async def request_deletion(
     now: datetime,
 ) -> None:
     if user.password_hash is not None:
-        ok, _ = verify_password(password or "", user.password_hash, settings)
+        ok, _ = await verify_password(password or "", user.password_hash, settings)
         if password is None or not ok:
             raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     else:
-        verify_password(password or "", DUMMY_HASH, settings)
+        await verify_password(password or "", dummy_hash(settings), settings)
         created: datetime | None
         if principal.auth_mode == "cookie":
             created = await db.scalar(

@@ -87,7 +87,7 @@ async def create_account(services: Services, role: UserRole) -> tuple[uuid.UUID,
             {
                 "id": identity,
                 "email": email,
-                "password_hash": hash_password(PASSWORD, services.settings),
+                "password_hash": await hash_password(PASSWORD, services.settings),
                 "role": role.value,
                 "now": services.clock.now(),
             },
