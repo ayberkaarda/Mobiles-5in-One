@@ -15,14 +15,15 @@ header baseline is set now for every response, including errors.
 
 ### Headers on every response
 
-| Header                      | Value                                                                                                                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload`, on secure requests only                                                                                                               |
-| `Content-Security-Policy`   | `default-src 'none'; script-src 'self' 'nonce-<n>'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
-| `X-Content-Type-Options`    | `nosniff`                                                                                                                                                                             |
-| `X-Frame-Options`           | `DENY`                                                                                                                                                                                |
-| `Referrer-Policy`           | `strict-origin-when-cross-origin`                                                                                                                                                     |
-| `Permissions-Policy`        | `camera=(), geolocation=(), microphone=()`                                                                                                                                            |
+| Header                         | Value                                                                                                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Strict-Transport-Security`    | `max-age=63072000; includeSubDomains; preload`, on secure requests only                                                                                                               |
+| `Content-Security-Policy`      | `default-src 'none'; script-src 'self' 'nonce-<n>'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
+| `X-Content-Type-Options`       | `nosniff`                                                                                                                                                                             |
+| `X-Frame-Options`              | `DENY`                                                                                                                                                                                |
+| `Referrer-Policy`              | `strict-origin-when-cross-origin`                                                                                                                                                     |
+| `Permissions-Policy`           | `camera=(), geolocation=(), microphone=()`                                                                                                                                            |
+| `Cross-Origin-Resource-Policy` | `same-origin`: cross-origin read protection for the cookie-session admin console and the token-in-URL statement page; no effect on bearer-token API clients.                          |
 
 Responses under `/v1/**` also carry `Cache-Control: no-store` and `Pragma: no-cache`.
 
