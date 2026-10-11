@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda and Cetele have applications. The Kadro card shows its web and lineup image and three Android app screens (emulator, sample data; the full set is in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md)). The Askıda card shows its brand system and three app screens (Android emulator, sample data); the full set is in [`askida/README.md`](askida/README.md#screenshots). The Cetele card shows three app screens (Android emulator signed in against a local server, sample data); screenshots are in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
+One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
