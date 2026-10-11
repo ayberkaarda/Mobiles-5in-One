@@ -14,6 +14,7 @@ import app.cetele.android.feature.settings.R
 import app.cetele.android.feature.settings.common.ReauthField
 import app.cetele.android.feature.settings.common.SettingsErrorText
 import app.cetele.android.feature.settings.common.SettingsPage
+import app.cetele.android.feature.settings.common.SubscriptionNotice
 
 @Composable
 internal fun AccountDeletionScreen(
@@ -23,11 +24,13 @@ internal fun AccountDeletionScreen(
     onTransfer: () -> Unit,
     onDismissChoice: () -> Unit,
     onBack: () -> Unit,
+    onManageSubscription: (() -> Unit)? = null,
 ) {
     var code by remember { mutableStateOf("") }
     var deleteOwnedShops by remember { mutableStateOf(false) }
     SettingsPage(stringResource(R.string.settings_home_account_deletion), onBack) {
         Text(stringResource(R.string.settings_deletion_explanation))
+        SubscriptionNotice(onManageSubscription)
         if (state.receipt != null) {
             Text(stringResource(R.string.settings_deletion_scheduled))
             CeteleButton(stringResource(R.string.settings_common_back), onBack)

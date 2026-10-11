@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.cetele.android.feature.auth.navigation.AuthRoutes
 import app.cetele.android.feature.auth.navigation.authGraph
+import app.cetele.android.feature.billing.navigation.billingGraph
 import app.cetele.android.feature.customers.navigation.customersGraph
 import app.cetele.android.feature.export.navigation.exportGraph
 import app.cetele.android.feature.ledger.navigation.ledgerGraph
@@ -59,9 +60,10 @@ fun CeteleNavHost(
             shopGraph(navigations.shop)
             customersGraph(navigations.customers)
             ledgerGraph(navigations.ledger, services.refreshing)
-            remindersGraph(navigations.back)
+            remindersGraph(navigations.reminders)
             exportGraph(navigations.back)
             settingsGraph(navigations.settings)
+            billingGraph(navigations.billing)
             composable<ShopHomeRoute> { ShopHomeRoute(onOpen = navigator::open) }
         }
     }

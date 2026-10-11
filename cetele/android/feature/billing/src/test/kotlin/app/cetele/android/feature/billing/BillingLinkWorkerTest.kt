@@ -17,6 +17,7 @@ import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.BillingApi
 import app.cetele.android.core.network.dto.billing.LinkPurchaseRequest
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.feature.billing.link.BillingLinkClient
 import app.cetele.android.feature.billing.link.BillingLinkScheduler
 import app.cetele.android.feature.billing.link.BillingLinkWorker
@@ -47,7 +48,7 @@ class BillingLinkWorkerTest {
     @Test
     fun billingUnavailableRetries() =
         runTest {
-            coEvery { api.link(any(), any()) } returns problem(503, BillingProblemCodes.UNAVAILABLE, 30)
+            coEvery { api.link(any(), any()) } returns problem(503, ProblemCodes.BILLING_UNAVAILABLE, 30)
             assertEquals(ListenableWorker.Result.retry(), worker().doWork())
             coVerify(exactly = 0) { shops.refresh() }
         }
@@ -66,22 +67,22 @@ class BillingLinkWorkerTest {
     @Test
     fun tokenInUseStopsWithItsCode() =
         runTest {
-            coEvery { api.link(any(), any()) } returns problem(409, BillingProblemCodes.TOKEN_IN_USE)
-            assertStops(BillingProblemCodes.TOKEN_IN_USE)
+            coEvery { api.link(any(), any()) } returns problem(409, ProblemCodes.BILLING_TOKEN_IN_USE)
+            assertStops(ProblemCodes.BILLING_TOKEN_IN_USE)
         }
 
     @Test
     fun alreadySubscribedStopsWithItsCode() =
         runTest {
-            coEvery { api.link(any(), any()) } returns problem(409, BillingProblemCodes.ALREADY_SUBSCRIBED)
-            assertStops(BillingProblemCodes.ALREADY_SUBSCRIBED)
+            coEvery { api.link(any(), any()) } returns problem(409, ProblemCodes.BILLING_ALREADY_SUBSCRIBED)
+            assertStops(ProblemCodes.BILLING_ALREADY_SUBSCRIBED)
         }
 
     @Test
     fun purchaseInvalidStopsWithItsCode() =
         runTest {
-            coEvery { api.link(any(), any()) } returns problem(422, BillingProblemCodes.PURCHASE_INVALID)
-            assertStops(BillingProblemCodes.PURCHASE_INVALID)
+            coEvery { api.link(any(), any()) } returns problem(422, ProblemCodes.BILLING_PURCHASE_INVALID)
+            assertStops(ProblemCodes.BILLING_PURCHASE_INVALID)
         }
 
     @Test
@@ -138,7 +139,7 @@ class BillingLinkWorkerTest {
         runTest {
             val work = mockk<WorkManager>(relaxed = true)
             val linker = PurchaseLinker(BillingLinkClient(api, shops), BillingLinkScheduler(work), TestGateway(), shops)
-            coEvery { api.link(any(), any()) } returns problem(503, BillingProblemCodes.UNAVAILABLE, 30)
+            coEvery { api.link(any(), any()) } returns problem(503, ProblemCodes.BILLING_UNAVAILABLE, 30)
             assertEquals(LinkOutcome.Queued, linker.link(SHOP_ID, purchase()))
             verify(exactly = 1) {
                 work.enqueueUniqueWork(
@@ -147,8 +148,8 @@ class BillingLinkWorkerTest {
                     any<OneTimeWorkRequest>(),
                 )
             }
-            coEvery { api.link(any(), any()) } returns problem(422, BillingProblemCodes.PURCHASE_INVALID)
-            assertEquals(LinkOutcome.Refused(BillingProblemCodes.PURCHASE_INVALID), linker.link(SHOP_ID, purchase()))
+            coEvery { api.link(any(), any()) } returns problem(422, ProblemCodes.BILLING_PURCHASE_INVALID)
+            assertEquals(LinkOutcome.Refused(ProblemCodes.BILLING_PURCHASE_INVALID), linker.link(SHOP_ID, purchase()))
             verify(exactly = 1) { work.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
         }
 

@@ -9,7 +9,6 @@ import app.cetele.android.core.designsystem.copy.ProblemCodeText
 import app.cetele.android.core.domain.format.DateFormats
 import app.cetele.android.core.domain.time.CeteleClock
 import app.cetele.android.core.network.dto.problem.ProblemCodes
-import app.cetele.android.feature.billing.BillingProblemCodes
 import app.cetele.android.feature.billing.R
 import app.cetele.android.feature.billing.data.SubscriptionStatus
 import app.cetele.android.feature.billing.data.Usage
@@ -51,10 +50,10 @@ internal fun noticeText(notice: BillingNotice): String =
 @StringRes
 internal fun billingCodeText(code: String?): Int? =
     when (code) {
-        BillingProblemCodes.PURCHASE_INVALID -> R.string.billing_error_purchase_invalid
-        BillingProblemCodes.TOKEN_IN_USE -> R.string.billing_error_token_in_use
-        BillingProblemCodes.ALREADY_SUBSCRIBED -> R.string.billing_error_already_subscribed
-        BillingProblemCodes.UNAVAILABLE -> R.string.billing_error_unavailable
+        ProblemCodes.BILLING_PURCHASE_INVALID -> R.string.billing_error_purchase_invalid
+        ProblemCodes.BILLING_TOKEN_IN_USE -> R.string.billing_error_token_in_use
+        ProblemCodes.BILLING_ALREADY_SUBSCRIBED -> R.string.billing_error_already_subscribed
+        ProblemCodes.BILLING_UNAVAILABLE -> R.string.billing_error_unavailable
         ProblemCodes.FORBIDDEN -> R.string.billing_error_forbidden
         else -> null
     }

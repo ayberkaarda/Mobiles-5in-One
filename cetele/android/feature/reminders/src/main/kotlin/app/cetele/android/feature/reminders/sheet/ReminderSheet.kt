@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.component.BalanceBand
 import app.cetele.android.core.designsystem.component.CeteleButton
+import app.cetele.android.core.designsystem.component.PlanUpgradeAction
 import app.cetele.android.core.domain.format.DateFormats
 import app.cetele.android.core.domain.model.Money
 import app.cetele.android.core.domain.time.CeteleClock
@@ -33,6 +34,7 @@ import java.time.Instant
 fun ReminderSheetRoute(
     viewModel: ReminderViewModel,
     onDismiss: () -> Unit,
+    onUpgrade: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -48,7 +50,7 @@ fun ReminderSheetRoute(
             viewModel.shareFinished(opened)
         }
     }
-    ReminderSheet(state, viewModel::sendWhatsApp, viewModel::sendSms, onDismiss)
+    ReminderSheet(state, viewModel::sendWhatsApp, viewModel::sendSms, onDismiss, onUpgrade = onUpgrade)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +61,7 @@ fun ReminderSheet(
     onSms: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onUpgrade: (() -> Unit)? = null,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Column(
@@ -102,10 +105,20 @@ fun ReminderSheet(
             state.message?.takeUnless { it == state.smsDisabledReason || it == state.whatsappDisabledReason }?.let {
                 Text(stringResource(it))
             }
-            state.retrySeconds?.let { Text(stringResource(R.string.reminders_sheet_retry_after, it)) }
-            state.traceId?.let {
-                Text(stringResource(R.string.reminders_sheet_support, it), style = MaterialTheme.typography.bodySmall)
-            }
+            FailureFollowUp(state, onUpgrade)
         }
+    }
+}
+
+/** What follows a refused send: the Çetele Pro way after `sms.quota_exceeded`, the wait and the support code. */
+@Composable
+private fun FailureFollowUp(
+    state: ReminderState,
+    onUpgrade: (() -> Unit)?,
+) {
+    if (state.quotaExceeded) PlanUpgradeAction(state.shop, onUpgrade)
+    state.retrySeconds?.let { Text(stringResource(R.string.reminders_sheet_retry_after, it)) }
+    state.traceId?.let {
+        Text(stringResource(R.string.reminders_sheet_support, it), style = MaterialTheme.typography.bodySmall)
     }
 }

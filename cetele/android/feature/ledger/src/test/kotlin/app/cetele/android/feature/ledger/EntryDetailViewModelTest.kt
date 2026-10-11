@@ -154,6 +154,18 @@ class EntryDetailViewModelTest {
         }
 
     @Test
+    fun photoLimitKeepsTheShopForThePlanPromptAndCanStillBeSentWithoutPhoto() =
+        modelTest {
+            coEvery { photos.sendWithoutPhoto(any()) } returns true
+            upload.value = EntryPhotoStatus.LimitReached
+            runCurrent()
+            assertEquals(LedgerFixtures.shop(), model.state.value.shop)
+            model.sendWithoutPhoto()
+            runCurrent()
+            coVerify(exactly = 1) { photos.sendWithoutPhoto(LedgerFixtures.entry()) }
+        }
+
+    @Test
     fun missingEntryIsReportedAfterLoading() =
         modelTest {
             runCurrent()

@@ -4,6 +4,8 @@ import app.cetele.android.core.data.session.SignOutReason
 import app.cetele.android.core.designsystem.component.SyncStatusSummary
 import app.cetele.android.core.domain.model.EntryType
 import app.cetele.android.feature.auth.navigation.AuthRoutes
+import app.cetele.android.feature.billing.BillingProduct
+import app.cetele.android.feature.billing.navigation.BillingRoutes
 import app.cetele.android.feature.customers.navigation.CustomerRoutes
 import app.cetele.android.feature.export.navigation.ExportRoutes
 import app.cetele.android.feature.ledger.navigation.LedgerRoutes
@@ -14,6 +16,7 @@ import app.cetele.android.startup.SyncRequests
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class FeatureNavigationsTest {
@@ -199,6 +202,42 @@ class FeatureNavigationsTest {
 
         assertEquals("0.3.0", settings.appVersion)
         assertEquals(listOf("open" to SettingsRoutes.About, "back" to null, "back" to null), navigator.calls)
+    }
+
+    @Test
+    fun `settings and every limit prompt open the billing screen, which closes back`() {
+        val navigations = AppNavigations(navigator, ShellServices(sync, emptyFlow(), emptyFlow(), { null }, "1.0"))
+
+        navigations.settings.onOpenBilling()
+        navigations.customers.onOpenBilling()
+        navigations.ledger.onOpenBilling()
+        navigations.reminders.onOpenBilling()
+        navigations.billing.onBack()
+        navigations.reminders.onBack()
+
+        assertEquals(
+            listOf(
+                "open" to BillingRoutes.Home,
+                "open" to BillingRoutes.Home,
+                "open" to BillingRoutes.Home,
+                "open" to BillingRoutes.Home,
+                "back" to null,
+                "back" to null,
+            ),
+            navigator.calls,
+        )
+        assertTrue(sync.calls.isEmpty())
+    }
+
+    @Test
+    fun `deletion screens link to the play subscription page of cetele pro`() {
+        val settings = AppSettingsNavigation(navigator, "0.3.0")
+
+        assertEquals(BillingProduct.MANAGE_URL, settings.subscriptionManageUrl)
+        assertEquals(
+            "https://play.google.com/store/account/subscriptions?sku=cetele_pro&package=app.cetele.android",
+            settings.subscriptionManageUrl,
+        )
     }
 
     @Test

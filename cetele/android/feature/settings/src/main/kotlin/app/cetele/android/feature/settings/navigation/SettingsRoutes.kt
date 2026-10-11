@@ -24,4 +24,12 @@ interface SettingsNavigation {
     val onNavigate: (Any) -> Unit
     val onBack: () -> Unit
     val appVersion: String
+
+    /** Opens the plan and Çetele Pro screen of the active shop; `null` hides the entry. */
+    val onOpenBilling: (() -> Unit)?
+        get() = null
+
+    /** Play's subscription page, linked from the deletion screens for owners (spec item 21); `null` hides it. */
+    val subscriptionManageUrl: String?
+        get() = null
 }

@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import app.cetele.android.core.data.lock.LockController
 import app.cetele.android.di.ApplicationScope
 import app.cetele.android.startup.AppVisibility
+import app.cetele.android.startup.BillingRestoreStartup
 import app.cetele.android.startup.LockLifecycleObserver
 import app.cetele.android.startup.SyncStartup
 import dagger.hilt.android.HiltAndroidApp
@@ -24,6 +25,9 @@ class CeteleApplication :
     lateinit var syncStartup: SyncStartup
 
     @Inject
+    lateinit var billingRestore: BillingRestoreStartup
+
+    @Inject
     lateinit var lock: LockController
 
     @Inject
@@ -36,6 +40,7 @@ class CeteleApplication :
     override fun onCreate() {
         super.onCreate()
         syncStartup.start(appScope)
+        billingRestore.start(appScope)
         val visibility =
             object : AppVisibility {
                 override suspend fun onForeground() = lock.onAppStart()

@@ -5,6 +5,9 @@ import app.cetele.android.core.designsystem.component.SyncStatusSummary
 import app.cetele.android.core.domain.model.EntryType
 import app.cetele.android.feature.auth.navigation.AuthNavigation
 import app.cetele.android.feature.auth.navigation.AuthRoutes
+import app.cetele.android.feature.billing.BillingProduct
+import app.cetele.android.feature.billing.navigation.BillingNavigation
+import app.cetele.android.feature.billing.navigation.BillingRoutes
 import app.cetele.android.feature.customers.navigation.CustomerNavigation
 import app.cetele.android.feature.customers.navigation.CustomerRoutes
 import app.cetele.android.feature.export.navigation.ExportNavigation
@@ -69,6 +72,8 @@ class AppCustomerNavigation(
     override val syncStatus: Flow<SyncStatusSummary>,
     override val customerLimitRejected: Flow<Boolean>,
 ) : CustomerNavigation {
+    override val onOpenBilling: () -> Unit = { navigator.open(BillingRoutes.Home) }
+
     override fun onCustomerSelected(customerId: String) = navigator.open(CustomerRoutes.Detail(customerId))
 
     override fun onAddCustomer() = navigator.open(CustomerRoutes.Edit())
@@ -103,6 +108,8 @@ class AppLedgerNavigation(
     private val navigator: RouteNavigator,
     private val sync: SyncRequests,
 ) : LedgerNavigation {
+    override val onOpenBilling: () -> Unit = { navigator.open(BillingRoutes.Home) }
+
     override fun onBack() = navigator.back()
 
     override fun onEntrySelected(entryId: String) = navigator.open(LedgerRoutes.EntryDetail(entryId))
@@ -121,12 +128,29 @@ class AppBackNavigation(
     override fun onBack() = navigator.back()
 }
 
+/** The reminder sheet closes back, and after `sms.quota_exceeded` an owner can open the Çetele Pro screen. */
+class AppReminderNavigation(
+    private val navigator: RouteNavigator,
+) : ReminderNavigation {
+    override val onOpenBilling: () -> Unit = { navigator.open(BillingRoutes.Home) }
+
+    override fun onBack() = navigator.back()
+}
+
+class AppBillingNavigation(
+    private val navigator: RouteNavigator,
+) : BillingNavigation {
+    override fun onBack() = navigator.back()
+}
+
 class AppSettingsNavigation(
     navigator: RouteNavigator,
     override val appVersion: String,
 ) : SettingsNavigation {
     override val onNavigate: (Any) -> Unit = navigator::open
     override val onBack: () -> Unit = navigator::back
+    override val onOpenBilling: () -> Unit = { navigator.open(BillingRoutes.Home) }
+    override val subscriptionManageUrl: String = BillingProduct.MANAGE_URL
 }
 
 /** What the shell hands to the feature callbacks: sync scheduling, the active shop and its sync status. */
@@ -150,5 +174,7 @@ class AppNavigations(
     val customers = AppCustomerNavigation(navigator, services.syncStatus, services.customerLimitRejected)
     val ledger = AppLedgerNavigation(navigator, services.sync)
     val back = AppBackNavigation(navigator)
+    val reminders = AppReminderNavigation(navigator)
+    val billing = AppBillingNavigation(navigator)
     val settings = AppSettingsNavigation(navigator, services.appVersion)
 }

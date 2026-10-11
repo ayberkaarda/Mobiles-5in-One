@@ -8,7 +8,7 @@ import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.BillingApi
-import app.cetele.android.feature.billing.BillingProblemCodes
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.feature.billing.ObfuscatedAccountId
 import app.cetele.android.feature.billing.data.BillingOverview
 import app.cetele.android.feature.billing.data.BillingStateMapper
@@ -244,7 +244,7 @@ class BillingViewModel
 
                 is LinkOutcome.Refused -> {
                     mutableState.update { it.copy(notice = BillingNotice.Problem(outcome.code)) }
-                    if (outcome.code == BillingProblemCodes.ALREADY_SUBSCRIBED) reloadState(shopId)
+                    if (outcome.code == ProblemCodes.BILLING_ALREADY_SUBSCRIBED) reloadState(shopId)
                 }
             }
         }
