@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Kadro and Askida dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
+  "description": "Kadro, Askida and Cetele dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
   "extends": ["config:recommended"],
-  "includePaths": ["kadro/**", "askida/**", ".github/**"],
+  "includePaths": ["kadro/**", "askida/**", "cetele/**", ".github/**"],
   "timezone": "Europe/Istanbul",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
@@ -86,6 +86,45 @@
       "matchFileNames": ["askida/**"],
       "matchUpdateTypes": ["major"],
       "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Cetele: Gradle dependencies and plugins of the server (cetele/server) in one weekly group. The Spring Boot BOM versions follow the spring-boot plugin entry, so Boot moves on its own pull request below.",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["cetele/server/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "cetele server gradle minor and patch",
+      "automerge": false
+    },
+    {
+      "description": "Cetele: Gradle dependencies and plugins of the Android app (cetele/android) in one weekly group; the Compose BOM, Kotlin, KSP and AGP entries are pinned together by ADR-0001, so a Kotlin or AGP update is reviewed with its KSP and Compose pair.",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["cetele/android/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "cetele android gradle minor and patch",
+      "automerge": false
+    },
+    {
+      "description": "Cetele: major updates of Gradle dependencies open one pull request each so they can be reviewed on their own.",
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["cetele/**"],
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Cetele: the Gradle wrapper of both roots, one pull request each (the wrapper checksum is validated in CI).",
+      "matchManagers": ["gradle-wrapper"],
+      "matchFileNames": ["cetele/**"],
+      "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Cetele: container images of the local stack (docker-compose.yml) in one weekly group; digests stay pinned.",
+      "matchManagers": ["docker-compose"],
+      "matchFileNames": ["cetele/**"],
+      "groupName": "cetele compose images",
+      "pinDigests": true,
       "automerge": false
     },
     {

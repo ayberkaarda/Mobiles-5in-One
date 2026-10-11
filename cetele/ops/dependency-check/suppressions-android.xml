@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP Dependency-Check suppressions for cetele/android (spec item 19).
+  Rule: every <suppress> carries a <notes> element with the reason, the advisory it covers and a
+  review date. A suppression without a reason is not accepted in review. No entry is needed yet:
+  an empty file is the honest state until a scan reports a finding that is judged not exploitable.
+  Add entries like this one (shown as a comment, not active):
+    <suppress until="2027-01-31Z">
+      <notes>Reason, advisory id, why the vulnerable code path is not reachable, reviewer, date.</notes>
+      <packageUrl regex="true">^pkg:maven/group/artifact@.*$</packageUrl>
+      <cve>CVE-0000-00000</cve>
+    </suppress>
+  `until` is mandatory in practice: a suppression expires and is reviewed again.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+</suppressions>

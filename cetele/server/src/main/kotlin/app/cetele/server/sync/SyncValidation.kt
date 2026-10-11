@@ -56,6 +56,11 @@ class SyncValidation(
         }
         op.customer?.let { c ->
             validator.validate(c).forEach { errors += ProblemFieldError("customer.${it.propertyPath}", code(it)) }
+            // PostgreSQL text cannot hold U+0000 and names and tags have no use for control characters;
+            // without this the database error surfaced as a misleading "conflict" rejection.
+            if (c.name.any { Character.isISOControl(it) }) add("customer.name")
+            if (c.tag != null && c.tag.any { Character.isISOControl(it) }) add("customer.tag")
+            if (c.note != null && c.note.contains(NUL)) add("customer.note")
             if (c.smsConsentSource != null &&
                 c.smsConsentSource !in setOf("IN_PERSON", "PHONE", "WRITTEN", "OTHER")
             ) {
@@ -66,6 +71,7 @@ class SyncValidation(
         }
         op.entry?.let { e ->
             validator.validate(e).forEach { errors += ProblemFieldError("entry.${it.propertyPath}", code(it)) }
+            if (e.note != null && e.note.contains(NUL)) add("entry.note")
             if (e.type !in setOf("DEBT", "PAYMENT")) add("entry.type")
             if (e.dueOn != null && e.type != "DEBT") add("entry.dueOn")
             if (e.occurredOn > CeteleTime.today(clock).plusDays(1)) add("entry.occurredOn", "out_of_range")
@@ -80,6 +86,10 @@ class SyncValidation(
             }
         }
         return errors.distinct().sortedWith(compareBy({ it.field }, { it.code }))
+    }
+
+    private companion object {
+        const val NUL = '\u0000'
     }
 
     /**
