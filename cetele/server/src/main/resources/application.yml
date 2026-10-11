@@ -92,6 +92,19 @@ cetele:
       secret: ${CETELE_SMS_DLR_SECRET:}
       previous-secret: ${CETELE_SMS_DLR_PREVIOUS_SECRET:}
       allowed-ips: ${CETELE_SMS_DLR_ALLOWED_IPS:}
+  # Cost alerts (spec item 22, docs/ops/cost-alerts.md): daily SMS credit check and operator mail.
+  monitoring:
+    sms-balance:
+      min-credit: ${CETELE_SMS_BALANCE_MIN_CREDIT:500}
+      last-top-up: ${CETELE_SMS_BALANCE_LAST_TOP_UP:0}
+      top-up-percent: ${CETELE_SMS_BALANCE_TOP_UP_PERCENT:20}
+  alerts:
+    mailer: ${CETELE_ALERT_MAILER:}
+    to: ${CETELE_ALERT_EMAIL_TO:}
+    from: ${CETELE_MAIL_FROM:}
+    resend:
+      api-key: ${CETELE_RESEND_API_KEY:}
+      base-url: ${CETELE_RESEND_BASE_URL:}
   security:
     require-https: true
   jwt:
