@@ -10,7 +10,7 @@
 <link rel="alternate" hreflang="tr-TR" href="https://ayberkaarda.github.io/Mobiles-5in-One/askida/etki">
 <link rel="alternate" hreflang="x-default" href="https://ayberkaarda.github.io/Mobiles-5in-One/askida/etki">
 <link rel="preload" href="/Mobiles-5in-One/askida/fonts/text-var.woff2__152d6682f1.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/Mobiles-5in-One/askida/css/site.css__2167772509.css">
+<link rel="stylesheet" href="/Mobiles-5in-One/askida/css/site.css__1be5a427d4.css">
 <link rel="icon" href="/Mobiles-5in-One/askida/logo/askida-favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#F4F0E8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#171411" media="(prefers-color-scheme: dark)">
@@ -48,26 +48,29 @@
 </header>
 <main id="main">
 <section class="page-head">
-<div class="wrap">
+<div class="wrap head-grid">
+<svg aria-hidden="true" focusable="false" class="art head-art" viewBox="0 0 260 220"><g class="swing" transform-origin="50 0"><path class="f-sand" fill-rule="evenodd" d="M24 40H76A10 10 0 0 1 86 50V140A10 10 0 0 1 76 150H24A10 10 0 0 1 14 140V50A10 10 0 0 1 24 40ZM44 58A6 6 0 1 0 56 58A6 6 0 1 0 44 58Z"/><path d="M43 4V0A7 7 0 0 1 57 0L43 20A7 7 0 0 0 57 20V16M50 27V52"/></g><g class="swing" transform-origin="130 0"><path class="f-crust" fill-rule="evenodd" d="M100 70H160A10 10 0 0 1 170 80V200A10 10 0 0 1 160 210H100A10 10 0 0 1 90 200V80A10 10 0 0 1 100 70ZM124 88A6 6 0 1 0 136 88A6 6 0 1 0 124 88Z"/><path d="M123 4V0A7 7 0 0 1 137 0L123 46A7 7 0 0 0 137 46V42M130 53V82"/></g><g class="swing" transform-origin="210 0"><path class="f-paper" fill-rule="evenodd" d="M184 50H236A10 10 0 0 1 246 60V150A10 10 0 0 1 236 160H184A10 10 0 0 1 174 150V60A10 10 0 0 1 184 50ZM204 68A6 6 0 1 0 216 68A6 6 0 1 0 204 68Z"/><path d="M203 4V0A7 7 0 0 1 217 0L203 28A7 7 0 0 0 217 28V24M210 35V62"/></g></svg>
+<div>
 <h1 class="display">Askıda etki</h1>
 <p class="answer">Bu sayfa, son otuz günde askıya bırakılan ve askıdan alınan ürün birimleri ile doğrulanmış dükkân sayısını il il gösterir. Sayılar yalnızca ürün adedidir; kimin bıraktığı ya da aldığı tutulmaz. Bir dükkânı belli etmesin diye küçük gruplar birleştirilir. Aynı veriyi CSV olarak indirebilirsiniz.</p>
 </div>
-</section>
-<section class="section" aria-labelledby="totals-title">
-<div class="wrap stack-lg">
-<h2 id="totals-title" class="title1">Son 30 gün</h2>
-<p class="notice"><span class="tag tag-sample">ÖRNEK</span> Bu sayılar örnek dükkânlardan türetilmiştir; gerçek bir etkiyi göstermez.</p>
-<div class="figures">
-<div><p class="numeral-xl">0</p><p class="label">Askıya bırakılan ürün</p></div>
-<div><p class="numeral-xl">0</p><p class="label">Askıdan alınan ürün</p></div>
-<div><p class="numeral-xl">6</p><p class="label">Doğrulanmış dükkân</p></div>
 </div>
-<p class="footnote">12 Eylül 2026 – 11 Ekim 2026 arası. Ürün sayıları günlük toplanır; dükkân sayısı son günün sayısıdır.</p>
+</section>
+<section class="section rail-top" aria-labelledby="totals-title">
+<div class="wrap stack-lg">
+<h2 id="totals-title" class="headline">Son 30 gün</h2>
+<p class="notice"><span class="tag tag-sample">ÖRNEK</span> Bu sayılar örnek dükkânlardan türetilmiştir; gerçek bir etkiyi göstermez.</p>
+<ul class="tag-row">
+<li><div class="hang-tag is-crust"><p class="numeral-xl">0</p><p class="label">Askıya bırakılan ürün</p></div></li>
+<li><div class="hang-tag"><p class="numeral-xl">0</p><p class="label">Askıdan alınan ürün</p></div></li>
+<li><div class="hang-tag"><p class="numeral-xl">6</p><p class="label">Doğrulanmış dükkân</p></div></li>
+</ul>
+<p class="footnote">12 Eylül 2026 ile 11 Ekim 2026 arası. Ürün sayıları günlük toplanır; dükkân sayısı son günün sayısıdır.</p>
 </div>
 </section>
 <section class="section band" aria-labelledby="province-title">
 <div class="wrap stack-lg">
-<h2 id="province-title" class="title1">İllere göre</h2>
+<h2 id="province-title" class="headline">İllere göre</h2>
 <div class="table-wrap">
 <table class="table">
 <thead><tr><th scope="col">İl</th><th scope="col" class="num">Bırakılan ürün</th><th scope="col" class="num">Alınan ürün</th><th scope="col" class="num">Dükkân</th></tr></thead>
@@ -81,22 +84,25 @@
 </section>
 <section class="section" aria-labelledby="method-title">
 <div class="wrap measure stack">
-<h2 id="method-title" class="title1">Nasıl sayıyoruz</h2>
+<h2 id="method-title" class="headline">Nasıl sayıyoruz</h2>
 <p>Bırakılan ürün, ödemesi tamamlanan bağışların ürün adedidir. Alınan ürün, kodu dükkânda okutulan ürün birimidir. Günler Türkiye saatine göre hesaplanır. Dükkân sayısı, o gün doğrulanmış dükkânlardır. Hiçbir satırda kişi, hesap ya da tek bir dükkân yoktur.</p>
 </div>
 </section>
 <section class="section band" aria-labelledby="open-title">
 <div class="wrap measure stack">
-<h2 id="open-title" class="title1">Açık veri</h2>
+<h2 id="open-title" class="headline">Açık veri</h2>
 <p>Son 90 günün günlük sayıları tek dosyada: <a href="/Mobiles-5in-One/askida/etki.csv">etki.csv</a>. Sütunlar: <code class="code">day,il,ilce,donated,redeemed,shops</code>. Küçük gruplar burada da birleştirilir.</p>
 <p class="footnote">Önerilen lisans: CC BY 4.0; hukuki onay bekliyor, henüz lisans verilmemiştir.</p>
 </div>
 </section>
 <section class="download-band band section-dense" aria-labelledby="download-band-title">
 <div class="wrap">
-<h2 id="download-band-title" class="title1">Askıda cebinizde</h2>
+<div>
+<h2 id="download-band-title" class="headline">Askıda cebinizde</h2>
 <p class="lead">Askıya bırakmak için uygulamayı kullanın. Askıdan almak için hesap gerekmez.</p>
 <p class="footnote">Mağaza bağlantıları uygulama yayımlandığında burada olacak.</p>
+</div>
+<svg aria-hidden="true" focusable="false" class="art" viewBox="0 0 240 200"><g class="swing" transform-origin="120 0"><path class="f-paper" fill-rule="evenodd" d="M44 14H196A14 14 0 0 1 210 28V176A14 14 0 0 1 196 190H44A14 14 0 0 1 30 176V28A14 14 0 0 1 44 14ZM113 32A7 7 0 1 0 127 32A7 7 0 1 0 113 32Z"/><path class="f-sand thin" d="M37 70h16v26h-16ZM57 70h16v26h-16ZM77 70h16v26h-16ZM97 70h16v26h-16ZM129 70h16v26h-16ZM149 70h16v26h-16ZM169 70h16v26h-16ZM189 70h16v26h-16Z"/><path class="thin" d="M50 128H190M50 152H138M50 168H116M164 160A12 12 0 1 0 188 160A12 12 0 1 0 164 160ZM176 153V160L181 164"/><path d="M113 4V0A7 7 0 0 1 127 0L113 26A7 7 0 0 0 127 26V22"/></g></svg>
 </div>
 </section>
 </main>

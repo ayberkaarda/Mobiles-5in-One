@@ -796,7 +796,7 @@ Hesap dökümü bağlantısının süresi 30 gündür. Sunucu bağlantının öz
 
 Kısaca: Müşteri ve defter kayıtları için belgelerde sabit bir genel saklama yılı belirtilmemiştir. Günlük bakım, bir günden eski giriş kodlarını; süresi dolmuş veya iptal edilmiş oturum yenileme kayıtlarını 30 gün sonra; süresi dolmuş davetleri yedi gün sonra temizler. Süresi dolmuş veya iptal edilmiş döküm bağlantıları 90 gün sonra kaldırılır.
 
-İşletim günlükleri için 30 günlük saklama öngörülür. Yedeklerin 30 günlük saklanması bir dağıtım planıdır; gerçek barındırma ve yedek hizmeti kurulmamıştır. Önceden alınmış yedekler ve sağlayıcıların kendi SMS kayıtları için tamamlanmış silme doğrulaması yoktur. Hesap ve dükkân silmenin kapsamını ve 14 günlük beklemeyi [hesap silme sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme) okuyabilirsiniz.
+İşletim günlükleri için 30 günlük saklama öngörülür. Silinen kayıtlar ve fotoğraflar, silmeden önce alınmış şifreli günlük yedeklerde ve fotoğraf deposunun eski sürümlerinde en fazla 30 gün daha kalabilir; ardından otomatik olarak silinir. Fotoğrafın ham ilk yüklemesi, silindikten sonra en geç bir ila iki gün içinde kaldırılır. Yedekten geri yükleme yalnızca bir arıza sonrasında yapılır; yedek tarihinden sonra tamamlanan silmeler, geri yüklemenin ardından yeniden uygulanır. Bu saklama düzeni bir dağıtım planıdır; gerçek barındırma ve yedek hizmeti kurulmamıştır. Önceden alınmış yedekler ve sağlayıcıların kendi SMS kayıtları için tamamlanmış silme doğrulaması yoktur. Hesap ve dükkân silmenin kapsamını ve 14 günlük beklemeyi [hesap silme sayfasında](https://ayberkaarda.github.io/Mobiles-5in-One/cetele/hesap-silme) okuyabilirsiniz.
 
 ---
 
@@ -870,7 +870,7 @@ Bekleme sırasında dükkâna yeni bir üye katılırsa silme engellenebilir. Su
 
 ## Hangi kayıtlar kaldırılır?
 
-Kısaca: Dükkân silindiğinde müşteriler, borç ve tahsilat kayıtları, ters kayıtlar, fotoğraflar, hatırlatma kayıtları, döküm bağlantıları, davetler, üyelikler ve eşitleme kayıtları kaldırılır. Fotoğrafların dosya deposundaki yükleme ve işlenmiş kopyaları da silinir.
+Kısaca: Dükkân silindiğinde müşteriler, borç ve tahsilat kayıtları, ters kayıtlar, fotoğraflar, hatırlatma kayıtları, döküm bağlantıları, davetler, üyelikler ve eşitleme kayıtları kaldırılır. Fotoğrafların dosya deposundaki yükleme ve işlenmiş kopyaları da silme kapsamındadır. Silinen kayıtlar ve fotoğraflar, silmeden önce alınmış şifreli günlük yedeklerde ve fotoğraf deposunun eski sürümlerinde en fazla 30 gün daha kalabilir; ardından otomatik olarak silinir. Fotoğrafın ham ilk yüklemesi, silindikten sonra en geç bir ila iki gün içinde kaldırılır. Yedekten geri yükleme yalnızca bir arıza sonrasında yapılır; yedek tarihinden sonra tamamlanan silmeler, geri yüklemenin ardından yeniden uygulanır.
 
 Hesap silindiğinde hesap telefonu ve görünen adı, cihaz kayıtları, oturum yenileme kayıtları, telefonla ilişkili giriş kodları ve davetler kaldırılır. Ürün akışı ayrıca telefondaki yerel veritabanının temizlenmesini ve şifreleme anahtarının yok edilmesini içerir. Sunucunun tamamlanma kaydı, telefondaki temizliğin gerçekleştiğine tek başına kanıt değildir.
 
