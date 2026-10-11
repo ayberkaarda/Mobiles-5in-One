@@ -29,17 +29,26 @@ The 23 requirements in section 6 of the product specification are mandatory and 
 
 ## Development commands
 
+From `inecekvar/`:
+
 ```sh
+docker compose up -d
 pnpm nx serve mobile
 pnpm nx serve web
 pnpm nx run-many -t lint test build
-uv sync
-uv run uvicorn app.main:app --reload
-uv run pytest
-uv run ruff check .
-uv run mypy
-docker compose up
+pnpm exec prettier --check .
 ```
 
-API secrets are loaded only through `pydantic-settings`. Angular environment files contain public values only. Document environment keys in `docs/ops/env.md`; `.env.example` contains local development values and no secrets.
+From `inecekvar/api/`:
+
+```sh
+uv sync --locked
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 57800
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy --strict app tests
+uv run pytest
+```
+
+Compose runs only the data and proxy services; the API and both dev servers run on the host, and Caddy reaches the API on port 57800. From Phase 1, API secrets are loaded only through `pydantic-settings` (not installed in Phase 0, where the API reads no environment variable). Angular environment files contain public values only. Document environment keys in `docs/ops/env.md`; `.env.example` contains local development values and no secrets.
 
