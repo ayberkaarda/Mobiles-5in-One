@@ -1,8 +1,11 @@
 package app.cetele.server.tenancy.shop
 
+import app.cetele.server.account.AccountStore
+import app.cetele.server.account.deletion.DeletionRequestRepository
 import app.cetele.server.security.CurrentUser
 import app.cetele.server.security.ShopRole
 import app.cetele.server.tenancy.MembershipResolver
+import app.cetele.server.tenancy.TenancyProperties
 import app.cetele.server.tenancy.TenantContext
 import app.cetele.server.tenancy.membership.Membership
 import app.cetele.server.tenancy.membership.MembershipRepository
@@ -47,6 +50,9 @@ class ShopService(
     private val memberships: MembershipRepository,
     private val resolver: MembershipResolver,
     private val clock: Clock,
+    private val store: AccountStore,
+    private val requests: DeletionRequestRepository,
+    private val properties: TenancyProperties,
 ) {
     /** Creates the shop and makes the caller its only `OWNER`, in one transaction. */
     @Transactional
@@ -54,6 +60,11 @@ class ShopService(
         caller: CurrentUser,
         input: NewShop,
     ): ShopView {
+        store.lockUser(caller.userId)
+        if (requests.openAccount(caller.userId) != null) throw ProblemException(ProblemCode.ACCOUNT_DELETION_PENDING)
+        if (store.activeOwnedCount(caller.userId) >= properties.maxOwnedShops) {
+            throw ProblemException(ProblemCode.SHOP_LIMIT_REACHED)
+        }
         val now = clock.instant()
         val shop =
             shops.save(

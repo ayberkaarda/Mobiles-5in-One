@@ -43,7 +43,20 @@ class OwnershipTransferRaceTest : AccountTestSupport() {
         assertEquals(202, delete("/v1/me", target, mapOf("code" to code(target))).status)
         // A solo shop opened during grace has no SHOP row of its own: the account completion deletes it while
         // holding the target's user row, which is where the executor pauses below.
-        val targetShop = fixtures.shop(target.actor)
+        // The API refuses shop creation while an account deletion is pending, so the shop is inserted directly.
+        val targetShop = java.util.UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO shops (id, name, type, il, ilce, created_by) VALUES (?, 'Bakkal', 'BAKKAL', 'İstanbul', 'Kadıköy', ?)",
+            targetShop,
+            target.actor.id,
+        )
+        jdbc.update(
+            "INSERT INTO memberships (id, shop_id, user_id, role, created_at) VALUES (?, ?, ?, 'OWNER', ?)",
+            java.util.UUID.randomUUID(),
+            targetShop,
+            target.actor.id,
+            java.sql.Timestamp.from(Instant.now()),
+        )
 
         // The executor stops inside the target's account completion (storage step of that shop), holding its locks.
         val entered = CountDownLatch(1)

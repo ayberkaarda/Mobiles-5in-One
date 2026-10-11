@@ -37,6 +37,7 @@ enum class RateLimit(
     WEBHOOK_DLR_IP("webhook.dlr.ip", 300, Duration.ofMinutes(1)),
     STATEMENT_PDF_USER("statement.pdf.user", 20, Duration.ofMinutes(10)),
     REMINDER_USER("reminder.user", 30, Duration.ofMinutes(10)),
+    REMINDER_PHONE("reminder.phone", 3, Duration.ofDays(1)),
     MEDIA_PRESIGN_USER("media.presign.user", 60, Duration.ofMinutes(10)),
     MEDIA_COMPLETE_USER("media.complete.user", 60, Duration.ofMinutes(10)),
     MEDIA_DOWNLOAD_USER("media.download.user", 300, Duration.ofMinutes(10)),

@@ -1,5 +1,6 @@
 package app.cetele.server.reminders
 
+import app.cetele.server.auth.ratelimit.RateLimiter
 import app.cetele.server.config.CeteleTime
 import app.cetele.server.config.SmsLimitsProperties
 import app.cetele.server.ledger.LedgerFixtures
@@ -66,7 +67,38 @@ class ReminderFlowTest(
     @Autowired private val entries: LedgerEntryRepository,
     @Autowired private val shops: ShopRepository,
     @Autowired private val transactions: PlatformTransactionManager,
+    @Autowired private val limiter: RateLimiter,
 ) {
+    @Test
+    fun `recipient ceiling spans shops and refuses the fourth send without quota or gateway effects`() {
+        val phone = TestUsers.phone()
+        val targets = List(4) { ReminderFixtures(mvc, auth, jdbc) }
+        val customers =
+            targets.map { f ->
+                f.ledger.customer(f.shopId, phone = phone, smsConsent = true).also { f.ledger.entry(f.shopId, it) }
+            }
+        val noConsent = targets.last().ledger.customer(targets.last().shopId, phone = phone, smsConsent = false)
+        targets.last().send(noConsent).expectProblem(409, "sms.consent_missing")
+        repeat(3) { targets[it].send(customers[it]).andExpect { status { isCreated() } } }
+        val fake = gateway as FakeSmsGateway
+        val lastMessage = fake.lastMessageTo(phone)
+        val dailyBefore = quotas.dailySent(clock.instant())
+        val response = targets.last().send(customers.last())
+        response.expectProblem(429, "rate_limited")
+        assertTrue(
+            response
+                .andReturn()
+                .response
+                .getHeader("Retry-After")!!
+                .toLong() > 0,
+        )
+        assertEquals(lastMessage, fake.lastMessageTo(phone))
+        assertEquals(dailyBefore, quotas.dailySent(clock.instant()))
+        listOf("sms_quota", "reminders", "statement_links").forEach { assertEquals(0, targets.last().count(it)) }
+        val other = targets.last().customer()
+        targets.last().send(other).andExpect { status { isCreated() } }
+    }
+
     @Test
     fun `accepted reminder stores delivery metadata and sends a usable statement link`() {
         val f = ReminderFixtures(mvc, auth, jdbc)
@@ -216,7 +248,7 @@ class ReminderFlowTest(
 
                 override fun balance() = gateway.balance()
             }
-        val service = ReminderService(reminders, customers, entries, shops, quotas, links, rejecting, clock, transactions)
+        val service = ReminderService(reminders, customers, entries, shops, quotas, links, rejecting, clock, transactions, limiter)
         val before = quotas.dailySent(clock.instant())
         val failure =
             assertFailsWith<ProblemException> {
@@ -252,7 +284,7 @@ class ReminderFlowTest(
             }
         val cap = quotas.dailySent(clock.instant()) + 1
         val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = cap))
-        val service = ReminderService(reminders, customers, entries, shops, cappedQuota, links, counting, clock, transactions)
+        val service = ReminderService(reminders, customers, entries, shops, cappedQuota, links, counting, clock, transactions, limiter)
         val start = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(targets.size)
         try {
@@ -300,7 +332,8 @@ class ReminderFlowTest(
         assertTrue(remaining >= 0)
         repeat(remaining) {
             jdbc.update(
-                "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, sent_at, requested_at) VALUES (?, ?, ?, 'SMS', 'BALANCE', 'SENT', ?, ?)",
+                "INSERT INTO reminders (id, shop_id, customer_id, channel, template, status, sent_at, requested_at) " +
+                    "VALUES (?, ?, ?, 'SMS', 'BALANCE', 'SENT', ?, ?)",
                 TraceIdFilter.uuidV7(),
                 f.shopId,
                 customer,
@@ -312,7 +345,7 @@ class ReminderFlowTest(
             assertEquals(100, quotas.dailySent(now))
             val other = ReminderFixtures(mvc, auth, jdbc)
             val cappedQuota = SmsQuotaService(quotaRows, locks, sent, sentIndex, SmsLimitsProperties(dailyCap = 100))
-            val capped = ReminderService(reminders, customers, entries, shops, cappedQuota, links, gateway, clock, transactions)
+            val capped = ReminderService(reminders, customers, entries, shops, cappedQuota, links, gateway, clock, transactions, limiter)
             val failure =
                 assertFailsWith<ProblemException> {
                     capped.send(other.shopId, other.owner.id, ReminderRequest(other.customer(), "SMS", "BALANCE"))

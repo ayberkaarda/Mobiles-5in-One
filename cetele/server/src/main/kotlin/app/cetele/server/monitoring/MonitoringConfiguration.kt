@@ -1,5 +1,6 @@
 package app.cetele.server.monitoring
 
+import app.cetele.server.config.HttpsEndpoints
 import app.cetele.server.config.LocalOnlyAdapterGuard
 import app.cetele.server.reminders.sms.NetgsmProperties
 import app.cetele.server.reminders.sms.SmsConfiguration
@@ -33,6 +34,7 @@ class MonitoringConfiguration {
                 check(netgsm.username.isNotBlank() && netgsm.password.isNotBlank()) {
                     "CETELE_SMS_PROVIDER=netgsm needs CETELE_NETGSM_USERNAME and _PASSWORD"
                 }
+                if (!LocalOnlyAdapterGuard.isAllowed(environment)) HttpsEndpoints.require("Netgsm endpoint", netgsm.endpoint())
                 NetgsmSmsBalanceProvider(client(netgsm.endpoint(), netgsm.connectTimeout, netgsm.readTimeout), netgsm)
             }
 
@@ -60,6 +62,7 @@ class MonitoringConfiguration {
 
             mailer == MAILER_RESEND -> {
                 val resend = properties.resend
+                if (!LocalOnlyAdapterGuard.isAllowed(environment)) HttpsEndpoints.require("Resend endpoint", resend.endpoint())
                 check(resend.apiKey.isNotBlank() && properties.from.isNotBlank() && properties.recipients().isNotEmpty()) {
                     "CETELE_ALERT_MAILER=resend needs CETELE_RESEND_API_KEY, CETELE_MAIL_FROM and CETELE_ALERT_EMAIL_TO"
                 }

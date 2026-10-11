@@ -8,6 +8,30 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SmsConfigurationTest {
+    @Test
+    fun `production rejects unsafe endpoints and local permits http`() {
+        val credentials =
+            arrayOf(
+                "cetele.sms.provider=netgsm",
+                "cetele.sms.netgsm.username=test-user",
+                "cetele.sms.netgsm.password=" + java.util.UUID.randomUUID(),
+                "cetele.sms.netgsm.msgheader=CETELE",
+            )
+        listOf("http://api.netgsm.com.tr", "https://u:p@api.netgsm.com.tr", "https:///sms", "https://bad host").forEach { url ->
+            runner("prod", *credentials, "cetele.sms.netgsm.base-url=$url").run { context ->
+                assertNotNull(context.startupFailure, url)
+            }
+        }
+        listOf("https://api.netgsm.com.tr", "https://api.netgsm.com.tr:443/path").forEach { url ->
+            runner("prod", *credentials, "cetele.sms.netgsm.base-url=$url").run { assertNull(it.startupFailure) }
+        }
+        listOf("local", "test").forEach { profile ->
+            runner(profile, *credentials, "cetele.sms.netgsm.base-url=http://localhost:9000").run {
+                assertNull(it.startupFailure)
+            }
+        }
+    }
+
     private fun runner(
         profile: String,
         vararg properties: String,

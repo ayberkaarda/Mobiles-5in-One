@@ -1,6 +1,17 @@
 package app.cetele.server.web.problem
 
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.media.ArraySchema
+import io.swagger.v3.oas.models.media.Content
+import io.swagger.v3.oas.models.media.IntegerSchema
+import io.swagger.v3.oas.models.media.MediaType
+import io.swagger.v3.oas.models.media.ObjectSchema
+import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.media.StringSchema
+import io.swagger.v3.oas.models.responses.ApiResponse
+import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springframework.http.HttpStatus
+import org.springframework.stereotype.Component
 import java.net.URI
 
 /**
@@ -55,6 +66,7 @@ enum class ProblemCode(
     ACCOUNT_OWNER_OF_SHARED_SHOP("account.owner_of_shared_shop", HttpStatus.CONFLICT, "Owner of a shop with other members"),
     ACCOUNT_DELETION_PENDING("account.deletion_pending", HttpStatus.CONFLICT, "Deletion already requested"),
     SHOP_DELETION_PENDING("shop.deletion_pending", HttpStatus.CONFLICT, "Shop deletion already requested"),
+    SHOP_LIMIT_REACHED("shop.limit_reached", HttpStatus.CONFLICT, "Owned shop limit reached"),
     WEBHOOK_UNAUTHENTICATED("webhook.unauthenticated", HttpStatus.UNAUTHORIZED, "Webhook authentication failed"),
     ;
 
@@ -66,4 +78,40 @@ enum class ProblemCode(
 
         fun fromCode(code: String): ProblemCode? = entries.firstOrNull { it.code == code }
     }
+}
+
+/** Keeps the P2 error contract in the server export as well as the committed snapshot. */
+@Component
+class ShopReminderProblemContract : OpenApiCustomizer {
+    override fun customise(openApi: OpenAPI) {
+        val code = StringSchema()
+        code.enum = ProblemCode.entries.map { it.code }
+        val body =
+            ObjectSchema()
+                .addProperty("code", code)
+                .addProperty("errors", ArraySchema().items(Schema<Any>().`$ref`("#/components/schemas/ProblemFieldError")))
+                .addProperty("status", IntegerSchema().format("int32"))
+                .addProperty("title", StringSchema())
+                .addProperty("traceId", StringSchema())
+                .addProperty("type", StringSchema())
+        openApi.components.addSchemas("ProblemBody", body)
+        openApi.paths["/v1/shops"]?.post?.responses?.addApiResponse(
+            "409",
+            response("account.deletion_pending or shop.limit_reached"),
+        )
+        openApi.paths["/v1/shops/{shopId}/reminders"]?.post?.responses?.addApiResponse(
+            "429",
+            response("rate_limited, sms.quota_exceeded or sms.daily_cap_reached"),
+        )
+    }
+
+    private fun response(description: String): ApiResponse =
+        ApiResponse()
+            .description(description)
+            .content(
+                Content().addMediaType(
+                    "application/problem+json",
+                    MediaType().schema(Schema<Any>().`$ref`("#/components/schemas/ProblemBody")),
+                ),
+            )
 }

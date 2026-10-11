@@ -39,12 +39,36 @@ class MonitoringConfigurationTest {
             "cetele.sms.netgsm.password=test-pass",
         )
 
+    @Test
+    fun `production validates both provider endpoints including mixed profiles`() {
+        listOf("prod", "prod,local", "staging", "").forEach { profile ->
+            listOf("http://remote.test", "https://u:p@remote.test", "https:///api", "https://bad host").forEach { url ->
+                runner(profile, *netgsm, *resend, "cetele.sms.netgsm.base-url=$url").run {
+                    assertTrue(it.messages().any { message -> message.contains("Netgsm endpoint must be an https URI") })
+                }
+                runner(profile, *netgsm, *resend, "cetele.alerts.resend.base-url=$url").run {
+                    assertTrue(it.messages().any { message -> message.contains("Resend endpoint must be an https URI") })
+                }
+            }
+        }
+        runner("prod", *netgsm, *resend).run { assertNull(it.startupFailure) }
+        listOf("local", "test").forEach { profile ->
+            runner(
+                profile,
+                *netgsm,
+                *resend,
+                "cetele.sms.netgsm.base-url=http://localhost:9000",
+                "cetele.alerts.resend.base-url=http://localhost:9001",
+            ).run { assertNull(it.startupFailure) }
+        }
+    }
+
     private fun runner(
         profile: String,
         vararg properties: String,
     ): ApplicationContextRunner =
         ApplicationContextRunner()
-            .withInitializer { it.environment.setActiveProfiles(*profile.split(',').toTypedArray()) }
+            .withInitializer { it.environment.setActiveProfiles(*profile.split(',').filter { name -> name.isNotEmpty() }.toTypedArray()) }
             .withUserConfiguration(MonitoringConfiguration::class.java, Properties::class.java)
             .withPropertyValues(*properties)
 

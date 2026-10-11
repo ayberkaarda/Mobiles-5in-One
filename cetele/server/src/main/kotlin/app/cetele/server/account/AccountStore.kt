@@ -63,6 +63,15 @@ class AccountStore(
             .list()
             .map { checkNotNull(it) }
 
+    fun activeOwnedCount(userId: UUID): Long =
+        jdbc
+            .sql(
+                "SELECT count(*) FROM memberships m JOIN shops s ON s.id = m.shop_id " +
+                    "WHERE m.user_id = :id AND m.role = 'OWNER' AND s.deleted_at IS NULL",
+            ).param("id", userId)
+            .query(Long::class.java)
+            .single()
+
     fun shared(shopId: UUID): Boolean =
         jdbc
             .sql("SELECT count(*) FROM memberships WHERE shop_id = :shopId")

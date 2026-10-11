@@ -37,6 +37,32 @@ class ProblemTest(
     private val base = ProbeController.BASE
 
     @Test
+    fun `server export includes the shop conflict and recipient rate limit contract`() {
+        val response =
+            mvc
+                .get("/v3/api-docs")
+                .andExpect { status { isOk() } }
+                .andReturn()
+                .response
+        val document = json.readTree(response.contentAsString)
+        val enumNode: JsonNode = document["components"]["schemas"]["ProblemBody"]["properties"]["code"]["enum"]
+        val codes: List<String> =
+            enumNode
+                .iterator()
+                .asSequence()
+                .map { it.asString() }
+                .toList()
+        assertEquals(ProblemCode.entries.map { it.code }, codes)
+        val paths = document["paths"]
+        assertEquals(
+            "account.deletion_pending or shop.limit_reached",
+            paths["/v1/shops"]["post"]["responses"]["409"]["description"].asString(),
+        )
+        val rateLimit = paths["/v1/shops/{shopId}/reminders"]["post"]["responses"]["429"]
+        assertEquals("#/components/schemas/ProblemBody", rateLimit["content"]["application/problem+json"]["schema"]["\$ref"].asString())
+    }
+
+    @Test
     fun `registry codes are unique and carry the contract statuses`() {
         val expected =
             mapOf(
@@ -79,6 +105,7 @@ class ProblemTest(
                 "account.owner_of_shared_shop" to 409,
                 "account.deletion_pending" to 409,
                 "shop.deletion_pending" to 409,
+                "shop.limit_reached" to 409,
                 "webhook.unauthenticated" to 401,
             )
         assertEquals(
