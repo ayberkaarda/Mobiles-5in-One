@@ -16,6 +16,7 @@ twelvemonkeys = "3.15.2"
 pdfbox = "3.0.8"
 totp = "1.7.1"
 bouncycastle = "1.86"
+commonmark = "0.30.1"
 
 [libraries]
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
@@ -44,6 +45,8 @@ imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref 
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
 totp = { module = "dev.samstevens.totp:totp", version.ref = "totp" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
