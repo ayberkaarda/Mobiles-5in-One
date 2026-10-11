@@ -11,7 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.CeteleTextStyles
 import app.cetele.android.core.designsystem.CeteleTheme
@@ -27,18 +29,27 @@ fun CustomerRow(
     phone: String? = null,
     tag: String? = null,
 ) {
+    val configuration = LocalConfiguration.current
+    val showAvatar = configuration.screenWidthDp >= COMPACT_WIDTH_DP && configuration.fontScale < COMPACT_FONT_SCALE
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = CeteleSpacing.rowMinHeight)
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(CeteleSpacing.screenGutter),
+                .padding(horizontal = CeteleSpacing.regular, vertical = CeteleSpacing.medium),
         horizontalArrangement = Arrangement.spacedBy(CeteleSpacing.medium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (showAvatar) CustomerAvatar(name)
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = CeteleTextStyles.bodyStrong)
+            Text(
+                name,
+                style = CeteleTextStyles.bodyStrong,
+                color = CeteleTheme.colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (phone != null) {
                 Text(
                     text = PhoneFormat.toE164Tr(phone)?.let(PhoneFormat::display) ?: phone,
@@ -46,8 +57,19 @@ fun CustomerRow(
                     color = CeteleTheme.colors.textMuted,
                 )
             }
-            if (tag != null) Text(tag, style = CeteleTextStyles.caption, color = CeteleTheme.colors.textMuted)
+            if (tag != null) {
+                Text(
+                    tag,
+                    style = CeteleTextStyles.caption,
+                    color = CeteleTheme.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         AmountText(balance, tone = balanceTone(balance))
     }
 }
+
+private const val COMPACT_WIDTH_DP = 320
+private const val COMPACT_FONT_SCALE = 1.3f

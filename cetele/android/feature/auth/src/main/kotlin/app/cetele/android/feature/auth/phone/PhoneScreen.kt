@@ -1,10 +1,13 @@
 package app.cetele.android.feature.auth.phone
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import app.cetele.android.core.designsystem.CeteleTextStyles
+import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.designsystem.component.PhoneTextField
@@ -24,10 +27,15 @@ fun PhoneScreen(
         PhoneTextField(
             state.phone,
             onPhoneChange,
+            modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.auth_phone_number),
             enabled = !state.loading,
         )
-        Text(stringResource(R.string.auth_phone_consent))
+        Text(
+            stringResource(R.string.auth_phone_consent),
+            style = CeteleTextStyles.body,
+            color = CeteleTheme.colors.textMuted,
+        )
         val privacyUrl = stringResource(R.string.auth_phone_privacy_url)
         CeteleButton(
             stringResource(R.string.auth_phone_privacy),
@@ -35,13 +43,17 @@ fun PhoneScreen(
             style = ButtonStyle.Text,
         )
         if (state.retrySeconds > 0) {
-            Text(stringResource(R.string.auth_phone_retry, state.retrySeconds))
+            Text(
+                stringResource(R.string.auth_phone_retry, state.retrySeconds),
+                color = CeteleTheme.colors.textMuted,
+            )
         } else {
             AuthErrorText(state.error)
         }
         CeteleButton(
             stringResource(R.string.auth_phone_send),
             onSend,
+            modifier = Modifier.fillMaxWidth(),
             enabled = state.retrySeconds == 0,
             loading = state.loading,
         )

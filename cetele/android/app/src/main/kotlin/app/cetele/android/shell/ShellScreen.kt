@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.cetele.android.R
 import app.cetele.android.core.designsystem.CeteleSpacing
 import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.designsystem.component.BrandMark
 
 /** Shown while the stored session and settings are read: brand name, tagline and a short status line. */
 @Composable
@@ -29,10 +30,11 @@ fun ShellScreen(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(CeteleSpacing.medium, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            BrandMark(height = CeteleSpacing.iconBadge)
             Text(
                 text = stringResource(R.string.shell_title),
                 style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.semantics { heading() },
             )
             Text(

@@ -19,10 +19,10 @@ Core colours (`derived: false`) are the seven from the spec. Everything else is 
 
 | Role                              | Light                           | Dark                                      | Use                                     |
 | --------------------------------- | ------------------------------- | ----------------------------------------- | --------------------------------------- |
-| `background`                      | Kâğıt Gölge `#F3EEE3`           | Gece `#0E1325`                            | Page behind cards and lists             |
+| `background`                      | Tezgâh `#EDEAE4`                | Gece `#0E1325`                            | Page behind cards and lists             |
 | `surface`                         | **Kâğıt** `#FAF7F0`             | Gece Surface `#151B31`                    | Cards, rows, top bar                    |
 | `surfaceRaised`                   | White `#FFFFFF`                 | Gece Raised `#1D2440`                     | Dialogs, sheets, menus                  |
-| `surfaceSunken`                   | Kâğıt Sunken `#EAE3D4`          | Gece Sunken `#090D1B`                     | Text fields, the running-total band     |
+| `surfaceSunken`                   | Tezgâh Sunken `#E8E4DC`         | Gece Sunken `#090D1B`                     | Keypad keys, chips and quiet marks      |
 | `text`                            | **Mürekkep** `#1A1A1A`          | **Kâğıt** `#FAF7F0`                       | All body copy                           |
 | `textMuted`                       | Kurşun Koyu `#575D69`           | Gece Muted `#A7AEBF`                      | Secondary lines, timestamps             |
 | `border` / `borderStrong`         | `#E0D8C7` / **Kurşun**          | `#2A3250` / **Kurşun**                    | Hairline / control outline              |
@@ -41,17 +41,17 @@ Core colours (`derived: false`) are the seven from the spec. Everything else is 
 
 ### Contrast, honestly
 
-Every pair in `contrast.pairs` (text, 4.5:1) and `contrast.nonTextPairs` (non-text, 3:1) is computed by the validator in both schemes; the lowest values are accentText on the light sunken surface (4.59) and Kurşun as a dark-mode outline on the raised surface (3.15). The combinations below fail and are recorded in `contrast.notValidForText` / `notValidForFill` so nobody uses them by accident:
+Every pair in `contrast.pairs` (text, 4.5:1) and `contrast.nonTextPairs` (non-text, 3:1) is computed by the validator in both schemes; the lowest values are accentText on the light sunken surface (4.63) and Kurşun as a dark-mode outline on the raised surface (3.15). The combinations below fail and are recorded in `contrast.notValidForText` / `notValidForFill` so nobody uses them by accident:
 
 | Scheme | Combination                                                                      | Ratio              | Instead use                                                                 |
 | ------ | -------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------- |
 | light  | Çentik Turuncu text on Kâğıt                                                     | 2.87               | `accentText`                                                                |
 | light  | Kâğıt or white label on Çentik Turuncu                                           | 2.87 / 3.08        | `onAccent` (Mürekkep, 5.66)                                                 |
-| light  | Çentik Turuncu as the only indicator on `background`, `surface`, `surfaceSunken` | 2.66 / 2.87 / 2.41 | the CTA is identified by its label; on `surfaceRaised` it passes 3:1 (3.08) |
+| light  | Çentik Turuncu as the only indicator on `background`, `surface`, `surfaceSunken` | 2.56 / 2.87 / 2.43 | the CTA is identified by its label; on `surfaceRaised` it passes 3:1 (3.08) |
 | light  | Ödendi Yeşili text on Kâğıt                                                      | 3.97               | `paymentText` (Ödendi Koyu)                                                 |
 | light  | White label on Ödendi Yeşili                                                     | 4.25               | `payment` fill (Ödendi Koyu, 6.01)                                          |
-| light  | Borç Kırmızısı text on the sunken surface                                        | 4.26               | `debtText`                                                                  |
-| light  | Kurşun text on the page background                                               | 4.18               | `textMuted` (Kurşun Koyu)                                                   |
+| light  | Borç Kırmızısı text on the sunken surface                                        | 4.29               | `debtText`                                                                  |
+| light  | Kurşun text on the page background                                               | 4.03               | `textMuted` (Kurşun Koyu)                                                   |
 | dark   | Ödendi Yeşili text on the dark surface                                           | 4.01               | `paymentText` (Ödendi Açık)                                                 |
 | dark   | Kâğıt label on Çentik Turuncu                                                    | 2.87               | `onAccent` (Mürekkep)                                                       |
 
@@ -64,7 +64,7 @@ Every pair in `contrast.pairs` (text, 4.5:1) and `contrast.nonTextPairs` (non-te
 | Manrope | 700           | `fonts/manrope/Manrope-Bold.ttf`                  | `manrope_bold.ttf`                                            |
 | Inter   | 400, 500, 600 | `fonts/inter/Inter-{Regular,Medium,SemiBold}.ttf` | `inter_regular.ttf`, `inter_medium.ttf`, `inter_semibold.ttf` |
 
-Scale (`typography.scale`, app sizes in sp, web in px): `display` 32/40, `headline` 26/32, `title` 20/28 (Manrope 700, never below 20); `titleSmall` 18/24, `bodyLarge` 18/28, `body` 16/24, `bodyStrong` 16/24, `label` 16/24, `caption` 14/20 (Inter); `amount` 18/24 Inter 600 and `amountLarge` 36/44 Manrope 700, both with `tnum` so columns of kuruş line up. Body never below 16 sp, nothing below 14 sp (spec section 8). Each style names its Material 3 slot in `m3`. Amounts are written `₺1.250,00` with `Locale("tr", "TR")`; casing (i/İ, ı/I) is left to the platform with the Turkish locale, never done by hand.
+Scale (`typography.scale`, app sizes in sp, web in px): `display` 32/40, `headline` 26/32, `title` 20/28 (Manrope 700, never below 20); `titleSmall` 18/24, `bodyLarge` 18/28, `body` 16/24, `bodyStrong` 16/24, `label` 16/24, `caption` 14/20 (Inter); `amount` 18/24 Inter 600 and `amountLarge` 40/48 Manrope 700, both with `tnum` so columns of kuruş line up. Body never below 16 sp, nothing below 14 sp (spec section 8). Each style names its Material 3 slot in `m3`. Amounts are written `₺1.250,00` with `Locale("tr", "TR")`; casing (i/İ, ı/I) is left to the platform with the Turkish locale, never done by hand.
 
 ## Shape, spacing, elevation, motion
 

@@ -2,13 +2,17 @@ package app.cetele.android
 
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,13 +52,28 @@ class MainActivity : FragmentActivity() {
 private fun CeteleApp(model: AppViewModel = hiltViewModel()) {
     val theme by model.themeMode.collectAsStateWithLifecycle()
     val gate by model.gate.collectAsStateWithLifecycle()
-    CeteleTheme(darkTheme = theme.isDark(isSystemInDarkTheme())) {
+    val dark = theme.isDark(isSystemInDarkTheme())
+    SystemBarsAppearance(dark)
+    CeteleTheme(darkTheme = dark) {
         val current = gate
         if (current == null) {
             ShellScreen()
         } else {
             val start = remember { current.startRoute() }
             CeteleNavHost(model.services, current, start)
+        }
+    }
+}
+
+/** Status and navigation bar icons follow the app theme, which can differ from the system one. */
+@Composable
+private fun SystemBarsAppearance(dark: Boolean) {
+    val window = LocalActivity.current?.window ?: return
+    val view = LocalView.current
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
         }
     }
 }

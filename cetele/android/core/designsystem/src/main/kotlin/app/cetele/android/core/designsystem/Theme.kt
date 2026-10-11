@@ -13,6 +13,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 /** Brand roles that Material 3 has no slot for (debt, payment, accent text, focus ring and the rest). */
 val LocalCeteleColors = staticCompositionLocalOf { LightCeteleColors }
 
+/** Colours of the ledger cover in the current scheme. */
+val LocalCoverColors = staticCompositionLocalOf { coverColors(dark = false) }
+
 /** Material 3 mapping of the brand roles (table "Using the tokens on Android" in the brand README). */
 fun CeteleColors.toColorScheme(dark: Boolean): ColorScheme {
     val base = if (dark) darkColorScheme() else lightColorScheme()
@@ -22,8 +25,17 @@ fun CeteleColors.toColorScheme(dark: Boolean): ColorScheme {
         surface = surface,
         onSurface = text,
         onSurfaceVariant = textMuted,
+        surfaceContainer = surface,
+        surfaceContainerLow = surface,
         surfaceContainerHigh = surfaceRaised,
         surfaceContainerHighest = surfaceRaised,
+        surfaceBright = surface,
+        surfaceDim = background,
+        surfaceTint = primary,
+        primaryContainer = secondary,
+        onPrimaryContainer = onSecondary,
+        secondary = primary,
+        onSecondary = onPrimary,
         surfaceVariant = surfaceSunken,
         surfaceContainerLowest = surfaceSunken,
         primary = primary,
@@ -47,7 +59,7 @@ fun CeteleTheme(
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) DarkCeteleColors else LightCeteleColors
-    CompositionLocalProvider(LocalCeteleColors provides colors) {
+    CompositionLocalProvider(LocalCeteleColors provides colors, LocalCoverColors provides coverColors(darkTheme)) {
         MaterialTheme(
             colorScheme = colors.toColorScheme(darkTheme),
             typography = CeteleTypography,
@@ -63,4 +75,9 @@ object CeteleTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalCeteleColors.current
+
+    val cover: CoverColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalCoverColors.current
 }

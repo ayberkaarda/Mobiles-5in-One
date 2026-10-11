@@ -63,9 +63,12 @@ object CeteleTextStyles {
     val amount: TextStyle =
         body(FontWeight.SemiBold, size = 18, lineHeight = 24).copy(fontFeatureSettings = TABULAR_FIGURES)
 
-    /** Customer balance and the shop total. */
+    /** Customer balance and the shop total on the ledger cover. */
     val amountLarge: TextStyle =
-        display(size = 36, lineHeight = 44, tracking = -0.01f).copy(fontFeatureSettings = TABULAR_FIGURES)
+        display(size = 40, lineHeight = 48, tracking = -0.01f).copy(fontFeatureSettings = TABULAR_FIGURES)
+
+    /** Smallest size a long cover amount may shrink to before it would overflow the cover. */
+    val amountLargeMinSize = 24.sp
 }
 
 /** Material 3 slots filled from the brand scale (the `m3` field of each token style). */
