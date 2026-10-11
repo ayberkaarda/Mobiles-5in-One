@@ -2,6 +2,7 @@ package app.cetele.android.core.designsystem.component
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.cetele.android.core.designsystem.R
 import app.cetele.android.core.domain.model.Shop
@@ -16,17 +17,23 @@ import app.cetele.android.core.domain.model.ShopRole
 fun PlanUpgradeAction(
     shop: Shop?,
     onUpgrade: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     if (shop == null || shop.plan != ShopPlan.FREE) return
     when (shop.role) {
         ShopRole.OWNER -> {
             if (onUpgrade != null) {
-                CeteleButton(stringResource(R.string.designsystem_plan_upgrade), onUpgrade, style = ButtonStyle.Text)
+                CeteleButton(
+                    stringResource(R.string.designsystem_plan_upgrade),
+                    onUpgrade,
+                    modifier,
+                    style = ButtonStyle.Text,
+                )
             }
         }
 
         ShopRole.STAFF -> {
-            Text(stringResource(R.string.designsystem_plan_owner_only))
+            Text(stringResource(R.string.designsystem_plan_owner_only), modifier)
         }
     }
 }
