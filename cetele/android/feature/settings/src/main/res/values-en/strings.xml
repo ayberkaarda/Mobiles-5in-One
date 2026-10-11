@@ -4,6 +4,7 @@
     <string name="settings_home_profile">Profile</string>
     <string name="settings_home_shop">Shop</string>
     <string name="settings_home_plan">Free plan: 100 customers, 30 SMS per month, 200 photos</string>
+    <string name="settings_home_billing">Plan and Çetele Pro</string>
     <string name="settings_home_lock">Lock</string>
     <string name="settings_home_sync">Sync issues</string>
     <string name="settings_home_pending">Waiting to send: %1$d records</string>
@@ -31,6 +32,8 @@
     <string name="settings_deletion_shared_title">Your shop has other members</string>
     <string name="settings_deletion_shared_text">You can transfer ownership or delete your shops too. A fresh code is required to delete them.</string>
     <string name="settings_deletion_delete_shops">Delete my shops too</string>
+    <string name="settings_deletion_subscription">Deleting does not cancel the Çetele Pro subscription in Google Play. Cancel your subscription in Google Play.</string>
+    <string name="settings_deletion_manage_subscription">Manage subscription in Google Play</string>
     <string name="settings_transfer_explanation">Select the new owner. You will become a staff member afterwards. A fresh verification code is required.</string>
     <string name="settings_transfer_no_staff">There are no staff members to transfer ownership to.</string>
     <string name="settings_transfer_done">Ownership transferred. You are now a staff member.</string>

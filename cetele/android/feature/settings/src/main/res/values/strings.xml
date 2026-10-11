@@ -4,6 +4,7 @@
     <string name="settings_home_profile">Profil</string>
     <string name="settings_home_shop">Dükkân</string>
     <string name="settings_home_plan">Ücretsiz plan: 100 müşteri, ayda 30 SMS, 200 fotoğraf</string>
+    <string name="settings_home_billing">Plan ve Çetele Pro</string>
     <string name="settings_home_lock">Kilit</string>
     <string name="settings_home_sync">Senkron sorunları</string>
     <string name="settings_home_pending">Gönderilmeyi bekleyen: %1$d kayıt</string>
@@ -31,6 +32,8 @@
     <string name="settings_deletion_shared_title">Dükkânınızda başka üyeler var</string>
     <string name="settings_deletion_shared_text">Sahipliği devredebilir veya dükkânlarınızı da silebilirsiniz. Silmek için yeni bir kod gerekir.</string>
     <string name="settings_deletion_delete_shops">Dükkânlarımı da sil</string>
+    <string name="settings_deletion_subscription">Silme işlemi Google Play\'deki Çetele Pro aboneliğini iptal etmez. Aboneliğinizi Google Play\'den iptal edin.</string>
+    <string name="settings_deletion_manage_subscription">Aboneliği Google Play\'de yönet</string>
     <string name="settings_transfer_explanation">Yeni sahibi seçin. İşlemden sonra çalışan olarak devam edersiniz. Bu işlem için yeni doğrulama kodu gerekir.</string>
     <string name="settings_transfer_no_staff">Sahipliği devredebileceğiniz çalışan yok.</string>
     <string name="settings_transfer_done">Sahiplik devredildi. Artık çalışan olarak devam ediyorsunuz.</string>

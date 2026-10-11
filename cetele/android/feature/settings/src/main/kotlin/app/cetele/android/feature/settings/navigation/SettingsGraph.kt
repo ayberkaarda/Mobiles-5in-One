@@ -1,9 +1,12 @@
 package app.cetele.android.feature.settings.navigation
 
 import androidx.biometric.BiometricManager
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
@@ -38,6 +41,7 @@ fun NavGraphBuilder.settingsGraph(nav: SettingsNavigation) {
             model::requestSignOut,
             { model.confirmSignOut() },
             model::dismissSignOut,
+            nav.onOpenBilling,
         )
     }
     composable<SettingsRoutes.Profile> {
@@ -65,6 +69,8 @@ fun NavGraphBuilder.settingsGraph(nav: SettingsNavigation) {
     composable<SettingsRoutes.AccountDeletion> {
         val model = hiltViewModel<AccountDeletionViewModel>()
         val state by model.state.collectAsStateWithLifecycle()
+        val owner by model.ownsShop.collectAsStateWithLifecycle(false)
+        val manage = rememberSubscriptionPage(nav.subscriptionManageUrl)
         AccountDeletionScreen(
             state,
             { model.requestCode() },
@@ -72,12 +78,21 @@ fun NavGraphBuilder.settingsGraph(nav: SettingsNavigation) {
             { nav.onNavigate(SettingsRoutes.OwnershipTransfer) },
             model::dismissChoice,
             nav.onBack,
+            manage.takeIf { owner },
         )
     }
     composable<SettingsRoutes.ShopDeletion> {
         val model = hiltViewModel<ShopDeletionViewModel>()
         val state by model.state.collectAsStateWithLifecycle()
-        ShopDeletionScreen(state, { model.requestCode() }, { model.delete(it) }, { model.cancel() }, nav.onBack)
+        val manage = rememberSubscriptionPage(nav.subscriptionManageUrl)
+        ShopDeletionScreen(
+            state,
+            { model.requestCode() },
+            { model.delete(it) },
+            { model.cancel() },
+            nav.onBack,
+            manage,
+        )
     }
     composable<SettingsRoutes.OwnershipTransfer> {
         val model = hiltViewModel<OwnershipTransferViewModel>()
@@ -86,4 +101,13 @@ fun NavGraphBuilder.settingsGraph(nav: SettingsNavigation) {
         OwnershipTransferScreen(state, model::select, { model.requestCode() }, { model.transfer(it) }, nav.onBack)
     }
     composable<SettingsRoutes.About> { AboutScreen(nav.appVersion, nav.onBack) }
+}
+
+/** Opens Play's subscription page; a device without a browser simply stays on the screen. */
+@Composable
+private fun rememberSubscriptionPage(url: String?): (() -> Unit)? {
+    val uriHandler = LocalUriHandler.current
+    return remember(url, uriHandler) {
+        url?.let { page -> { runCatching { uriHandler.openUri(page) } } }
+    }
 }
