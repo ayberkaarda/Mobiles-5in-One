@@ -148,6 +148,7 @@ class Subscription(
     fun apply(
         purchase: PlaySubscriptionPurchase,
         now: Instant,
+        readAt: Instant = now,
     ): Boolean {
         val before = state
         val item = purchase.lineItemFor(productId)
@@ -161,7 +162,7 @@ class Subscription(
             testPurchase = purchase.testPurchase
         }
         if (acknowledgedAt == null && purchase.acknowledgementState == PlaySubscriptionPurchase.ACKNOWLEDGED) acknowledgedAt = now
-        lastVerifiedAt = now
+        lastVerifiedAt = readAt
         updatedAt = now
         return before != state
     }

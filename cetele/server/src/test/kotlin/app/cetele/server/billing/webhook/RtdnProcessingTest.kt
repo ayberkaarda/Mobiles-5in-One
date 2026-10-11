@@ -81,17 +81,19 @@ class RtdnProcessingTest : BillingTestSupport() {
     }
 
     @Test
-    fun `revoked notification revokes for ever`() {
+    fun `expired play answer confirms revocation for ever`() {
         val world = world()
         val shopId = world.shopId
         val token = token("active", shopId)
         linkOk(shopId, token, world.owner)
+        fake.put(token, fake.getSubscription("fake.sub.revoked.$shopId"))
         val id = deliver(subscriptionNotification(token, 12))
         assertEquals("revoked", event(id)["outcome"])
         assertEquals("REVOKED", state(token))
         assertNotNull(row(token)["revoked_at"])
         assertEquals("FREE", plan(shopId))
-        // Play still answers ACTIVE (e.g. a stale read): the revocation stays.
+        fake.put(token, fake.purchase(PlaySubscriptionPurchase.STATE_ACTIVE, shopId))
+        // A later active answer cannot restore a confirmed revocation.
         deliver(subscriptionNotification(token, 2))
         assertEquals("REVOKED", state(token))
         assertEquals("FREE", plan(shopId))
@@ -103,11 +105,61 @@ class RtdnProcessingTest : BillingTestSupport() {
     @Test
     fun `voided purchase revokes a known token`() {
         val (shopId, token) = proShop()
+        fake.put(token, PlaySubscriptionResult.NotFound)
         val id = deliver(voidedNotification(token))
         assertEquals("PROCESSED", event(id)["status"])
         assertEquals("REVOKED", state(token))
         assertEquals("FREE", plan(shopId))
         assertNull(event(id)["notification_type"])
+    }
+
+    @Test
+    fun `active play answer refuses both revocation notification kinds`() {
+        val (shopId, token) = proShop()
+        listOf(subscriptionNotification(token, 12), voidedNotification(token)).forEach { notification ->
+            val id = deliver(notification)
+            assertEquals("PROCESSED", event(id)["status"])
+            assertEquals("revoke_unconfirmed", event(id)["outcome"])
+            assertEquals("ACTIVE", state(token))
+            assertEquals("PRO", plan(shopId))
+            assertNull(row(token)["revoked_at"])
+        }
+    }
+
+    @Test
+    fun `notification verification time comes from the play read rather than the batch time`() {
+        val (shopId, token) = proShop()
+        val id = "read-" + suffix()
+        pushOk(envelope(subscriptionNotification(token, 12), id))
+        val before = clock.instant().truncatedTo(ChronoUnit.MICROS)
+        val batchTime = before.plus(Duration.ofHours(1))
+        processor.processDue(batchTime)
+        val verifiedAt = (row(token)["last_verified_at"] as Timestamp).toInstant()
+        assertTrue(verifiedAt >= before && verifiedAt <= clock.instant().plusNanos(1_000))
+        assertTrue(verifiedAt < batchTime)
+        assertEquals("revoke_unconfirmed", event(id)["outcome"])
+        assertEquals("PRO", plan(shopId))
+    }
+
+    @Test
+    fun `unavailable play answer retries both revocation notification kinds without revoking`() {
+        val (shopId, token) = proShop()
+        fake.put(token, PlaySubscriptionResult.Unavailable("fake"))
+        listOf(subscriptionNotification(token, 12), voidedNotification(token)).forEach { notification ->
+            val before = clock.instant().truncatedTo(ChronoUnit.MICROS)
+            val id = deliver(notification)
+            assertEquals("RECEIVED", event(id)["status"])
+            assertEquals("unavailable", event(id)["outcome"])
+            assertEquals(1, event(id)["attempts"])
+            val nextAttempt = (event(id)["next_attempt_at"] as Timestamp).toInstant()
+            val earliest = before.plus(Duration.ofMinutes(1))
+            val latest = clock.instant().plus(Duration.ofMinutes(1)).plusNanos(1_000)
+            assertTrue(nextAttempt >= earliest && nextAttempt <= latest)
+            assertNotNull(event(id)["purchase_token_enc"])
+            assertNull(row(token)["revoked_at"])
+            assertEquals("ACTIVE", state(token))
+            assertEquals("PRO", plan(shopId))
+        }
     }
 
     @Test

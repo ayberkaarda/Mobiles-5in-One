@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import java.sql.Timestamp
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -21,6 +22,80 @@ class BillingSweeperTest : BillingTestSupport() {
     @Autowired lateinit var sweeper: BillingSweeper
 
     @Autowired lateinit var jobs: JobLocks
+
+    @Test
+    fun `older active and missing answers cannot overwrite a newer hold answer`() {
+        val world = world()
+        val token = token("active", world.shopId)
+        linkOk(world.shopId, token, world.owner)
+        val key = SubscriptionKey(world.shopId, row(token)["id"] as UUID)
+        val t1 = clock.instant().plusSeconds(10).truncatedTo(ChronoUnit.MICROS)
+        val t2 = t1.plusSeconds(10)
+        val now = t2.plusSeconds(10)
+        val hold = fake.purchase(PlaySubscriptionPurchase.STATE_ON_HOLD, world.shopId)
+        val active = fake.purchase(PlaySubscriptionPurchase.STATE_ACTIVE, world.shopId)
+        writer.refresh(key, hold, now, PlanChangeReason.RTDN, 5, readAt = t2)
+        writer.refresh(key, active, now.plusSeconds(1), PlanChangeReason.SWEEP, 2, readAt = t1)
+        writer.refresh(key, null, now.plusSeconds(2), PlanChangeReason.SWEEP, readAt = t1)
+        assertEquals("ON_HOLD", state(token))
+        assertEquals("FREE", plan(world.shopId))
+        assertEquals(t2, (row(token)["last_verified_at"] as Timestamp).toInstant())
+        assertEquals(now, (row(token)["updated_at"] as Timestamp).toInstant())
+        assertEquals(5, row(token)["last_notification_type"])
+        writer.refresh(key, active, now.plusSeconds(3), PlanChangeReason.RTDN, 1, readAt = t2.plusSeconds(1))
+        assertEquals("ACTIVE", state(token))
+        assertEquals("PRO", plan(world.shopId))
+    }
+
+    @Test
+    fun `older confirmed revocation cannot overwrite a newer active answer`() {
+        val world = world()
+        val token = token("active", world.shopId)
+        linkOk(world.shopId, token, world.owner)
+        val key = SubscriptionKey(world.shopId, row(token)["id"] as UUID)
+        val t1 = clock.instant().plusSeconds(10).truncatedTo(ChronoUnit.MICROS)
+        val t2 = t1.plusSeconds(10)
+        writer.refresh(key, fake.purchase(PlaySubscriptionPurchase.STATE_ACTIVE, world.shopId), t2, PlanChangeReason.RTDN)
+        assertEquals(false, writer.revoke(key, t2.plusSeconds(1), PlanChangeReason.RTDN, 12, readAt = t1))
+        assertEquals("ACTIVE", state(token))
+        assertEquals("PRO", plan(world.shopId))
+        assertNull(row(token)["revoked_at"])
+        assertEquals(t2, (row(token)["last_verified_at"] as Timestamp).toInstant())
+        assertEquals(true, writer.revoke(key, t2.plusSeconds(2), PlanChangeReason.RTDN, 12, readAt = t2.plusSeconds(1)))
+        assertEquals("REVOKED", state(token))
+        assertEquals("FREE", plan(world.shopId))
+    }
+
+    @Test
+    fun `sweep verification time comes from the play read rather than the batch time`() {
+        val world = world()
+        val token = token("active", world.shopId)
+        linkOk(world.shopId, token, world.owner)
+        fake.put(token, fake.purchase(PlaySubscriptionPurchase.STATE_ON_HOLD, world.shopId))
+        val before = clock.instant().truncatedTo(ChronoUnit.MICROS)
+        val batchTime = before.plus(Duration.ofHours(25))
+        sweeper.sweep(batchTime)
+        val after = clock.instant().plusNanos(1_000)
+        val verifiedAt = (row(token)["last_verified_at"] as Timestamp).toInstant()
+        assertTrue(verifiedAt >= before && verifiedAt <= after)
+        assertTrue(verifiedAt < batchTime)
+        assertEquals("ON_HOLD", state(token))
+        assertEquals("FREE", plan(world.shopId))
+    }
+
+    @Test
+    fun `equal play read time is accepted`() {
+        val world = world()
+        val token = token("active", world.shopId)
+        linkOk(world.shopId, token, world.owner)
+        val key = SubscriptionKey(world.shopId, row(token)["id"] as UUID)
+        val readAt = (row(token)["last_verified_at"] as Timestamp).toInstant()
+        val hold = fake.purchase(PlaySubscriptionPurchase.STATE_ON_HOLD, world.shopId)
+        writer.refresh(key, hold, readAt.plusSeconds(1), PlanChangeReason.SWEEP, readAt = readAt)
+        assertEquals("ON_HOLD", state(token))
+        assertEquals("FREE", plan(world.shopId))
+        assertEquals(readAt, (row(token)["last_verified_at"] as Timestamp).toInstant())
+    }
 
     @Test
     fun `canceled past its expiry becomes expired and the shop free`() {
