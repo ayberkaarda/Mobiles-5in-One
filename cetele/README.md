@@ -53,9 +53,9 @@ A single repository with two roots: `android/` (a multi-module Gradle project wi
 
 ## Status
 
-Phases 0 to 3 of 7 are merged: the repository foundation, the Spring Boot server (authentication and security baseline, sync with a change log, ledger, reminders, media pipeline, account and shop deletion) and the Android app (offline-first ledger, sync engine, PIN and biometric lock, reminders, PDF and CSV export, settings). Progress is about 57%. Billing and webhooks, the web and admin area, and release hardening (Phases 4 to 6) have not started.
+Phases 0 to 4 of 7 are merged: the repository foundation, the Spring Boot server (authentication and security baseline, sync with a change log, ledger, reminders, media pipeline, account and shop deletion, Play billing with purchase linking and entitlements, Play RTDN and SMS delivery-report webhooks, the admin console with TOTP and an audit log) and the Android app (offline-first ledger, sync engine, PIN and biometric lock, reminders, PDF and CSV export, settings, Play Billing and the Pro plan screens). Progress is about 71%. The public web (SEO and GEO, Phase 5) and release hardening (Phase 6) are not merged yet.
 
-Verification so far is JVM unit tests and CI only. The Android app has not been run on a device or emulator and the server has not been exercised by a real client, so biometrics, camera capture, real PDF output, WhatsApp and live SMS are untested. Phase 3 left open: the KVKK notice link (a product decision) and a running-sync signal for the dashboard refresh indicator.
+Verification so far is JVM unit tests and CI only; Play Developer API, RTDN signing keys and Play Integrity ran against fake adapters and recorded fixtures, with no Play account. The Android app has not been run on a device or emulator and the server has not been exercised by a real client, so biometrics, camera capture, real PDF output, WhatsApp and live SMS are untested. Left open: the KVKK notice link (a product decision), a running-sync signal for the dashboard refresh indicator and an upgrade button on the sync issues screen.
 
 ## Getting started
 
