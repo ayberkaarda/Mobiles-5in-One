@@ -1,0 +1,8 @@
+/* Ionic core and the optional utility sheets the app uses, then the brand tokens from libs/ui. */
+@use '@ionic/angular/css/core.css';
+@use '@ionic/angular/css/normalize.css';
+@use '@ionic/angular/css/structure.css';
+@use '@ionic/angular/css/typography.css';
+@use '@ionic/angular/css/padding.css';
+@use '../../../libs/ui/src/styles/tokens.css';
+@use '../../../libs/ui/src/styles/base.css';

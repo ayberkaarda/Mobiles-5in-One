@@ -1,0 +1,15 @@
+# Build output, caches and lockfiles are not formatted
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+/.angular
+/api
+/apps/mobile/android
+pnpm-lock.yaml
+/README.md
+/README.tr.md
+/05-*.md
+/docs
+# Built by brand/scripts/build-tokens.mjs, checked byte for byte
+/libs/ui/src/styles/tokens.css

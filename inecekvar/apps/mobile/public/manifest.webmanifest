@@ -1,0 +1,12 @@
+{
+  "name": "İnecek Var: Dolmuş & Minibüs Hatları",
+  "short_name": "İnecekVar",
+  "description": "Dolmuş, minibüs ve servis hatları için mahallelinin birlikte haritaladığı, çevrimdışı da çalışan hat rehberi.",
+  "lang": "tr-TR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#F2B705",
+  "background_color": "#FFF8E7"
+}

@@ -1,0 +1,22 @@
+# Single-package Nx workspace: the apps and libs are Nx projects, not pnpm workspace packages.
+packages: []
+
+# Dependency lifecycle scripts are denied unless listed here with `true`.
+# Review every new entry: install scripts run arbitrary code on developer machines and CI.
+allowBuilds:
+  # Verifies the platform-specific native binary of the Nx task runner.
+  nx: true
+  esbuild: false
+  lmdb: false
+  msgpackr-extract: false
+  '@parcel/watcher': false
+
+minimumReleaseAgeExclude:
+  - '@angular-eslint/builder@22.6.0'
+  - '@angular-eslint/bundled-angular-compiler@22.6.0'
+  - '@angular-eslint/eslint-plugin-template@22.6.0'
+  - '@angular-eslint/eslint-plugin@22.6.0'
+  - '@angular-eslint/schematics@22.6.0'
+  - '@angular-eslint/template-parser@22.6.0'
+  - '@angular-eslint/utils@22.6.0'
+  - angular-eslint@22.6.0

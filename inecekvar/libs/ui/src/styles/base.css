@@ -1,0 +1,17 @@
+/* Shared base rules on top of tokens.css; both apps import tokens.css first, then this file. */
+body {
+  font-family: var(--iv-font-body);
+  color: var(--iv-color-text);
+  background: var(--iv-color-background);
+}
+
+h1,
+h2,
+.iv-display {
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+}
+
+.iv-fare {
+  font-variant-numeric: var(--iv-font-fare-numeric);
+}

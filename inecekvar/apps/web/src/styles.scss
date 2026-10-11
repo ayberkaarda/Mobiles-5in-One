@@ -1,0 +1,7 @@
+/* Brand tokens and shared base rules from libs/ui. */
+@use '../../../libs/ui/src/styles/tokens.css';
+@use '../../../libs/ui/src/styles/base.css';
+
+body {
+  margin: 0;
+}
