@@ -3,6 +3,7 @@ package app.cetele.android.navigation
 import android.app.Application
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,6 +12,7 @@ import androidx.navigation.toRoute
 import app.cetele.android.core.data.session.SignOutReason
 import app.cetele.android.core.domain.model.EntryType
 import app.cetele.android.feature.auth.navigation.AuthRoutes
+import app.cetele.android.feature.billing.navigation.BillingRoutes
 import app.cetele.android.feature.customers.navigation.CustomerRoutes
 import app.cetele.android.feature.ledger.navigation.LedgerRoutes
 import app.cetele.android.feature.settings.navigation.SettingsRoutes
@@ -48,6 +50,7 @@ class NavControllerNavigatorTest {
                 composable<CustomerRoutes.Edit> { Text("edit") }
                 composable<ShopHomeRoute> { Text("shop") }
                 composable<SettingsRoutes.Home> { Text("settings") }
+                composable<BillingRoutes.Home> { Text("billing") }
                 composable<AuthRoutes.Lock> { Text("lock") }
                 composable<AuthRoutes.SessionEnded> { Text("ended") }
             }
@@ -96,6 +99,22 @@ class NavControllerNavigatorTest {
             assertEquals("c2", controller.currentBackStackEntry!!.toRoute<CustomerRoutes.Detail>().customerId)
             navigator.back()
             assertEquals(TopLevelDestination.CUSTOMERS, currentTab())
+        }
+    }
+
+    @Test
+    fun billingOpensOverSettingsBehindTheGateAndReturnsToSettings() {
+        onMain {
+            navigator.openTab(SettingsRoutes.Home)
+            AppSettingsNavigation(navigator, "0.3.0").onOpenBilling()
+            val billing = controller.currentDestination!!
+            assertTrue(billing.hasRoute(BillingRoutes.Home::class))
+            assertEquals(RouteKind.PROTECTED, routeKind(billing))
+            assertNull(currentTab())
+            val locked = AppGate(signedIn = true, pinSetupDone = true, locked = true)
+            assertEquals(AuthRoutes.Lock, locked.redirect(routeKind(billing)))
+            AppBillingNavigation(navigator).onBack()
+            assertEquals(TopLevelDestination.SETTINGS, currentTab())
         }
     }
 
