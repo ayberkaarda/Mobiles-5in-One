@@ -34,6 +34,24 @@ pre-commit:
           exit 0
         fi
         dart format --set-exit-if-changed {staged_files}
+    inecekvar-prettier:
+      root: inecekvar/
+      glob: '*.{js,mjs,cjs,ts,json,html,scss,css,yml,yaml}'
+      exclude:
+        - 'inecekvar/api/**'
+        - 'inecekvar/apps/mobile/android/**'
+        - 'inecekvar/libs/ui/src/styles/tokens.css'
+      run: pnpm exec prettier --check {staged_files}
+    # Inecek Var API lint and format check. Fail-open with a visible warning when uv is not on PATH.
+    inecekvar-ruff:
+      root: inecekvar/api/
+      glob: '*.py'
+      run: |
+        if ! command -v uv >/dev/null 2>&1; then
+          echo "WARNING: inecekvar-ruff skipped, uv is not on PATH. Run uv run ruff check . in inecekvar/api manually." >&2
+          exit 0
+        fi
+        uv run ruff check {staged_files} && uv run ruff format --check {staged_files}
 
 commit-msg:
   commands:
