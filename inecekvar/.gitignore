@@ -1,0 +1,32 @@
+node_modules/
+dist/
+tmp/
+coverage/
+out-tsc/
+.angular/
+.nx/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Python API
+api/.venv/
+api/.mypy_cache/
+api/.ruff_cache/
+api/.pytest_cache/
+__pycache__/
+# Capacitor native build output (the android project itself is committed)
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/app/src/main/assets/public/
+apps/mobile/android/capacitor-cordova-android-plugins/
+
+.angular
+
+__screenshots__/
+vitest.config.*.timestamp*
+.vitest

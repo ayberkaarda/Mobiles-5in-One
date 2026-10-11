@@ -37,7 +37,7 @@ Tagline (tr): "Dolmuş nereden geçer? Mahalle bilir."
 
 | Layer | Technology |
 |---|---|
-| Mobile and PWA | Ionic 8, Angular, Capacitor |
+| Mobile and PWA | Ionic 9, Angular, Capacitor |
 | Web | Angular SSR |
 | Maps | MapLibre GL JS with PMTiles |
 | Monorepo tooling | Nx, pnpm |
@@ -53,8 +53,28 @@ An Nx workspace with `apps/mobile` (Ionic and Angular, also served as a PWA), `a
 
 ## Status
 
-This folder currently contains only a design/spec document; no source code has been written yet.
+Phase 0 (foundation) is in place; no product feature exists yet. The folder holds the Nx workspace with `apps/mobile` (Ionic 9 on Capacitor, Android project committed), `apps/web` (Angular SSR) and the `libs/` ui, domain and data-access libraries; the FastAPI project in `api/` with a `/v1/health` endpoint and a PostGIS connectivity test; the local Docker Compose stack (PostGIS, Redis, MinIO, Mailpit, Caddy); the brand tokens and logo set; the ADRs, the env reference and the security drafts in `docs/`; and the `inecekvar-ci.yml` workflow. Resolved versions and the Phase 0 evidence are in `docs/adr/0001-stack-and-versions.md`.
+
+Not exercised in Phase 0: iOS (no macOS host), the CI workflow on GitHub Actions (the branch is not pushed), the lefthook hooks themselves, the APK on an emulator or device, the dev servers behind Caddy, and wiring the brand icons into the SSR favicon and the Android launcher.
 
 ## Getting started
 
-There is no code to install or run yet. The product and technical specification lives in this folder as `05-inecekvar-ionic-angular.md`. This README will be updated once development starts.
+The product and technical specification lives in this folder as `05-inecekvar-ionic-angular.md`. Requirements: Node 22, pnpm 12, uv, Docker; JDK 21 for the Android build. Run the Phase 0 gates as in ADR-0001, from `inecekvar/`:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec prettier --check .
+pnpm nx run-many -t lint test build --skip-nx-cache
+docker compose up -d
+```
+
+and from `inecekvar/api/`:
+
+```sh
+uv sync --locked
+uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
+uv run pytest
+uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
+```
+
+Compose runs only the data and proxy services; the API and the dev servers run on the host. Ports and environment keys are listed in `docs/ops/env.md`.

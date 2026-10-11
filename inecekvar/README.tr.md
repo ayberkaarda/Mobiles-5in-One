@@ -37,7 +37,7 @@ Slogan: "Dolmuş nereden geçer? Mahalle bilir."
 
 | Katman | Teknoloji |
 |---|---|
-| Mobil ve PWA | Ionic 8, Angular, Capacitor |
+| Mobil ve PWA | Ionic 9, Angular, Capacitor |
 | Web | Angular SSR |
 | Harita | MapLibre GL JS + PMTiles |
 | Monorepo araçları | Nx, pnpm |
@@ -53,8 +53,28 @@ Bir Nx workspace: `apps/mobile` (Ionic ve Angular, aynı zamanda PWA olarak sunu
 
 ## Durum
 
-Bu klasörde şu an yalnızca tasarım/spec dokümanı var; kaynak kod henüz yazılmadı.
+Faz 0 (temel) hazır; henüz ürün özelliği yok. Klasörde şunlar var: `apps/mobile` (Capacitor üzerinde Ionic 9, Android projesi depoda), `apps/web` (Angular SSR) ve `libs/` altındaki ui, domain ve data-access kütüphaneleriyle Nx workspace; `/v1/health` uç noktası ve PostGIS bağlantı testi olan `api/` FastAPI projesi; yerel Docker Compose yığını (PostGIS, Redis, MinIO, Mailpit, Caddy); marka token'ları ve logo seti; `docs/` altında ADR'ler, ortam değişkenleri rehberi ve güvenlik taslakları; `inecekvar-ci.yml` iş akışı. Çözümlenen sürümler ve Faz 0 kanıtları `docs/adr/0001-stack-and-versions.md` dosyasında.
+
+Faz 0'da denenmeyenler: iOS (macOS makine yok), GitHub Actions üzerinde CI iş akışı (dal push edilmedi), lefthook kancalarının kendisi, APK'nın emülatörde veya cihazda çalıştırılması, Caddy arkasındaki geliştirme sunucuları ve marka ikonlarının SSR favicon'una ve Android başlatıcı ikonuna bağlanması.
 
 ## Kurulum
 
-Henüz kod yok, bu yüzden kurulacak ya da çalıştırılacak bir şey de yok. Ürün ve teknik tanım bu klasörde `05-inecekvar-ionic-angular.md` dosyasında duruyor. Geliştirme başlayınca bu README güncellenecek.
+Ürün ve teknik tanım bu klasörde `05-inecekvar-ionic-angular.md` dosyasında duruyor. Gerekenler: Node 22, pnpm 12, uv, Docker; Android derlemesi için JDK 21. Faz 0 kapıları ADR-0001'deki gibi `inecekvar/` içinden çalışır:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec prettier --check .
+pnpm nx run-many -t lint test build --skip-nx-cache
+docker compose up -d
+```
+
+ve `inecekvar/api/` içinden:
+
+```sh
+uv sync --locked
+uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
+uv run pytest
+uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
+```
+
+Compose yalnızca veri ve proxy servislerini çalıştırır; API ve geliştirme sunucuları makinede çalışır. Portlar ve ortam değişkenleri `docs/ops/env.md` dosyasında.

@@ -1,0 +1,14 @@
+# Build output, caches and lockfiles are not formatted
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+/.angular
+/api
+/apps/mobile/android
+pnpm-lock.yaml
+# Prose (specification, READMEs, ADRs, guides) is written by hand and not reflowed
+*.md
+/docs
+# Built by brand/scripts/build-tokens.mjs, checked byte for byte
+/libs/ui/src/styles/tokens.css

@@ -1,0 +1,35 @@
+# Local reverse proxy for docker-compose.yml. Production uses automatic TLS for inecekvar.app,
+# app.inecekvar.app and api.inecekvar.app (hosting is decided in ADR-0002); locally the sites are
+# plain HTTP on 127.0.0.1 only. Both browser origins proxy /api/* to the API so the session
+# cookie stays same-origin (spec section 4, auth strategy for web and PWA).
+{
+	admin off
+	auto_https off
+}
+
+(api_proxy) {
+	handle_path /api/* {
+		reverse_proxy host.docker.internal:57800
+	}
+}
+
+# inecekvar.app locally: Angular SSR web dev server.
+:8080 {
+	import api_proxy
+	handle {
+		reverse_proxy host.docker.internal:4200
+	}
+}
+
+# app.inecekvar.app locally: Ionic PWA dev server.
+:8081 {
+	import api_proxy
+	handle {
+		reverse_proxy host.docker.internal:8100
+	}
+}
+
+# Container health check only; not published to the host.
+:8090 {
+	respond /healthz 200
+}

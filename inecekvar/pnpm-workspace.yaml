@@ -1,0 +1,14 @@
+# Single-package Nx workspace: the apps and libs are Nx projects, not pnpm workspace packages.
+packages: []
+
+# Dependency lifecycle scripts are denied unless listed here with `true`.
+# Review every new entry: install scripts run arbitrary code on developer machines and CI.
+allowBuilds:
+  # Verifies the platform-specific native binary of the Nx task runner.
+  nx: true
+  # Denied: their native binaries arrive as optional platform packages, so the install scripts
+  # only re-check them; lint, test and build pass without them (ADR-0001 evidence table).
+  esbuild: false
+  lmdb: false
+  msgpackr-extract: false
+  "@parcel/watcher": false

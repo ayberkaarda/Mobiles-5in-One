@@ -1,0 +1,410 @@
+name: Inecek Var CI
+
+# Runs on every pull request and every push to main, without a path filter, so the single
+# "Inecek Var CI gate" check always reports and can be the one required status check on main.
+# The "changes" job decides whether the Inecek Var jobs have work to do; when nothing under
+# inecekvar/ (or an inecekvar-* workflow, or .gitleaks.toml) changed they are skipped and the
+# gate passes. Same pattern as askida-ci.yml and kadro-ci.yml.
+# Actions are pinned to full commit SHAs. The workflow lives at the Git repository root.
+# Native builds run on manual dispatch only (spec section 8): the "android" job below.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inecekvar-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  UV_VERSION: 0.12.5
+  NX_DAEMON: "false"
+  NX_NO_CLOUD: "true"
+
+jobs:
+  changes:
+    name: Detect Inecek Var changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      inecekvar: ${{ steps.diff.outputs.inecekvar }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch, an unknown "before" commit or a manual dispatch
+      # runs everything. The decision comes from the exit code of `git diff --quiet` limited to
+      # the Inecek Var pathspecs, not from parsing file names, so quoted or non-ASCII names cannot
+      # slip past. --no-renames reports a file moved out of inecekvar/ as a deletion inside it.
+      # Exit 0 means no change, 1 a change, anything else is an error and runs every job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base commit; running every Inecek Var job."
+            inecekvar=true
+          else
+            set -- inecekvar/ ':(glob).github/workflows/inecekvar-*.yml' .gitleaks.toml
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) inecekvar=false ;;
+              1) inecekvar=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Inecek Var job."
+                inecekvar=true
+                ;;
+            esac
+          fi
+          echo "inecekvar=$inecekvar" >> "$GITHUB_OUTPUT"
+          echo "Inecek Var jobs run: $inecekvar"
+
+  # Nx workspace in inecekvar/: apps/mobile (Ionic + Capacitor PWA), apps/web (Angular SSR) and
+  # libs/{ui,domain,data-access}. Lint, unit tests and production builds of every project.
+  workspace:
+    name: Inecek Var workspace
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in inecekvar/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: inecekvar/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: inecekvar/.nvmrc
+          cache: pnpm
+          cache-dependency-path: inecekvar/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Brand tokens are in sync with libs/ui
+        run: node brand/scripts/build-tokens.mjs --check
+
+      - name: Format check (Prettier)
+        run: pnpm exec prettier --check .
+
+      - name: Lint, test and build
+        run: pnpm nx run-many -t lint test build --output-style=static
+
+  # FastAPI project in inecekvar/api. The PostGIS service container carries the test database;
+  # INECEKVAR_REQUIRE_DOCKER=1 turns a missing database into a failure instead of a skip, and the
+  # JUnit report is checked for skipped cases as in askida-ci.yml.
+  api:
+    name: Inecek Var API
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: inecekvar/api
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: inecekvar_test
+          POSTGRES_USER: inecekvar
+          POSTGRES_PASSWORD: inecekvar_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U inecekvar -d inecekvar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7.4.11-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      INECEKVAR_TEST_DATABASE_URL: postgresql://inecekvar:inecekvar_ci_only@127.0.0.1:5432/inecekvar_test
+      INECEKVAR_REQUIRE_DOCKER: "1"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: inecekvar/api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # Fails early with a clear message when a service container is not reachable (max 30 s).
+      # Plain bash TCP probes, no extra client needed. Redis is probed with PING; the API uses it
+      # from Phase 1 on (rate limits, planner cache).
+      - name: Wait for PostgreSQL and Redis
+        run: |
+          wait_for() {
+            name="$1"; host="$2"; port="$3"; probe="$4"
+            for _ in $(seq 1 30); do
+              if exec 3<>"/dev/tcp/${host}/${port}" 2>/dev/null; then
+                if [ -z "$probe" ]; then
+                  exec 3>&- 3<&-
+                  echo "$name reachable at ${host}:${port}"
+                  return 0
+                fi
+                printf '%s\r\n' "$probe" >&3
+                reply=""
+                read -r -t 2 reply <&3 || true
+                exec 3>&- 3<&-
+                case "$reply" in
+                  +PONG*)
+                    echo "$name reachable at ${host}:${port}"
+                    return 0
+                    ;;
+                esac
+              fi
+              sleep 1
+            done
+            echo "$name NOT reachable at ${host}:${port} after 30 s"
+            return 1
+          }
+          status=0
+          wait_for PostgreSQL 127.0.0.1 5432 "" || status=1
+          wait_for Redis "$REDIS_HOST" "$REDIS_PORT" "PING" || status=1
+          exit "$status"
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Type check (mypy --strict)
+        run: uv run mypy --strict app tests
+
+      - name: Tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/junit"
+          uv run pytest --junitxml="$RUNNER_TEMP/junit/api.xml"
+
+      - name: Reject skipped tests
+        run: |
+          report="$RUNNER_TEMP/junit/api.xml"
+          test -s "$report" || { echo "JUnit report missing: $report"; exit 1; }
+          skipped=$(grep -c '<skipped' "$report" || true)
+          echo "Skipped test cases in report: $skipped"
+          if [ "$skipped" -ne 0 ]; then
+            echo "Skipped tests are failures in CI."
+            exit 1
+          fi
+
+  # Leftover-marker grep over the tracked Inecek Var sources, the compose file check and a secret
+  # scan of the full history. git grep only reads tracked files; the pathspecs exclude lockfiles
+  # and the vendored Gradle wrapper. Case-sensitive TODO, FIXME, XXX and YOUR_; lorem is matched
+  # case-insensitively.
+  checks:
+    name: Inecek Var checks
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Placeholder markers
+        run: |
+          set -- inecekvar \
+            ':(exclude)inecekvar/05-inecekvar-ionic-angular.md' \
+            ':(exclude,glob)**/node_modules/**' \
+            ':(exclude,glob)**/dist/**' \
+            ':(exclude,glob)**/pnpm-lock.yaml' \
+            ':(exclude,glob)**/uv.lock' \
+            ':(exclude,glob)**/gradle/wrapper/**'
+          found=0
+          if git grep -n -I -E 'TODO|FIXME|XXX|YOUR_' -- "$@"; then found=1; fi
+          if git grep -n -I -i -E 'lorem' -- "$@"; then found=1; fi
+          if [ "$found" -ne 0 ]; then
+            echo "Placeholder markers found under inecekvar/."
+            exit 1
+          fi
+          echo "No placeholder markers found."
+
+      # The project's banned words, case-insensitive, over every tracked file under inecekvar/.
+      # Narrow exclusions: the specification names the words in its own rules text; node_modules
+      # and dist are not sources; lockfiles hold third-party names and hashes; the Android project
+      # is managed by Capacitor (`cap sync` rewrites its gradle files and their header comments).
+      - name: Banned words
+        run: |
+          if git grep -n -I -i -E 'claude|codex|gpt|generated|orchestrat|todo|fixme|lorem|your_' -- inecekvar \
+            ':(exclude)inecekvar/05-inecekvar-ionic-angular.md' \
+            ':(exclude,glob)**/node_modules/**' \
+            ':(exclude,glob)**/dist/**' \
+            ':(exclude,glob)**/pnpm-lock.yaml' \
+            ':(exclude,glob)**/uv.lock' \
+            ':(exclude)inecekvar/apps/mobile/android'; then
+            echo "Banned words found under inecekvar/."
+            exit 1
+          fi
+          echo "No banned words found."
+
+      - name: Compose file is valid
+        run: docker compose -f inecekvar/docker-compose.yml config --quiet
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Scans every commit of every ref from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  # Capacitor Android debug APK. Native builds run on manual dispatch only (spec section 8), so
+  # this job is NOT part of "Inecek Var CI gate" and is skipped on pushes and pull requests.
+  android:
+    name: Inecek Var Android (manual)
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' && needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: inecekvar/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: inecekvar/.nvmrc
+          cache: pnpm
+          cache-dependency-path: inecekvar/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the PWA and sync it into the Android project
+        run: pnpm nx run mobile:cap-sync --output-style=static
+
+      - name: Assemble debug APK
+        working-directory: inecekvar/apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+  # The only check to mark as required on main. "changes" must succeed and report inecekvar=true
+  # or inecekvar=false. true: workspace, api and checks must all succeed. false: all three must
+  # be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # The manual "android" job is deliberately left out of "needs".
+  # When a job is added to this workflow, add it to "needs" and to the checks below.
+  gate:
+    name: Inecek Var CI gate
+    needs: [changes, workspace, api, checks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          INECEKVAR_CHANGED: ${{ needs.changes.outputs.inecekvar }}
+          WORKSPACE_RESULT: ${{ needs.workspace.result }}
+          API_RESULT: ${{ needs.api.result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (inecekvar=${INECEKVAR_CHANGED:-<none>})"
+          echo "workspace: ${WORKSPACE_RESULT:-<none>}"
+          echo "api: ${API_RESULT:-<none>}"
+          echo "checks: ${CHECKS_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Inecek Var CI failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$INECEKVAR_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Inecek Var CI failed: change detection reported no valid inecekvar output."
+              exit 1
+              ;;
+          esac
+          for result in "$WORKSPACE_RESULT" "$API_RESULT" "$CHECKS_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Inecek Var CI failed: inecekvar=$INECEKVAR_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Inecek Var CI passed (inecekvar=$INECEKVAR_CHANGED, all jobs $expected)."

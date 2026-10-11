@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Kadro, Askida and Cetele dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
+  "description": "Kadro, Askida, Cetele and Inecek Var dependency updates: weekly, grouped, never merged automatically. Security alerts open pull requests outside the schedule.",
   "extends": ["config:recommended"],
-  "includePaths": ["kadro/**", "askida/**", "cetele/**", ".github/**"],
+  "includePaths": ["kadro/**", "askida/**", "cetele/**", "inecekvar/**", ".github/**"],
   "timezone": "Europe/Istanbul",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
@@ -128,8 +128,71 @@
       "automerge": false
     },
     {
-      "description": "node-forge (ADR-0043) and braces (ADR-0078) carry the two advisories ignored in pnpm-workspace.yaml; no patched release exists, so no update is proposed until the ADRs are reviewed.",
+      "description": "Inecek Var: Angular, Nx and the Angular test and lint plugins move together (the @nx/angular peer range bounds the Angular major), so they get their own weekly group and major updates are reviewed by hand.",
       "matchManagers": ["npm"],
+      "matchFileNames": ["inecekvar/**"],
+      "matchPackageNames": [
+        "@angular/*",
+        "@angular-devkit/*",
+        "@schematics/angular",
+        "nx",
+        "@nx/*",
+        "angular-eslint",
+        "@angular-eslint/*",
+        "@analogjs/*",
+        "typescript"
+      ],
+      "groupName": "inecekvar angular and nx",
+      "automerge": false
+    },
+    {
+      "description": "Inecek Var: Ionic and Capacitor packages (the Capacitor plugins share the core major) in one weekly group.",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["inecekvar/**"],
+      "matchPackageNames": ["@ionic/*", "ionicons", "@capacitor/*"],
+      "groupName": "inecekvar ionic and capacitor",
+      "automerge": false
+    },
+    {
+      "description": "Inecek Var API: the pyproject.toml ranges stay, only uv.lock moves.",
+      "matchManagers": ["pep621"],
+      "matchFileNames": ["inecekvar/**"],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "description": "Inecek Var API: one weekly pull request for every minor and patch update of the Python dependencies.",
+      "matchManagers": ["pep621"],
+      "matchFileNames": ["inecekvar/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "inecekvar python minor and patch",
+      "automerge": false
+    },
+    {
+      "description": "Inecek Var: the Capacitor Android Gradle files and wrapper in one weekly group; the Android Gradle plugin follows the Capacitor major.",
+      "matchManagers": ["gradle", "gradle-wrapper"],
+      "matchFileNames": ["inecekvar/**"],
+      "groupName": "inecekvar android gradle",
+      "automerge": false
+    },
+    {
+      "description": "Inecek Var: container images of the local stack (docker-compose.yml) in one weekly group.",
+      "matchManagers": ["docker-compose"],
+      "matchFileNames": ["inecekvar/**"],
+      "groupName": "inecekvar compose images",
+      "automerge": false
+    },
+    {
+      "description": "Inecek Var: major updates of Python and compose dependencies open one pull request each so they can be reviewed on their own.",
+      "matchManagers": ["pep621", "docker-compose"],
+      "matchFileNames": ["inecekvar/**"],
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Kadro: node-forge (ADR-0043) and braces (ADR-0078) carry the two advisories ignored in kadro/pnpm-workspace.yaml; no patched release exists, so no update is proposed until the ADRs are reviewed. Scoped to kadro/** so the other products keep their updates.",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["kadro/**"],
       "matchPackageNames": ["node-forge", "braces"],
       "enabled": false
     }
