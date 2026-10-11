@@ -28,7 +28,7 @@
         },
         "outputMode": "server",
         "security": {
-          "allowedHosts": []
+          "allowedHosts": ["inecekvar.app"]
         }
       },
       "configurations": {
