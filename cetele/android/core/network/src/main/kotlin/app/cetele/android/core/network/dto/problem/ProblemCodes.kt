@@ -39,5 +39,6 @@ object ProblemCodes {
     const val MEDIA_NOT_READY = "media.not_ready"
     const val ACCOUNT_OWNER_OF_SHARED_SHOP = "account.owner_of_shared_shop"
     const val ACCOUNT_DELETION_PENDING = "account.deletion_pending"
+    const val SHOP_LIMIT_REACHED = "shop.limit_reached"
     const val SHOP_DELETION_PENDING = "shop.deletion_pending"
 }

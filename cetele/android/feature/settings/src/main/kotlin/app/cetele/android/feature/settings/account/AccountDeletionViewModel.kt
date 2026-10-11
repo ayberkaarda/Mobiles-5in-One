@@ -8,6 +8,7 @@ import app.cetele.android.core.domain.validation.Limits
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
 import app.cetele.android.core.network.api.MeApi
+import app.cetele.android.core.network.api.ReauthAction
 import app.cetele.android.core.network.dto.me.AccountDeletionBody
 import app.cetele.android.core.network.dto.me.AccountDeletionReceipt
 import app.cetele.android.feature.settings.common.SettingsError
@@ -49,7 +50,7 @@ class AccountDeletionViewModel
             viewModelScope.launch {
                 if (state.value.busy) return@launch
                 mutableState.value = state.value.copy(busy = true, error = null, sharedShopChoice = false)
-                val result = auth.requestReauth()
+                val result = auth.requestReauth(ReauthAction.ACCOUNT_DELETE)
                 mutableState.value =
                     state.value.copy(
                         busy = false,

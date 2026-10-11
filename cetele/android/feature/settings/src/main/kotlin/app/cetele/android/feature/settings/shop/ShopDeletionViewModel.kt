@@ -6,6 +6,7 @@ import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
+import app.cetele.android.core.network.api.ReauthAction
 import app.cetele.android.core.network.api.ShopsApi
 import app.cetele.android.core.network.dto.shops.DeletionReceipt
 import app.cetele.android.core.network.dto.shops.ReauthCode
@@ -36,12 +37,21 @@ class ShopDeletionViewModel
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(ShopDeletionState())
         val state = mutableState.asStateFlow()
+        private var codeShopId: String? = null
 
         fun requestCode() =
             viewModelScope.launch {
                 if (state.value.busy) return@launch
+                val shop = shops.observeActive().first()
+                codeShopId = null
+                mutableState.value = state.value.copy(codeSent = false)
+                if (shop?.role != ShopRole.OWNER) {
+                    mutableState.value = state.value.copy(error = SettingsError("forbidden"))
+                    return@launch
+                }
                 mutableState.value = state.value.copy(busy = true, error = null)
-                val result = auth.requestReauth()
+                val result = auth.requestReauth(ReauthAction.SHOP_DELETE, shop.id)
+                if (result is ApiResult.Success) codeShopId = shop.id
                 mutableState.value =
                     state.value.copy(busy = false, codeSent = result is ApiResult.Success, error = result.error())
             }
@@ -50,7 +60,7 @@ class ShopDeletionViewModel
             viewModelScope.launch {
                 if (state.value.busy || !state.value.codeSent) return@launch
                 val shop = shops.observeActive().first()
-                if (shop?.role != ShopRole.OWNER) {
+                if (shop?.role != ShopRole.OWNER || shop.id != codeShopId) {
                     mutableState.value = state.value.copy(error = SettingsError("forbidden"))
                     return@launch
                 }

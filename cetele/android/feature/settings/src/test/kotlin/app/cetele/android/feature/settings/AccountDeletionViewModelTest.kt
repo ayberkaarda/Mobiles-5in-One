@@ -5,6 +5,7 @@ import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
 import app.cetele.android.core.network.api.MeApi
+import app.cetele.android.core.network.api.ReauthAction
 import app.cetele.android.core.network.dto.me.AccountDeletionBody
 import app.cetele.android.core.network.dto.me.AccountDeletionReceipt
 import app.cetele.android.feature.settings.account.AccountDeletionViewModel
@@ -42,7 +43,7 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
     @Test
     fun successKeepsAccountActiveAndRefreshesGraceStatus() =
         runTest(dispatcher) {
-            coEvery { auth.requestReauth() } returns ApiResult.Success(Unit, 202)
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns ApiResult.Success(Unit, 202)
             coEvery { me.deleteAccount(AccountDeletionBody(code, false)) } returns ApiResult.Success(receipt, 202)
             coEvery { shops.refresh() } returns ApiResult.Success(Unit, 200)
             val model = AccountDeletionViewModel(auth, me, shops)
@@ -57,7 +58,7 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
     @Test
     fun sharedOwnerCanChooseShopDeletionWithAFreshCode() =
         runTest(dispatcher) {
-            coEvery { auth.requestReauth() } returns ApiResult.Success(Unit, 202)
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns ApiResult.Success(Unit, 202)
             coEvery { me.deleteAccount(AccountDeletionBody(code, false)) } returns
                 problem("account.owner_of_shared_shop")
             coEvery { me.deleteAccount(AccountDeletionBody(code, true)) } returns ApiResult.Success(receipt, 202)
@@ -77,7 +78,7 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
     @Test
     fun invalidCodeAndPendingDeletionRemainVisibleWithoutRefresh() =
         runTest(dispatcher) {
-            coEvery { auth.requestReauth() } returns ApiResult.Success(Unit, 202)
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns ApiResult.Success(Unit, 202)
             val model = AccountDeletionViewModel(auth, me, shops)
             model.requestCode().join()
             for (reason in listOf("auth.reauth_invalid", "account.deletion_pending")) {
@@ -97,7 +98,7 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
     @Test
     fun rateLimitNetworkFailureAndMalformedCodeDoNotSubmitDeletion() =
         runTest(dispatcher) {
-            coEvery { auth.requestReauth() } returns problem("rate_limited", 40)
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns problem("rate_limited", 40)
             val model = AccountDeletionViewModel(auth, me, shops)
             model.requestCode().join()
             assertEquals(
@@ -107,10 +108,11 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
             )
             model.delete(code).join()
             coVerify(exactly = 0) { me.deleteAccount(any()) }
-            coEvery { auth.requestReauth() } returns ApiResult.Failure.Network(IllegalStateException())
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns
+                ApiResult.Failure.Network(IllegalStateException())
             model.requestCode().join()
             assertFalse(model.state.value.codeSent)
-            coEvery { auth.requestReauth() } returns ApiResult.Success(Unit, 202)
+            coEvery { auth.requestReauth(ReauthAction.ACCOUNT_DELETE) } returns ApiResult.Success(Unit, 202)
             model.requestCode().join()
             model.delete("12").join()
             assertEquals(

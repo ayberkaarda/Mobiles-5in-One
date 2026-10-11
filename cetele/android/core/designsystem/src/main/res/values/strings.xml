@@ -89,4 +89,5 @@
     <string name="error_field_date_out_of_range">Kayıt tarihi yarından sonra olamaz</string>
     <string name="error_field_due_invalid">Vade yalnızca borç kaydına eklenebilir</string>
     <string name="error_field_photo_invalid">Düzeltme kaydına fotoğraf eklenemez</string>
+    <string name="error_shop_limit_reached">Sahip olabileceğiniz dükkân sayısının sınırına ulaştınız.</string>
 </resources>
