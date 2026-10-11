@@ -168,25 +168,27 @@ fun BackupImportScreen(
 
 @Composable
 private fun PreviewSummary(preview: BackupPreview) {
-    SectionHeader(preview.shopName)
-    Text(
-        stringResource(
-            R.string.export_restore_date,
-            DateFormats.long(preview.exportedAt.atZone(CeteleClock.ZONE).toLocalDate()),
-        ),
-    )
-    Text(stringResource(R.string.export_restore_summary, preview.customers, preview.entries))
-    Text(
-        stringResource(R.string.export_restore_new, preview.newCustomers, preview.newEntries),
-        style = CeteleTextStyles.bodyStrong,
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(CeteleSpacing.large)) {
+        SectionHeader(preview.shopName)
+        Text(
+            stringResource(
+                R.string.export_restore_date,
+                DateFormats.long(preview.exportedAt.atZone(CeteleClock.ZONE).toLocalDate()),
+            ),
+        )
+        Text(stringResource(R.string.export_restore_summary, preview.customers, preview.entries))
+        Text(
+            stringResource(R.string.export_restore_new, preview.newCustomers, preview.newEntries),
+            style = CeteleTextStyles.bodyStrong,
+        )
+    }
 }
 
 @Composable
 private fun BackupScaffold(
     title: Int,
     onBack: () -> Unit,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Scaffold(
