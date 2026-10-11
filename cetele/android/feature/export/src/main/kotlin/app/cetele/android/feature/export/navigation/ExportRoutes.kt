@@ -10,4 +10,12 @@ object ExportRoutes {
 
     @Serializable
     data object All
+
+    /** Owner-only encrypted `.cetele` export. */
+    @Serializable
+    data object Backup
+
+    /** Owner-only import of a `.cetele` file. */
+    @Serializable
+    data object Restore
 }
