@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performScrollTo
 import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.dto.billing.SubscriptionState
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.feature.billing.data.BillingStateMapper
 import app.cetele.android.feature.billing.gateway.ProOffer
 import app.cetele.android.feature.billing.ui.BillingActions
@@ -128,10 +129,10 @@ class BillingScreenTest {
     fun billingErrorCodesUseTheContractCopy() {
         val cases =
             mapOf(
-                BillingProblemCodes.PURCHASE_INVALID to "Satın alma doğrulanamadı.",
-                BillingProblemCodes.TOKEN_IN_USE to "Bu abonelik başka bir dükkâna ait.",
-                BillingProblemCodes.ALREADY_SUBSCRIBED to "Bu dükkânın zaten etkin bir Çetele Pro aboneliği var.",
-                BillingProblemCodes.UNAVAILABLE to "Satın alma şu an doğrulanamıyor; biraz sonra yeniden denenecek.",
+                ProblemCodes.BILLING_PURCHASE_INVALID to "Satın alma doğrulanamadı.",
+                ProblemCodes.BILLING_TOKEN_IN_USE to "Bu abonelik başka bir dükkâna ait.",
+                ProblemCodes.BILLING_ALREADY_SUBSCRIBED to "Bu dükkânın zaten etkin bir Çetele Pro aboneliği var.",
+                ProblemCodes.BILLING_UNAVAILABLE to "Satın alma şu an doğrulanamıyor; biraz sonra yeniden denenecek.",
                 "forbidden" to "Aboneliği yalnızca dükkân sahibi yönetebilir.",
             )
         val notice = mutableStateOf<BillingNotice>(BillingNotice.Problem(null))

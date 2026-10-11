@@ -30,6 +30,8 @@
     <string name="designsystem_sync_done">Kayıtlar güncel</string>
     <string name="designsystem_error_support_code">Destek kodu: %1$s</string>
     <string name="designsystem_phone_label">Telefon numaranız</string>
+    <string name="designsystem_plan_upgrade">Çetele Pro\'ya geç</string>
+    <string name="designsystem_plan_owner_only">Dükkân sahibi Çetele Pro\'ya geçebilir</string>
     <string name="error_generic">İşlem tamamlanamadı. Lütfen daha sonra tekrar deneyin.</string>
     <string name="error_auth_unauthenticated">Devam etmek için giriş yapın</string>
     <string name="error_auth_integrity_required">Cihaz doğrulaması yapılamadı</string>
@@ -52,6 +54,10 @@
     <string name="error_ledger_reversal_mismatch">Düzeltme bilgileri asıl kayıtla eşleşmiyor</string>
     <string name="error_plan_customer_limit">Müşteri sınırına ulaştınız</string>
     <string name="error_plan_photo_limit">Bu ayki fotoğraf sınırına ulaştınız</string>
+    <string name="error_billing_purchase_invalid">Satın alma doğrulanamadı.</string>
+    <string name="error_billing_token_in_use">Bu abonelik başka bir dükkâna ait.</string>
+    <string name="error_billing_already_subscribed">Bu dükkânın zaten etkin bir Çetele Pro aboneliği var.</string>
+    <string name="error_billing_unavailable">Satın alma şu an doğrulanamıyor; biraz sonra yeniden denenecek.</string>
     <string name="error_sms_quota_exceeded">Bu ayki SMS sınırına ulaştınız</string>
     <string name="error_sms_daily_cap_reached">Bugünkü SMS gönderim sınırına ulaşıldı. Daha sonra deneyin.</string>
     <string name="error_sms_consent_missing">SMS göndermek için müşterinizin iznini kaydedin</string>
