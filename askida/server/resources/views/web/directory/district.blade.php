@@ -1,7 +1,9 @@
 {{-- /dukkanlar/{il}/{ilce}: listed shops of one district as shop cards. Names are escaped user input. --}}
 <x-web.layout :meta="$meta">
 <section class="page-head">
-<div class="wrap">
+<div class="wrap head-grid">
+<x-web.art name="sign" class="head-art" />
+<div>
 <nav class="breadcrumbs" aria-label="Konum">
 <ol>
 <li><a href="/">Askıda</a></li>
@@ -12,12 +14,13 @@
 <h1>{{ $ilce }}, {{ $il }}: askıda dükkânlar</h1>
 <x-web.answer>{{ $answer }}</x-web.answer>
 </div>
+</div>
 </section>
 
-<section class="section" aria-labelledby="shops-title">
+<section class="section rail-top" aria-labelledby="shops-title">
 <div class="wrap stack-lg">
 <x-web.rail-counter :count="$available" prefix="Şu an" note="Bu ilçedeki listelenen dükkânlarda askıda bekleyen ürünler." />
-<h2 id="shops-title" class="title2">Dükkânlar</h2>
+<h2 id="shops-title" class="title1">Dükkânlar</h2>
 <ul class="shop-list">
 @foreach ($cards as $card)
 <li><x-web.shop-card :name="$card['name']" :district="$ilce.', '.$il" :available="$card['available']" :href="$card['href']" :pictogram="$card['pictogram']" :type-label="$card['typeLabel']" :sample="$card['sample']" /></li>

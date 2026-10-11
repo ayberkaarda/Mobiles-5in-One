@@ -1,15 +1,18 @@
 @use('App\Support\Web\Facts')
 <x-web.layout :meta="$meta">
 <section class="page-head">
-<div class="wrap">
+<div class="wrap head-grid">
+<x-web.art name="loaf" class="head-art" />
+<div>
 <nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/en">Askıda</a></li><li aria-current="page">How it works</li></ol></nav>
 <h1 class="display">How Askıda works</h1>
 <x-web.answer>A donor pays for an item in the app and it is added to the shop rail. Anyone who wants one picks a nearby shop without opening an account, receives a one-time code of {{ Facts::codeLength() }} characters and shows it at the shop within {{ Facts::codeValidMinutes() }} minutes. The shop scans it and hands over the item; who took it is never recorded.</x-web.answer>
 </div>
+</div>
 </section>
-<section class="section" aria-labelledby="rail-title">
-<div class="wrap stack-lg">
-<h2 id="rail-title" class="title1">Three steps, one rail</h2>
+<section class="section rail-top" aria-labelledby="rail-title">
+<div class="wrap">
+<h2 id="rail-title" class="headline section-title">Three steps, one rail</h2>
 <x-web.station-rail :steps="[
 ['Hang', 'A donor pays for an item in the app; it is added to the shop rail.'],
 ['On the rail', 'The item waits on the shop rail, and everyone can see how many are hanging.'],
@@ -18,8 +21,9 @@
 </div>
 </section>
 <section class="section" aria-labelledby="limits-title">
-<div class="wrap stack-lg">
-<h2 id="limits-title" class="title1">The limits</h2>
+<div class="wrap split">
+<h2 id="limits-title" class="headline">The limits</h2>
+<div class="stack-lg">
 <dl class="facts-list">
 <dt>Code validity</dt><dd>{{ Facts::codeValidMinutes() }} minutes, one use.</dd>
 <dt>Daily limit</dt><dd>{{ Facts::anonDailyCap() }} items per device, {{ Facts::anonShopDailyCap() }} per shop.</dd>
@@ -28,10 +32,12 @@
 </dl>
 <p class="footnote">The details, the FAQ and the legal pages are in Turkish. <a href="/nasil-calisir" hreflang="tr" lang="tr">Türkçe sayfa</a></p>
 </div>
+</div>
 </section>
-<section class="band section-dense" aria-labelledby="get-title">
+<section class="download-band band section-dense" aria-labelledby="get-title">
 <div class="wrap">
-<h2 id="get-title" class="title1">Askıda in your pocket</h2>
+<div>
+<h2 id="get-title" class="headline">Askıda in your pocket</h2>
 <p class="lead">Use the app to hang an item. Taking one needs no account.</p>
 @if (Facts::storeUrls() !== [])
 <div class="actions">
@@ -44,6 +50,8 @@
 @else
 <p class="footnote">Store links will appear here when the app is released.</p>
 @endif
+</div>
+<x-web.art name="code" />
 </div>
 </section>
 </x-web.layout>
