@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="tr" xmlns:th="http://www.thymeleaf.org" xmlns:site="https://cetele.app/site">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${page.title}">Çetele</title>
+  <meta name="description" th:content="${page.description}">
+  <meta name="robots" th:content="${page.robots}">
+  <th:block th:if="${page.canonical != null}">
+  <link rel="canonical" th:href="${page.canonical}">
+  <link rel="alternate" hreflang="tr-TR" th:href="${page.canonical}">
+  <link rel="alternate" hreflang="x-default" th:href="${page.canonical}">
+  </th:block>
+  <link rel="preload" href="/assets/site/fonts/manrope-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/site/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/site/site.css">
+  <link rel="icon" href="/assets/site/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1E2A5A">
+  <meta property="og:type" th:content="${page.ogType}">
+  <meta property="og:site_name" content="Çetele">
+  <meta property="og:locale" content="tr_TR">
+  <meta property="og:title" th:content="${page.title}">
+  <meta property="og:description" th:content="${page.description}">
+  <meta property="og:url" th:if="${page.canonical != null}" th:content="${page.canonical}">
+  <meta property="og:image" th:content="${page.ogImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" th:content="${page.ogImageAlt}">
+  <meta property="article:modified_time" th:if="${page.guide}" th:content="${page.modified}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" th:content="${page.title}">
+  <meta name="twitter:description" th:content="${page.description}">
+  <meta name="twitter:image" th:content="${page.ogImage}">
+  <meta name="twitter:image:alt" th:content="${page.ogImageAlt}">
+  <meta th:if="${page.jsonLd != null}" site:jsonld="${page.jsonLd}">
+</head>
+<body>
+<a class="skip" href="#main">İçeriğe geç</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect width="20" height="20" rx="4.5" fill="#1E2A5A"/><path fill="none" stroke="#FAF7F0" stroke-width="1.8" stroke-linecap="round" d="M14.46 4.18A5.5 5.5 0 1 0 14.46 11.82"/><path fill="none" stroke="#FAF7F0" stroke-width="1" stroke-linecap="round" d="M7.5 5.5V10.5M9.5 5.5V10.5M11.5 5.5V10.5M13.5 5.5V10.5"/><path fill="none" stroke="#E8712B" stroke-width="1" stroke-linecap="round" d="M10.5 14.4V16.5H9.5"/></svg>
+      <span>Çetele</span>
+    </a>
+    <nav aria-label="Ana menü">
+      <ul>
+        <li th:each="link : ${page.nav}"><a th:href="${link.path}" th:text="${link.label}" th:aria-current="${link.path == page.path} ? 'page'"></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Sayfa konumu" th:if="${!page.crumbs.isEmpty()}">
+      <ol>
+        <li th:each="crumb, state : ${page.crumbs}"><a th:if="${!state.last}" th:href="${crumb.path}" th:text="${crumb.label}"></a><span th:if="${state.last}" aria-current="page" th:text="${crumb.label}"></span></li>
+      </ol>
+    </nav>
+    <article>
+      <header class="intro" th:classappend="${page.home} ? 'hero'">
+        <h1 th:text="${page.heading}">Çetele</h1>
+        <p class="lead" th:text="${page.lead}"></p>
+        <p class="meta" th:if="${page.guide}">Güncelleme: <time th:datetime="${page.modified}" th:text="${page.modifiedText}"></time></p>
+        <p class="actions" th:if="${page.home}"><a class="button primary" href="/ozellikler">Özellikleri inceleyin</a><a class="button" href="/fiyatlandirma">Planları karşılaştırın</a></p>
+      </header>
+      <div class="prose" th:if="${page.html != null}" site:html="${page.html}"></div>
+      <section class="faq" th:if="${!page.faq.isEmpty()}" aria-labelledby="sorular">
+        <h2 id="sorular">Sorular ve cevaplar</h2>
+        <div class="qa" th:each="item : ${page.faq}">
+          <h3 th:text="${item.question}"></h3>
+          <p th:text="${item.answer}"></p>
+        </div>
+      </section>
+      <section th:if="${!page.trades.isEmpty()}" aria-labelledby="esnaf">
+        <h2 id="esnaf">Esnafınıza göre Çetele</h2>
+        <ul class="cards">
+          <li th:each="card : ${page.trades}"><a th:href="${card.path}"><strong th:text="${card.title}"></strong><span th:text="${card.text}"></span></a></li>
+        </ul>
+      </section>
+      <section th:if="${!page.cards.isEmpty()}" aria-labelledby="rehber">
+        <h2 id="rehber" th:text="${page.guide or page.kind?.name() == 'TRADE'} ? 'Diğer rehber yazıları' : 'Rehber yazıları'">Rehber yazıları</h2>
+        <ul class="cards">
+          <li th:each="card : ${page.cards}"><a th:href="${card.path}"><strong th:text="${card.title}"></strong><span th:text="${card.text}"></span></a></li>
+        </ul>
+      </section>
+      <section th:if="${page.kind == null}" aria-labelledby="baglantilar">
+        <h2 id="baglantilar">Buradan devam edebilirsiniz</h2>
+        <ul>
+          <li th:each="link : ${page.footerProduct}"><a th:href="${link.path}" th:text="${link.label}"></a></li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="columns">
+      <nav aria-labelledby="alt-urun">
+        <h2 id="alt-urun">Çetele</h2>
+        <ul><li th:each="link : ${page.footerProduct}"><a th:href="${link.path}" th:text="${link.label}"></a></li></ul>
+      </nav>
+      <nav aria-labelledby="alt-esnaf">
+        <h2 id="alt-esnaf">Esnaf için</h2>
+        <ul><li th:each="link : ${page.footerTrades}"><a th:href="${link.path}" th:text="${link.label}"></a></li></ul>
+      </nav>
+      <nav aria-labelledby="alt-yasal">
+        <h2 id="alt-yasal">Yasal metinler</h2>
+        <ul><li th:each="link : ${page.footerLegal}"><a th:href="${link.path}" th:text="${link.label}"></a></li></ul>
+      </nav>
+    </div>
+    <p class="note">Veresiyeyi unutma, Çetele'ye yaz. Çetele bir portföy projesidir; Android uygulaması Google Play'de yayına hazırlanıyor. Yasal metinler örnek metinlerdir.</p>
+  </div>
+</footer>
+</body>
+</html>

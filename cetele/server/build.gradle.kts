@@ -69,6 +69,9 @@ dependencies {
         exclude(group = "com.github.jai-imageio", module = "jai-imageio-core")
     }
     implementation(libs.bouncycastle.bcprov)
+    // Markdown of the public site content (ADR-0034).
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.ext.gfm.tables)
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.spring.boot.starter.test)
