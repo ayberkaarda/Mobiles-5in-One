@@ -1,0 +1,12 @@
+# Overrides for the ZAP scan (merged after docker-compose.yml, see ops/zap/run-zap.sh).
+#   - the server image is replaced so a scan can run against a locally built tag
+#     (CETELE_ZAP_SERVER_IMAGE, default cetele-server:local);
+#   - OTP local echo is switched on so the scan script can read the sign-in code from the
+#     server log. The server refuses this key outside the local and test profiles, and the
+#     profile stays local here; production never sets it.
+# Nothing else changes: ports stay bound to 127.0.0.1 and come from the CETELE_* port keys.
+services:
+  server:
+    image: ${CETELE_ZAP_SERVER_IMAGE:-cetele-server:local}
+    environment:
+      CETELE_OTP_LOCAL_ECHO: "true"
