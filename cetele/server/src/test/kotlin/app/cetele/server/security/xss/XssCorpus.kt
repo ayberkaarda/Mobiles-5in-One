@@ -1,5 +1,7 @@
 package app.cetele.server.security.xss
 
+import app.cetele.server.web.validation.containsBidiControl
+
 /**
  * The stored-XSS payload corpus of security item 16. Every entry is at most 80 characters (the
  * longest free-text field the write paths accept besides notes), contains no leading or trailing
@@ -84,6 +86,9 @@ object XssCorpus {
         )
 
     val all: List<String> = markup + urls + expressions + encodings + unicode + csv
+
+    /** Entries the write paths accept: text with a bidi control is refused as `invalid_format`. */
+    val storable: List<String> = all.filterNot(::containsBidiControl)
 
     /** Entries that fit a 30-character field (customer tags). */
     val short: List<String> = all.filter { it.length <= 30 }

@@ -131,7 +131,7 @@ class StoredXssAdminTest : AdminIntegrationTest() {
     @Test
     fun `console pages show stored and searched payloads as inert text`() {
         val (_, session) = admins.signedIn(AdminRole.ADMIN)
-        XssCorpus.all.forEach { payload ->
+        XssCorpus.storable.forEach { payload ->
             val written = write(payload)
             val where = "[$payload]"
 
