@@ -8,6 +8,7 @@ settings and services; the module-level `app` reads the environment.
 from fastapi import APIRouter, FastAPI
 
 from app.core.deps import Services
+from app.core.errors import ProblemError, problem_response
 from app.core.health import router as health_router
 from app.core.settings import Settings, load_settings
 
@@ -28,6 +29,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     )
     application.state.settings = resolved
     application.state.services = services
+    application.add_exception_handler(ProblemError, problem_response)
     for router in ROUTERS:
         application.include_router(router, prefix=API_PREFIX)
     return application

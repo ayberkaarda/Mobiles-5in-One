@@ -4,7 +4,9 @@ Nothing here is used at runtime. The ES256 key pair is created once per test pro
 never written to disk.
 """
 
+import math
 import secrets
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import cache
@@ -12,10 +14,13 @@ from typing import Any
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from fastapi import FastAPI
 from pydantic import SecretStr
+from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.deps import OutgoingMail
-from app.core.settings import Settings
+from app.core.deps import OutgoingMail, RateLimitDecision, Services
+from app.core.settings import RateLimitRule, Settings
+from app.main import create_app
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,3 +110,48 @@ class StaticBreachChecker:
     async def is_breached(self, password: str) -> bool:
         self.calls.append(password)
         return password in self.breached
+
+
+class InMemoryRateLimiter:
+    """Sliding-window limiter over a dict; a stand-in where Redis is not the subject."""
+
+    def __init__(self, rules: Mapping[str, RateLimitRule], clock: FixedClock) -> None:
+        self._rules = dict(rules)
+        self._clock = clock
+        self._hits: dict[tuple[str, str], list[float]] = {}
+
+    async def hit(self, rule: str, subject: str) -> RateLimitDecision:
+        limit = self._rules[rule]
+        now = self._clock.now().timestamp()
+        window = [t for t in self._hits.get((rule, subject), []) if t > now - limit.window_seconds]
+        if len(window) >= limit.limit:
+            self._hits[(rule, subject)] = window
+            retry_after = math.ceil(window[0] + limit.window_seconds - now)
+            return RateLimitDecision(allowed=False, remaining=0, retry_after_seconds=retry_after)
+        window.append(now)
+        self._hits[(rule, subject)] = window
+        return RateLimitDecision(
+            allowed=True, remaining=limit.limit - len(window), retry_after_seconds=0
+        )
+
+
+class PeerClientIpMiddleware:
+    """Test-only: sets `request.state.client_ip` from the ASGI peer (pass `client=` to
+    `httpx.ASGITransport` to choose it). The production middleware lives in `app.core`."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            client = scope.get("client")
+            scope.setdefault("state", {})["client_ip"] = client[0] if client else "127.0.0.1"
+        await self.app(scope, receive, send)
+
+
+def build_test_app(services: Services, *, peer_ip_middleware: bool = True) -> FastAPI:
+    """The real `create_app` composition with the given services."""
+    application = create_app(services=services)
+    if peer_ip_middleware:
+        application.add_middleware(PeerClientIpMiddleware)
+    return application

@@ -10,6 +10,8 @@ from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Final
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 PROBLEM_CONTENT_TYPE: Final = "application/problem+json"
@@ -91,3 +93,20 @@ def problem_body(
         detail=detail,
     )
     return body.model_dump(exclude_none=True)
+
+
+def request_id_of(request: Request) -> str:
+    value = getattr(request.state, "request_id", None)
+    return value if isinstance(value, str) and value else "unknown"
+
+
+async def problem_response(request: Request, exc: Exception) -> JSONResponse:
+    """Exception handler for `ProblemError`, registered by `create_app`."""
+    if not isinstance(exc, ProblemError):
+        raise TypeError("problem_response handles ProblemError only")
+    return JSONResponse(
+        problem_body(exc.code, exc.status, request_id_of(request), exc.detail),
+        status_code=exc.status,
+        headers=exc.headers,
+        media_type=PROBLEM_CONTENT_TYPE,
+    )
