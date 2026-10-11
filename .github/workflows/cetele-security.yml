@@ -167,6 +167,27 @@ jobs:
       - name: Dependency-Check
         run: ./gradlew ${{ matrix.task }}
 
+      # A scan that analysed nothing reports "0 vulnerabilities" and passes: the server job did
+      # exactly that until 2026-10-11 (the Spring Boot classpath was skipped as a test
+      # configuration). Every JSON report must list at least one analysed dependency.
+      - name: Require analysed dependencies
+        run: |
+          reports="$(find . -path '*/build/reports/dependency-check/dependency-check-report.json' | sort)"
+          if [ -z "$reports" ]; then
+            echo "::error title=No dependency-check report::No JSON report was written."
+            exit 1
+          fi
+          status=0
+          for report in $reports; do
+            count="$(jq '.dependencies | length' "$report")"
+            echo "$report: $count dependencies analysed"
+            if [ "$count" -eq 0 ]; then
+              echo "::error title=Empty dependency scan::$report analysed no dependency."
+              status=1
+            fi
+          done
+          exit "$status"
+
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
