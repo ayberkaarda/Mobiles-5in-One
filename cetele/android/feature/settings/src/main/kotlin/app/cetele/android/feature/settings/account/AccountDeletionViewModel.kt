@@ -3,6 +3,7 @@ package app.cetele.android.feature.settings.account
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.domain.validation.Limits
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
@@ -12,8 +13,11 @@ import app.cetele.android.core.network.dto.me.AccountDeletionReceipt
 import app.cetele.android.feature.settings.common.SettingsError
 import app.cetele.android.feature.settings.common.error
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,6 +39,11 @@ class AccountDeletionViewModel
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(AccountDeletionState())
         val state = mutableState.asStateFlow()
+
+        /** True while the user owns a shop: only an owner can hold a Play subscription (spec item 21). */
+        val ownsShop: Flow<Boolean> by lazy {
+            shops.observeShops().map { list -> list.any { it.role == ShopRole.OWNER } }.distinctUntilChanged()
+        }
 
         fun requestCode() =
             viewModelScope.launch {

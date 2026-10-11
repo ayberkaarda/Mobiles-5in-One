@@ -14,14 +14,6 @@ object BillingProduct {
     const val MANAGE_URL = "https://play.google.com/store/account/subscriptions?sku=$PRODUCT_ID&package=$PACKAGE_NAME"
 }
 
-/** Billing problem codes of the Phase 4 contract (handoff 002). */
-object BillingProblemCodes {
-    const val PURCHASE_INVALID = "billing.purchase_invalid"
-    const val TOKEN_IN_USE = "billing.token_in_use"
-    const val ALREADY_SUBSCRIBED = "billing.already_subscribed"
-    const val UNAVAILABLE = "billing.unavailable"
-}
-
 /**
  * `obfuscatedAccountId` of a purchase for a shop: `lowercase_hex(SHA-256(UTF-8(shopId)))` with the shop id in
  * canonical lowercase UUID text. The server refuses a purchase whose identifier does not match the path shop.

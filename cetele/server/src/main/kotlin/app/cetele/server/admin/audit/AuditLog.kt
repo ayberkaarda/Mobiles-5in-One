@@ -49,6 +49,12 @@ enum class AuditAction(
     USER_REACTIVATED(emptySet()),
     DEVICE_REVOKED(setOf("revokedSessions")),
     AUDIT_LOG_VIEWED(setOf("page")),
+
+    /** Written by the deletion executor (actor SYSTEM, no target): `shops` is the number of shops deleted with it. */
+    ACCOUNT_DELETION_COMPLETED(setOf("shops")),
+
+    /** Written by the deletion executor (actor SYSTEM, no target): `shops` is always 1. */
+    SHOP_DELETION_COMPLETED(setOf("shops")),
 }
 
 /** Stage of a failed admin sign-in, the only metadata of `ADMIN_LOGIN_FAILED`. */

@@ -167,6 +167,7 @@ class ReminderViewModelTest {
                 assertEquals(60, viewModel.state.value.retrySeconds)
                 assertEquals(reminderTime.toEpochMilli() + 60000, viewModel.state.value.retryAtMillis)
                 assertEquals("support", viewModel.state.value.traceId)
+                assertEquals(code == "sms.quota_exceeded", viewModel.state.value.quotaExceeded)
                 viewModel.sendSms()
                 advanceUntilIdle()
             }

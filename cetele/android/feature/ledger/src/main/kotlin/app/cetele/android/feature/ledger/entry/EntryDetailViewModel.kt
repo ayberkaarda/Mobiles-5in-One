@@ -8,10 +8,12 @@ import app.cetele.android.core.data.repository.LedgerRepository
 import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.data.write.WriteResult
 import app.cetele.android.core.domain.model.LedgerEntry
+import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.domain.time.CeteleClock
 import app.cetele.android.core.domain.validation.FieldError
 import app.cetele.android.feature.ledger.photo.EntryPhotoStatus
 import app.cetele.android.feature.ledger.photo.EntryPhotos
+import app.cetele.android.feature.ledger.photo.uploadFailed
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,7 @@ import javax.inject.Inject
 
 data class EntryDetailState(
     val entry: LedgerEntry? = null,
+    val shop: Shop? = null,
     val loading: Boolean = true,
     val photoStatus: EntryPhotoStatus = EntryPhotoStatus.Absent,
     val confirmReversal: Boolean = false,
@@ -50,7 +53,7 @@ class EntryDetailViewModel
         init {
             viewModelScope.launch {
                 shops.observeActive().collectLatest { shop ->
-                    mutableState.value = EntryDetailState(loading = shop != null)
+                    mutableState.value = EntryDetailState(loading = shop != null, shop = shop)
                     if (shop != null) {
                         ledger.observeAll(shop.id).collectLatest { entries ->
                             val entry = entries.firstOrNull { it.id == entryId }
@@ -105,7 +108,7 @@ class EntryDetailViewModel
         fun sendWithoutPhoto() {
             val current = state.value
             val entry = current.entry ?: return
-            if (current.photoStatus != EntryPhotoStatus.Failed || current.busy) return
+            if (!current.photoStatus.uploadFailed || current.busy) return
             performWrite { photos.sendWithoutPhoto(entry) }
         }
 

@@ -1,6 +1,9 @@
 package app.cetele.server.account.deletion
 
 import app.cetele.server.account.AccountStore
+import app.cetele.server.admin.audit.AuditAction
+import app.cetele.server.admin.audit.AuditActorType
+import app.cetele.server.admin.audit.AuditLogService
 import app.cetele.server.auth.UserStore
 import app.cetele.server.config.JobLocks
 import app.cetele.server.media.store.MediaStore
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionTemplate
+import java.sql.Timestamp
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -23,6 +27,7 @@ class DeletionExecutor(
     private val media: MediaStore,
     private val jdbc: JdbcClient,
     private val jobs: JobLocks,
+    private val audit: AuditLogService,
     transactionManager: PlatformTransactionManager,
     private val clock: Clock,
 ) {
@@ -103,12 +108,21 @@ class DeletionExecutor(
             return
         }
         shops.forEach { shopId ->
-            deleteShop(shopId)
+            deleteShop(shopId, now)
             requests.openShop(shopId)?.let {
                 it.completedAt = now
                 requests.save(it)
             }
         }
+        val deviceRows =
+            jdbc
+                .sql("SELECT id FROM devices WHERE user_id = :id")
+                .param("id", user.id)
+                .query(UUID::class.java)
+                .list()
+                .filterNotNull()
+        // Audit rows outlive what they name (no foreign key): the user and the user's device rows are unnamed here.
+        (deviceRows + user.id).forEach(::anonymiseAudit)
         listOf("refresh_tokens", "devices").forEach { table ->
             jdbc.sql("DELETE FROM $table WHERE user_id = :id").param("id", user.id).update()
         }
@@ -119,6 +133,7 @@ class DeletionExecutor(
         jdbc.sql("DELETE FROM users WHERE id = :id").param("id", user.id).update()
         request.completedAt = now
         requests.save(request)
+        audit.record(AuditActorType.SYSTEM, null, AuditAction.ACCOUNT_DELETION_COMPLETED, metadata = mapOf("shops" to shops.size))
         log.info("account deletion completed user={} shops={}", user.id, shops.size)
     }
 
@@ -149,21 +164,50 @@ class DeletionExecutor(
             log.info("Shop deletion outcome=blocked shop={}", shopId)
             return
         }
-        deleteShop(shopId)
+        deleteShop(shopId, now)
         request.blockedAt = null
         request.completedAt = now
         requests.save(request)
+        audit.record(AuditActorType.SYSTEM, null, AuditAction.SHOP_DELETION_COMPLETED, metadata = mapOf("shops" to 1))
         log.info("Shop deletion completed shop={}", shopId)
     }
 
-    private fun deleteShop(shopId: UUID) {
+    private fun deleteShop(
+        shopId: UUID,
+        now: Instant,
+    ) {
         store.lockShop(shopId)
         media.deletePrefix("media/$shopId/")
         media.deletePrefix("uploads/$shopId/")
+        // ADR-0031: the rows leave the shop as ORPHANED without their encrypted token in this transaction; the
+        // billing sweep only repairs a row detached any other way. The hash stays, so the token never links again.
+        jdbc
+            .sql(
+                "UPDATE subscriptions SET state = 'ORPHANED', purchase_token_enc = NULL, shop_id = NULL, updated_at = :now " +
+                    "WHERE shop_id = :shopId",
+            ).param("now", Timestamp.from(now))
+            .param("shopId", shopId)
+            .update()
+        anonymiseAudit(shopId)
         SHOP_TABLES.forEach { table ->
             jdbc.sql("DELETE FROM $table WHERE shop_id = :shopId").param("shopId", shopId).update()
         }
         jdbc.sql("DELETE FROM shops WHERE id = :shopId").param("shopId", shopId).update()
+    }
+
+    /**
+     * Unnames [id] in `audit_logs` (ADR-0033): the row stays, its target or actor pointer goes. Actors are admins
+     * or the system, never an app user or shop, so the actor update is a guard that normally matches nothing.
+     */
+    private fun anonymiseAudit(id: UUID) {
+        jdbc
+            .sql("UPDATE audit_logs SET target_type = NULL, target_id = NULL WHERE target_id = :id")
+            .param("id", id)
+            .update()
+        jdbc
+            .sql("UPDATE audit_logs SET actor_id = NULL WHERE actor_id = :id")
+            .param("id", id)
+            .update()
     }
 
     companion object {

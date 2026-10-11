@@ -12,6 +12,7 @@ import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.BillingApi
 import app.cetele.android.core.network.dto.billing.LinkPurchaseRequest
 import app.cetele.android.core.network.dto.billing.SubscriptionState
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.feature.billing.gateway.PurchaseRequest
 import app.cetele.android.feature.billing.gateway.StoreFailure
 import app.cetele.android.feature.billing.gateway.StorePurchaseState
@@ -220,7 +221,7 @@ class BillingViewModelTest {
     fun unavailableVerificationQueuesTheLinkInBackgroundWork() =
         runTest(dispatcher) {
             coEvery { api.state(SHOP_ID) } returns ApiResult.Success(freeState(), 200)
-            coEvery { api.link(SHOP_ID, any()) } returns problem(503, BillingProblemCodes.UNAVAILABLE, 30)
+            coEvery { api.link(SHOP_ID, any()) } returns problem(503, ProblemCodes.BILLING_UNAVAILABLE, 30)
             memberships.value = listOf(shop())
             val model = open(shop())
             gateway.purchaseUpdates.emit(StoreResult.Ok(listOf(purchase())))
@@ -242,18 +243,18 @@ class BillingViewModelTest {
             coEvery { api.state(SHOP_ID) } returns ApiResult.Success(freeState(), 200)
             memberships.value = listOf(shop())
             val model = open(shop())
-            for (code in listOf(BillingProblemCodes.TOKEN_IN_USE, BillingProblemCodes.PURCHASE_INVALID)) {
-                val status = if (code == BillingProblemCodes.TOKEN_IN_USE) 409 else 422
+            for (code in listOf(ProblemCodes.BILLING_TOKEN_IN_USE, ProblemCodes.BILLING_PURCHASE_INVALID)) {
+                val status = if (code == ProblemCodes.BILLING_TOKEN_IN_USE) 409 else 422
                 coEvery { api.link(SHOP_ID, any()) } returns problem(status, code)
                 gateway.purchaseUpdates.emit(StoreResult.Ok(listOf(purchase())))
                 runCurrent()
                 assertEquals(BillingNotice.Problem(code), model.state.value.notice)
             }
-            coEvery { api.link(SHOP_ID, any()) } returns problem(409, BillingProblemCodes.ALREADY_SUBSCRIBED)
+            coEvery { api.link(SHOP_ID, any()) } returns problem(409, ProblemCodes.BILLING_ALREADY_SUBSCRIBED)
             coEvery { api.state(SHOP_ID) } returns ApiResult.Success(proState(), 200)
             gateway.purchaseUpdates.emit(StoreResult.Ok(listOf(purchase())))
             runCurrent()
-            assertEquals(BillingNotice.Problem(BillingProblemCodes.ALREADY_SUBSCRIBED), model.state.value.notice)
+            assertEquals(BillingNotice.Problem(ProblemCodes.BILLING_ALREADY_SUBSCRIBED), model.state.value.notice)
             assertTrue(model.state.value.showManage)
             verify(exactly = 0) { work.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
             close(model)

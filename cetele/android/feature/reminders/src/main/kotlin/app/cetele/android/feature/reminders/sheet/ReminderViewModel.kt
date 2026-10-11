@@ -14,6 +14,7 @@ import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.RemindersApi
 import app.cetele.android.core.network.api.StatementsApi
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import app.cetele.android.core.network.dto.reminders.ReminderRequest
 import app.cetele.android.core.network.dto.statements.StatementLinkRequest
 import app.cetele.android.feature.reminders.R
@@ -181,7 +182,7 @@ class ReminderViewModel internal constructor(
         val customer = snapshot.customer
         val allowed = disabledReason == null && canSend(snapshot) && shop != null && customer != null
         if (!allowed) return null
-        mutableState.update { it.copy(busy = true, message = null, traceId = null) }
+        mutableState.update { it.copy(busy = true, message = null, traceId = null, quotaExceeded = false) }
         return requireNotNull(shop) to requireNotNull(customer)
     }
 
@@ -205,6 +206,7 @@ class ReminderViewModel internal constructor(
                 retrySeconds = seconds,
                 retryAtMillis = seconds?.let { delay -> clock.millis() + delay.toLong() * MILLIS_PER_SECOND } ?: 0,
                 smsUncertain = it.smsUncertain || uncertain,
+                quotaExceeded = problem?.problem?.code == ProblemCodes.SMS_QUOTA_EXCEEDED,
             )
         }
     }

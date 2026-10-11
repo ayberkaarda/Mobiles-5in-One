@@ -2,6 +2,7 @@ package app.cetele.server.account
 
 import app.cetele.server.account.deletion.DeletionExecutor
 import app.cetele.server.account.deletion.DeletionRequestRepository
+import app.cetele.server.admin.audit.AuditLogService
 import app.cetele.server.auth.UserStore
 import app.cetele.server.config.JobLocks
 import app.cetele.server.media.store.MediaStore
@@ -30,6 +31,8 @@ class OwnershipTransferRaceTest : AccountTestSupport() {
     @Autowired private lateinit var media: MediaStore
 
     @Autowired private lateinit var jobs: JobLocks
+
+    @Autowired private lateinit var audit: AuditLogService
 
     @Test
     fun `transfer to a user whose account deletion is running waits and then finds the user gone`() {
@@ -64,6 +67,7 @@ class OwnershipTransferRaceTest : AccountTestSupport() {
                 pausing,
                 JdbcClient.create(jdbc),
                 jobs,
+                audit,
                 checkNotNull(tx.transactionManager),
                 Clock.systemUTC(),
             )

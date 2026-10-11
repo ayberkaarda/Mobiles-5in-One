@@ -1,6 +1,7 @@
 package app.cetele.android.feature.settings
 
 import app.cetele.android.core.data.repository.ShopRepository
+import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.core.network.ApiResult
 import app.cetele.android.core.network.api.AuthApi
 import app.cetele.android.core.network.api.MeApi
@@ -9,7 +10,10 @@ import app.cetele.android.core.network.dto.me.AccountDeletionReceipt
 import app.cetele.android.feature.settings.account.AccountDeletionViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -23,6 +27,17 @@ class AccountDeletionViewModelTest : SettingsTestSupport() {
     private val shops = mockk<ShopRepository>()
     private val code = (1..6).joinToString("")
     private val receipt = AccountDeletionReceipt(Instant.EPOCH, Instant.EPOCH.plusSeconds(1209600), listOf("shop"))
+
+    @Test
+    fun subscriptionNoticeFollowsWhetherTheUserOwnsAShop() =
+        runTest(dispatcher) {
+            val list = MutableStateFlow(listOf(shop(ShopRole.STAFF)))
+            every { shops.observeShops() } returns list
+            val model = AccountDeletionViewModel(auth, me, shops)
+            assertFalse(model.ownsShop.first())
+            list.value = listOf(shop(ShopRole.STAFF), shop(ShopRole.OWNER))
+            assertTrue(model.ownsShop.first())
+        }
 
     @Test
     fun successKeepsAccountActiveAndRefreshesGraceStatus() =

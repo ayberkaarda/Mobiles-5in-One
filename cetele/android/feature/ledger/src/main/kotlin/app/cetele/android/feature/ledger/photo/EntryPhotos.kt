@@ -4,12 +4,14 @@ import app.cetele.android.core.data.media.PhotoRepository
 import app.cetele.android.core.data.repository.PhotoUploadState
 import app.cetele.android.core.data.repository.SyncIssueRepository
 import app.cetele.android.core.domain.model.LedgerEntry
+import app.cetele.android.core.network.dto.problem.ProblemCodes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-enum class EntryPhotoStatus { Absent, Uploading, Failed, Ready }
+/** [LimitReached] is a failed upload refused by `plan.photo_limit`; it is released like [Failed]. */
+enum class EntryPhotoStatus { Absent, Uploading, Failed, LimitReached, Ready }
 
 /**
  * Photo state of an entry from the public data layer: the upload pipeline state when this device
@@ -34,7 +36,7 @@ class EntryPhotos
                 .map { upload ->
                     when (upload) {
                         PhotoUploadState.Uploading -> EntryPhotoStatus.Uploading
-                        is PhotoUploadState.Failed -> EntryPhotoStatus.Failed
+                        is PhotoUploadState.Failed -> failed(upload.code)
                         PhotoUploadState.Ready -> EntryPhotoStatus.Ready
                         PhotoUploadState.Absent -> status(entry)
                     }
@@ -43,3 +45,10 @@ class EntryPhotos
         /** Releases an entry whose photo upload failed; it is then sent without the photo. */
         suspend fun sendWithoutPhoto(entry: LedgerEntry): Boolean = uploads.sendWithoutPhoto(entry.shopId, entry.id)
     }
+
+/** Either failed state: the entry can be sent without its photo. */
+val EntryPhotoStatus.uploadFailed: Boolean
+    get() = this == EntryPhotoStatus.Failed || this == EntryPhotoStatus.LimitReached
+
+private fun failed(code: String?): EntryPhotoStatus =
+    if (code == ProblemCodes.PLAN_PHOTO_LIMIT) EntryPhotoStatus.LimitReached else EntryPhotoStatus.Failed

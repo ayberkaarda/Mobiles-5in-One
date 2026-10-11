@@ -13,6 +13,7 @@ import app.cetele.android.feature.settings.account.validCode
 import app.cetele.android.feature.settings.common.ReauthField
 import app.cetele.android.feature.settings.common.SettingsErrorText
 import app.cetele.android.feature.settings.common.SettingsPage
+import app.cetele.android.feature.settings.common.SubscriptionNotice
 
 @Composable
 internal fun ShopDeletionScreen(
@@ -21,11 +22,13 @@ internal fun ShopDeletionScreen(
     onDelete: (String) -> Unit,
     onCancel: () -> Unit,
     onBack: () -> Unit,
+    onManageSubscription: (() -> Unit)? = null,
 ) {
     var code by remember { mutableStateOf("") }
     SettingsPage(stringResource(R.string.settings_home_shop_deletion), onBack) {
         Text(stringResource(R.string.settings_deletion_explanation))
         Text(stringResource(R.string.settings_deletion_shop_explanation))
+        SubscriptionNotice(onManageSubscription)
         if (state.receipt != null) {
             Text(stringResource(R.string.settings_deletion_scheduled))
             CeteleButton(stringResource(R.string.settings_home_cancel_deletion), onCancel, enabled = !state.busy)
