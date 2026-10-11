@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import java.time.Duration
 
 /**
- * The public pages and files (ADR-0034). Every path resolves through [SiteRoutes]; an unknown
+ * The public pages and files (ADR-0039). Every path resolves through [SiteRoutes]; an unknown
  * trade or guide slug gets the 404 page. GET only (HEAD follows GET); the site chain answers
  * every other method with 405 before a handler runs. Not part of the API document.
  */

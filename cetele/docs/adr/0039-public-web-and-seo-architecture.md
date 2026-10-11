@@ -1,4 +1,4 @@
-# ADR-0034: Public web and SEO architecture
+# ADR-0039: Public web and SEO architecture
 
 - Status: Accepted
 - Date: 2026-10-11

@@ -32,7 +32,7 @@ class PublicSurfaceTest(
         // The OTP and refresh endpoints are public since Phase 1; everything else still needs a token.
         mvc.get("/v1/me").andExpect { status { isUnauthorized() } }
         mvc.post("/v1/shops").andExpect { status { isUnauthorized() } }
-        // The public site answers its registry paths (ADR-0034); any other path stays behind the API chain.
+        // The public site answers its registry paths (ADR-0039); any other path stays behind the API chain.
         mvc.get("/unlisted-page").andExpect { status { isUnauthorized() } }
     }
 }

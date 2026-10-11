@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import java.net.URI
 
 /**
- * `cetele.site.*` (ADR-0034).
+ * `cetele.site.*` (ADR-0039).
  *
  * - `base-url` (`CETELE_SITE_BASE_URL`, default `https://cetele.app`): origin of every canonical,
  *   `hreflang`, Open Graph, sitemap and `llms.txt` URL. No trailing slash.

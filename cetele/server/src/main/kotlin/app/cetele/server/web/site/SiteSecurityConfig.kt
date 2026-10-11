@@ -19,7 +19,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.web.filter.ShallowEtagHeaderFilter
 
 /**
- * The public site chain (ADR-0034): the registry pages, the slug families, the machine-readable
+ * The public site chain (ADR-0039): the registry pages, the slug families, the machine-readable
  * files and the site assets, ordered before the stateless API chain. It reads no credential,
  * creates no session and sets no cookie; only GET and HEAD reach a handler. The shared header
  * baseline of ADR-0010 applies; the CSP is a fixed policy without a nonce because the pages carry

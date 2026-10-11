@@ -35,9 +35,9 @@ documented here, so a gap in the numbering is always explained.
 | [0031](0031-billing-purchase-linking-and-entitlements.md)  | Billing, purchase linking and entitlements          | Accepted |
 | [0032](0032-webhook-authentication.md)                     | Webhook authentication                              | Accepted |
 | [0033](0033-admin-console-and-audit-log.md)                | Admin console and audit log                         | Accepted |
-| [0034](0034-public-web-and-seo-architecture.md)            | Public web and SEO architecture                     | Accepted |
-| 0035-0038                                                  | Phase 4 decisions (billing, webhooks, admin)        | Reserved |
-| 0039-0046                                                  | Phase 5 decisions (web, SEO and GEO)                | Reserved |
+| 0034-0038                                                  | Phase 4 decisions (billing, webhooks, admin)        | Reserved |
+| [0039](0039-public-web-and-seo-architecture.md)            | Public web and SEO architecture                     | Accepted |
+| 0040-0046                                                  | Phase 5 decisions (web, SEO and GEO)                | Reserved |
 | 0047-0056                                                  | Phase 6 decisions (hardening and release readiness) | Reserved |
 
 ADR-0001 records the toolchain decision (JDK 21 toolchain, Gradle 9.7.0, Android Gradle Plugin
@@ -64,7 +64,6 @@ downgrade rule; webhook authentication for Play RTDN and SMS delivery reports; a
 console with TOTP and the audit log (settling D-9 and D-10). Phase 3 recorded no ADR, so 0021-0030
 stays reserved and unused; 0034-0038 stays reserved for decisions made while Phase 4 is built.
 
-ADR-0034 records the Phase 5 public web shell: the route registry, content loading, templates,
-structured data, the machine-readable files and the site security chain. It takes the first free
-number after ADR-0033 at the owner's direction; 0035-0038 stays reserved and the Phase 5 range
-0039-0046 stays available for further web decisions.
+ADR-0039 records the Phase 5 public web shell: the route registry, content loading, templates,
+structured data, the machine-readable files and the site security chain. It is the first record of
+the Phase 5 range; 0040-0046 stays available for further web decisions.
