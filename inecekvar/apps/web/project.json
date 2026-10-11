@@ -65,6 +65,9 @@
         "development": {
           "buildTarget": "web:build:development"
         }
+      },
+      "options": {
+        "port": 4200
       }
     },
     "lint": {

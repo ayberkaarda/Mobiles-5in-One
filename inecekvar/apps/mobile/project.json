@@ -58,6 +58,9 @@
         "development": {
           "buildTarget": "mobile:build:development"
         }
+      },
+      "options": {
+        "port": 8100
       }
     },
     "lint": {

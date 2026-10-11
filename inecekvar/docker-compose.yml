@@ -1,0 +1,115 @@
+# Inecek Var local development stack. Host ports sit in the 57xxx range so the stack runs next
+# to the Askida (5xxxx offsets), Kadro and Cetele stacks without clashes. Every port binds to
+# 127.0.0.1 only. The passwords below are local development defaults, never used elsewhere.
+# The API (uv run uvicorn app.main:app --port 57800), the web dev server (pnpm nx serve web,
+# port 4200) and the mobile dev server (pnpm nx serve mobile, port 8100) run on the host; Caddy
+# reaches them through host.docker.internal, as production reaches them through its own network.
+# Host ports can be overridden through the environment (defaults shown):
+#   INECEKVAR_PG_PORT=57432  INECEKVAR_REDIS_PORT=57379
+#   INECEKVAR_WEB_PORT=57080  INECEKVAR_APP_PORT=57081
+#   INECEKVAR_MINIO_PORT=57900  INECEKVAR_MINIO_CONSOLE_PORT=57901
+#   INECEKVAR_MAIL_SMTP_PORT=57025  INECEKVAR_MAIL_UI_PORT=57825
+name: inecekvar
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_DB: inecekvar
+      POSTGRES_USER: inecekvar
+      POSTGRES_PASSWORD: ${INECEKVAR_DB_PASSWORD:-inecekvar_local_dev}
+    ports:
+      - "127.0.0.1:${INECEKVAR_PG_PORT:-57432}:5432"
+    volumes:
+      - inecekvar_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inecekvar -d inecekvar"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.11-alpine
+    ports:
+      - "127.0.0.1:${INECEKVAR_REDIS_PORT:-57379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # S3-compatible stand-in for Cloudflare R2 (photos, exports, backups).
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: inecekvar
+      MINIO_ROOT_PASSWORD: ${INECEKVAR_MINIO_PASSWORD:-inecekvar_local_dev}
+    ports:
+      - "127.0.0.1:${INECEKVAR_MINIO_PORT:-57900}:9000"
+      - "127.0.0.1:${INECEKVAR_MINIO_CONSOLE_PORT:-57901}:9001"
+    volumes:
+      - inecekvar_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: inecekvar
+      MINIO_ROOT_PASSWORD: ${INECEKVAR_MINIO_PASSWORD:-inecekvar_local_dev}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing local/inecekvar-media &&
+        mc mb --ignore-existing local/inecekvar-exports &&
+        mc mb --ignore-existing local/inecekvar-backups
+    restart: "no"
+
+  # Local stand-in for Resend: catches every outgoing email.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:${INECEKVAR_MAIL_SMTP_PORT:-57025}:1025"
+      - "127.0.0.1:${INECEKVAR_MAIL_UI_PORT:-57825}:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8025/livez"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Same-origin reverse proxy, as in production: /api/* goes to the API on both sites.
+  caddy:
+    image: caddy:2.11.7-alpine
+    ports:
+      - "127.0.0.1:${INECEKVAR_WEB_PORT:-57080}:8080"
+      - "127.0.0.1:${INECEKVAR_APP_PORT:-57081}:8081"
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - inecekvar_caddy_data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8090/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+# No fixed `name:` on the volumes: compose prefixes them with the project name, so a second
+# project (for example `docker compose -p inecekvar-p0`) never shares a data directory.
+volumes:
+  inecekvar_pg: {}
+  inecekvar_minio: {}
+  inecekvar_caddy_data: {}
