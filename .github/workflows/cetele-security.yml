@@ -173,9 +173,9 @@ jobs:
         with:
           name: cetele-dependency-check-${{ matrix.root }}
           path: |
-            cetele/${{ matrix.root }}/build/reports/dependency-check-report.*
-            cetele/${{ matrix.root }}/*/build/reports/dependency-check-report.*
-            cetele/${{ matrix.root }}/*/*/build/reports/dependency-check-report.*
+            cetele/${{ matrix.root }}/build/reports/dependency-check/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/build/reports/dependency-check/dependency-check-report.*
+            cetele/${{ matrix.root }}/*/*/build/reports/dependency-check/dependency-check-report.*
           if-no-files-found: warn
           retention-days: 30
 
