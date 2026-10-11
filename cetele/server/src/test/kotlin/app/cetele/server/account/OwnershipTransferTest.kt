@@ -7,12 +7,54 @@ import kotlin.test.assertEquals
 @IntegrationTest
 class OwnershipTransferTest : AccountTestSupport() {
     @Test
+    fun `target with open account deletion is refused during and after grace without consuming code`() {
+        val owner = actor()
+        val target = actor()
+        val shopId = fixtures.shop(owner.actor)
+        fixtures.addStaff(shopId, target.actor)
+        assertEquals(202, delete("/v1/me", target, mapOf("code" to code(target))).status)
+        val value = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
+        val body = mapOf("userId" to target.actor.id, "code" to value)
+        problem(post("/v1/shops/$shopId/ownership-transfer", owner, body), 404, "not_found")
+        assertEquals("OWNER", fixtures.roleOf(shopId, owner.actor.id))
+        assertEquals("STAFF", fixtures.roleOf(shopId, target.actor.id))
+        expire(target)
+        problem(post("/v1/shops/$shopId/ownership-transfer", owner, body), 404, "not_found")
+        assertEquals(204, delete("/v1/me/deletion", target).status)
+        assertEquals(200, post("/v1/shops/$shopId/ownership-transfer", owner, body).status)
+    }
+
+    @Test
+    fun `ineligible and self targets preserve the transfer code`() {
+        val owner = actor()
+        val target = actor()
+        val shopId = fixtures.shop(owner.actor)
+        val value = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
+        problem(
+            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to value)),
+            404,
+            "not_found",
+        )
+        problem(
+            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to owner.actor.id, "code" to value)),
+            409,
+            "membership.owner_locked",
+        )
+        fixtures.addStaff(shopId, target.actor)
+        assertEquals(
+            200,
+            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to value)).status,
+        )
+    }
+
+    @Test
     fun `roles swap and exactly one owner remains`() {
         val owner = actor()
         val target = actor()
         val shopId = fixtures.shop(owner.actor)
         fixtures.addStaff(shopId, target.actor)
-        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to code(owner)))
+        val value = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
+        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to value))
         assertEquals(200, response.status, response.contentAsString)
         assertEquals(target.actor.id.toString(), json.readTree(response.contentAsString)["ownerUserId"].asString())
         assertEquals(owner.actor.id.toString(), json.readTree(response.contentAsString)["previousOwnerUserId"].asString())
@@ -30,18 +72,19 @@ class OwnershipTransferTest : AccountTestSupport() {
         val shopId = fixtures.shop(owner.actor)
         val target = actor()
         fixtures.addStaff(fixtures.shop(), target.actor)
+        val scopedCode = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
         problem(
-            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to code(owner))),
+            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to scopedCode)),
             404,
             "not_found",
         )
         problem(
-            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to owner.actor.id, "code" to code(owner))),
+            post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to owner.actor.id, "code" to scopedCode)),
             409,
             "membership.owner_locked",
         )
         fixtures.addStaff(shopId, target.actor)
-        val value = code(owner)
+        val value = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
         problem(
             post(
                 "/v1/shops/$shopId/ownership-transfer",
@@ -74,7 +117,8 @@ class OwnershipTransferTest : AccountTestSupport() {
                     .replace("-", "")
         jdbc.execute("ALTER TABLE memberships ADD CONSTRAINT $constraint CHECK (user_id <> '${target.actor.id}' OR role <> 'OWNER')")
         try {
-            val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to code(owner)))
+            val value = code(owner, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
+            val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to value))
             assertEquals(500, response.status)
             assertEquals("OWNER", fixtures.roleOf(shopId, owner.actor.id))
             assertEquals("STAFF", fixtures.roleOf(shopId, target.actor.id))

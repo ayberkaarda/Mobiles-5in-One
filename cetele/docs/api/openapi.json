@@ -226,6 +226,39 @@
         },
         "type" : "object"
       },
+      "DeviceSession" : {
+        "properties" : {
+          "appVersion" : {
+            "type" : "string"
+          },
+          "current" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "lastSeenAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "signedIn" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "DeviceSignOutRequest" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EntryInput" : {
         "properties" : {
           "amountMinor" : {
@@ -760,6 +793,27 @@
         },
         "type" : "object"
       },
+      "ReauthRequest" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "ACCOUNT_DELETE",
+              "SHOP_DELETE",
+              "OWNERSHIP_TRANSFER",
+              "DEVICE_SIGN_OUT"
+            ],
+            "type" : "string"
+          },
+          "shopId" : {
+            "format" : "uuid",
+            "type" : [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type" : "object"
+      },
       "RefreshBody" : {
         "properties" : {
           "refreshToken" : {
@@ -1167,6 +1221,16 @@
     "/v1/auth/reauth/request" : {
       "post" : {
         "operationId" : "request",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReauthRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "202" : {
             "description" : "Accepted"
@@ -1323,6 +1387,63 @@
         },
         "tags" : [
           "account-controller"
+        ]
+      }
+    },
+    "/v1/me/devices" : {
+      "get" : {
+        "operationId" : "listDevices",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DeviceSession"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "device-controller"
+        ]
+      }
+    },
+    "/v1/me/devices/{id}/sign-out" : {
+      "post" : {
+        "operationId" : "signOutDevice",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DeviceSignOutRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [
+          "device-controller"
         ]
       }
     },

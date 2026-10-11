@@ -1,5 +1,6 @@
 package app.cetele.server.auth
 
+import app.cetele.server.account.ReauthAction
 import app.cetele.server.auth.otp.OtpCheck
 import app.cetele.server.auth.otp.OtpPurpose
 import app.cetele.server.auth.otp.OtpService
@@ -12,6 +13,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @IntegrationTest
 class ReauthOtpTest(
@@ -58,7 +60,10 @@ class ReauthOtpTest(
         device: UUID,
         purpose: OtpPurpose,
         now: Instant,
-    ): String = Regex("\\b\\d{6}\\b").find(tx.execute { otp.issue(phone, device, purpose, now) }!!)!!.value
+    ): String {
+        val scope = if (purpose == OtpPurpose.REAUTH) ReauthAction.ACCOUNT_DELETE.scope() else null
+        return Regex("\\b\\d{6}\\b").find(tx.execute { otp.issue(phone, device, purpose, now, scope) }!!)!!.value
+    }
 
     private fun check(
         phone: String,
@@ -66,5 +71,37 @@ class ReauthOtpTest(
         purpose: OtpPurpose,
         code: String,
         now: Instant,
-    ): OtpCheck = tx.execute { otp.check(phone, device, purpose, code, now) }!!
+    ): OtpCheck {
+        val scope = if (purpose == OtpPurpose.REAUTH) ReauthAction.ACCOUNT_DELETE.scope() else null
+        return tx.execute { otp.check(phone, device, purpose, code, now, scope) }!!
+    }
+
+    @Test
+    fun `reauth SMS names every action and distinguishes the login code`() {
+        val login = OtpService.message("123456")
+        ReauthAction.entries.forEach { action ->
+            val scope = action.scope(UUID.randomUUID())
+            val text = OtpService.message("123456", OtpPurpose.REAUTH, scope)
+            assertTrue(text != login)
+            assertTrue(text.contains(action.smsText))
+            assertTrue(text.contains("giriş kodu değildir"))
+            assertTrue(text.contains("Çetele bu kodu sizden telefonla istemez"))
+            assertTrue(!text.contains(scope))
+        }
+    }
+
+    @Test
+    fun `fifth scope mismatch closes the code even when its digits and device match`() {
+        val phone = TestUsers.phone()
+        val device = UUID.randomUUID()
+        val now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS)
+        val value = issue(phone, device, OtpPurpose.REAUTH, now)
+        repeat(5) {
+            assertEquals(
+                OtpCheck.Rejected,
+                tx.execute { otp.check(phone, device, OtpPurpose.REAUTH, value, now, ReauthAction.DEVICE_SIGN_OUT.scope()) },
+            )
+        }
+        assertEquals(OtpCheck.Rejected, check(phone, device, OtpPurpose.REAUTH, value, now))
+    }
 }

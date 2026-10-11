@@ -54,10 +54,25 @@ abstract class AccountTestSupport {
     protected fun code(
         user: AccountActor,
         purpose: OtpPurpose = OtpPurpose.REAUTH,
+        action: ReauthAction = ReauthAction.ACCOUNT_DELETE,
+        shopId: UUID? = null,
     ): String {
-        val text = tx.execute { otp.issue(user.actor.phone, user.deviceId, purpose, Instant.now()) }
+        val scope = if (purpose == OtpPurpose.REAUTH) action.scope(shopId) else null
+        val text = tx.execute { otp.issue(user.actor.phone, user.deviceId, purpose, Instant.now(), scope) }
         return Regex("[0-9]{6}").find(text)!!.value
     }
+
+    /** A reauthentication code bound to deleting [shopId]. */
+    protected fun shopCode(
+        user: AccountActor,
+        shopId: UUID,
+    ): String = code(user, action = ReauthAction.SHOP_DELETE, shopId = shopId)
+
+    /** A reauthentication code bound to transferring [shopId]. */
+    protected fun transferCode(
+        user: AccountActor,
+        shopId: UUID,
+    ): String = code(user, action = ReauthAction.OWNERSHIP_TRANSFER, shopId = shopId)
 
     protected fun post(
         path: String,
@@ -103,7 +118,8 @@ abstract class AccountTestSupport {
 
     protected fun expire(user: AccountActor) {
         jdbc.update(
-            "UPDATE deletion_requests SET requested_at = now() - interval '15 days', grace_until = now() - interval '1 day' WHERE user_id = ? AND completed_at IS NULL AND cancelled_at IS NULL",
+            "UPDATE deletion_requests SET requested_at = now() - interval '15 days', grace_until = now() - interval '1 day' " +
+                "WHERE user_id = ? AND completed_at IS NULL AND cancelled_at IS NULL",
             user.actor.id,
         )
     }

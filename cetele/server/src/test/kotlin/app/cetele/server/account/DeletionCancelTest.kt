@@ -47,7 +47,7 @@ class DeletionCancelTest : AccountTestSupport() {
     fun `account request keeps an earlier shop request and its cancel leaves that request open`() {
         val user = actor()
         val shopId = fixtures.shop(user.actor)
-        assertEquals(202, delete("/v1/shops/$shopId", user, mapOf("code" to code(user))).status)
+        assertEquals(202, delete("/v1/shops/$shopId", user, mapOf("code" to shopCode(user, shopId))).status)
         val response = delete("/v1/me", user, mapOf("code" to code(user)))
         assertEquals(202, response.status, response.contentAsString)
         assertEquals(shopId.toString(), json.readTree(response.contentAsString)["shopsToDelete"][0].asString())
@@ -67,7 +67,7 @@ class DeletionCancelTest : AccountTestSupport() {
     fun `shop cancellation does not cancel an independent account request`() {
         val user = actor()
         val shopId = fixtures.shop(user.actor)
-        assertEquals(202, delete("/v1/shops/$shopId", user, mapOf("code" to code(user))).status)
+        assertEquals(202, delete("/v1/shops/$shopId", user, mapOf("code" to shopCode(user, shopId))).status)
         assertEquals(204, delete("/v1/shops/$shopId/deletion", user).status)
         problem(delete("/v1/shops/$shopId/deletion", user), 404, "not_found")
         assertEquals(1, count("shops", "id", shopId))

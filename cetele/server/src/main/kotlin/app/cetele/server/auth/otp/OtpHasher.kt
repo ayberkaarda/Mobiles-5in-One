@@ -72,7 +72,8 @@ class OtpConfiguration {
             LocalOnlyAdapterGuard.check(LOCAL_ECHO_ADAPTER, environment)
             log.warn("OTP local echo is on: SMS texts are written to the log")
         }
-        return OtpSettings(localEcho = localEcho)
+        val dailyLimit = environment.getProperty("cetele.otp.daily-limit", Int::class.java, 10)
+        return OtpSettings(localEcho = localEcho, dailyLimit = dailyLimit)
     }
 
     companion object {
@@ -88,4 +89,9 @@ class OtpConfiguration {
 
 data class OtpSettings(
     val localEcho: Boolean,
-)
+    val dailyLimit: Int = 10,
+) {
+    init {
+        require(dailyLimit > 0) { "OTP daily limit must be positive" }
+    }
+}

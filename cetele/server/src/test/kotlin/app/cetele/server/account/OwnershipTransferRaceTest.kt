@@ -77,7 +77,7 @@ class OwnershipTransferRaceTest : AccountTestSupport() {
             // for the transfer, so only the row locks (not the due-request check) keep the two apart.
             val run = threads.submit { executor.run(Instant.now().plus(Duration.ofDays(15))) }
             assertTrue(entered.await(60, TimeUnit.SECONDS))
-            val value = code(owner)
+            val value = transferCode(owner, shopId)
             val transfer =
                 threads.submit<MockHttpServletResponse> {
                     post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to target.actor.id, "code" to value))

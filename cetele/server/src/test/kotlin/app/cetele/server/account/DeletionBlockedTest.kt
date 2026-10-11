@@ -36,7 +36,8 @@ class DeletionBlockedTest : AccountTestSupport() {
         executor.run(Instant.now())
         assertTrue(json.readTree(me(owner).contentAsString)["deletion"]["blocked"].asBoolean())
         assertEquals(1, count("users", "id", owner.actor.id))
-        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to code(owner)))
+        val transferValue = transferCode(owner, shopId)
+        val response = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to transferValue))
         assertEquals(200, response.status)
         assertFalse(json.readTree(me(owner).contentAsString)["deletion"]["blocked"].asBoolean())
         executor.run(Instant.now())
@@ -68,7 +69,8 @@ class DeletionBlockedTest : AccountTestSupport() {
                 shopId,
             ),
         )
-        val transfer = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to code(owner)))
+        val transferValue = transferCode(owner, shopId)
+        val transfer = post("/v1/shops/$shopId/ownership-transfer", owner, mapOf("userId" to staff.actor.id, "code" to transferValue))
         assertEquals(200, transfer.status, transfer.contentAsString)
         // The transfer itself cancels the previous owner's shop request, before any executor run.
         assertEquals(

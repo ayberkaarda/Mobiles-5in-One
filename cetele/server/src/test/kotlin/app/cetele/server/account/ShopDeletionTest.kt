@@ -20,9 +20,9 @@ class ShopDeletionTest : AccountTestSupport() {
         val staff = actor()
         val shopId = fixtures.shop(owner.actor)
         fixtures.addStaff(shopId, staff.actor)
-        problem(delete("/v1/shops/$shopId", staff, mapOf("code" to code(staff))), 403, "forbidden")
-        assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to code(owner))).status)
-        problem(delete("/v1/shops/$shopId", owner, mapOf("code" to code(owner))), 409, "shop.deletion_pending")
+        problem(delete("/v1/shops/$shopId", staff, mapOf("code" to shopCode(staff, shopId))), 403, "forbidden")
+        assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to shopCode(owner, shopId))).status)
+        problem(delete("/v1/shops/$shopId", owner, mapOf("code" to shopCode(owner, shopId))), 409, "shop.deletion_pending")
         expire(owner)
         executor.run(Instant.now())
         assertEquals(0, count("shops", "id", shopId))
@@ -44,7 +44,7 @@ class ShopDeletionTest : AccountTestSupport() {
             adminId,
             shopId,
         )
-        assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to code(owner))).status)
+        assertEquals(202, delete("/v1/shops/$shopId", owner, mapOf("code" to shopCode(owner, shopId))).status)
         val startedAt = Instant.now().minusSeconds(1)
         expire(owner)
         executor.run(Instant.now())

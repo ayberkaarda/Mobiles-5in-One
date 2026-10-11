@@ -50,6 +50,15 @@ class RefreshToken(
 interface RefreshTokenRepository : Repository<RefreshToken, UUID> {
     fun save(token: RefreshToken): RefreshToken
 
+    @Query(
+        "SELECT DISTINCT t.deviceId FROM RefreshToken t WHERE t.userId = :user AND t.revokedAt IS NULL " +
+            "AND t.expiresAt > :now AND t.familyExpiresAt > :now",
+    )
+    fun signedInDeviceIds(
+        @Param("user") userId: UUID,
+        @Param("now") now: Instant,
+    ): List<UUID>
+
     /** Resolves the family of a token without loading (and caching) the row itself. */
     @Query("SELECT t.familyId FROM RefreshToken t WHERE t.tokenHash = :hash")
     fun findFamilyIdByTokenHash(
