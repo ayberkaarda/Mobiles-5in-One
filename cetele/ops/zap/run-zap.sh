@@ -92,11 +92,18 @@ net_args=(--add-host=host.docker.internal:host-gateway)
 if [ "${CETELE_ZAP_HOST_NETWORK:-0}" = "1" ]; then
   net_args=(--network host --add-host=host.docker.internal:127.0.0.1)
 fi
+# Fail fast and readably when the scan container cannot reach the server: otherwise ZAP imports
+# no URL and ends with "NoUrlsException", exit 3.
+if ! docker run --rm "${net_args[@]}" --entrypoint curl "$image" -fsS -o /dev/null \
+  "http://host.docker.internal:${port}/actuator/health"; then
+  echo "The ZAP container cannot reach http://host.docker.internal:${port} (see CETELE_ZAP_HOST_NETWORK)." >&2
+  exit 1
+fi
 
 set +e
 # shellcheck disable=SC2086
 # MSYS_NO_PATHCONV: Git Bash on Windows would rewrite the "/zap/wrk" container paths.
-MSYS_NO_PATHCONV=1 docker run --rm --add-host=host.docker.internal:host-gateway \
+MSYS_NO_PATHCONV=1 docker run --rm "${net_args[@]}" \
   -e ZAP_AUTH_HEADER_VALUE -e ZAP_AUTH_HEADER=Authorization \
   -e ZAP_AUTH_HEADER_SITE=host.docker.internal \
   -v "$work:/zap/wrk:rw" -v "$cetele_dir/docs/api:/zap/api:ro" "$image" \
