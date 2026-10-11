@@ -86,6 +86,8 @@ class MeTest(
                 """{"displayName":"   "}""" to ("displayName" to "required"),
                 """{"displayName":"${"a".repeat(81)}"}""" to ("displayName" to "too_long"),
                 """{}""" to ("displayName" to "required"),
+                """{"displayName":"Ali\u0000Usta"}""" to ("displayName" to "invalid_format"),
+                """{"displayName":"Ali\u0007Usta"}""" to ("displayName" to "invalid_format"),
             )
         cases.forEach { (body, expected) ->
             val response =

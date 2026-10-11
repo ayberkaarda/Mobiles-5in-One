@@ -355,6 +355,7 @@
           "displayName" : {
             "maxLength" : 80,
             "minLength" : 1,
+            "pattern" : "^[^\\p{Cntrl}]*[^\\p{Cntrl}\\s][^\\p{Cntrl}]*$",
             "type" : "string"
           }
         },
