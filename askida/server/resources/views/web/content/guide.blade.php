@@ -4,10 +4,7 @@
 <x-web.art name="loaf" class="head-art" />
 <div>
 <nav class="breadcrumbs" aria-label="Sayfa yolu">
-<ol>
-<li><a href="/">Askıda</a></li>
-<li>Rehber</li>
-</ol>
+<ol><li><a href="/">Askıda</a></li><li>Rehber</li></ol>
 </nav>
 <h1 class="display">{{ $guide->title }}</h1>
 <x-web.answer>{{ $guide->answer }}</x-web.answer>
