@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Üç uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) ve [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) içinde. Inecek Var ve Patika kartları henüz tasarım aşamasındaki ürünler için yer tutucudur.
+Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Üç uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) ve [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Inecek Var ve Patika kartları henüz tasarım aşamasındaki ürünler için yer tutucudur.
 
 <table>
   <tr>
