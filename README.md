@@ -23,7 +23,10 @@ One card per project. Kadro, Askıda and Cetele have applications. The Askıda c
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/kadro.png" alt="Kadro: web home page and mobile lineup screen, sample data" width="100%"><br>
-      <sub><b>Kadro</b>: in development</sub>
+      <img src="kadro/docs/screenshots/mobile/03-matches-light.png" alt="Kadro mobile app: matches tab with two upcoming matches, sample data" width="32%">
+      <img src="kadro/docs/screenshots/mobile/04-match-detail-rsvp-light.png" alt="Kadro mobile app: match detail with RSVP and fee share, sample data" width="32%">
+      <img src="kadro/docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro mobile app: lineup on a pitch diagram with open places, sample data" width="32%"><br>
+      <sub><b>Kadro</b>: web pages and Android app screens (emulator, sample data); all planned phases merged</sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/askida.png" alt="Askıda: brand system and foundation" width="100%"><br>
