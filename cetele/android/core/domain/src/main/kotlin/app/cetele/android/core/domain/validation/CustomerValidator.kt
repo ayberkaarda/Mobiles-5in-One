@@ -18,6 +18,9 @@ object CustomerValidator {
             val trimmed = name.trim()
             if (trimmed.isEmpty()) add(FieldError("customer.name", FieldCodes.REQUIRED))
             if (trimmed.length > Limits.NAME_MAX) add(FieldError("customer.name", FieldCodes.TOO_LONG))
+            addIfBidi("customer.name", name)
+            addIfBidi("customer.note", note)
+            addIfBidi("customer.tag", tag)
             if (phone != null && !PhoneValidator.isValid(phone)) {
                 add(FieldError("customer.phone", FieldCodes.INVALID_FORMAT))
             }
@@ -31,4 +34,11 @@ object CustomerValidator {
                 add(FieldError("customer.smsConsentSource", FieldCodes.REQUIRED))
             }
         }.sortedWith(compareBy({ it.field }, { it.code }))
+
+    private fun MutableList<FieldError>.addIfBidi(
+        field: String,
+        value: String?,
+    ) {
+        if (value != null && containsBidiControl(value)) add(FieldError(field, FieldCodes.INVALID_FORMAT))
+    }
 }

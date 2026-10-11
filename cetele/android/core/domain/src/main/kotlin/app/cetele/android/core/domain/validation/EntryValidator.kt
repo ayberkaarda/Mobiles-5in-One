@@ -37,6 +37,7 @@ object EntryValidator {
                 add(FieldError("entry.dueOn", FieldCodes.INVALID_FORMAT))
             }
             if (note != null && note.length > Limits.NOTE_MAX) add(FieldError("entry.note", FieldCodes.TOO_LONG))
+            if (note != null && containsBidiControl(note)) add(FieldError("entry.note", FieldCodes.INVALID_FORMAT))
             if (photoKey != null && reverses != null) add(FieldError("entry.photoKey", FieldCodes.INVALID_FORMAT))
         }.sortedWith(compareBy({ it.field }, { it.code }))
 
