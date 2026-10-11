@@ -10,6 +10,7 @@ import app.cetele.android.core.data.database.CeteleDatabase
 import app.cetele.android.core.data.database.DatabaseStore
 import app.cetele.android.core.data.database.SyncCursorEntity
 import app.cetele.android.core.data.lock.LockController
+import app.cetele.android.core.data.lock.MutableElapsedClock
 import app.cetele.android.core.data.lock.PinHasher
 import app.cetele.android.core.data.lock.PinStore
 import app.cetele.android.core.data.media.EncryptedPhotoStore
@@ -52,7 +53,9 @@ import javax.inject.Provider
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], application = Application::class)
 class SessionManagerTest {
-    private class Fixture {
+    private class Fixture(
+        wipers: Set<LocalDataWiper> = emptySet(),
+    ) {
         val context: Context = ApplicationProvider.getApplicationContext()
         val directory = File(context.noBackupFilesDir, "session-" + java.util.UUID.randomUUID()).apply { mkdirs() }
         val databaseFile = File(directory, "cetele.db")
@@ -78,11 +81,23 @@ class SessionManagerTest {
                 }
             })
         val photos = EncryptedPhotoStore(File(directory, "photos"), vault)
-        val pins = PinStore(vault, PinHasher(), Clock.systemUTC())
-        val lock = LockController(pins, settings, Clock.systemUTC())
+        val elapsed = MutableElapsedClock()
+        val pins = PinStore(vault, PinHasher(), Clock.systemUTC(), elapsed)
+        val lock = LockController(pins, settings, elapsed)
         val retryAfter = RetryAfterPolicy(context, Clock.systemUTC())
         val manager =
-            SessionManager(Provider { auth }, tokens, vault, databases, photos, settings, work, lock, retryAfter)
+            SessionManager(
+                Provider { auth },
+                tokens,
+                vault,
+                databases,
+                photos,
+                settings,
+                work,
+                lock,
+                retryAfter,
+                wipers,
+            )
         val initialAccess = "access-" + java.util.UUID.randomUUID()
         val initialRefresh = "refresh-" + java.util.UUID.randomUUID()
 
@@ -134,6 +149,43 @@ class SessionManagerTest {
                         .syncCursorDao()
                         .get("shop-a"),
                 )
+            } finally {
+                f.close()
+            }
+        }
+
+    @Test fun everyWiperRunsForLogoutAndAccountDeletion() =
+        runTest {
+            for (reason in listOf(SignOutReason.USER, SignOutReason.ACCOUNT_DELETED)) {
+                val calls = mutableListOf<Int>()
+                val f = Fixture(linkedSetOf(LocalDataWiper { calls += 1 }, LocalDataWiper { calls += 2 }))
+                try {
+                    f.signIn()
+                    coEvery { f.auth.logout() } returns ApiResult.Success(Unit, 204)
+                    f.manager.signOut(reason)
+                    assertEquals(listOf(1, 2), calls)
+                    assertEquals(SessionState.SignedOut(reason), f.manager.state.value)
+                } finally {
+                    f.close()
+                }
+            }
+        }
+
+    @Test fun failingWiperDoesNotSkipOtherWipersOrSessionCleanup() =
+        runTest {
+            var cleaned = false
+            val failure = java.io.IOException("cleanup failed")
+            val f = Fixture(linkedSetOf(LocalDataWiper { throw failure }, LocalDataWiper { cleaned = true }))
+            try {
+                f.signIn()
+                coEvery { f.auth.logout() } returns ApiResult.Success(Unit, 204)
+                val thrown = runCatching { f.manager.signOut(SignOutReason.ACCOUNT_DELETED) }.exceptionOrNull()
+                assertTrue(thrown is java.io.IOException)
+                assertEquals(failure.message, thrown?.message)
+                assertTrue(cleaned)
+                assertTrue(f.vault.keys().isEmpty())
+                assertNull(f.tokens.accessToken)
+                assertEquals(SessionState.SignedOut(SignOutReason.ACCOUNT_DELETED), f.manager.state.value)
             } finally {
                 f.close()
             }

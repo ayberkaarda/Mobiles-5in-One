@@ -3,7 +3,6 @@ package app.cetele.android.core.data.lock
 import app.cetele.android.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,11 +20,12 @@ class LockController
     constructor(
         private val pins: PinStore,
         private val settings: SettingsRepository,
-        private val clock: Clock,
+        private val clock: ElapsedClock,
     ) {
         private val mutableState = MutableStateFlow<LockState>(if (pins.isSet()) LockState.Locked else LockState.NoPin)
         val state = mutableState.asStateFlow()
         private var coldStart = true
+        private var backgroundedAt: Long? = null
 
         suspend fun onAppStart() {
             val current = settings.current()
@@ -34,7 +34,7 @@ class LockController
                     !pins.isSet() -> LockState.NoPin
 
                     LockPolicy.shouldLock(
-                        current.backgroundedAtEpochMillis,
+                        backgroundedAt,
                         clock.millis(),
                         current.lockTimeoutSeconds,
                         coldStart,
@@ -46,7 +46,7 @@ class LockController
         }
 
         suspend fun onAppStop() {
-            settings.update { it.copy(backgroundedAtEpochMillis = clock.millis()) }
+            backgroundedAt = clock.millis()
         }
 
         fun unlock() {
@@ -55,6 +55,7 @@ class LockController
 
         fun reset() {
             coldStart = true
+            backgroundedAt = null
             mutableState.value = LockState.NoPin
         }
     }
