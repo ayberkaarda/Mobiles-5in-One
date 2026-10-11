@@ -199,9 +199,15 @@ async def test_login_uniform_error_for_unknown_and_wrong_password(
         await failed_login(client, email)
         for email in (EMAIL, "unknown@example.com", "nopassword@example.com")
     ]
+
+    def without_request_id(response: httpx.Response) -> dict[str, object]:
+        body = dict(response.json())
+        assert body.pop("request_id")
+        return body
+
     for response in responses:
         assert response.status_code == 401
-        assert response.json() == responses[0].json()
+        assert without_request_id(response) == without_request_id(responses[0])
         assert response.json()["code"] == "auth.invalid_credentials"
 
 

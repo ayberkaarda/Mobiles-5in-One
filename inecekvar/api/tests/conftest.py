@@ -72,7 +72,7 @@ def redis_url() -> Iterator[str]:
         if os.environ.get("INECEKVAR_REQUIRE_DOCKER") == "1":
             pytest.fail(f"{reason}; INECEKVAR_REQUIRE_DOCKER=1 forbids skipping")
         pytest.skip(reason)
-    from testcontainers.redis import RedisContainer
+    from testcontainers.community.redis import RedisContainer
 
     with RedisContainer(REDIS_IMAGE) as container:
         host = container.get_container_host_ip()
