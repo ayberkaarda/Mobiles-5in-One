@@ -38,6 +38,14 @@ Further rules:
 - Invitation accept: the bucket is charged on every attempt, valid or not, per user.
 - Phone numbers are keyed by their SHA-256, never in clear text.
 - The per-attempt limit of 5 wrong codes belongs to the code itself ([ADR-0005](0005-session-model.md)).
+- One limit is not a bucket: at most 10 codes per phone and purpose (`LOGIN`, `REAUTH`) in any
+  rolling 24 hours, counted from `otp_codes` under the per-phone advisory lock
+  ([ADR-0005](0005-session-model.md)). It lives in the database, so a restart or a second instance
+  does not reset or double it. `reauth/request` charges `reauth.request.user` and this daily count,
+  never `otp.phone` ([ADR-0019](0019-ownership-transfer-and-reauthentication.md)).
+- `reminder.phone:<sha256(phone)>`, 3 per day, is charged by every reminder send after the consent
+  and balance checks and before the shop quota, across all shops
+  ([ADR-0016](0016-sms-reminders-and-netgsm-client.md)). It is an in-memory bucket like the others.
 
 ### Client IP and trusted proxies
 
@@ -57,7 +65,11 @@ Further rules:
 
 - Buckets live in process memory. There is no limiting across instances: a second instance doubles
   every budget, and a restart resets all counters. Multi-instance deployment needs a shared bucket
-  backend (Bucket4j supports one); not built.
+  backend (Bucket4j supports one); not built. This includes the per-recipient reminder cap
+  `reminder.phone`: a restart lets a number receive 3 more reminders that day, and a second
+  instance doubles the cap (accepted under the one-instance assumption; counting it in the database
+  would be a cross-tenant query against the architecture rules). The daily OTP ceiling is the only
+  limit that survives a restart.
 - `TrustedProxyTest` runs against a real server on a random port over raw sockets (the valve does
   not run under MockMvc) with `CETELE_TRUSTED_PROXIES` set to `127.0.0.2`. It proves two cases:
   spoofed `X-Forwarded-For` from the untrusted peer `127.0.0.1` does not change the bucket key (the
@@ -68,4 +80,4 @@ Further rules:
 - Behind a trusted proxy that appends rather than replaces `X-Forwarded-For`, the valve's rules
   decide the client address; that interaction is not tested.
 - Evidence: `OtpRequestTest`, `OtpVerifyTest`, `RefreshRotationTest`, `InvitationFlowTest`,
-  `TrustedProxyTest`.
+  `TrustedProxyTest`, `OtpDailyLimitTest`, `ReminderFlowTest`.

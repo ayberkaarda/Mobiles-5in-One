@@ -33,6 +33,11 @@ verdict ([ADR-0006](0006-integrity-verifier-and-local-adapters.md)).
 - Time to live 5 minutes, single use (`consumed_at`), at most 5 attempts, then the code is
   consumed. Only the newest open code of a phone can be verified: a new request closes the
   previous one.
+- Sign-in codes are additionally capped at 10 per phone per rolling 24 hours (counted in
+  `otp_codes` under the per-phone lock, `cetele.otp.daily-limit`, default 10). Consumed, expired
+  and exhausted codes count, so the cap limits SMS, not success; the 11th request answers 429
+  `rate_limited` with a `Retry-After` taken from the oldest code in the window. Re-authentication
+  codes are counted separately with the same ceiling.
 - The code is bound to the `deviceId` of the request that created it. A verify from another device
   id counts as a wrong attempt.
 - The HMAC is computed on every verify, also when no code is open, so unknown phones and open
@@ -84,6 +89,12 @@ verdict ([ADR-0006](0006-integrity-verifier-and-local-adapters.md)).
   pair in sorted key order (no lock-order deadlock with a rotation), then revokes all live refresh
   tokens of the pair and answers 204. Other devices of the user are untouched. The access token
   stays valid until it expires (at most 15 minutes).
+- Other devices of the user are ended by the user through `POST /v1/me/devices/{id}/sign-out` with
+  a `DEVICE_SIGN_OUT` re-authentication code ([ADR-0019](0019-ownership-transfer-and-reauthentication.md)),
+  which runs the same per-device revocation under the family locks and answers 204; a row id of
+  another user or an unknown id is 404. `GET /v1/me/devices` lists the caller's device rows (row
+  id, model, app version, last seen, current, signed in) and never exposes the client `device_id`.
+  The access token of a signed-out device stays valid for its remaining 15 minutes (accepted).
 
 ## Consequences
 
@@ -98,5 +109,6 @@ verdict ([ADR-0006](0006-integrity-verifier-and-local-adapters.md)).
 - Advisory locks are per PostgreSQL database: they serialise concurrent requests on one database,
   which is the deployment here. The locks need no schema change.
 - Evidence: `OtpVerifyTest`, `OtpStorageTest`, `OtpIssueRaceTest`, `RefreshRotationTest`,
-  `RefreshRaceTest`, `LogoutTest`, `JwtTest`, `JwtKeyConfigurationTest`, `V2AuthSchemaTest` (names in the
+  `RefreshRaceTest`, `LogoutTest`, `JwtTest`, `JwtKeyConfigurationTest`, `V2AuthSchemaTest`, `OtpDailyLimitTest`,
+  `DeviceSessionsTest` (names in the
   [verification matrix](../security/verification-matrix.md)).

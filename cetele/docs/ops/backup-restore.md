@@ -78,7 +78,10 @@ touches the disk; the result must start with the `age-encryption.org/v1` header;
 `cetele/cetele-<YYYYMMDDTHHMMSSZ>.dump.age` with a `.sha256` sidecar, then deleted locally. The
 script refuses a recipient that contains `AGE-SECRET-KEY` or is not an `age1...` X25519 recipient,
 plain `http` to a non-local endpoint, keys with characters that are not URL-safe, and database
-names that are not plain identifiers (`checks.test.sh`).
+names that are not plain identifiers (`checks.test.sh`). An endpoint with user info (`@`) or
+without a host is refused, and plain `http` is accepted only when the host is exactly `localhost`,
+`127.0.0.1`, `[::1]` or `host.docker.internal` (any port), or, with a Docker network given, a
+single-label name such as `minio`; `http://localhost.example.com` is remote.
 
 Retention is the bucket's job, not the script's: `backup-lifecycle.json` expires dumps under
 `cetele/` after 30 days. The write-only identity has `s3:PutObject` only, so a stolen VPS key

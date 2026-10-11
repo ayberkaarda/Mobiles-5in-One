@@ -75,6 +75,12 @@ an outsider. `TenantIsolationTest` compares the bodies.
 - `POST /v1/shops` and `POST /v1/invitations/{code}/accept` have no shop in the path and are
   annotated `isAuthenticated()`, because architecture rule 4 requires an annotation on every
   tenancy handler.
+- `POST /v1/shops` locks the caller's `users` row, then refuses with 409 `account.deletion_pending`
+  while an account deletion request is open ([ADR-0018](0018-account-and-shop-deletion.md)) and
+  with 409 `shop.limit_reached` when the caller already owns `cetele.tenancy.max-owned-shops`
+  (default 3) live shops. `STAFF` memberships do not count; a shop in its deletion grace still
+  counts until the deletion completes. The cap stops FREE quotas from being multiplied by opening
+  shops (`ShopLimitTest`).
 
 ### Invitations
 
@@ -108,4 +114,4 @@ a removal works.
   between the 404 of a missing and a foreign shop are not measured.
 - Evidence: `TenantIsolationTest`, `PermissionEnforcementTest`, `InvitationFlowTest`,
   `OneOwnerInvariantTest`, `ShopValidationTest`, `MembershipQueryTest`, `V3TenancyMigrationTest`,
-  `PermissionMatrixTest`, `ArchitectureTest`.
+  `PermissionMatrixTest`, `ArchitectureTest`, `ShopLimitTest`.
