@@ -1,0 +1,41 @@
+---
+slug: sss
+title: "Çetele Hakkında Sık Sorulan Sorular"
+description: "Çetele'nin internetsiz kullanımı, PIN kilidi, çalışan hesapları, ücretsiz ve Pro sınırları, SMS onayı ve hesap silme hakkında soruların yanıtları."
+updated: 2026-10-11
+lead: "Çetele, küçük esnafın müşteri borçlarını ve tahsilatlarını Android telefonda takip ettiği, internet olmadan da kayıt tutan dijital veresiye defteridir. Bu sayfa, dükkân sahiplerinin cihaz, kilit, çalışan erişimi, paylaşım ve plan sınırları hakkındaki sorularını yanıtlar. Çetele bir portföy projesidir; Google Play'de yayına hazırlanıyor ve burada sabit bir abonelik fiyatı belirtilmiyor."
+keywords: [Çetele soruları, dijital veresiye defteri, internetsiz kullanım, Pro sınırları]
+breadcrumb: "Sık Sorulan Sorular"
+faq:
+- q: "Çetele internet olmadan kullanılabilir mi?"
+  a: "Evet, Çetele internet olmadan müşteri, borç ve tahsilat kaydı tutar. Kayıtlar telefonda saklanır ve bağlantı geldiğinde eşitlenir. İnternet yokken başka cihazda yazılan yeni işlemlerin sizin telefonunuzda hemen görünmesini beklemeyiniz."
+- q: "Müşteri bilgilerinin güvenliği için neler var?"
+  a: "Telefondaki kayıtlar şifreli yerel veritabanında tutulur. Dükkân verilerine erişim üyelik ve yetkiyle sınırlandırılır; PIN ve biyometrik kilit de bulunur. Çetele bir portföy projesidir; bu özellikler mutlak güvenlik veya hukuki uygunluk garantisi anlamına gelmez."
+- q: "PIN ve biyometrik kilit nasıl çalışır?"
+  a: "Çetele'de altı haneli uygulama PIN'i veya biyometrik kilit kullanabilirsiniz. Uygulama yeniden açılırken ve arka planda iki dakika kaldıktan sonra kilit uygulanır. PIN telefonda tutulur, sunucuya gönderilmez; kilit bilginizi başkalarıyla paylaşmayınız."
+- q: "Çalışanım için ayrı hesap açabilir miyim?"
+  a: "Dükkân sahibi çalışanı telefon numarasıyla davet edebilir. Çalışan müşteri bilgilerini ve bakiyeleri görür, borç ve tahsilat kaydeder. Müşteri silme, bütün kayıtları dışa aktarma ve dükkân üyelerini yönetme yetkileri çalışanda bulunmaz."
+- q: "Ücretsiz plan ile Pro arasındaki sınırlar nelerdir?"
+  a: "Ücretsiz plan 100 müşteri, ayda 200 fotoğraf ve 30 SMS sunar. Pro'da müşteri sayısı sınırsızdır; aylık sınırlar 2000 fotoğraf ve 500 SMS olur. Pro ayrıca öncelikli eşitleme içerir, aylık veya yıllık abonelik olarak tasarlanmıştır."
+- q: "Telefonu kayıtlı her müşteriye SMS gönderebilir miyim?"
+  a: "Hayır, SMS hatırlatması yalnızca onayı kayıtlı müşteriler için kullanılabilir. Çetele onay durumuyla birlikte tarih ve kaynak bilgisini de tutar. Telefon numarasının kayıtlı olması SMS onayı yerine geçmez; gönderimler ayrıca aylık plan sınırına tabidir."
+- q: "Borç kaydına fiş fotoğrafı ekleyebilir miyim?"
+  a: "Evet, borç veya tahsilat kaydına isteğe bağlı fiş ya da el yazısı not fotoğrafı ekleyebilirsiniz. Fotoğraf, işlem tutarı ve tarihinin yerini almaz. Aylık fotoğraf sınırı ücretsiz planda 200, Pro'da 2000 adettir."
+- q: "Müşteriye hesap dökümü nasıl gönderilir?"
+  a: "Müşteri başına PDF hesap dökümü oluşturabilir ve paylaşabilirsiniz. WhatsApp paylaşımı imzalı hesap dökümü bağlantısı içerir; müşteri bu bağlantıyı tarayıcıda açabilir. Paylaşmadan önce doğru müşteri hesabını seçtiğinizi, borç ve tahsilat kayıtlarını kontrol ediniz."
+- q: "Bütün kayıtları dışa aktarabilir miyim?"
+  a: "Dükkân sahibi bütün defter kayıtlarını CSV olarak dışa aktarabilir. Tek müşterinin hesabı için PDF döküm de bulunur. Çalışanın bütün kayıtları dışa aktarma yetkisi yoktur; paylaşacağınız dosyanın hangi müşterilerin bilgilerini içerdiğini kontrol ediniz."
+- q: "Hesabımı ve dükkânımı nasıl silebilirim?"
+  a: "Silme işlemi uygulamadaki ayarlardan veya web'deki hesap silme sayfasından başlatılabilir. Yeniden SMS koduyla doğrulama ve 14 günlük bekleme süresi vardır. Pro aboneliği sunucudan iptal edilemez; aboneliğin iptalini Google Play üzerinden ayrıca yapmanız gerekir."
+- q: "Aynı dükkânı birden fazla cihazda kullanabilir miyim?"
+  a: "Evet, Çetele dükkân sahibi ve çalışan arasında cihazlar arası eşitleme için tasarlanmıştır. Her cihaz internet olmadan kayıt tutabilir; bağlantı geldiğinde işlemler eşitlenir. Bağlantısız cihazlardaki yeni kayıtların diğer telefonlarda görünmesi için eşitleme gerekir."
+- q: "Yanlış yazdığım borcu veya tahsilatı değiştirebilir miyim?"
+  a: "Defter kayıtları sonradan değiştirilmez. Yanlış işlem, ilk kayda bağlı ters kayıt oluşturularak düzeltilir; böylece işlem geçmişi korunur. Düzeltme yapmadan önce müşteriyi, tutarı ve işlem türünü kontrol ediniz, ardından hesap dökümünü yeniden inceleyiniz."
+- q: "Telefonumu kaybedersem kayıtlarım ne olur?"
+  a: "Kayıtlar internet geldiğinde sunucuyla eşitlenir; henüz eşitlenmemiş işlemler kayıp telefonda kalabilir. Bu yüzden bütün kayıtların geri geleceğini garanti etmek doğru olmaz. PIN ve biyometrik kilit erişimi korumaya yardımcı olur; eşitleme durumunu düzenli kontrol ediniz."
+- q: "Çetele Pro'nun fiyatı nedir?"
+  a: "Pro aylık veya yıllık Google Play aboneliği olarak tasarlanmıştır; fiyatlar Google Play'de gösterilir. Bu projede sabit fiyat belirtilmez. Çetele bir portföy projesidir ve Google Play'de yayına hazırlanıyor; yayımlanmış bir mağaza uygulaması olarak sunulmaz."
+- q: "Hangi cihazlar desteklenir?"
+  a: "Çetele Android uygulamasıdır; ürün kapsamındaki en düşük sürüm Android 8.0'dır. iOS uygulaması bu sürümün kapsamına dahil değildir. Belirli bir telefon modelinde sorunsuz çalışma garantisi verilmez; cihazlara ilişkin gerçek kullanım doğrulamalarının sınırları ayrıca değerlendirilmelidir."
+---
+Çetele hakkında en sık sorulan konular, dükkânda kaydı ne zaman yazabileceğiniz, müşterinin hesabını nasıl paylaşacağınız ve çalışanınızın hangi işlemleri yapabileceğidir. Bu sayfadaki yanıtlar, bakkal, manav, kasap, berber ve kahvehane gibi küçük işletmelerde veresiye hesabını takip ederken karşılaşabileceğiniz sorulara odaklanır. Önce günlük kayıt düzeninizi düşününüz: müşteriyi seçmek, borç veya tahsilat tutarını doğru yazmak, işlem tarihini kontrol etmek ve hesap dökümünü gözden geçirmek aynı işin birbirini tamamlayan adımlarıdır. İnternet bağlantınız kesilse de telefonda kayıt tutabilirsiniz; farklı cihazlardaki işlemlerin görünmesi ise bağlantı geldikten sonraki eşitlemeye bağlıdır. Bu nedenle dükkân sahibi ile çalışan aynı hesabı incelerken cihazlarının bağlantı durumunu da hesaba katmalıdır. Yanlış işlem için kullanılan ters kayıt, bir satırın geçmişini değiştirmeden hesabı düzeltmeye yarar. Paylaşım tarafında müşteri başına PDF ile bütün kayıtları içeren CSV'nin farklı amaçları olduğunu bilmek önemlidir. WhatsApp üzerinden hesap dökümü bağlantısı paylaşımı ve SMS hatırlatması da ayrı seçeneklerdir; SMS için müşterinin onay kaydı ve aylık gönderim sınırı birlikte değerlendirilir. Telefon numarası, tek başına onay kaydı sayılmaz. Fotoğraf eklemek isteğe bağlıdır ve planın aylık fotoğraf sınırına tabidir. Ücretsiz plan ile Pro'yu karşılaştırırken yalnızca müşteri sayısını değil, bu fotoğraf ve SMS sınırlarını da dikkate alınız. PIN, biyometrik kilit ve çalışan yetkileriyle ilgili yanıtlar, müşteri bilgilerine erişim düzenini anlamanıza yardımcı olur. Hesap silme, kayıp telefon ve henüz eşitlenmemiş kayıtlar hakkındaki açıklamaları da karar vermeden önce okuyunuz. Çetele bir portföy projesidir; yayımlanmış bir hizmet veya hukuki uygunluk güvencesi olarak sunulmaz. Özelliklerin günlük işinizdeki yerini [özellikler sayfasından](/ozellikler), plan kapsamını [fiyatlandırma sayfasından](/fiyatlandirma), silme sürecini [hesap silme sayfasından](/hesap-silme) inceleyebilirsiniz. Buradaki açıklamalar, dükkânınız için hangi kayıt alışkanlığını kuracağınızı düşünürken ürünün kapsamını ve sınırlarını birlikte görmenizi sağlar.
