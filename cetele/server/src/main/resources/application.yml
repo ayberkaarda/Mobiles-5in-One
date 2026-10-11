@@ -72,6 +72,12 @@ springdoc:
 
 cetele:
   public-base-url: ${CETELE_PUBLIC_BASE_URL:}
+  # Public site (ADR-0034): canonical origin, content folder and the app signing fingerprints
+  # for /.well-known/assetlinks.json (empty = that file answers 404).
+  site:
+    base-url: ${CETELE_SITE_BASE_URL:https://cetele.app}
+    content-location: ${CETELE_SITE_CONTENT_LOCATION:classpath:content/}
+    android-cert-fingerprints: ${CETELE_ANDROID_CERT_SHA256:}
   jobs:
     enabled: ${CETELE_JOBS_ENABLED:true}
   sms:
@@ -140,5 +146,8 @@ spring:
       on-profile: test
 cetele:
   public-base-url: http://localhost
+  site:
+    # The fixtures of src/test/resources; the real files under content/ are checked by SiteContentFilesTest.
+    content-location: classpath:content-fixtures/
   jobs:
     enabled: false
