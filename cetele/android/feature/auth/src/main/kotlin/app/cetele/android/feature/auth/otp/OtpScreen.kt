@@ -1,8 +1,10 @@
 package app.cetele.android.feature.auth.otp
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
@@ -18,11 +20,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import app.cetele.android.core.designsystem.CeteleSpacing
+import app.cetele.android.core.designsystem.CeteleTextStyles
+import app.cetele.android.core.designsystem.CeteleTheme
+import app.cetele.android.core.designsystem.component.ButtonStyle
 import app.cetele.android.core.designsystem.component.CeteleButton
 import app.cetele.android.core.domain.format.PhoneFormat
 import app.cetele.android.core.domain.validation.Limits
@@ -41,8 +47,12 @@ fun OtpScreen(
     var code by remember(state.attempt) { mutableStateOf("") }
     val label = stringResource(R.string.auth_otp_code)
     val emptyDigit = stringResource(R.string.auth_otp_empty_digit)
-    AuthPage(stringResource(R.string.auth_otp_title), modifier, onBack) {
-        Text(stringResource(R.string.auth_otp_sent, PhoneFormat.masked(state.phone)))
+    AuthPage(
+        stringResource(R.string.auth_otp_title),
+        modifier,
+        onBack,
+        subtitle = stringResource(R.string.auth_otp_sent, PhoneFormat.masked(state.phone)),
+    ) {
         BasicTextField(
             value = code,
             onValueChange = { value ->
@@ -54,41 +64,73 @@ fun OtpScreen(
             modifier = Modifier.semantics { contentDescription = label },
             enabled = !state.loading && state.destination == null && state.retrySeconds == 0,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            cursorBrush = SolidColor(Color.Transparent),
             singleLine = true,
             decorationBox = { input ->
                 Box {
-                    Row(horizontalArrangement = Arrangement.spacedBy(CeteleSpacing.small)) {
-                        repeat(Limits.OTP_LENGTH) { index ->
-                            Surface(
-                                modifier = Modifier.weight(1f).heightIn(min = CeteleSpacing.touchTarget),
-                                shape = MaterialTheme.shapes.small,
-                                tonalElevation = CeteleSpacing.extraSmall,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        code.getOrNull(index)?.toString() ?: emptyDigit,
-                                        style = MaterialTheme.typography.titleLarge,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    OtpBoxes(code, emptyDigit)
                     Box(Modifier.padding(CeteleSpacing.small)) { input() }
                 }
             },
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Transparent),
         )
         if (state.retrySeconds > 0) {
-            Text(stringResource(R.string.auth_phone_retry, state.retrySeconds))
+            Text(
+                stringResource(R.string.auth_phone_retry, state.retrySeconds),
+                color = CeteleTheme.colors.textMuted,
+            )
         } else {
             AuthErrorText(state.error)
         }
-        if (state.resendSeconds > 0) Text(stringResource(R.string.auth_otp_resend_wait, state.resendSeconds))
+        if (state.resendSeconds > 0) {
+            Text(
+                stringResource(R.string.auth_otp_resend_wait, state.resendSeconds),
+                color = CeteleTheme.colors.textMuted,
+            )
+        }
         CeteleButton(
             stringResource(R.string.auth_otp_resend),
             onResend,
+            modifier = Modifier.fillMaxWidth(),
+            style = ButtonStyle.Outlined,
             enabled = state.resendSeconds == 0,
             loading = state.loading,
         )
+    }
+}
+
+/** Six paper boxes; the next one to fill carries the Defter Lacivert outline. */
+@Composable
+private fun OtpBoxes(
+    code: String,
+    emptyDigit: String,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(CeteleSpacing.small)) {
+        repeat(Limits.OTP_LENGTH) { index ->
+            val current = index == code.length
+            Surface(
+                modifier = Modifier.weight(1f).heightIn(min = CeteleSpacing.keyHeight),
+                shape = MaterialTheme.shapes.small,
+                color = CeteleTheme.colors.surface,
+                border =
+                    BorderStroke(
+                        if (current) CeteleSpacing.hairline * 2 else CeteleSpacing.hairline,
+                        if (current) CeteleTheme.colors.primary else CeteleTheme.colors.borderStrong,
+                    ),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        code.getOrNull(index)?.toString() ?: emptyDigit,
+                        style = CeteleTextStyles.headline,
+                        color =
+                            if (index < code.length) {
+                                CeteleTheme.colors.text
+                            } else {
+                                CeteleTheme.colors.textMuted
+                            },
+                    )
+                }
+            }
+        }
     }
 }

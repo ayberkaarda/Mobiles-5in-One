@@ -11,11 +11,12 @@
   <link rel="alternate" hreflang="tr-TR" th:href="${page.canonical}">
   <link rel="alternate" hreflang="x-default" th:href="${page.canonical}">
   </th:block>
-  <link rel="preload" href="/assets/site/fonts/manrope-700.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/site/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/site/fonts/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/site/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/site/site.css">
   <link rel="icon" href="/assets/site/favicon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#1E2A5A">
+  <meta name="theme-color" content="#EDEAE4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1325" media="(prefers-color-scheme: dark)">
   <meta property="og:type" th:content="${page.ogType}">
   <meta property="og:site_name" content="Çetele">
   <meta property="og:locale" content="tr_TR">
@@ -34,11 +35,11 @@
   <meta name="twitter:image:alt" th:content="${page.ogImageAlt}">
   <meta th:if="${page.jsonLd != null}" site:jsonld="${page.jsonLd}">
 </head>
-<body>
+<body th:class="${page.bodyClass}">
 <a class="skip" href="#main">İçeriğe geç</a>
 <header class="site-header">
   <div class="wrap bar">
-    <a class="brand" href="/">
+    <a class="brand" href="/" aria-label="Çetele ana sayfa">
       <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect width="20" height="20" rx="4.5" fill="#1E2A5A"/><path fill="none" stroke="#FAF7F0" stroke-width="1.8" stroke-linecap="round" d="M14.46 4.18A5.5 5.5 0 1 0 14.46 11.82"/><path fill="none" stroke="#FAF7F0" stroke-width="1" stroke-linecap="round" d="M7.5 5.5V10.5M9.5 5.5V10.5M11.5 5.5V10.5M13.5 5.5V10.5"/><path fill="none" stroke="#E8712B" stroke-width="1" stroke-linecap="round" d="M10.5 14.4V16.5H9.5"/></svg>
       <span>Çetele</span>
     </a>
@@ -50,50 +51,77 @@
   </div>
 </header>
 <main id="main" tabindex="-1">
-  <div class="wrap">
-    <nav class="crumbs" aria-label="Sayfa konumu" th:if="${!page.crumbs.isEmpty()}">
-      <ol>
-        <li th:each="crumb, state : ${page.crumbs}"><a th:if="${!state.last}" th:href="${crumb.path}" th:text="${crumb.label}"></a><span th:if="${state.last}" aria-current="page" th:text="${crumb.label}"></span></li>
-      </ol>
-    </nav>
-    <article>
-      <header class="intro" th:classappend="${page.home} ? 'hero'">
-        <h1 th:text="${page.heading}">Çetele</h1>
-        <p class="lead" th:text="${page.lead}"></p>
-        <p class="meta" th:if="${page.guide}">Güncelleme: <time th:datetime="${page.modified}" th:text="${page.modifiedText}"></time></p>
-        <p class="actions" th:if="${page.home}"><a class="button primary" href="/ozellikler">Özellikleri inceleyin</a><a class="button" href="/fiyatlandirma">Planları karşılaştırın</a></p>
-      </header>
-      <div class="prose" th:if="${page.html != null}" site:html="${page.html}"></div>
-      <section class="faq" th:if="${!page.faq.isEmpty()}" aria-labelledby="sorular">
-        <h2 id="sorular">Sorular ve cevaplar</h2>
-        <div class="qa" th:each="item : ${page.faq}">
-          <h3 th:text="${item.question}"></h3>
-          <p th:text="${item.answer}"></p>
+  <article>
+    <header class="hero" th:classappend="${page.screen != null} ? 'has-screen'">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <nav class="crumbs" aria-label="Sayfa konumu" th:if="${!page.crumbs.isEmpty()}">
+            <ol>
+              <li th:each="crumb, state : ${page.crumbs}"><a th:if="${!state.last}" th:href="${crumb.path}" th:text="${crumb.label}"></a><span th:if="${state.last}" aria-current="page" th:text="${crumb.label}"></span></li>
+            </ol>
+          </nav>
+          <h1 th:if="${page.headingKicker == null}" th:text="${page.heading}">Çetele</h1>
+          <h1 th:if="${page.headingKicker != null}"><span class="kicker" th:text="${page.headingKicker}"></span> <span class="main" th:text="${page.headingMain}"></span></h1>
+          <p class="lead"><span class="intro" th:text="${page.leadIntro}"></span> <span class="more" th:if="${page.leadMore != null}" th:text="${page.leadMore}"></span></p>
+          <p class="meta" th:if="${page.guide}">Güncelleme: <time th:datetime="${page.modified}" th:text="${page.modifiedText}"></time></p>
+          <p class="actions" th:if="${page.home}"><a class="button primary" href="/ozellikler">Özellikleri inceleyin</a><a class="button" href="/fiyatlandirma">Planları karşılaştırın</a></p>
         </div>
-      </section>
-      <section th:if="${!page.trades.isEmpty()}" aria-labelledby="esnaf">
+        <figure class="device" th:if="${page.screen != null}">
+          <img class="notebook" src="/assets/site/defter.svg" alt="" width="420" height="520">
+          <span class="phone"><img th:src="@{${page.screen.src}}" th:alt="${page.screen.alt}" width="540" height="1200"></span>
+          <figcaption th:text="${page.screen.caption}">Emülatör görüntüsü, örnek verilerle</figcaption>
+        </figure>
+        <div class="stick" th:if="${page.screen == null}" aria-hidden="true">
+          <img src="/assets/site/cetele-cubugu.svg" alt="" width="360" height="120">
+        </div>
+      </div>
+    </header>
+    <div class="sheet" th:if="${page.html != null or !page.faq.isEmpty()}">
+      <div class="wrap">
+        <section class="faq" th:if="${!page.faq.isEmpty()}" aria-labelledby="sorular">
+          <h2 id="sorular">Sorular ve cevaplar</h2>
+          <div class="faq-list">
+            <details th:each="item : ${page.faq}">
+              <summary th:text="${item.question}"></summary>
+              <p th:text="${item.answer}"></p>
+            </details>
+          </div>
+        </section>
+        <div class="prose" th:if="${page.html != null}" site:html="${page.html}"></div>
+      </div>
+    </div>
+    <section class="shops" th:if="${!page.trades.isEmpty()}" aria-labelledby="esnaf">
+      <div class="wrap">
         <h2 id="esnaf">Esnafınıza göre Çetele</h2>
-        <ul class="cards">
-          <li th:each="card : ${page.trades}"><a th:href="${card.path}"><strong th:text="${card.title}"></strong><span th:text="${card.text}"></span></a></li>
+        <ul class="shop-row">
+          <li th:each="card : ${page.trades}"><a class="shop" th:href="${card.path}"><strong th:text="${card.title}"></strong><span th:text="${card.text}"></span></a></li>
         </ul>
-      </section>
-      <section th:if="${!page.cards.isEmpty()}" aria-labelledby="rehber">
+      </div>
+    </section>
+    <section class="guides" th:if="${!page.cards.isEmpty()}" aria-labelledby="rehber">
+      <div class="wrap">
         <h2 id="rehber" th:text="${page.guide or page.kind?.name() == 'TRADE'} ? 'Diğer rehber yazıları' : 'Rehber yazıları'">Rehber yazıları</h2>
-        <ul class="cards">
+        <ul class="index">
           <li th:each="card : ${page.cards}"><a th:href="${card.path}"><strong th:text="${card.title}"></strong><span th:text="${card.text}"></span></a></li>
         </ul>
-      </section>
-      <section th:if="${page.kind == null}" aria-labelledby="baglantilar">
+      </div>
+    </section>
+    <section class="guides" th:if="${page.kind == null}" aria-labelledby="baglantilar">
+      <div class="wrap">
         <h2 id="baglantilar">Buradan devam edebilirsiniz</h2>
-        <ul>
-          <li th:each="link : ${page.footerProduct}"><a th:href="${link.path}" th:text="${link.label}"></a></li>
+        <ul class="index">
+          <li th:each="link : ${page.footerProduct}"><a th:href="${link.path}"><strong th:text="${link.label}"></strong></a></li>
         </ul>
-      </section>
-    </article>
-  </div>
+      </div>
+    </section>
+  </article>
 </main>
 <footer class="site-footer">
   <div class="wrap">
+    <div class="closing">
+      <svg class="tally" viewBox="0 0 120 64" aria-hidden="true" focusable="false"><path d="M14 6v52M36 4v54M58 7v50M80 5v53"/><path class="cut" d="M2 50 96 12"/></svg>
+      <p class="tagline">Veresiyeyi unutma, Çetele'ye yaz.</p>
+    </div>
     <div class="columns">
       <nav aria-labelledby="alt-urun">
         <h2 id="alt-urun">Çetele</h2>
@@ -108,7 +136,7 @@
         <ul><li th:each="link : ${page.footerLegal}"><a th:href="${link.path}" th:text="${link.label}"></a></li></ul>
       </nav>
     </div>
-    <p class="note">Veresiyeyi unutma, Çetele'ye yaz. Çetele bir portföy projesidir; Android uygulaması Google Play'de yayına hazırlanıyor. Yasal metinler örnek metinlerdir.</p>
+    <p class="note">Çetele bir portföy projesidir; Android uygulaması Google Play'de yayına hazırlanıyor. Yasal metinler örnek metinlerdir.</p>
   </div>
 </footer>
 </body>

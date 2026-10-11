@@ -31,8 +31,12 @@ fun PinSetupScreen(
             BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
                 BiometricManager.BIOMETRIC_SUCCESS
         }
-    AuthPage(stringResource(R.string.auth_pinsetup_title), modifier) {
-        Text(stringResource(R.string.auth_pinsetup_explanation))
+    AuthPage(
+        stringResource(R.string.auth_pinsetup_title),
+        modifier,
+        centered = true,
+        subtitle = stringResource(R.string.auth_pinsetup_explanation),
+    ) {
         PinPad(
             onComplete = { onPin(it, available) },
             subtitle =

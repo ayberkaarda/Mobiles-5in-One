@@ -12,7 +12,7 @@
 <p class="footnote">{{ $footnote }}</p>
 </div>
 </section>
-<section class="section-dense">
+<section class="section rail-top">
 <div class="wrap">
 <x-web.prose :html="$page->body" />
 </div>

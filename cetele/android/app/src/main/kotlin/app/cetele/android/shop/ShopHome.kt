@@ -18,9 +18,11 @@ import androidx.lifecycle.viewModelScope
 import app.cetele.android.R
 import app.cetele.android.core.data.repository.ShopRepository
 import app.cetele.android.core.designsystem.CeteleSpacing
-import app.cetele.android.core.designsystem.component.ButtonStyle
-import app.cetele.android.core.designsystem.component.CeteleButton
+import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.core.designsystem.component.CeteleTopBar
+import app.cetele.android.core.designsystem.component.NavRow
+import app.cetele.android.core.designsystem.component.Sheet
+import app.cetele.android.core.designsystem.component.SheetRule
 import app.cetele.android.core.domain.model.Shop
 import app.cetele.android.core.domain.model.ShopRole
 import app.cetele.android.feature.export.navigation.ExportRoutes
@@ -83,16 +85,20 @@ fun ShopHomeScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = CeteleTheme.colors.background,
         topBar = { CeteleTopBar(shop?.name ?: stringResource(R.string.app_shop_title)) },
     ) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = CeteleSpacing.screenGutter),
+                .padding(top = CeteleSpacing.small, bottom = CeteleSpacing.spacious),
         ) {
-            shopHomeActions(shop?.role).forEach { action ->
-                CeteleButton(stringResource(action.label), { onOpen(action.route) }, style = ButtonStyle.Text)
+            Sheet {
+                shopHomeActions(shop?.role).forEachIndexed { index, action ->
+                    if (index > 0) SheetRule(Modifier.padding(start = CeteleSpacing.regular))
+                    NavRow(stringResource(action.label), { onOpen(action.route) })
+                }
             }
         }
     }

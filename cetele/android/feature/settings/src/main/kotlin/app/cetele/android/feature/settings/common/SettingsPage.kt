@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.cetele.android.core.designsystem.CeteleSpacing
+import app.cetele.android.core.designsystem.CeteleTheme
 import app.cetele.android.core.designsystem.component.CeteleTopBar
 import app.cetele.android.core.designsystem.copy.ProblemCodeText
 import app.cetele.android.feature.settings.R
@@ -22,17 +23,24 @@ import app.cetele.android.feature.settings.R
 internal fun SettingsPage(
     title: String,
     onBack: (() -> Unit)? = null,
+    sheets: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Scaffold(topBar = { CeteleTopBar(title, onBack = onBack) }) { padding ->
+    Scaffold(
+        containerColor = CeteleTheme.colors.background,
+        topBar = { CeteleTopBar(title, onBack = onBack) },
+    ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(
                     padding,
                 ).verticalScroll(rememberScrollState())
-                .padding(CeteleSpacing.screenGutter),
-            verticalArrangement = Arrangement.spacedBy(CeteleSpacing.regular),
+                .padding(
+                    horizontal = if (sheets) CeteleSpacing.none else CeteleSpacing.screenGutter,
+                    vertical = CeteleSpacing.regular,
+                ),
+            verticalArrangement = Arrangement.spacedBy(if (sheets) CeteleSpacing.medium else CeteleSpacing.regular),
             content = content,
         )
     }

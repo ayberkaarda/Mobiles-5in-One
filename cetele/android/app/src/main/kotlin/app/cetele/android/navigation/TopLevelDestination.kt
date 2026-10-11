@@ -1,15 +1,11 @@
 package app.cetele.android.navigation
 
 import androidx.annotation.StringRes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import app.cetele.android.R
+import app.cetele.android.core.designsystem.CeteleIcons
 import app.cetele.android.feature.auth.navigation.AuthRoutes
 import app.cetele.android.feature.customers.navigation.CustomerRoutes
 import app.cetele.android.feature.ledger.navigation.LedgerRoutes
@@ -23,10 +19,10 @@ enum class TopLevelDestination(
     @param:StringRes val label: Int,
     val icon: ImageVector,
 ) {
-    TODAY(LedgerRoutes.Dashboard, R.string.app_tab_today, Icons.Filled.Home),
-    CUSTOMERS(CustomerRoutes.List, R.string.app_tab_customers, Icons.Filled.Person),
-    SHOP(ShopHomeRoute, R.string.app_tab_shop, Icons.Filled.ShoppingCart),
-    SETTINGS(SettingsRoutes.Home, R.string.app_tab_settings, Icons.Filled.Settings),
+    TODAY(LedgerRoutes.Dashboard, R.string.app_tab_today, CeteleIcons.today),
+    CUSTOMERS(CustomerRoutes.List, R.string.app_tab_customers, CeteleIcons.customers),
+    SHOP(ShopHomeRoute, R.string.app_tab_shop, CeteleIcons.shop),
+    SETTINGS(SettingsRoutes.Home, R.string.app_tab_settings, CeteleIcons.settings),
     ;
 
     fun matches(destination: NavDestination?): Boolean = destination?.hasRoute(route::class) == true
