@@ -22,6 +22,8 @@ spring:
     multipart:
       enabled: false
   jackson:
+    read:
+      strict-duplicate-detection: true
     deserialization:
       fail-on-unknown-properties: true
   thymeleaf:

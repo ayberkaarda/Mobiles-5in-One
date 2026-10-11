@@ -36,6 +36,7 @@ class AdminHeadersTest : AdminIntegrationTest() {
             assertEquals("no-store", response.getHeader("Cache-Control"))
             assertEquals("noindex, nofollow", response.getHeader("X-Robots-Tag"))
             assertEquals("nosniff", response.getHeader("X-Content-Type-Options"))
+            assertEquals("same-origin", response.getHeader("Cross-Origin-Resource-Policy"))
             assertEquals("DENY", response.getHeader("X-Frame-Options"))
             assertEquals(SecurityHeadersConfig.HSTS, response.getHeader("Strict-Transport-Security"))
             if (response.status != 302) {

@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.post
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 
@@ -62,11 +64,13 @@ class TenancyFixtures(
         shopId: UUID,
         member: Actor = actor(),
     ): Actor {
+        // Deletion choices use the JVM clock; the database clock can differ in containers.
         jdbc.update(
-            "INSERT INTO memberships (id, shop_id, user_id, role) VALUES (?, ?, ?, 'STAFF')",
+            "INSERT INTO memberships (id, shop_id, user_id, role, created_at) VALUES (?, ?, ?, 'STAFF', ?)",
             TraceIdFilter.uuidV7(),
             shopId,
             member.id,
+            Timestamp.from(Instant.now()),
         )
         return member
     }

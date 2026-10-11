@@ -31,6 +31,7 @@ object SecurityHeadersConfig {
             headers.referrerPolicy { it.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN) }
             headers.frameOptions { it.deny() }
             headers.addHeaderWriter(StaticHeadersWriter("Permissions-Policy", PERMISSIONS_POLICY))
+            headers.addHeaderWriter(StaticHeadersWriter("Cross-Origin-Resource-Policy", "same-origin"))
             // API responses are never cached; pages (Phase 5) set their own caching.
             headers.cacheControl { it.disable() }
             headers.addHeaderWriter(
