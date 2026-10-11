@@ -17,28 +17,32 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Askıda kartı marka sistemini ve üç uygulama ekranını gösterir (Android emülatörü, örnek veri); tamamı [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) dosyasında. Cetele kartı iki gerçek emülatör ekranını gösterir (yalnızca giriş, sunucu çalışmıyordu); ekran görüntüleri [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) altında. Inecek Var ve Patika kartları henüz tasarım aşamasındaki ürünler için yer tutucudur.
+Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Üç uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) ve [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Inecek Var ve Patika kartları henüz tasarım aşamasındaki ürünler için yer tutucudur.
 
 <table>
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/kadro.png" alt="Kadro: web ana sayfası ve mobil diziliş ekranı, örnek veri" width="100%"><br>
-      <sub><b>Kadro</b>: geliştirme aşamasında</sub>
+      <img src="kadro/docs/screenshots/mobile/03-matches-light.png" alt="Kadro mobil uygulaması: iki yaklaşan maçlı Maçlar sekmesi, örnek veri" width="32%">
+      <img src="kadro/docs/screenshots/mobile/04-match-detail-rsvp-light.png" alt="Kadro mobil uygulaması: katılım yanıtı ve ücret payıyla maç detayı, örnek veri" width="32%">
+      <img src="kadro/docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro mobil uygulaması: saha şemasında diziliş ve boş yerler, örnek veri" width="32%"><br>
+      <sub><b>Kadro</b>: web sayfaları ve Android uygulama ekranları (emülatör, örnek veri); planlanan tüm fazlar birleşti · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/kadro/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askıda: marka sistemi ve altyapı" width="100%"><br>
+      <img src="docs/readme/askida.png" alt="Askıda web ana sayfası ve Android alıcı ekranı (yerel yığın, örnek veri)" width="100%"><br>
       <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda alan kişi modu: yakındaki dükkânlar, örnek veri" width="32%">
       <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda bağışçı modu: ürün ve adet, örnek veri" width="32%">
       <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda esnaf modu: dükkân paneli, örnek veri" width="32%"><br>
-      <sub><b>Askıda</b>: marka sistemi ve Android uygulama ekranları (örnek veri)</sub>
+      <sub><b>Askıda</b>: web ana sayfası ve Android alıcı ekranı (yerel yığın, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/askida/">web demo</a></sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele kartı: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı" width="100%"><br>
-      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android uygulaması giriş ekranı, boş telefon numarası alanı, emülatör" width="32%">
-      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android uygulaması sunucu çalışmadığı için bağlanılamadı hatasını gösteriyor, emülatör" width="32%"><br>
-      <sub><b>Cetele</b>: Android uygulaması ve sunucu birleştirildi, henüz canlı sunucuyla çalıştırılmadı (emülatör ekranları, sunucu yok)</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele kartı: web ana sayfası ve Android müşteri listesi, yerel sunucu, örnek veri" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-customers.png" alt="Cetele Android uygulaması: bakiyeleriyle müşteri listesi, örnek müşteriler, emülatör" width="32%">
+      <img src="cetele/docs/release/screenshots/02-customer-ledger.png" alt="Cetele Android uygulaması: bir müşterinin hesabı, borçlar, tahsilat ve üstü çizili düzeltilmiş kayıt, örnek veri, emülatör" width="32%">
+      <img src="cetele/docs/release/screenshots/03-dashboard.png" alt="Cetele Android uygulaması: toplam alacak ve en çok borçlu müşterilerle panel, örnek veri, emülatör" width="32%"><br>
+      <sub><b>Cetele</b>: web ana sayfası ve Android müşteri listesi (yerel sunucu, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tasarım aşamasında, henüz uygulama yok" width="100%"><br>
@@ -100,7 +104,7 @@ Son güncelleme: 2026-10-11 (Cetele Phase 4 birleştirmesi için yazıldı). Rak
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kadro`     | %100     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktının 11'i birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 11/11) / 7 = %100. Phase 6 portfolyo kapsamında tamamdır (11 çıktının 11'i birleşti); henüz var olmayan sistemlere bağlı kanıtlar kısmi olarak kayıtlı kalır (23 güvenlik maddesinin 10'u, barındırılan origin, EAS derlemeleri, sağlayıcı hesapları, iOS). Yani %100, planlanan işin birleştiği anlamına gelir; her kontrolün üretimde kanıtlandığı anlamına gelmez.                                                                                                  |
 | `askida`    | %100     | Phase 0-6 birleşti: yedi fazın 7'si, eşit ağırlıklı (temel; veri katmanı, kimlik doğrulama ve güvenlik tabanı; dükkânlar, hesaplar ve askı; ödeme akışı, webhook'lar, esnaf ödemeleri ve yönetim paneli; Flutter uygulaması; herkese açık web, SEO ve GEO; sertleştirme ve yayına hazırlık): 7/7 = %100. %100 planlanan işin birleştiği anlamına gelir, her kontrolün üretimde kanıtlandığı anlamına gelmez: 23 güvenlik maddesinin 9'u kısmi kalır ([doğrulama matrisi](askida/docs/security/verification-matrix.md)); gerçek ödeme, gerçek cihaz doğrulaması, mağaza hesapları, barındırılan origin ve iOS denenmedi. |
-| `cetele`    | %71      | Phase 0-4 birleşti: 7 fazdan 5'i, fazlar eşit ağırlıklı (temel; sunucu çekirdeği, kimlik doğrulama ve güvenlik tabanı; senkronizasyon, defter, hatırlatma ve medya; Android uygulaması; faturalama, webhook ve yönetim): 5/7 = %71. Phase 5 ve 6 (web SEO ve GEO; sertleştirme ve yayın hazırlığı) henüz birleşmedi. Yalnızca JVM ve CI'da doğrulandı: cihaz, emülatör veya canlı sunucu denemesi yok, gerçek Play hesabı yok (Play Developer API, RTDN ve Play Integrity sahte adaptörler ve kayıtlı örneklerle çalıştı), gerçek PDF çıktısı, biyometri ve kamera denenmedi. |
+| `cetele`    | %71      | Phase 0-4 birleşti: 7 fazdan 5'i, fazlar eşit ağırlıklı (temel; sunucu çekirdeği, kimlik doğrulama ve güvenlik tabanı; senkronizasyon, defter, hatırlatma ve medya; Android uygulaması; faturalama, webhook ve yönetim): 5/7 = %71. Phase 5 ve 6 (web SEO ve GEO; sertleştirme ve yayın hazırlığı) henüz birleşmedi. JVM ve CI'da doğrulandı; debug uygulama yalnızca README ekran görüntüleri için yerel sunucuya karşı Android emülatöründe çalıştırıldı (giriş, örnek verinin senkronu, üç ekran), fiziksel cihaz ve uçtan uca akış denemesi yok, gerçek Play hesabı yok (Play Developer API, RTDN ve Play Integrity sahte adaptörler ve kayıtlı örneklerle çalıştı), gerçek PDF çıktısı, biyometri ve kamera denenmedi. |
 | `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 

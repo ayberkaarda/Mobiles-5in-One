@@ -17,28 +17,32 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda and Cetele have applications. The Askıda card shows its brand system and three app screens (Android emulator, sample data); the full set is in [`askida/README.md`](askida/README.md#screenshots). The Cetele card shows two real emulator screens (sign-in only, no server was running); screenshots are in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
+One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
 
 <table>
   <tr>
     <td width="50%" align="center">
       <img src="docs/readme/kadro.png" alt="Kadro: web home page and mobile lineup screen, sample data" width="100%"><br>
-      <sub><b>Kadro</b>: in development</sub>
+      <img src="kadro/docs/screenshots/mobile/03-matches-light.png" alt="Kadro mobile app: matches tab with two upcoming matches, sample data" width="32%">
+      <img src="kadro/docs/screenshots/mobile/04-match-detail-rsvp-light.png" alt="Kadro mobile app: match detail with RSVP and fee share, sample data" width="32%">
+      <img src="kadro/docs/screenshots/mobile/18-match-lineup-light.png" alt="Kadro mobile app: lineup on a pitch diagram with open places, sample data" width="32%"><br>
+      <sub><b>Kadro</b>: web pages and Android app screens (emulator, sample data); all planned phases merged · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/kadro/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/askida.png" alt="Askıda: brand system and foundation" width="100%"><br>
+      <img src="docs/readme/askida.png" alt="Askıda web home page and Android recipient screen (local stack, sample data)" width="100%"><br>
       <img src="askida/docs/release/screenshots/01-recipient-nearby.png" alt="Askıda recipient mode: nearby shops, sample data" width="32%">
       <img src="askida/docs/release/screenshots/04-donor-donate.png" alt="Askıda donor mode: item and quantity, sample data" width="32%">
       <img src="askida/docs/release/screenshots/16-merchant-home.png" alt="Askıda merchant mode: shop home, sample data" width="32%"><br>
-      <sub><b>Askıda</b>: brand system and Android app screens (sample data)</sub>
+      <sub><b>Askıda</b>: web home page and Android recipient screen (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/askida/">web demo</a></sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/cetele.png" alt="Cetele card: Android app and server merged, not yet run against a live server" width="100%"><br>
-      <img src="cetele/docs/release/screenshots/01-sign-in-phone.png" alt="Cetele Android app sign-in screen with an empty phone number field, emulator" width="32%">
-      <img src="cetele/docs/release/screenshots/02-sign-in-unreachable.png" alt="Cetele Android app showing an unable-to-connect error because no server was running, emulator" width="32%"><br>
-      <sub><b>Cetele</b>: Android app and server merged, not yet run against a live server (emulator screens, no server)</sub>
+      <img src="docs/readme/cetele.png" alt="Cetele card: web home page and Android customer list, local server, sample data" width="100%"><br>
+      <img src="cetele/docs/release/screenshots/01-customers.png" alt="Cetele Android app: customer list with balances, sample customers, emulator" width="32%">
+      <img src="cetele/docs/release/screenshots/02-customer-ledger.png" alt="Cetele Android app: one customer's ledger with debts, a payment and a reversed entry struck through, sample data, emulator" width="32%">
+      <img src="cetele/docs/release/screenshots/03-dashboard.png" alt="Cetele Android app: dashboard with the total owed and the top debtors, sample data, emulator" width="32%"><br>
+      <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
       <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
@@ -100,7 +104,7 @@ Last updated: 2026-10-11 (written for the merge of Cetele Phase 4). The figures 
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kadro`     | 100%     | Phases 0 to 2 done; Phases 3 to 5: 34 of 34 work packages merged; Phase 6: 11 of 11 deliverables merged. Seven phases weighted equally: (3 + 3 x 34/34 + 11/11) / 7 = 100%. Phase 6 is complete for the portfolio scope (all 11 deliverables merged), while proofs that need systems that do not exist yet stay recorded as partial (10 of 23 security items, hosted origin, EAS builds, provider accounts, iOS), so 100% means the planned work is merged, not that every control is proven in production.                                                                   |
 | `askida`    | 100%     | Phases 0 to 6 merged: 7 of 7 phases, weighted equally (foundation; data layer, authentication and security baseline; shops, accounts and hooks; payments, webhooks, payouts and admin panel; Flutter app; public web, SEO and GEO; hardening and release readiness): 7/7 = 100%. 100% means the planned work is merged, not that every control is proven in production: 9 of 23 security items stay partial ([verification matrix](askida/docs/security/verification-matrix.md)); real payments, real attestation, store accounts, a hosted origin and iOS are not exercised. |
-| `cetele`    | 71%      | Phases 0 to 4 merged: 5 of 7 phases, weighted equally (foundation; server core, authentication and security baseline; sync, ledger, reminders and media; Android app; billing, webhooks and admin): 5/7 = 71%. Phases 5 and 6 (web SEO and GEO; hardening and release readiness) are not merged yet. Verified on the JVM and in CI only: no device, emulator or live server run, no real Play account (Play Developer API, RTDN and Play Integrity ran against fakes and recorded fixtures), and real PDF output, biometrics and camera are not exercised. |
+| `cetele`    | 71%      | Phases 0 to 4 merged: 5 of 7 phases, weighted equally (foundation; server core, authentication and security baseline; sync, ledger, reminders and media; Android app; billing, webhooks and admin): 5/7 = 71%. Phases 5 and 6 (web SEO and GEO; hardening and release readiness) are not merged yet. Verified on the JVM and in CI; the debug app was run on an Android emulator against a local server only to take the README screenshots (sign-in, sync of sample data, three screens), no physical device and no end-to-end flow run, no real Play account (Play Developer API, RTDN and Play Integrity ran against fakes and recorded fixtures), and real PDF output, biometrics and camera are not exercised. |
 | `inecekvar` | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
