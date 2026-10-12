@@ -96,9 +96,13 @@ class RecordingMailSender:
     """Keeps every message in memory instead of sending it."""
 
     sent: list[OutgoingMail] = field(default_factory=list)
+    discarded: list[OutgoingMail] = field(default_factory=list)
 
     async def send(self, mail: OutgoingMail) -> None:
         self.sent.append(mail)
+
+    async def discard(self, mail: OutgoingMail) -> None:
+        self.discarded.append(mail)
 
 
 @dataclass(slots=True)

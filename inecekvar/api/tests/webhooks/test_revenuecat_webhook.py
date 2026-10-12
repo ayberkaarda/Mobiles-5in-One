@@ -329,3 +329,46 @@ async def test_secret_settings_are_validated() -> None:
         make_test_settings(resend_webhook_secret=SecretStr("no-prefix"))
     with pytest.raises(ValueError, match="too short"):
         make_test_settings(resend_webhook_secret=SecretStr("whsec_c2hvcnQ="))
+
+
+async def test_aliased_anonymous_id_is_accepted_and_reaches_the_account(
+    client: httpx.AsyncClient,
+    webhook_services: Services,
+    user: Account,
+    clock: FixedClock,
+    queue: RecordingJobQueue,
+) -> None:
+    # A purchase made before sign-in: the event names the anonymous id, the aliases the account.
+    body = rc_event(
+        "INITIAL_PURCHASE",
+        "$RCAnonymousID:8a2b",
+        clock.now(),
+        expires=clock.now() + timedelta(days=30),
+        aliases=["$RCAnonymousID:8a2b", str(user.identity)],
+    )
+    response = await client.post(URL, content=encode(body), headers=rc_headers())
+    assert response.json() == {"status": "accepted"}
+    ((_, (row_id,), _),) = queue.jobs
+    assert await worker.revenuecat_event_job({"services": webhook_services}, row_id) == "applied"
+    async with webhook_services.session_factory() as db:
+        row = await db.scalar(select(Subscription))
+    assert row is not None
+    assert (row.user_id, row.rc_app_user_id) == (user.identity, str(user.identity))
+
+
+@pytest.mark.parametrize("path", ["/v1/webhooks/revenuecat", "/v1/webhooks/resend"])
+async def test_body_without_declared_length_is_refused_before_reading(
+    path: str,
+    client: httpx.AsyncClient,
+    webhook_services: Services,
+    user: Account,
+    clock: FixedClock,
+) -> None:
+    async def chunks() -> Any:
+        for part in (b'{"api_version":"1.0",', b'"event":{}}'):
+            yield part
+
+    response = await client.post(path, content=chunks(), headers=rc_headers())
+    assert response.request.headers.get("content-length") is None
+    assert (response.status_code, response.json()["code"]) == (411, "request.length_required")
+    assert await stored(webhook_services) == 0

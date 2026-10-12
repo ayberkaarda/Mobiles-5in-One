@@ -218,8 +218,9 @@ async def test_bounce_suppresses_digest_only(
     ("event_type", "bounce", "expected"),
     [
         ("email.bounced", "Permanent", "bounce"),
-        ("email.bounced", None, "bounce"),
-        ("email.bounced", "Undetermined", "bounce"),
+        # Only a hard bounce suppresses (ADR-0050 item 12).
+        ("email.bounced", None, None),
+        ("email.bounced", "Undetermined", None),
         ("email.bounced", "Transient", None),
         ("email.complained", None, "complaint"),
         ("email.delivered", None, None),
@@ -249,7 +250,7 @@ async def test_complaint_is_not_downgraded_by_a_later_bounce(
     client: httpx.AsyncClient, webhook_services: Services, clock: FixedClock
 ) -> None:
     for event_type in ("email.complained", "email.bounced"):
-        body = encode(resend_event(event_type, ADDRESS))
+        body = encode(resend_event(event_type, ADDRESS, bounce="Permanent"))
         assert (
             await client.post(URL, content=body, headers=svix_headers(body, clock))
         ).status_code == 200
@@ -260,7 +261,7 @@ async def test_complaint_is_not_downgraded_by_a_later_bounce(
 async def test_replayed_svix_id_has_no_second_effect(
     client: httpx.AsyncClient, webhook_services: Services, clock: FixedClock
 ) -> None:
-    body = encode(resend_event("email.bounced", ADDRESS))
+    body = encode(resend_event("email.bounced", ADDRESS, bounce="Permanent"))
     headers = svix_headers(body, clock, message_id="msg_replayed")
     assert (await client.post(URL, content=body, headers=headers)).json() == {"status": "accepted"}
     replay = await client.post(URL, content=body, headers=headers)
@@ -340,3 +341,30 @@ def test_published_svix_vector() -> None:
 
     # The endpoint secret is the `whsec_` prefix plus the base64 key above.
     assert svix_key(SecretStr("whsec_" + base64.b64encode(key).decode())) == key
+
+
+async def test_delivery_clears_a_bounce_but_not_a_complaint(
+    client: httpx.AsyncClient, webhook_services: Services, clock: FixedClock
+) -> None:
+    other = "complained@example.com"
+    for event_type, address, bounce in (
+        ("email.bounced", ADDRESS, "Permanent"),
+        ("email.complained", other, None),
+    ):
+        body = encode(resend_event(event_type, address, bounce=bounce))
+        assert (
+            await client.post(URL, content=body, headers=svix_headers(body, clock))
+        ).status_code == 200
+    delivered = encode(resend_event("email.delivered", ADDRESS.upper(), other))
+    assert (
+        await client.post(URL, content=delivered, headers=svix_headers(delivered, clock))
+    ).status_code == 200
+    assert await reason_of(webhook_services, ADDRESS) is None
+    assert await reason_of(webhook_services, other) == "complaint"
+    async with webhook_services.session_factory() as db:
+        outcomes = list(
+            await db.scalars(
+                select(WebhookEvent.outcome).where(WebhookEvent.event_type == "email.delivered")
+            )
+        )
+    assert outcomes == ["applied"]

@@ -3,9 +3,11 @@
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.core.errors import BODY_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE
+from app.core.errors import BODY_TOO_LARGE, LENGTH_REQUIRED, UNSUPPORTED_MEDIA_TYPE
 from app.core.handlers import run_with_error_response, send_problem
 from app.core.settings import Settings
+
+WEBHOOK_PATHS: frozenset[str] = frozenset({"/v1/webhooks/revenuecat", "/v1/webhooks/resend"})
 
 
 class BodyLimitMiddleware:
@@ -37,6 +39,11 @@ class BodyLimitMiddleware:
             declared = int(lengths[0])
         if declared > limit:
             await send_problem(scope, receive, send, BODY_TOO_LARGE, 413)
+            return
+        if path in WEBHOOK_PATHS and scope["method"] == "POST" and not lengths:
+            # Providers always declare the length; an unauthenticated chunked body is refused
+            # before a byte of it is buffered (ADR-0050 item 16).
+            await send_problem(scope, receive, send, LENGTH_REQUIRED, 411)
             return
         check_type = scope["method"] in {"POST", "PUT", "PATCH", "DELETE"} and not path.startswith(
             "/v1/webhooks/"

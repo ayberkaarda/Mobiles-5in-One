@@ -2119,6 +2119,48 @@
         }
       }
     },
+    "/v1/admin/suppressions": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove Email Suppression",
+        "description": "Lift the suppression of one address (ADR-0050 item 12). The address travels in the body,\nnever in a URL or a log; the audit row records only the keyed digest.",
+        "operationId": "remove_email_suppression_v1_admin_suppressions_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionRemovalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuppressionRemovalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/audit-logs": {
       "get": {
         "tags": [
@@ -4523,6 +4565,37 @@
           "name"
         ],
         "title": "StopRef"
+      },
+      "SuppressionRemovalIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+$",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "SuppressionRemovalIn"
+      },
+      "SuppressionRemovalOut": {
+        "properties": {
+          "removed": {
+            "type": "boolean",
+            "title": "Removed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "removed"
+        ],
+        "title": "SuppressionRemovalOut"
       },
       "TotpCodeIn": {
         "properties": {

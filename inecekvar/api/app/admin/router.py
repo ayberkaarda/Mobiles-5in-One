@@ -3,12 +3,13 @@ from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
-from pydantic import AwareDatetime, BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.router import AuthRoute
 from app.auth.step_up import revoke_user_step_ups
+from app.auth.suppression import remove_suppression, suppression_hash
 from app.core.deps import DbDep, ObjectStoreDep, Principal, ServicesDep, enforce_rate_limit
 from app.core.errors import VALIDATION_FAILED, ProblemError
 from app.lines.router import Limit, Offset
@@ -24,6 +25,9 @@ from app.workers.export import export_city
 router = APIRouter(prefix="/admin", tags=["admin"], route_class=AuthRoute)
 type ManageUsersDep = Annotated[Principal, Depends(require_step_up(Action.MANAGE_USERS))]
 type ExportAdminDep = Annotated[Principal, Depends(require_step_up(Action.EXPORT_ADMIN))]
+type ManageSuppressionsDep = Annotated[
+    Principal, Depends(require_step_up(Action.MANAGE_SUPPRESSIONS))
+]
 type AuditFilter = Annotated[str | None, Query(pattern=r"^[a-z_.]{1,64}$")]
 
 
@@ -74,6 +78,18 @@ class AuditLogOut(BaseModel):
     target_id: uuid.UUID | None
     diff_hash: str | None
     created_at: datetime
+
+
+class SuppressionRemovalIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=3, max_length=320, pattern=r"^[^@\s]+@[^@\s]+$")
+
+
+class SuppressionRemovalOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    removed: bool
 
 
 class AuditLogPage(BaseModel):
@@ -219,6 +235,33 @@ async def create_export(
         path=exported.path,
         published_at=exported.published_at,
     )
+
+
+@router.delete("/suppressions")
+async def remove_email_suppression(
+    body: SuppressionRemovalIn,
+    principal: ManageSuppressionsDep,
+    db: DbDep,
+    services: ServicesDep,
+) -> SuppressionRemovalOut:
+    """Lift the suppression of one address (ADR-0050 item 12). The address travels in the body,
+    never in a URL or a log; the audit row records only the keyed digest."""
+    now = services.clock.now()
+    removed = await remove_suppression(db, services.settings, body.email)
+    audit(
+        db,
+        principal,
+        "admin.suppression_removed",
+        "email_suppression",
+        removed,
+        {
+            "email_hash": suppression_hash(services.settings, body.email).hex(),
+            "removed": removed is not None,
+        },
+        now,
+    )
+    await db.commit()
+    return SuppressionRemovalOut(removed=removed is not None)
 
 
 @router.get("/audit-logs")

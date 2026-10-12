@@ -46,6 +46,8 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     # anonymous hash (or signed-in user) per day.
     "media.presign": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
     "pack.download": RateLimitRule(limit=10, window_seconds=24 * 60 * 60),
+    # ADR-0050: security mail to an address that hard-bounced more than 30 days ago.
+    "mail.security_after_bounce": RateLimitRule(limit=3, window_seconds=24 * 60 * 60),
 }
 
 # Reputation below this value uses `edits.low_reputation` (spec section 6.5).

@@ -50,6 +50,12 @@ def audit_request(client: httpx.AsyncClient, target: uuid.UUID) -> httpx.Request
     return client.build_request("GET", "/v1/admin/audit-logs")
 
 
+def suppression_request(client: httpx.AsyncClient, target: uuid.UUID) -> httpx.Request:
+    return client.build_request(
+        "DELETE", "/v1/admin/suppressions", json={"email": "bounced@example.com"}
+    )
+
+
 @dataclass(frozen=True)
 class AdminRoute:
     method: str
@@ -64,6 +70,9 @@ ADMIN_ROUTES = (
     AdminRoute("PATCH", "/v1/admin/users/{identity}/role", role_request, 200, Action.MANAGE_USERS),
     AdminRoute("POST", "/v1/admin/exports/{city}", export_request, 201, Action.EXPORT_ADMIN),
     AdminRoute("GET", "/v1/admin/audit-logs", audit_request, 200, Action.MANAGE_USERS),
+    AdminRoute(
+        "DELETE", "/v1/admin/suppressions", suppression_request, 200, Action.MANAGE_SUPPRESSIONS
+    ),
 )
 ACTORS: tuple[tuple[UserRole | None, StepState, int, str | None], ...] = (
     (None, "none", 401, "auth.required"),

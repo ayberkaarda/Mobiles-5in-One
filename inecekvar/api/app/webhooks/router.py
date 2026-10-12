@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 
-from app.auth.suppression import suppress
+from app.auth.suppression import clear_bounces, suppress
 from app.billing.events import TEST, RevenueCatEnvelope, subject_ids
 from app.billing.subscriptions import known_user_ids
 from app.core.deps import DbDep, ServicesDep
@@ -130,9 +130,10 @@ def suppression_for(event: ResendEvent) -> SuppressionReason | None:
     if event.type == "email.complained":
         return SuppressionReason.COMPLAINT
     if event.type == "email.bounced":
-        # A transient (soft) bounce may deliver later; every other bounce suppresses.
+        # Only a hard (`Permanent`) bounce suppresses; `Transient`, `Undetermined` and a bounce
+        # without a type may deliver later and suppress nothing (ADR-0050 item 12).
         bounce_type = event.data.bounce.type if event.data.bounce is not None else None
-        return None if bounce_type == "Transient" else SuppressionReason.BOUNCE
+        return SuppressionReason.BOUNCE if bounce_type == "Permanent" else None
     return None
 
 
@@ -178,10 +179,13 @@ async def resend_webhook(request: Request, services: ServicesDep, db: DbDep) -> 
         logger.info("webhook.received", provider="resend", event_type=event.type, duplicate=True)
         return WebhookAck(status="duplicate")
     reason = suppression_for(event)
-    count = 0
+    suppressed = cleared = 0
     if reason is not None and recipients:
-        count = await suppress(db, services.settings, recipients, reason, now)
-    outcome = WebhookOutcome.APPLIED if count else WebhookOutcome.IGNORED
+        suppressed = await suppress(db, services.settings, recipients, reason, now)
+    elif event.type == "email.delivered" and recipients:
+        # A later delivery proves the mailbox accepts mail again.
+        cleared = await clear_bounces(db, services.settings, recipients)
+    outcome = WebhookOutcome.APPLIED if suppressed + cleared else WebhookOutcome.IGNORED
     await db.execute(
         update(WebhookEvent).where(WebhookEvent.id == row_id).values(outcome=outcome.value)
     )
@@ -192,6 +196,7 @@ async def resend_webhook(request: Request, services: ServicesDep, db: DbDep) -> 
         event_type=event.type,
         duplicate=False,
         outcome=outcome.value,
-        suppressed=count,
+        suppressed=suppressed,
+        cleared=cleared,
     )
     return WebhookAck(status="accepted")

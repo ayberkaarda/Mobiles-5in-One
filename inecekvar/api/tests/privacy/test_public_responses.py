@@ -111,6 +111,7 @@ PRIVATE_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("PATCH", "/v1/admin/users/{identity}/role"),
         ("POST", "/v1/admin/exports/{city}"),
         ("GET", "/v1/admin/audit-logs"),
+        ("DELETE", "/v1/admin/suppressions"),
         ("POST", "/v1/auth/csrf"),
         ("POST", "/v1/auth/logout"),
         ("POST", "/v1/auth/logout-all"),

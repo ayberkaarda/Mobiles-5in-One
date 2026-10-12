@@ -35,6 +35,27 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/v1/admin/suppressions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Remove Email Suppression
+     * @description Lift the suppression of one address (ADR-0050 item 12). The address travels in the body,
+     *     never in a URL or a log; the audit row records only the keyed digest.
+     */
+    delete: operations['remove_email_suppression_v1_admin_suppressions_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/admin/users': {
     parameters: {
       query?: never;
@@ -1569,6 +1590,16 @@ export type components = {
       /** Slug */
       slug: string;
     };
+    /** SuppressionRemovalIn */
+    SuppressionRemovalIn: {
+      /** Email */
+      email: string;
+    };
+    /** SuppressionRemovalOut */
+    SuppressionRemovalOut: {
+      /** Removed */
+      removed: boolean;
+    };
     /** TotpCodeIn */
     TotpCodeIn: {
       /** Code */
@@ -1813,6 +1844,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AdminExportOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  remove_email_suppression_v1_admin_suppressions_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SuppressionRemovalIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SuppressionRemovalOut'];
         };
       };
       /** @description Validation Error */

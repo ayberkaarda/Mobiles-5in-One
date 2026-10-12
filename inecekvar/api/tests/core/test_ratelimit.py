@@ -121,4 +121,5 @@ def test_rules_match_spec() -> None:
         "pack.download": (10, 86400),
         "public.stop_pairs": (60, 60),
         "admin.export": (10, 3600),
+        "mail.security_after_bounce": (3, 86400),
     }

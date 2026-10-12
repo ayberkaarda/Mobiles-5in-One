@@ -133,6 +133,9 @@ def build_services(settings: Settings) -> Services:
     redis = Redis.from_url(settings.redis_url.get_secret_value())
     clock = SystemClock()
     session_factory = create_session_factory(engine)
+    rate_limiter = RedisSlidingWindowLimiter(
+        redis, settings.rate_limit_rules, settings.require_secret("log_hash_key"), clock
+    )
     # One REST client serves the reconciliation and the subscriber deletion of account erasure;
     # without a key both stay unconfigured (reconciliation skipped, erasure of subscribers
     # deferred).
@@ -141,11 +144,15 @@ def build_services(settings: Settings) -> Services:
         settings=settings,
         session_factory=session_factory,
         redis=redis,
-        rate_limiter=RedisSlidingWindowLimiter(
-            redis, settings.rate_limit_rules, settings.require_secret("log_hash_key"), clock
-        ),
+        rate_limiter=rate_limiter,
         authenticator=TokenSessionAuthenticator(settings, clock),
-        mail_sender=SuppressionAwareMailSender(SmtpMailSender(settings), session_factory, settings),
+        mail_sender=SuppressionAwareMailSender(
+            SmtpMailSender(settings),
+            session_factory,
+            settings,
+            rate_limiter=rate_limiter,
+            clock=clock,
+        ),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
         entitlements=SubscriptionEntitlements(),
