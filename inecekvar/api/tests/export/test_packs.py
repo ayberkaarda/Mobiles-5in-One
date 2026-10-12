@@ -127,16 +127,21 @@ async def test_pack_requires_request_header(
         transport=httpx.ASGITransport(app=export_app(services), client=("203.0.113.12", 50000)),
         base_url="https://testserver",
     ) as plain:
-        assert (await plain.get(PACK)).status_code == 400
+        missing = await plain.get(PACK)
+        assert missing.status_code == 422
+        assert missing.json()["code"] == "validation.failed"
     async with services.session_factory() as db:
         assert await db.scalar(select(func.count()).select_from(PackDownload)) == 0
 
 
-async def test_signing_in_does_not_grant_another_free_city(
+async def test_account_history_decides_for_signed_in_downloads(
     client: httpx.AsyncClient, services: Services, sample: Sample, user: Account
 ) -> None:
     await second_city(services)
+    # An anonymous download on the same network does not choose the account's free city.
     assert (await client.get(PACK)).status_code == 200
-    response = await client.get("/v1/cities/ikinci-sehir/pack", headers=user.headers)
+    second = "/v1/cities/ikinci-sehir/pack"
+    assert (await client.get(second, headers=user.headers)).status_code == 200
+    response = await client.get(PACK, headers=user.headers)
     assert response.status_code == 403
     assert response.json()["code"] == "pack.entitlement_required"

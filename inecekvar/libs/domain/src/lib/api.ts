@@ -1639,8 +1639,8 @@ export interface operations {
   download_pack_v1_cities__slug__pack_get: {
     parameters: {
       query?: never;
-      header?: {
-        'X-Pack-Request'?: string | null;
+      header: {
+        'X-Pack-Request': string;
       };
       path: {
         slug: string;

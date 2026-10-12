@@ -1503,16 +1503,9 @@
           {
             "name": "X-Pack-Request",
             "in": "header",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": "string",
               "title": "X-Pack-Request"
             }
           }

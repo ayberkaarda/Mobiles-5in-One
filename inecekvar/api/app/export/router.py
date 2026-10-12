@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header
 from fastapi.responses import RedirectResponse, Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 
 from app.cities.router import get_city
 from app.core.deps import (
@@ -47,15 +47,15 @@ async def download_pack(
     clock: ClockDep,
     limiter: RateLimiterDep,
     services: ServicesDep,
-    pack_request: Annotated[str | None, Header(alias=PACK_REQUEST_HEADER)] = None,
+    pack_request: Annotated[str, Header(alias=PACK_REQUEST_HEADER)],
 ) -> dict[str, object]:
     # Downloading can select the free first city, so it must not be triggered by a
     # cross-site navigation or image: browsers send this custom header only from code on an
     # allowed origin (after a CORS preflight), never on a plain link.
     if pack_request != "1":
         raise ProblemError("pack.header_required", 400)
-    # The network identity always counts, also for a signed-in caller, so signing in or out
-    # does not grant another free city or a fresh daily quota.
+    # The network identity always counts against the daily quota, also for a signed-in caller,
+    # so signing in or out does not reset it.
     anon_hash = hmac.new(
         settings.require_secret("log_hash_key"),
         b"pack-anon:" + client_ip.encode(),
@@ -71,8 +71,10 @@ async def download_pack(
     for identity in identities:
         await db.execute(select(func.pg_advisory_xact_lock(pack_lock(identity))))
     city = await get_city(db, slug)
+    # The account's own history decides for a signed-in caller (a shared network must not take
+    # away an account's free city); the network identity still counts against the quota.
     predicate = (
-        or_(PackDownload.user_id == principal.user_id, PackDownload.anon_hash == anon_hash)
+        PackDownload.user_id == principal.user_id
         if principal is not None
         else PackDownload.anon_hash == anon_hash
     )
