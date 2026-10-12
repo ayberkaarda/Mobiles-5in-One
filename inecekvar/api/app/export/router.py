@@ -5,9 +5,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header
 from fastapi.responses import RedirectResponse, Response
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 
-from app.cities.router import get_city
+from app.cities.router import get_city, published_lastmod
 from app.core.deps import (
     ClientIpDep,
     ClockDep,
@@ -23,7 +24,7 @@ from app.core.errors import ProblemError
 from app.core.storage import ObjectMissingError, ObjectTooLargeError
 from app.export.dataset import city_dataset
 from app.models.billing import PackDownload
-from app.models.geo import Line, LineStop, LineVersion, Stop
+from app.models.geo import City, Line, LineStop, LineVersion, Stop
 from app.models.ops import Export
 
 router = APIRouter()
@@ -31,6 +32,45 @@ MAX_EXPORT_BYTES = 50 * 1024 * 1024
 
 
 PACK_REQUEST_HEADER = "X-Pack-Request"
+
+
+class SitemapCityOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    slug: str
+    lastmod: datetime
+    is_sample: bool
+    published_line_count: int
+
+
+class SitemapIndexOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cities: list[SitemapCityOut]
+
+
+@router.get("/sitemap")
+async def sitemap_index(db: DbDep) -> SitemapIndexOut:
+    rows = await db.execute(
+        select(City, func.count(Line.id))
+        .join(Line, Line.city_id == City.id)
+        .join(LineVersion, Line.current_version_id == LineVersion.id)
+        .where(Line.status == "published")
+        .group_by(City.id)
+        .order_by(City.slug)
+    )
+    cities = list(rows.all())
+    lastmods = await published_lastmod(db, [city.id for city, _ in cities])
+    return SitemapIndexOut(
+        cities=[
+            SitemapCityOut(
+                slug=city.slug,
+                lastmod=lastmods[city.id],
+                is_sample=city.is_sample,
+                published_line_count=count,
+            )
+            for city, count in cities
+            if city.id in lastmods
+        ]
+    )
 
 
 def pack_lock(identity: str) -> int:

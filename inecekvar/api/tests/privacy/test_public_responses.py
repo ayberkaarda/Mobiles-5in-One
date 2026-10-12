@@ -44,6 +44,8 @@ PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
     ),
     ("GET", "/v1/export/{city}/latest.geojson"): Probe("/v1/export/" + CITY + "/latest.geojson"),
     ("GET", "/v1/cities/{slug}/sitemap"): Probe("/v1/cities/" + CITY + "/sitemap"),
+    ("GET", "/v1/cities/{slug}/stop-pairs"): Probe("/v1/cities/" + CITY + "/stop-pairs"),
+    ("GET", "/v1/sitemap"): Probe("/v1/sitemap"),
     ("POST", "/v1/plan"): Probe(
         "/v1/plan",
         body={

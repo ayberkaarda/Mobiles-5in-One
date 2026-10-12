@@ -10,19 +10,13 @@ from app.cities.router import get_city
 from app.core.deps import DbDep
 from app.core.errors import ProblemError
 from app.geo import GeoJSONLineString, line_geojson, point_coordinates
+from app.lines.schemas import LineSummary as LineSummary
+from app.lines.schemas import summary as summary
 from app.models import Line, LineStop, LineVersion, Stop
 
 router = APIRouter()
 type Limit = Annotated[int, Query(ge=1, le=100)]
 type Offset = Annotated[int, Query(ge=0, le=100000)]
-
-
-class LineSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    slug: str
-    code: str
-    name: str
-    mode: str
 
 
 class StopOut(BaseModel):
@@ -60,10 +54,6 @@ class VersionOut(BaseModel):
     published_at: datetime
     fare_minor: int | None
     stop_count: int
-
-
-def summary(line: Line) -> LineSummary:
-    return LineSummary(slug=line.slug, code=line.code, name=line.name, mode=line.mode)
 
 
 def stop_response(stop: Stop) -> StopOut:

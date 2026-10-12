@@ -22,7 +22,8 @@ async def test_public_city_line_stop_reads(client: httpx.AsyncClient, sample: Sa
     assert city["is_sample"] is True
     assert city["published_line_count"] == 3
     assert city["bbox"] == [34.0, 42.5, 34.1, 42.58]
-    assert (await client.get("/v1/cities/" + CITY)).json() == city
+    detail = (await client.get("/v1/cities/" + CITY)).json()
+    assert {key: detail[key] for key in city} == city
     assert len((await client.get("/v1/lines", params={"city": CITY})).json()) == 3
     line = (await client.get(DETAIL)).json()
     assert line["geometry"]["type"] == "LineString"
