@@ -31,7 +31,9 @@ async function mailedToken(request: APIRequestContext, to: string): Promise<stri
     const messages = ((await search.json()) as { messages?: { ID: string }[] }).messages ?? [];
     if (messages.length > 0) {
       const message = await request.get(`${MAIL}/api/v1/message/${messages[0]?.ID}`);
-      const token = /#token=([A-Za-z0-9_-]+)/.exec(((await message.json()) as { Text: string }).Text);
+      const token = /#token=([A-Za-z0-9_-]+)/.exec(
+        ((await message.json()) as { Text: string }).Text,
+      );
       if (token?.[1]) return token[1];
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
