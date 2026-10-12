@@ -24,12 +24,21 @@ import {
   spy,
 } from '../testing/catalog.fixtures';
 import { i18nTesting } from '../testing/i18n.testing';
-import { fakePmtiles } from '../testing/pack.fakes';
+import { deferred, FakeCacheStorage, fakePmtiles } from '../testing/pack.fakes';
+import { CachePackStorage, INDEX_CACHE, INSTALL_CACHE_PREFIX } from './cache-pack-storage';
 import { CatalogSource } from './catalog-source';
-import { apiLineId, PackFormatError, PackIndex, parsePack } from './pack-data';
+import {
+  apiLineId,
+  MAX_PACK_LINES,
+  MAX_ROUTE_POINTS,
+  PackFormatError,
+  PackIndex,
+  parsePack,
+} from './pack-data';
 import { failureOf, isPmtilesV3, PackManager } from './pack-manager';
 import { PackRegistry } from './pack-registry';
-import { MemoryPackStorage, PackStorageError } from './pack-storage';
+import { MemoryPackStorage, PackStorage, PackStorageError } from './pack-storage';
+import { PACK_STORAGE } from './pack-storage.provider';
 
 const CITY = SAMPLE_CITY.slug;
 
@@ -88,6 +97,25 @@ function controllablePack() {
 describe('pack data', () => {
   const index = new PackIndex(parsePack(packBody().bytes, CITY));
 
+  it('rejects a dataset with too many lines before building its pack index', () => {
+    const data = samplePackData();
+    const line = data.lines[0];
+    if (!line) throw new Error('fixture has no lines');
+    const body = packBody({
+      ...data,
+      lines: Array.from({ length: MAX_PACK_LINES + 1 }, () => line),
+    });
+    expect(() => parsePack(body.bytes, CITY)).toThrow('too many lines');
+  });
+
+  it('rejects a line with too many route points before indexing it', () => {
+    const data = samplePackData();
+    const line = data.lines[0];
+    if (!line) throw new Error('fixture has no lines');
+    line.geometry = Array.from({ length: MAX_ROUTE_POINTS + 1 }, () => [34, 42]);
+    expect(() => parsePack(packBody(data).bytes, CITY)).toThrow('too many route points per line');
+  });
+
   it('refuses bodies that are not a format 1 pack of the city', () => {
     const enc = (v: unknown) => new TextEncoder().encode(JSON.stringify(v));
     expect(() => parsePack(new TextEncoder().encode('{"format":1,'), CITY)).toThrow(
@@ -139,6 +167,40 @@ describe('pack data', () => {
 });
 
 describe('PackManager', () => {
+  it('cancels during saving without committing or deleting the previous pack', async () => {
+    const backing = new FakeCacheStorage();
+    const storage = new CachePackStorage(backing);
+    const { manager, registry, catalog } = setup({
+      providers: [{ provide: PACK_STORAGE, useValue: storage }],
+    });
+    await manager.download(CITY);
+    const first = registry.manifest(CITY);
+    const index = backing.caches.get(INDEX_CACHE)?.get('/__iv-packs/index.json')?.bytes.slice();
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    backing.faults.before = async (key) => {
+      if (key.endsWith('dataset.json')) {
+        entered.resolve();
+        await release.promise;
+      }
+    };
+    catalog.packBytes.impl = async () => packBody(samplePackData(2));
+    const installing = manager.download(CITY);
+    await entered.promise;
+    expect(manager.jobs().get(CITY)?.phase).toBe('saving');
+    manager.cancel(CITY);
+    release.resolve();
+    expect(await installing).toBe(false);
+    expect(registry.manifest(CITY)).toEqual(first);
+    expect(backing.caches.get(INDEX_CACHE)?.get('/__iv-packs/index.json')?.bytes).toEqual(index);
+    expect(
+      [...backing.caches.keys()].filter((key) => key.startsWith(INSTALL_CACHE_PREFIX)),
+    ).toEqual([expect.stringContaining(first?.installId ?? '')]);
+    expect(manager.failures().size).toBe(0);
+    expect(manager.jobs().size).toBe(0);
+    expect(manager.state({ ...SAMPLE_CITY, pack_version: 2 })).toBe('update');
+  });
+
   it('downloads with progress, installs, warms the map and reports the state', async () => {
     const { manager, registry, catalog, warmups } = setup();
     const gate = controllablePack();
@@ -247,6 +309,67 @@ describe('PackManager', () => {
 });
 
 describe('PackRegistry', () => {
+  it('evicts dataset promises from obsolete generations on update and removal', async () => {
+    const { manager, registry, catalog } = setup();
+    await manager.download(CITY);
+    await registry.dataset(CITY);
+    const cache = (registry as unknown as { datasets: Map<string, unknown> }).datasets;
+    const oldKey = [...cache.keys()][0];
+    expect(cache.size).toBe(1);
+    catalog.packBytes.impl = async () => packBody(samplePackData(2));
+    await manager.download(CITY);
+    expect(cache.has(oldKey ?? '')).toBe(false);
+    await registry.dataset(CITY);
+    expect(cache.size).toBe(1);
+    await manager.remove(CITY);
+    expect(cache.size).toBe(0);
+  });
+
+  it('refreshes committed manifests after a cross-tab invalidation', async () => {
+    let invalidate: () => void = () => undefined;
+    const memory = new MemoryPackStorage();
+    const storage: PackStorage = {
+      kind: 'memory',
+      list: () => memory.list(),
+      readDataset: (city) => memory.readDataset(city),
+      readBasemap: (city, offset, length, installId) =>
+        memory.readBasemap(city, offset, length, installId),
+      install: (manifest, files, signal) => memory.install(manifest, files, signal),
+      remove: (city) => memory.remove(city),
+      estimate: () => memory.estimate(),
+      subscribeInvalidation: (listener) => {
+        invalidate = listener;
+        return () => undefined;
+      },
+    };
+    const { manager, registry } = setup({
+      providers: [{ provide: PACK_STORAGE, useValue: storage }],
+    });
+    await manager.download(CITY);
+    expect(registry.has(CITY)).toBe(true);
+    await memory.remove(CITY);
+    invalidate();
+    await settle();
+    expect(registry.has(CITY)).toBe(false);
+  });
+
+  it('rejects reads through an old PMTiles source after its install is replaced', async () => {
+    const { manager, registry, catalog } = setup();
+    catalog.tilesArchive.impl = async () => ({
+      bytes: fakePmtiles(100),
+      declaredLength: null,
+      etag: null,
+      contentType: null,
+    });
+    await manager.download(CITY);
+    const source = registry.basemapSource(CITY);
+    expect(source).not.toBeNull();
+    await source?.getBytes(0, 8);
+    catalog.packBytes.impl = async () => packBody(samplePackData(2));
+    await manager.download(CITY);
+    await expect(source?.getBytes(0, 8)).rejects.toThrow('basemap not installed');
+  });
+
   it('lists offline cities and ignores a dataset that no longer matches its manifest', async () => {
     const { manager, registry, storage } = setup();
     await manager.download(CITY);
@@ -452,6 +575,16 @@ describe('PacksPage', () => {
   const row = (el: HTMLElement) => el.querySelector(`[data-city="${CITY}"]`) as HTMLElement;
   const button = (el: HTMLElement, label: string) =>
     [...row(el).querySelectorAll('button')].find((b) => b.textContent?.trim() === label);
+
+  it('refreshes catalog versions whenever the packs page is activated', async () => {
+    const { fixture, catalog, cities } = await render();
+    const calls = catalog.cities.calls.length;
+    catalog.cities.impl = async () => [{ ...SAMPLE_CITY, pack_version: 9 }];
+    fixture.componentInstance.ionViewWillEnter();
+    await settle(fixture);
+    expect(catalog.cities.calls.length).toBe(calls + 1);
+    expect(cities.cities()[0]?.pack_version).toBe(9);
+  });
 
   it('lists the city, downloads it and offers delete with a second tap', async () => {
     const { el, fixture, registry } = await render();

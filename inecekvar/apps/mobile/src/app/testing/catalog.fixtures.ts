@@ -26,6 +26,7 @@ import {
 import { PREFERENCE_STORE, PreferenceStore } from '../city/city.store';
 import { CityPackData } from '../packs/pack-data';
 import { MAP_WARMUP } from '../packs/pack-manager';
+import { MAP_WARMUP_RUNTIME, WarmupRuntime } from '../packs/map-warmup';
 import { MemoryPackStorage, PackStorage } from '../packs/pack-storage';
 import { PACK_STORAGE } from '../packs/pack-storage.provider';
 import { NETWORK_SOURCE, NetworkSource } from '../shared/connectivity.service';
@@ -461,6 +462,16 @@ export function catalogTesting(options: CatalogTestingOptions = {}): Provider[] 
     { provide: PACK_STORAGE, useValue: options.packs ?? new MemoryPackStorage() },
     { provide: NETWORK_SOURCE, useValue: options.network ?? new FakeNetwork() },
     { provide: MAP_WARMUP, useValue: options.warmup ?? (async () => undefined) },
+    {
+      provide: MAP_WARMUP_RUNTIME,
+      useValue: {
+        controlled: () => true,
+        version: () => 'test-app',
+        marker: () => null,
+        saveMarker: () => undefined,
+        subscribe: () => () => undefined,
+      } satisfies WarmupRuntime,
+    },
     { provide: SessionStore, useValue: session },
     { provide: AccountApi, useValue: account },
     { provide: ContributionApi, useValue: options.contributions ?? fakeContributions() },

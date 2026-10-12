@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  EnvironmentInjector,
   inject,
   isDevMode,
   provideAppInitializer,
@@ -32,6 +33,12 @@ export const appConfig: ApplicationConfig = {
     // token out of the address bar before the router reads the URL.
     provideAppInitializer(() => {
       inject(ThemeService);
+      // The map warmup (and the pack code it needs) loads after start-up, outside the
+      // initial bundle; it re-warms installed packs after an app update.
+      const injector = inject(EnvironmentInjector);
+      void import('./packs/map-warmup')
+        .then(({ MapWarmup }) => injector.get(MapWarmup))
+        .catch(() => undefined);
       bootstrapSession();
       return inject(LanguageService).init();
     }),

@@ -98,6 +98,11 @@ export class PacksPage {
     void this.registry.ready().then(() => this.manager.refreshEstimate());
   }
 
+  ionViewWillEnter(): void {
+    void this.cityStore.init().then(() => this.cityStore.load());
+    void this.registry.refresh();
+  }
+
   protected installedText(city: City): string | null {
     const manifest = this.registry.manifests().get(city.slug);
     if (!manifest) return null;

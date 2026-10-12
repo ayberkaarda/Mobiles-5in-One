@@ -1,4 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { City } from '@inecekvar/data-access';
+import { ConnectivityService } from '../shared/connectivity.service';
+import { deferred } from '../testing/pack.fakes';
 import {
   catalogTesting,
   fakeCatalog,
@@ -14,6 +17,37 @@ function setup(prefs = new MemoryPreferences(), catalog = fakeCatalog()) {
 }
 
 describe('CityStore', () => {
+  it('refreshes catalog versions on reconnect even when the list came from the API', async () => {
+    const { store, catalog } = setup();
+    await store.init();
+    const connectivity = TestBed.inject(ConnectivityService);
+    await Promise.resolve();
+    connectivity.online.set(false);
+    TestBed.tick();
+    expect(store.fromPacks()).toBe(false);
+    catalog.cities.impl = async () => [{ ...SAMPLE_CITY, pack_version: 5 }];
+    connectivity.online.set(true);
+    TestBed.tick();
+    await Promise.resolve();
+    expect(catalog.cities.calls).toHaveLength(2);
+    expect(store.cities()[0]?.pack_version).toBe(5);
+  });
+
+  it('ignores an older catalog response that arrives after a newer refresh', async () => {
+    const { store, catalog } = setup();
+    const first = deferred<City[]>();
+    let calls = 0;
+    catalog.cities.impl = () => {
+      calls++;
+      return calls === 1 ? first.promise : Promise.resolve([{ ...SAMPLE_CITY, pack_version: 7 }]);
+    };
+    const slow = store.load();
+    await store.load();
+    first.resolve([{ ...SAMPLE_CITY, pack_version: 2 }]);
+    await slow;
+    expect(store.cities()[0]?.pack_version).toBe(7);
+  });
+
   it('starts without a city, loads the list and stores a choice in Preferences', async () => {
     const { store, prefs } = setup();
     await store.init();

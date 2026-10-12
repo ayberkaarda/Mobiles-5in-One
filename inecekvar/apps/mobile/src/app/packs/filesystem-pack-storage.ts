@@ -10,6 +10,7 @@ import {
   PackStorage,
   PackStorageError,
   PackStorageEstimate,
+  throwIfAborted,
   verifyFile,
 } from './pack-storage';
 
@@ -30,7 +31,9 @@ export interface FilesystemLike {
 }
 
 /** Reads `length` bytes from `offset` of a file given by its native URI. */
-export type RangeReader = (uri: string, offset: number, length: number) => Promise<Uint8Array>;
+export type RangeReader = ((uri: string, offset: number, length: number) => Promise<Uint8Array>) & {
+  forget?: (uri: string) => void;
+};
 
 const ROOT = 'packs';
 const INDEX = `${ROOT}/index.json`;
@@ -56,10 +59,13 @@ export class FilesystemPackStorage implements PackStorage {
   readonly kind = 'filesystem' as const;
   private queue: Promise<unknown> = Promise.resolve();
   private readonly directory: Directory;
+  private readonly active = new Set<string>();
+  private readonly basemapUris = new Map<string, string>();
+  private lastGood: PackIndexFile = { version: 1, packs: [] };
 
   constructor(
     private readonly fs: FilesystemLike,
-    private readonly readRange: RangeReader = fetchRange,
+    private readonly readRange: RangeReader = createRangeReader(),
     directory: Directory = Directory.Data,
   ) {
     this.directory = directory;
@@ -67,7 +73,19 @@ export class FilesystemPackStorage implements PackStorage {
 
   async list(): Promise<PackManifest[]> {
     return this.serial(async () => {
-      const index = await this.readIndex();
+      let index: PackIndexFile;
+      try {
+        index = await this.readIndex();
+      } catch {
+        return this.lastGood.packs;
+      }
+      const live = new Set(index.packs.map(installDir));
+      for (const [dir, uri] of this.basemapUris) {
+        if (!live.has(dir)) {
+          this.readRange.forget?.(uri);
+          this.basemapUris.delete(dir);
+        }
+      }
       await this.collectGarbage(index);
       return index.packs;
     });
@@ -83,69 +101,89 @@ export class FilesystemPackStorage implements PackStorage {
     }
   }
 
-  async readBasemap(city: string, offset: number, length: number): Promise<Uint8Array | null> {
-    const manifest = await this.committed(city);
-    if (!manifest?.basemap) return null;
-    const { uri } = await this.fs.getUri({
-      path: `${installDir(manifest)}/basemap.pmtiles`,
-      directory: this.directory,
+  async readBasemap(
+    city: string,
+    offset: number,
+    length: number,
+    installId?: string,
+  ): Promise<Uint8Array | null> {
+    return this.serial(async () => {
+      const manifest = (await this.readIndex()).packs.find((p) => p.city === city);
+      if (installId && manifest?.installId !== installId) return null;
+      if (!manifest?.basemap) return null;
+      const { uri } = await this.fs.getUri({
+        path: `${installDir(manifest)}/basemap.pmtiles`,
+        directory: this.directory,
+      });
+      this.basemapUris.set(installDir(manifest), uri);
+      const end = Math.min(offset + length, manifest.basemap.bytes);
+      return this.readRange(uri, offset, Math.max(0, end - offset));
     });
-    const end = Math.min(offset + length, manifest.basemap.bytes);
-    return this.readRange(uri, offset, Math.max(0, end - offset));
   }
 
-  async install(manifest: PackManifest, files: PackFiles): Promise<void> {
-    if (manifest.basemap && !files.basemap) {
-      throw new PackStorageError('integrity', 'basemap missing');
-    }
-    const dir = installDir(manifest);
-    let previous: PackManifest | undefined;
-    try {
-      await this.writeBytes(`${dir}/dataset.json`, files.dataset);
-      if (manifest.basemap && files.basemap) {
-        await this.writeBytes(`${dir}/basemap.pmtiles`, files.basemap);
+  async install(manifest: PackManifest, files: PackFiles, signal?: AbortSignal): Promise<void> {
+    return this.serial(async () => {
+      if (manifest.basemap && !files.basemap) {
+        throw new PackStorageError('integrity', 'basemap missing');
       }
-      await verifyFile('dataset', await this.readBytes(`${dir}/dataset.json`), manifest.dataset);
-      if (manifest.basemap) {
-        await verifyFile(
-          'basemap',
-          await this.readBytes(`${dir}/basemap.pmtiles`),
-          manifest.basemap,
-        );
+      const dir = installDir(manifest);
+      const index = await this.readIndex();
+      const previous = index.packs.find((p) => p.city === manifest.city);
+      if (previous && previous.packVersion > manifest.packVersion) {
+        throw new PackStorageError('integrity', 'a newer pack is already installed');
       }
-      await this.serial(async () => {
-        const index = await this.readIndex();
-        previous = index.packs.find((p) => p.city === manifest.city);
+      throwIfAborted(signal);
+      this.active.add(dir);
+      let committed = false;
+      try {
+        await this.writeBytes(`${dir}/dataset.json`, files.dataset);
+        throwIfAborted(signal);
+        if (manifest.basemap && files.basemap) {
+          await this.writeBytes(`${dir}/basemap.pmtiles`, files.basemap);
+        }
+        throwIfAborted(signal);
+        await verifyFile('dataset', await this.readBytes(`${dir}/dataset.json`), manifest.dataset);
+        if (manifest.basemap) {
+          await verifyFile(
+            'basemap',
+            await this.readBytes(`${dir}/basemap.pmtiles`),
+            manifest.basemap,
+          );
+        }
+        throwIfAborted(signal);
         const packs = index.packs.filter((p) => p.city !== manifest.city);
         packs.push(manifest);
-        await this.writeIndex({ version: 1, packs });
-      });
-    } catch (error) {
-      await this.fs
-        .rmdir({ path: dir, directory: this.directory, recursive: true })
-        .catch(() => undefined);
-      throw asStorageError(error, 'install failed');
-    }
-    if (previous && previous.installId !== manifest.installId) {
-      await this.fs
-        .rmdir({ path: installDir(previous), directory: this.directory, recursive: true })
-        .catch(() => undefined);
-    }
+        await this.writeIndex({ version: 1, packs }, signal);
+        committed = true;
+        if (signal?.aborted) {
+          await this.writeIndex(index);
+          committed = false;
+          throwIfAborted(signal);
+        }
+      } catch (error) {
+        if (!committed) {
+          await this.fs
+            .rmdir({ path: dir, directory: this.directory, recursive: true })
+            .catch(() => undefined);
+        }
+        throw asStorageError(error, 'install failed');
+      } finally {
+        this.active.delete(dir);
+      }
+      if (previous && previous.installId !== manifest.installId) {
+        await this.deleteInstall(previous);
+      }
+    });
   }
 
   async remove(city: string): Promise<void> {
-    let removed: PackManifest | undefined;
     await this.serial(async () => {
       const index = await this.readIndex();
-      removed = index.packs.find((p) => p.city === city);
+      const removed = index.packs.find((p) => p.city === city);
       if (!removed) return;
       await this.writeIndex({ version: 1, packs: index.packs.filter((p) => p.city !== city) });
+      await this.deleteInstall(removed);
     });
-    if (removed) {
-      await this.fs
-        .rmdir({ path: `${ROOT}/${city}`, directory: this.directory, recursive: true })
-        .catch(() => undefined);
-    }
   }
 
   async estimate(): Promise<PackStorageEstimate> {
@@ -159,25 +197,82 @@ export class FilesystemPackStorage implements PackStorage {
 
   private async readIndex(): Promise<PackIndexFile> {
     for (const path of [INDEX, INDEX_NEXT]) {
+      let bytes: Uint8Array;
       try {
-        const text = new TextDecoder().decode(await this.readBytes(path));
+        bytes = await this.readBytes(path);
+      } catch (error) {
+        if (isMissingFile(error)) continue;
+        throw new PackStorageError('io', 'pack index is unreadable', error);
+      }
+      try {
+        const text = new TextDecoder().decode(bytes);
         const parsed = JSON.parse(text) as Partial<PackIndexFile>;
-        if (Array.isArray(parsed.packs)) {
-          return { version: 1, packs: parsed.packs.filter(isManifest) };
+        if (
+          parsed.version !== 1 ||
+          !Array.isArray(parsed.packs) ||
+          !parsed.packs.every(isManifest)
+        ) {
+          throw new PackStorageError('io', 'pack index is unreadable');
         }
-      } catch {
-        // Missing or unreadable: try the next generation.
+        const index: PackIndexFile = { version: 1, packs: parsed.packs };
+        if (path === INDEX_NEXT) {
+          for (const manifest of index.packs) {
+            await verifyFile(
+              'dataset',
+              await this.readBytes(`${installDir(manifest)}/dataset.json`),
+              manifest.dataset,
+            );
+            if (manifest.basemap) {
+              await verifyFile(
+                'basemap',
+                await this.readBytes(`${installDir(manifest)}/basemap.pmtiles`),
+                manifest.basemap,
+              );
+            }
+          }
+          await this.fs.rename({ from: INDEX_NEXT, to: INDEX, directory: this.directory });
+        }
+        this.lastGood = index;
+        return index;
+      } catch (error) {
+        throw new PackStorageError('io', 'pack index is unreadable', error);
       }
     }
-    return { version: 1, packs: [] };
+    return (this.lastGood = { version: 1, packs: [] });
   }
 
-  private async writeIndex(index: PackIndexFile): Promise<void> {
-    await this.writeBytes(INDEX_NEXT, new TextEncoder().encode(JSON.stringify(index)));
-    await this.fs.rename({ from: INDEX_NEXT, to: INDEX, directory: this.directory });
+  private async writeIndex(index: PackIndexFile, signal?: AbortSignal): Promise<void> {
+    try {
+      await this.writeBytes(INDEX_NEXT, new TextEncoder().encode(JSON.stringify(index)));
+      throwIfAborted(signal);
+      await this.fs.rename({ from: INDEX_NEXT, to: INDEX, directory: this.directory });
+      this.lastGood = index;
+    } catch (error) {
+      await this.fs
+        .deleteFile({ path: INDEX_NEXT, directory: this.directory })
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async deleteInstall(manifest: PackManifest): Promise<void> {
+    this.basemapUris.delete(installDir(manifest));
+    try {
+      const { uri } = await this.fs.getUri({
+        path: `${installDir(manifest)}/basemap.pmtiles`,
+        directory: this.directory,
+      });
+      this.readRange.forget?.(uri);
+    } catch {
+      // A missing archive has no buffer to release.
+    }
+    await this.fs
+      .rmdir({ path: installDir(manifest), directory: this.directory, recursive: true })
+      .catch(() => undefined);
   }
 
   private async collectGarbage(index: PackIndexFile): Promise<void> {
+    if (this.active.size > 0) return;
     const live = new Set(index.packs.map(installDir));
     try {
       const cities = await this.fs.readdir({ path: ROOT, directory: this.directory });
@@ -189,7 +284,12 @@ export class FilesystemPackStorage implements PackStorage {
         });
         for (const install of installs.files) {
           const path = `${ROOT}/${city.name}/${install.name}`;
-          if (install.type === 'directory' && !live.has(path)) {
+          if (install.type === 'directory' && !live.has(path) && !this.active.has(path)) {
+            const { uri } = await this.fs.getUri({
+              path: `${path}/basemap.pmtiles`,
+              directory: this.directory,
+            });
+            this.readRange.forget?.(uri);
             await this.fs.rmdir({ path, directory: this.directory, recursive: true });
           }
         }
@@ -237,29 +337,52 @@ export function fromBase64(text: string): Uint8Array {
   return bytes;
 }
 
-const wholeFiles = new Map<string, Promise<Uint8Array>>();
+function isMissingFile(error: unknown): boolean {
+  const value = error as { code?: string; message?: string } | null;
+  return (
+    value?.code === 'ENOENT' ||
+    /^(File does not exist|File not found|No such file)/i.test(value?.message ?? '')
+  );
+}
 
 /**
  * Range read through the WebView's local file URL. Servers that ignore `Range` answer 200 with
  * the whole file, which is then kept in memory for the next reads of the same file.
  */
-export async function fetchRange(uri: string, offset: number, length: number): Promise<Uint8Array> {
-  if (length <= 0) return new Uint8Array(0);
-  const url = Capacitor.convertFileSrc(uri);
-  const cached = wholeFiles.get(url);
-  if (!cached) {
-    const response = await fetch(url, {
-      headers: { Range: `bytes=${offset}-${offset + length - 1}` },
-    });
-    if (response.status === 206) return new Uint8Array(await response.arrayBuffer());
-    if (!response.ok) throw new PackStorageError('io', `basemap read failed (${response.status})`);
-    const whole = response.arrayBuffer().then((b) => new Uint8Array(b));
-    wholeFiles.set(url, whole);
-    whole.catch(() => wholeFiles.delete(url));
-    return (await whole).slice(offset, offset + length);
-  }
-  return (await cached).slice(offset, offset + length);
+export function createRangeReader(fetchFn: typeof fetch = fetch): RangeReader {
+  const wholeFiles = new Map<string, Promise<Uint8Array>>();
+  const read: RangeReader = async (uri, offset, length) => {
+    if (length <= 0) return new Uint8Array(0);
+    const url = Capacitor.convertFileSrc(uri);
+    const cached = wholeFiles.get(url);
+    if (!cached) {
+      const response = await fetchFn(url, {
+        headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+      });
+      if (response.status === 206) return new Uint8Array(await response.arrayBuffer());
+      if (!response.ok) {
+        throw new PackStorageError('io', `basemap read failed (${response.status})`);
+      }
+      const whole = response.arrayBuffer().then((b) => new Uint8Array(b));
+      wholeFiles.set(url, whole);
+      while (wholeFiles.size > 2) {
+        const oldest = wholeFiles.keys().next().value;
+        if (oldest !== undefined) wholeFiles.delete(oldest);
+      }
+      whole.catch(() => {
+        if (wholeFiles.get(url) === whole) wholeFiles.delete(url);
+      });
+      return (await whole).slice(offset, offset + length);
+    }
+    wholeFiles.delete(url);
+    wholeFiles.set(url, cached);
+    return (await cached).slice(offset, offset + length);
+  };
+  read.forget = (uri) => wholeFiles.delete(Capacitor.convertFileSrc(uri));
+  return read;
 }
+
+export const fetchRange: RangeReader = createRangeReader();
 
 export function nativeFilesystem(): FilesystemLike {
   return Filesystem as unknown as FilesystemLike;

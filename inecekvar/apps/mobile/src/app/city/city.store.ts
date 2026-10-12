@@ -60,6 +60,7 @@ export class CityStore {
   private readonly offlineCities = inject(OFFLINE_CITIES);
   private readonly connectivity = inject(ConnectivityService);
   private initOnce: Promise<void> | null = null;
+  private requestGeneration = 0;
 
   /** True while the list shows only the cities of installed packs (the API was unreachable). */
   readonly fromPacks = signal(false);
@@ -76,9 +77,11 @@ export class CityStore {
 
   /** Restores the stored choice and loads the list; later calls reuse the first run. */
   constructor() {
-    // Back online after a pack-only list: fetch the full list again.
+    let wasOnline = this.connectivity.online();
     effect(() => {
-      if (this.connectivity.online() && untracked(() => this.fromPacks())) void this.load();
+      const online = this.connectivity.online();
+      if (online && (!wasOnline || untracked(() => this.fromPacks()))) void this.load();
+      wasOnline = online;
     });
   }
 
@@ -88,19 +91,23 @@ export class CityStore {
   }
 
   async load(): Promise<void> {
+    const generation = ++this.requestGeneration;
     this.status.set('loading');
     this.error.set(null);
     try {
       const cities = await this.api.cities();
+      if (generation !== this.requestGeneration) return;
       this.cities.set(cities);
       this.fromPacks.set(false);
       this.status.set('ready');
       const slug = this.selectedSlug();
       if (slug !== null && !cities.some((city) => city.slug === slug)) await this.clear();
     } catch (error) {
+      if (generation !== this.requestGeneration) return;
       // Without the API the installed packs still name their cities; the stored choice is
       // kept either way, since an unreachable API says nothing about the city.
       const offline = await this.offlineCities().catch(() => [] as City[]);
+      if (generation !== this.requestGeneration) return;
       if (offline.length > 0) {
         this.cities.set(offline);
         this.fromPacks.set(true);

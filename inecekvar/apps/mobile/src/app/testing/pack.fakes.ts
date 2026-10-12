@@ -4,6 +4,9 @@ import { fromBase64, type FilesystemLike } from '../packs/filesystem-pack-storag
 
 /** Decides per write whether it fails (the returned error is thrown) or is corrupted. */
 export interface WriteFaults {
+  before?: (key: string) => Promise<void>;
+  beforeRead?: (key: string) => Promise<void>;
+  readFail?: (key: string) => Error | null;
   fail?: (key: string) => Error | null;
   corrupt?: (key: string) => boolean;
 }
@@ -31,6 +34,7 @@ export class FakeCacheStorage implements CacheStorageLike {
     const store = entries;
     return {
       put: async (request, response) => {
+        await this.faults.before?.(request);
         const error = this.faults.fail?.(request);
         if (error) throw error;
         let bytes: Uint8Array = new Uint8Array(await response.arrayBuffer());
@@ -38,6 +42,9 @@ export class FakeCacheStorage implements CacheStorageLike {
         store.set(request, { bytes, type: response.headers.get('Content-Type') ?? '' });
       },
       match: async (request) => {
+        await this.faults.beforeRead?.(request);
+        const error = this.faults.readFail?.(request);
+        if (error) throw error;
         const entry = store.get(request);
         if (!entry) return undefined;
         const body = new Uint8Array(entry.bytes.length);
@@ -61,8 +68,10 @@ export class FakeFilesystem implements FilesystemLike {
   readonly files = new Map<string, string>();
   faults: WriteFaults = {};
   renames = 0;
+  renameError: Error | null = null;
 
   async writeFile(options: { path: string; data: string; directory: Directory }) {
+    await this.faults.before?.(options.path);
     const error = this.faults.fail?.(options.path);
     if (error) throw error;
     let data = options.data;
@@ -75,12 +84,16 @@ export class FakeFilesystem implements FilesystemLike {
   }
 
   async readFile(options: { path: string }) {
+    await this.faults.beforeRead?.(options.path);
+    const error = this.faults.readFail?.(options.path);
+    if (error) throw error;
     const data = this.files.get(options.path);
     if (data === undefined) throw new Error('File does not exist');
     return { data };
   }
 
   async rename(options: { from: string; to: string }) {
+    if (this.renameError) throw this.renameError;
     const data = this.files.get(options.from);
     if (data === undefined) throw new Error('File does not exist');
     this.renames++;
@@ -132,6 +145,12 @@ export class FakeFilesystem implements FilesystemLike {
     }
     return [...dirs].sort();
   }
+}
+
+export function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => (resolve = done));
+  return { promise, resolve };
 }
 
 /** A minimal valid PMTiles v3 header (127 bytes) followed by `extra` payload bytes. */

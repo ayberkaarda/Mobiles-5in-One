@@ -1,8 +1,42 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
 import { join } from 'node:path';
 
 const CITY = 'ornek-test-sehri';
 const SHOTS = join(__dirname, '../../../docs/screenshots/phase3');
+
+async function privateReadToken(request: APIRequestContext): Promise<string> {
+  const api = `${process.env['IV_E2E_API'] ?? 'http://127.0.0.1:57980'}/v1`;
+  const mail = process.env['IV_E2E_MAIL'] ?? 'http://127.0.0.1:57825';
+  const email = `offline${Date.now().toString(36)}@example.com`;
+  const password = 'offline-pack-2026!';
+  const registered = await request.post(`${api}/auth/register`, {
+    data: { email, password, mode: 'bearer' },
+  });
+  expect(registered.status()).toBe(202);
+  let token: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const search = await request.get(`${mail}/api/v1/search`, {
+          params: { query: `to:"${email}"` },
+        });
+        const messages = ((await search.json()) as { messages?: { ID: string }[] }).messages;
+        const id = messages?.[0]?.ID;
+        if (!id) return false;
+        const message = await request.get(`${mail}/api/v1/message/${id}`);
+        const text = ((await message.json()) as { Text: string }).Text;
+        token = /#token=([A-Za-z0-9_-]+)/.exec(text)?.[1];
+        return !!token;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+  const verified = await request.post(`${api}/auth/magic-link/verify`, {
+    data: { token, password, mode: 'bearer' },
+  });
+  expect(verified.status()).toBe(200);
+  return ((await verified.json()) as { access_token: string }).access_token;
+}
 
 async function shoot(page: Page, name: string, focus?: Locator): Promise<void> {
   if (focus) await focus.evaluate((el) => el.scrollIntoView({ block: 'center' }));
@@ -155,4 +189,68 @@ test('installs the sample city pack and works offline after a reload', async ({
       !/401|Failed to load resource|ERR_INTERNET_DISCONNECTED|tiles\.inecekvar\.app/.test(text),
   );
   expect(unexpected).toEqual([]);
+});
+
+test('recovers map warmup for a pack installed before service worker control', async ({
+  page,
+  context,
+}) => {
+  await page.addInitScript(() => {
+    const register = ServiceWorkerContainer.prototype.register;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    Object.defineProperty(window, 'ivAllowServiceWorkerRegistration', { value: release });
+    ServiceWorkerContainer.prototype.register = function (url, options) {
+      return gate.then(() => register.call(this, url, options));
+    };
+  });
+  await page.goto('/ayarlar/cevrimdisi');
+  expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(false);
+  const row = page.locator(`li.city[data-city="${CITY}"]`);
+  await row.getByRole('button', { name: 'İndir' }).click();
+  await expect(row).toHaveAttribute('data-state', 'installed', { timeout: 30_000 });
+  expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(false);
+  await page.evaluate(() => {
+    (
+      window as unknown as { ivAllowServiceWorkerRegistration(): void }
+    ).ivAllowServiceWorkerRegistration();
+  });
+  await controlledByServiceWorker(page);
+  await mapAssetsCached(page);
+  await context.setOffline(true);
+  await page.goto(`/hat/ornek-hat-2?city=${CITY}`);
+  await expect(page.locator('iv-line-page .from-pack')).toContainText('şehir paketinden');
+  await expect(page.locator('iv-line-page iv-map canvas.maplibregl-canvas')).toBeVisible();
+  await expect(page.locator('iv-line-page iv-map')).toHaveAttribute(
+    'data-status',
+    /^(ready|no-basemap)$/,
+  );
+  await context.setOffline(false);
+});
+
+test('never caches an authenticated private query containing a catalog pathname', async ({
+  page,
+  request,
+}) => {
+  const token = await privateReadToken(request);
+  await page.goto('/ara');
+  await controlledByServiceWorker(page);
+  const result = await page.evaluate(async (access) => {
+    const path = '/api/v1/me?x=/api/v1/lines';
+    const response = await fetch(path, {
+      headers: { Authorization: `Bearer ${access}` },
+      credentials: 'omit',
+    });
+    await response.text();
+    const cached: string[] = [];
+    for (const name of await caches.keys()) {
+      if (!name.startsWith('ngsw:')) continue;
+      for (const entry of await (await caches.open(name)).keys()) {
+        if (new URL(entry.url).pathname === '/api/v1/me') cached.push(entry.url);
+      }
+    }
+    return { status: response.status, cached };
+  }, token);
+  expect(result.status).toBe(200);
+  expect(result.cached).toEqual([]);
 });

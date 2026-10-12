@@ -37,10 +37,14 @@ const UPLOAD_TIMEOUT_MS = 60_000;
 const FORBIDDEN_UPLOAD_HEADERS = new Set(['content-length', 'host', 'connection']);
 /** A city basemap archive is tens of megabytes. */
 const TILES_TIMEOUT_MS = 300_000;
+export const MAX_PACK_DATASET_BYTES = 64 * 1024 * 1024;
+export const MAX_PACK_BASEMAP_BYTES = 512 * 1024 * 1024;
 
 export interface BytesOptions {
   signal?: AbortSignal;
   onProgress?: ProgressListener;
+  /** Expected catalog size, when known; bounded by the endpoint's hard limit. */
+  maxBytes?: number;
 }
 
 /** Public reads used by search, line and stop pages, offline packs and the planner. */
@@ -86,6 +90,7 @@ export class CatalogApi {
         signal: options.signal,
       },
       options.onProgress,
+      Math.min(options.maxBytes ?? MAX_PACK_DATASET_BYTES, MAX_PACK_DATASET_BYTES),
     );
   }
 
@@ -106,6 +111,7 @@ export class CatalogApi {
         signal: options.signal,
       },
       options.onProgress,
+      Math.min(options.maxBytes ?? MAX_PACK_BASEMAP_BYTES, MAX_PACK_BASEMAP_BYTES),
     );
   }
 

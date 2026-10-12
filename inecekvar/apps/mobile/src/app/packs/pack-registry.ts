@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import type { City } from '@inecekvar/data-access';
 import { PackIndex, parsePack } from './pack-data';
 import { PackFiles, PackManifest, sha256Hex } from './pack-storage';
@@ -31,6 +31,11 @@ export class PackRegistry {
     [...this.manifests().values()].sort((a, b) => a.name.localeCompare(b.name, 'tr')),
   );
 
+  constructor() {
+    const unsubscribe = this.storage.subscribeInvalidation?.(() => void this.refresh());
+    if (unsubscribe) inject(DestroyRef).onDestroy(unsubscribe);
+  }
+
   /** Reads the manifests once; later calls reuse the first read. */
   ready(): Promise<void> {
     this.initOnce ??= this.refresh();
@@ -40,9 +45,13 @@ export class PackRegistry {
   async refresh(): Promise<void> {
     try {
       const manifests = await this.storage.list();
+      const live = new Set(manifests.map((m) => `${m.city}:${m.installId}`));
+      for (const key of this.datasets.keys()) {
+        if (!live.has(key)) this.datasets.delete(key);
+      }
       this.manifests.set(new Map(manifests.map((m) => [m.city, m])));
     } catch {
-      this.manifests.set(new Map());
+      // Keep the last readable manifests until storage can be read again.
     } finally {
       this.loaded.set(true);
     }
@@ -96,7 +105,7 @@ export class PackRegistry {
     return {
       getKey: () => `iv-pack/${city}/${manifest.installId}.pmtiles`,
       getBytes: async (offset, length) => {
-        const bytes = await this.storage.readBasemap(city, offset, length);
+        const bytes = await this.storage.readBasemap(city, offset, length, manifest.installId);
         if (!bytes) throw new Error('basemap not installed');
         const data = new ArrayBuffer(bytes.length);
         new Uint8Array(data).set(bytes);
@@ -105,9 +114,9 @@ export class PackRegistry {
     };
   }
 
-  async install(manifest: PackManifest, files: PackFiles): Promise<void> {
+  async install(manifest: PackManifest, files: PackFiles, signal?: AbortSignal): Promise<void> {
     await this.ready();
-    await this.storage.install(manifest, files);
+    await this.storage.install(manifest, files, signal);
     this.unmarkCorrupt(manifest.city);
     await this.refresh();
   }

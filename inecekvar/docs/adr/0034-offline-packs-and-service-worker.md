@@ -149,3 +149,63 @@ Not exercised:
 - The API sends no ETag or digest for packs; integrity relies on the declared length (when not
   compressed), the format check and the hash taken at download time. A digest header on the pack
   route would let the app verify end to end (proposal for the API owner).
+
+## Review round
+
+Catalog patterns anchor the HTTP(S) origin and pathname before accepting a query. Angular's
+installed generator escapes `.`, `+`, `*`, `?` and pathname separators; quantifiers and
+alternatives survive. Absolute patterns containing `://` bypass base-href prefixing. The
+catalog data-group version is now 2, retiring entries written with the previous patterns.
+
+Storage locks cover staging, verification, index replacement, reads of basemap ranges and
+cleanup. Active installs also prevent garbage collection. Unreadable indexes preserve files
+and reject mutations with `io`; only a missing index allows an empty initial index. Native
+recovery verifies every referenced file before promoting a next index. Cancellation reaches
+the commit boundary; cancellation during an index write restores the previous index under
+the lock before staging is removed. If restoration itself fails, referenced files are kept.
+
+Byte reads accept an optional `maxBytes` (`ApiClient.requestBytes` third argument and
+`BytesOptions.maxBytes`). The dataset limit is 64 MiB and the basemap limit is 512 MiB;
+known expected sizes can lower those limits. The current catalog supplies no pack sizes.
+An excessive Content-Length is refused before reading; streams stop at the smaller of the
+cap and the unencoded declared length with `invalid_response` / `body_too_large`. Collection
+limits are 10,000 lines, 100,000 stops, 20,000 route points and 2,000 stops per line, and
+32 payment methods per line. Native whole-file fallback buffers use a two-file LRU.
+
+Web Locks serialize PWA tabs using `iv-packs-index`; environments without them retain the
+instance queue. Commits reject older pack versions and publish `iv-packs` invalidations.
+The registry drops obsolete dataset promises on refresh. Basemap sources carry their install
+generation and cannot read a replacement archive. Catalog requests refresh on page activation
+and reconnect, and responses from superseded requests are ignored.
+
+Map warmup starts at app startup and after installs, waits for service-worker control, and
+fetches every lazy map asset explicitly. A successful marker records the loaded app's hashed
+script URLs; a changed app version warms again. Controller changes and reconnects retry
+unfinished warmup. Failure records no success. The injectable runtime supplies controller
+state, version, marker storage and activation events for tests.
+
+| # | Finding | Fix | Test(s) |
+| - | ------- | --- | ------- |
+| E1 | Private queries match catalog cache patterns | Anchor paths; bump group version | `core/ngsw-config.spec.ts`: `anchors catalog patterns before queries and retires the unsafe cache version` |
+| E2 | GC removes staged installs | Lock the full install; skip GC for active installs | `packs/pack-storage.spec.ts` (both storages): `keeps staged files when list runs during a deferred install write` |
+| E3 | Index errors permit destructive cleanup | Preserve files and refuse mutations | `packs/pack-storage.spec.ts` (both storages): `preserves install files and refuses mutations with an unreadable read-error index`; `preserves install files and refuses mutations with an unreadable invalid-json index` |
+| E4 | Failed rename leaves an unsafe recovery index | Remove next index on failure; verify recovery files | `packs/pack-storage.spec.ts`: `removes the next index when its commit rename fails`; `never promotes a next index that references missing install files` |
+| E5 | Downloads and collections have no caps | Streaming byte limits and collection limits | `libs/data-access/src/lib/api-client.spec.ts`: `cancels an oversized byte stream without pulling another chunk`; `rejects Content-Length above the byte cap before reading the body`; `stops reading when a byte stream exceeds its declared length`. `packs/packs.spec.ts`: `rejects a dataset with too many lines before building its pack index`; `rejects a line with too many route points before indexing it` |
+| E6 | Saving ignores cancellation | Carry the signal through hashing and commit; clean staging | `packs/pack-storage.spec.ts` (both storages): `cancels a staged update before commit and retains the previous install`; `cancels an update while the index write is pending and restores the old index`. `packs/packs.spec.ts`: `cancels during saving without committing or deleting the previous pack` |
+| E7 | Obsolete generations retain memory | Evict dataset promises and native buffers; bound LRU | `packs/packs.spec.ts`: `evicts dataset promises from obsolete generations on update and removal`. `packs/pack-storage.spec.ts`: `evicts whole-file fallback buffers using a two-file LRU bound`; `releases whole-file buffers when their install is updated or removed`; `releases obsolete whole-file buffers when refreshing the native index` |
+| E8 | Old PMTiles sources read the current archive | Read the named generation; hold the lock through reads | `packs/pack-storage.spec.ts` (both storages): `never serves the replacement archive for an obsolete install generation`; `keeps a cache generation alive until its in-flight basemap read finishes`; `keeps a basemap generation alive until its in-flight range read finishes`. `packs/packs.spec.ts`: `rejects reads through an old PMTiles source after its install is replaced` |
+| E9 | Catalog versions stay stale | Refresh on activation and reconnect; ignore older responses | `packs/packs.spec.ts`: `refreshes catalog versions whenever the packs page is activated`. `city/city.store.spec.ts`: `refreshes catalog versions on reconnect even when the list came from the API`; `ignores an older catalog response that arrives after a newer refresh` |
+| E10 | Tabs lose index entries or install older versions | Shared Web Lock, version guard and invalidation | `packs/pack-storage.spec.ts`: `uses the named browser Web Lock for pack index operations`; `preserves concurrent city installs across two tabs sharing the index lock`; `refuses version three after version four is committed by another tab`; `publishes invalidations after successful pack commits and removals`. `packs/packs.spec.ts`: `refreshes committed manifests after a cross-tab invalidation` |
+| E11 | Warmup skips control and app-version changes | Persist success per app version; retry failures and activation | `packs/map-warmup.spec.ts`: `defers warmup until a service worker controller appears`; `warms map assets again when the app version changes with a pack installed`; `retries a failed warmup without recording a successful version`; `rejects warmup when a lazy map asset responds with an error` |
+| E12 | Offline e2e misses control timing and private queries | Delay registration until installation; authenticate the private GET | Unit: `packs/map-warmup.spec.ts`: `warms an existing pack on activation after an uncontrolled installation`; `core/ngsw-config.spec.ts`: `excludes authenticated private queries from every generated data group`. Playwright: `apps/mobile-e2e/src/offline-pack.spec.ts`: `recovers map warmup for a pack installed before service worker control`; `never caches an authenticated private query containing a catalog pathname` |
+
+Existing scenario assertions and screenshot names remain unchanged. The authenticated e2e
+uses the existing Mailpit stack (`IV_E2E_MAIL`) and a bearer account. The stack still provides
+no real PMTiles archive, so the existing `ready|no-basemap` assertion remains
+(`not exercised: a real PMTiles range flow`, the API accepts only an https tiles base). The
+warmup service is loaded with a dynamic import after start-up so the initial bundle stays
+under 720 kB. Revert checks: restoring the old `ngsw-config.json` turns both
+`core/ngsw-config.spec.ts` tests red; returning an empty index on a read error turns the two
+unreadable-index tests red; running `list` outside the lock without the active-install guard
+turns `keeps staged files when list runs during a deferred install write` red. Native device
+behaviour remains `not exercised`.

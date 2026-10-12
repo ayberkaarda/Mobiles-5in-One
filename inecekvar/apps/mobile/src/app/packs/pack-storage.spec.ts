@@ -1,8 +1,20 @@
 import { Directory } from '@capacitor/filesystem';
 import { packBody, samplePackData } from '../testing/catalog.fixtures';
-import { FakeCacheStorage, FakeFilesystem, fakePmtiles, quotaError } from '../testing/pack.fakes';
-import { CachePackStorage, INDEX_CACHE, INSTALL_CACHE_PREFIX } from './cache-pack-storage';
-import { FilesystemPackStorage } from './filesystem-pack-storage';
+import {
+  deferred,
+  FakeCacheStorage,
+  FakeFilesystem,
+  fakePmtiles,
+  quotaError,
+} from '../testing/pack.fakes';
+import {
+  CachePackStorage,
+  browserIndexLock,
+  INDEX_CACHE,
+  IndexLock,
+  INSTALL_CACHE_PREFIX,
+} from './cache-pack-storage';
+import { createRangeReader, FilesystemPackStorage, toBase64 } from './filesystem-pack-storage';
 import {
   choosePackStorage,
   fileInfo,
@@ -74,6 +86,8 @@ interface Harness {
   orphan(): Promise<void>;
   /** A second storage over the same backing store (an app restart). */
   reopen(): PackStorage;
+  beforeWrite(step: (key: string) => Promise<void>): void;
+  unreadableIndex(kind: 'read-error' | 'invalid-json'): void;
 }
 
 function cacheHarness(): Harness {
@@ -92,6 +106,18 @@ function cacheHarness(): Harness {
       await cache.put('/__iv-packs/x/dataset.json', new Response('{'));
     },
     reopen: make,
+    beforeWrite: (step) => (backing.faults.before = step),
+    unreadableIndex: (kind) => {
+      if (kind === 'read-error') {
+        backing.faults.readFail = (key) =>
+          key.endsWith('index.json') ? new Error('index I/O failure') : null;
+      } else {
+        backing.caches.get(INDEX_CACHE)?.set('/__iv-packs/index.json', {
+          bytes: new TextEncoder().encode('{'),
+          type: 'application/json',
+        });
+      }
+    },
   };
 }
 
@@ -112,6 +138,15 @@ function filesystemHarness(): Harness {
       });
     },
     reopen: make,
+    beforeWrite: (step) => (fs.faults.before = step),
+    unreadableIndex: (kind) => {
+      if (kind === 'read-error') {
+        fs.faults.readFail = (key) =>
+          key === 'packs/index.json' ? new Error('index I/O failure') : null;
+      } else {
+        fs.files.set('packs/index.json', btoa('{'));
+      }
+    },
   };
 }
 
@@ -119,6 +154,110 @@ describe.each([
   ['Cache Storage', cacheHarness],
   ['Filesystem', filesystemHarness],
 ])('%s pack storage', (_name, harness) => {
+  it('keeps staged files when list runs during a deferred install write', async () => {
+    const h = harness();
+    const pack = await packFiles(1, true);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    h.beforeWrite(async (key) => {
+      if (key.endsWith('basemap.pmtiles')) {
+        entered.resolve();
+        await release.promise;
+      }
+    });
+    const installing = h.storage.install(pack.manifest, pack.files);
+    await entered.promise;
+    let listed = false;
+    const listing = h.storage.list().then((packs) => {
+      listed = true;
+      return packs;
+    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(listed).toBe(false);
+    release.resolve();
+    await installing;
+    expect(await listing).toEqual([pack.manifest]);
+    const dataset = await h.storage.readDataset(CITY);
+    const basemap = await h.storage.readBasemap(CITY, 0, 8);
+    expect([...(dataset ?? [])]).toEqual([...pack.files.dataset]);
+    expect([...(basemap ?? [])]).toEqual([...(pack.files.basemap?.slice(0, 8) ?? [])]);
+  });
+
+  it.each(['read-error', 'invalid-json'] as const)(
+    'preserves install files and refuses mutations with an unreadable %s index',
+    async (kind) => {
+      const h = harness();
+      const first = await packFiles(1);
+      await h.storage.install(first.manifest, first.files);
+      const locations = h.locations();
+      h.unreadableIndex(kind);
+      await h.reopen().list();
+      expect(h.locations()).toEqual(locations);
+      const next = await packFiles(2);
+      expect((await failure(h.storage.install(next.manifest, next.files))).kind).toBe('io');
+      expect((await failure(h.storage.remove(CITY))).kind).toBe('io');
+      expect(h.locations()).toEqual(locations);
+    },
+  );
+
+  it('cancels a staged update before commit and retains the previous install', async () => {
+    const h = harness();
+    const first = await packFiles(1);
+    await h.storage.install(first.manifest, first.files);
+    const next = await packFiles(2);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    h.beforeWrite(async (key) => {
+      if (key.endsWith('dataset.json')) {
+        entered.resolve();
+        await release.promise;
+      }
+    });
+    const controller = new AbortController();
+    const installing = failure(h.storage.install(next.manifest, next.files, controller.signal));
+    await entered.promise;
+    controller.abort();
+    release.resolve();
+    expect((await installing).kind).toBe('aborted');
+    expect(await h.storage.list()).toEqual([first.manifest]);
+    expect(h.locations()).toEqual([expect.stringContaining(first.manifest.installId)]);
+  });
+
+  it('cancels an update while the index write is pending and restores the old index', async () => {
+    const h = harness();
+    const first = await packFiles(1);
+    await h.storage.install(first.manifest, first.files);
+    const next = await packFiles(2);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    h.beforeWrite(async (key) => {
+      if (key.endsWith('index.json') || key.endsWith('index.next.json')) {
+        entered.resolve();
+        await release.promise;
+      }
+    });
+    const controller = new AbortController();
+    const installing = failure(h.storage.install(next.manifest, next.files, controller.signal));
+    await entered.promise;
+    controller.abort();
+    release.resolve();
+    expect((await installing).kind).toBe('aborted');
+    expect(await h.storage.list()).toEqual([first.manifest]);
+    expect(h.locations()).toEqual([expect.stringContaining(first.manifest.installId)]);
+  });
+
+  it('never serves the replacement archive for an obsolete install generation', async () => {
+    const h = harness();
+    const first = await packFiles(1, true);
+    const next = await packFiles(2, true);
+    await h.storage.install(first.manifest, first.files);
+    await h.storage.install(next.manifest, next.files);
+    expect(await h.storage.readBasemap(CITY, 0, 8, first.manifest.installId)).toBeNull();
+    expect(await h.storage.readBasemap(CITY, 0, 8, next.manifest.installId)).toEqual(
+      next.files.basemap?.slice(0, 8),
+    );
+  });
+
   it('installs, lists, reads back and survives a restart', async () => {
     const h = harness();
     const { manifest, files } = await packFiles(1, true);
@@ -217,6 +356,102 @@ describe.each([
 });
 
 describe('Cache Storage specifics', () => {
+  it('uses the named browser Web Lock for pack index operations', async () => {
+    const request = vi.fn(async (_name: string, step: () => Promise<unknown>) => step());
+    vi.stubGlobal('navigator', { locks: { request } });
+    try {
+      expect(await browserIndexLock(async () => 7)).toBe(7);
+      expect(request).toHaveBeenCalledWith('iv-packs-index', expect.any(Function));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps a cache generation alive until its in-flight basemap read finishes', async () => {
+    const backing = new FakeCacheStorage();
+    const storage = new CachePackStorage(backing);
+    const first = await packFiles(1, true);
+    const next = await packFiles(2, true);
+    const firstCache = `${INSTALL_CACHE_PREFIX}${CITY}:${first.manifest.installId}`;
+    const nextCache = `${INSTALL_CACHE_PREFIX}${CITY}:${next.manifest.installId}`;
+    await storage.install(first.manifest, first.files);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    backing.faults.beforeRead = async (key) => {
+      if (key.endsWith('basemap.pmtiles') && key.includes(first.manifest.installId)) {
+        entered.resolve();
+        await release.promise;
+      }
+    };
+    const reading = storage.readBasemap(CITY, 127, 10, first.manifest.installId);
+    await entered.promise;
+    const installing = storage.install(next.manifest, next.files);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(backing.caches.has(nextCache)).toBe(false);
+    expect(backing.caches.has(firstCache)).toBe(true);
+    release.resolve();
+    expect(await reading).toEqual(first.files.basemap?.slice(127, 137));
+    await installing;
+    expect(backing.caches.has(firstCache)).toBe(false);
+  });
+
+  it('publishes invalidations after successful pack commits and removals', async () => {
+    const publish = vi.fn();
+    const storage = new CachePackStorage(new FakeCacheStorage(), (step) => step(), {
+      publish,
+      subscribe: () => () => undefined,
+    });
+    const pack = await packFiles(1);
+    await storage.install(pack.manifest, pack.files);
+    expect(publish).toHaveBeenCalledTimes(1);
+    await storage.remove(CITY);
+    expect(publish).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves concurrent city installs across two tabs sharing the index lock', async () => {
+    const backing = new FakeCacheStorage();
+    let queue: Promise<unknown> = Promise.resolve();
+    const lock: IndexLock = (step) => {
+      const run = queue.then(step, step);
+      queue = run.catch(() => undefined);
+      return run;
+    };
+    const first = new CachePackStorage(backing, lock);
+    const second = new CachePackStorage(backing, lock);
+    const a = await packFiles(1);
+    const b = await packFiles(1);
+    b.manifest.city = 'another-city';
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    backing.faults.before = async (key) => {
+      if (key.endsWith('dataset.json') && key.includes(a.manifest.installId)) {
+        entered.resolve();
+        await release.promise;
+      }
+    };
+    const installingA = first.install(a.manifest, a.files);
+    await entered.promise;
+    const installingB = second.install(b.manifest, b.files);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(
+      backing.caches.has(`${INSTALL_CACHE_PREFIX}${b.manifest.city}:${b.manifest.installId}`),
+    ).toBe(false);
+    release.resolve();
+    await Promise.all([installingA, installingB]);
+    const cities = (await first.list()).map((pack) => pack.city).sort();
+    expect(cities).toEqual(['another-city', CITY].sort());
+  });
+
+  it('refuses version three after version four is committed by another tab', async () => {
+    const backing = new FakeCacheStorage();
+    const newer = await packFiles(4);
+    const older = await packFiles(3);
+    await new CachePackStorage(backing).install(newer.manifest, newer.files);
+    const tab = new CachePackStorage(backing);
+    expect((await failure(tab.install(older.manifest, older.files))).kind).toBe('integrity');
+    expect(await tab.list()).toEqual([newer.manifest]);
+  });
+
   it('never touches the service worker caches', async () => {
     const backing = new FakeCacheStorage();
     await backing.open('ngsw:/:db:control');
@@ -232,6 +467,112 @@ describe('Cache Storage specifics', () => {
 });
 
 describe('Filesystem specifics', () => {
+  it('removes the next index when its commit rename fails', async () => {
+    const fs = new FakeFilesystem();
+    const storage = new FilesystemPackStorage(fs, fs.readRange);
+    const first = await packFiles(1);
+    await storage.install(first.manifest, first.files);
+    fs.renameError = new Error('rename failed');
+    const next = await packFiles(2);
+    expect((await failure(storage.install(next.manifest, next.files))).kind).toBe('io');
+    expect(fs.files.has('packs/index.next.json')).toBe(false);
+    fs.renameError = null;
+    expect(await storage.list()).toEqual([first.manifest]);
+  });
+
+  it('never promotes a next index that references missing install files', async () => {
+    const fs = new FakeFilesystem();
+    const missing = await packFiles(1);
+    fs.files.set(
+      'packs/index.next.json',
+      toBase64(new TextEncoder().encode(JSON.stringify({ version: 1, packs: [missing.manifest] }))),
+    );
+    expect(await new FilesystemPackStorage(fs, fs.readRange).list()).toEqual([]);
+    expect(fs.files.has('packs/index.json')).toBe(false);
+    const good = await packFiles(2);
+    fs.files.delete('packs/index.next.json');
+    const storage = new FilesystemPackStorage(fs, fs.readRange);
+    await storage.install(good.manifest, good.files);
+    fs.files.set(
+      'packs/index.next.json',
+      toBase64(new TextEncoder().encode(JSON.stringify({ version: 1, packs: [missing.manifest] }))),
+    );
+    expect(await storage.list()).toEqual([good.manifest]);
+  });
+
+  it('keeps a basemap generation alive until its in-flight range read finishes', async () => {
+    const fs = new FakeFilesystem();
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const storage = new FilesystemPackStorage(fs, async (uri, offset, length) => {
+      entered.resolve();
+      await release.promise;
+      return fs.readRange(uri, offset, length);
+    });
+    const first = await packFiles(1, true);
+    const next = await packFiles(2, true);
+    await storage.install(first.manifest, first.files);
+    const reading = storage.readBasemap(CITY, 127, 10, first.manifest.installId);
+    await entered.promise;
+    const installing = storage.install(next.manifest, next.files);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(fs.installDirs()).not.toContain(`packs/${CITY}/${next.manifest.installId}`);
+    expect(fs.installDirs()).toContain(`packs/${CITY}/${first.manifest.installId}`);
+    release.resolve();
+    expect(await reading).toEqual(first.files.basemap?.slice(127, 137));
+    await installing;
+    expect(fs.installDirs()).not.toContain(`packs/${CITY}/${first.manifest.installId}`);
+  });
+
+  it('evicts whole-file fallback buffers using a two-file LRU bound', async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response(new Uint8Array([1, 2, 3])));
+    const reader = createRangeReader(fetchFn);
+    await reader('file:///one', 0, 1);
+    await reader('file:///two', 0, 1);
+    await reader('file:///one', 0, 1);
+    await reader('file:///three', 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    await reader('file:///two', 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    reader.forget?.('file:///two');
+    await reader('file:///two', 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(5);
+  });
+
+  it('releases whole-file buffers when their install is updated or removed', async () => {
+    const fs = new FakeFilesystem();
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response(new Uint8Array([1, 2, 3])));
+    const reader = createRangeReader(fetchFn);
+    const storage = new FilesystemPackStorage(fs, reader);
+    const first = await packFiles(1, true);
+    const next = await packFiles(2, true);
+    const firstUri = `file:///data/packs/${CITY}/${first.manifest.installId}/basemap.pmtiles`;
+    const nextUri = `file:///data/packs/${CITY}/${next.manifest.installId}/basemap.pmtiles`;
+    await storage.install(first.manifest, first.files);
+    await storage.readBasemap(CITY, 0, 1);
+    await storage.install(next.manifest, next.files);
+    await reader(firstUri, 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    await storage.readBasemap(CITY, 0, 1);
+    await storage.remove(CITY);
+    await reader(nextUri, 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+  });
+
+  it('releases obsolete whole-file buffers when refreshing the native index', async () => {
+    const fs = new FakeFilesystem();
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response(new Uint8Array([1, 2, 3])));
+    const reader = createRangeReader(fetchFn);
+    const storage = new FilesystemPackStorage(fs, reader);
+    const pack = await packFiles(1, true);
+    await storage.install(pack.manifest, pack.files);
+    await storage.readBasemap(CITY, 0, 1);
+    await new FilesystemPackStorage(fs, fs.readRange).remove(CITY);
+    await storage.list();
+    await reader(`file:///data/packs/${CITY}/${pack.manifest.installId}/basemap.pmtiles`, 0, 1);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
   it('swaps the index with a rename and falls back to the next index after a crash', async () => {
     const fs = new FakeFilesystem();
     const storage = new FilesystemPackStorage(fs, fs.readRange, Directory.Data);

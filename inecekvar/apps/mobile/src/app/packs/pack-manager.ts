@@ -1,8 +1,7 @@
-import { DOCUMENT } from '@angular/common';
-import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { ApiBytes, ApiError, CatalogApi, City } from '@inecekvar/data-access';
 import { CityStore } from '../city/city.store';
-import { loadMapLibrary, workerUrlFor } from '../map/map-library';
+import { MapWarmup } from './map-warmup';
 import { PackFormatError, parsePack } from './pack-data';
 import { PackRegistry } from './pack-registry';
 import {
@@ -12,7 +11,10 @@ import {
   PackManifest,
   PackStorageError,
   PackStorageEstimate,
+  throwIfAborted,
 } from './pack-storage';
+
+export { MAP_WARMUP } from './map-warmup';
 
 export type PackPhase = 'dataset' | 'basemap' | 'saving';
 
@@ -34,26 +36,6 @@ export interface PackFailure {
 /** How a city row of the pack manager looks right now. */
 export type PackRowState = 'none' | 'working' | 'installed' | 'update';
 
-/**
- * Caches what the map needs offline: the map component and MapLibre chunks (through the service
- * worker's lazy `map` group) and the MapLibre worker modules. Called after an install.
- */
-export const MAP_WARMUP = new InjectionToken<() => Promise<void>>('MAP_WARMUP', {
-  providedIn: 'root',
-  factory: () => {
-    const baseUri = inject(DOCUMENT).baseURI;
-    return async () => {
-      const worker = workerUrlFor(baseUri);
-      await Promise.allSettled([
-        import('../map/map.component'),
-        loadMapLibrary(baseUri),
-        fetch(worker),
-        fetch(worker.replace('maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs')),
-      ]);
-    };
-  },
-});
-
 /** Head room asked for beyond the downloaded bytes before writing (write amplification). */
 const QUOTA_MARGIN = 1.2;
 /** `PMTiles` followed by spec version 3. */
@@ -74,6 +56,7 @@ export function failureOf(error: unknown): PackFailure {
       }
       if (error.status === 429) return 'rate_limited';
       if (error.kind === 'network' || error.kind === 'timeout') return 'offline';
+      if (error.kind === 'invalid_response') return 'invalid';
       return 'error';
     }
     if (error instanceof PackStorageError) {
@@ -88,7 +71,8 @@ export function failureOf(error: unknown): PackFailure {
   return { kind, retryAfterSeconds };
 }
 
-const isAbort = (error: unknown) => error instanceof ApiError && error.kind === 'aborted';
+const isAbort = (error: unknown) =>
+  (error instanceof ApiError || error instanceof PackStorageError) && error.kind === 'aborted';
 
 /**
  * Downloads, updates and removes offline city packs. A download fetches the dataset with
@@ -103,7 +87,7 @@ export class PackManager {
   private readonly api = inject(CatalogApi);
   private readonly registry = inject(PackRegistry);
   private readonly cityStore = inject(CityStore);
-  private readonly warmMap = inject(MAP_WARMUP);
+  private readonly warmMap = inject(MapWarmup);
   private readonly controllers = new Map<string, AbortController>();
 
   readonly jobs = signal<ReadonlyMap<string, PackJob>>(new Map());
@@ -164,12 +148,19 @@ export class PackManager {
         signal: controller.signal,
         onProgress: progress('dataset'),
       });
+      throwIfAborted(controller.signal);
       checkLength('dataset', dataset);
       const data = parsePack(dataset.bytes, city);
       const basemap = await this.fetchBasemap(city, controller.signal, progress('basemap'));
+      throwIfAborted(controller.signal);
       this.setJob(city, { phase: 'saving', received: 0, total: null });
       const needed = dataset.bytes.length + (basemap?.length ?? 0);
       await checkQuota(needed);
+      throwIfAborted(controller.signal);
+      const datasetInfo = await fileInfo(dataset.bytes);
+      throwIfAborted(controller.signal);
+      const basemapInfo = basemap ? await fileInfo(basemap) : null;
+      throwIfAborted(controller.signal);
       const manifest: PackManifest = {
         city,
         name: data.city.name,
@@ -180,16 +171,17 @@ export class PackManager {
         packVersion: data.pack_version,
         lineCount: data.lines.length,
         stopCount: data.stops.length,
-        dataset: await fileInfo(dataset.bytes),
-        basemap: basemap ? await fileInfo(basemap) : null,
+        dataset: datasetInfo,
+        basemap: basemapInfo,
         installedAt: new Date().toISOString(),
         installId: newInstallId(),
       };
-      await this.registry.install(manifest, { dataset: dataset.bytes, basemap });
-      void this.warmMap().catch(() => undefined);
+      throwIfAborted(controller.signal);
+      await this.registry.install(manifest, { dataset: dataset.bytes, basemap }, controller.signal);
+      void this.warmMap.ensure();
       return true;
     } catch (error) {
-      if (!isAbort(error)) this.setFailure(city, failureOf(error));
+      if (!isAbort(error) && !controller.signal.aborted) this.setFailure(city, failureOf(error));
       return false;
     } finally {
       this.controllers.delete(city);
@@ -219,6 +211,7 @@ export class PackManager {
     } catch (error) {
       if (isAbort(error) || signal.aborted) throw error;
       if (error instanceof PackStorageError) throw error;
+      if (error instanceof ApiError && error.kind === 'invalid_response') throw error;
       return null;
     }
   }

@@ -9,6 +9,11 @@ import { distanceMeters, fold } from '../shared/format';
 
 /** The only dataset format this app reads (`format` in the pack, ADR-0024). */
 export const PACK_FORMAT = 1;
+export const MAX_PACK_LINES = 10_000;
+export const MAX_PACK_STOPS = 100_000;
+export const MAX_ROUTE_POINTS = 20_000;
+export const MAX_LINE_STOPS = 2_000;
+export const MAX_PAYMENT_METHODS = 32;
 
 export interface PackCity {
   name: string;
@@ -66,9 +71,14 @@ const isString = (v: unknown): v is string => typeof v === 'string';
 const isNullableString = (v: unknown): v is string | null => v === null || typeof v === 'string';
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isPoint = (v: unknown): v is number[] =>
-  Array.isArray(v) && v.length >= 2 && v.every((n) => isNumber(n));
+  Array.isArray(v) && v.length >= 2 && v.length <= 3 && v.every((n) => isNumber(n));
 
 function checkLine(v: unknown): v is PackLine {
+  if (isRecord(v)) {
+    checkCollectionSize(v['geometry'], MAX_ROUTE_POINTS, 'too many route points per line');
+    checkCollectionSize(v['stops'], MAX_LINE_STOPS, 'too many stops per line');
+    checkCollectionSize(v['payment_methods'], MAX_PAYMENT_METHODS, 'too many payment methods');
+  }
   return (
     isRecord(v) &&
     isString(v['slug']) &&
@@ -90,6 +100,10 @@ function checkLine(v: unknown): v is PackLine {
     isNullableString(v['last_verified_at']) &&
     isNumber(v['contributor_count'])
   );
+}
+
+function checkCollectionSize(value: unknown, limit: number, reason: string): void {
+  if (Array.isArray(value) && value.length > limit) throw new PackFormatError(reason);
 }
 
 function checkStop(v: unknown): v is PackStop {
@@ -135,6 +149,12 @@ export function parsePack(bytes: Uint8Array, expectedCity?: string): CityPackDat
   if (!isNumber(raw['pack_version'])) throw new PackFormatError('pack_version');
   const lines = raw['lines'];
   const stops = raw['stops'];
+  if (Array.isArray(lines) && lines.length > MAX_PACK_LINES) {
+    throw new PackFormatError('too many lines');
+  }
+  if (Array.isArray(stops) && stops.length > MAX_PACK_STOPS) {
+    throw new PackFormatError('too many stops');
+  }
   if (!Array.isArray(lines) || !lines.every(checkLine)) throw new PackFormatError('lines');
   if (!Array.isArray(stops) || !stops.every(checkStop)) throw new PackFormatError('stops');
   return raw as unknown as CityPackData;

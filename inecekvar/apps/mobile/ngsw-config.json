@@ -47,7 +47,13 @@
   "dataGroups": [
     {
       "name": "catalog-reads",
-      "urls": ["/api/v1/cities$", "/api/v1/cities/*$", "/api/v1/lines", "/api/v1/stops/"],
+      "version": 2,
+      "urls": [
+        "^https{0,1}://[^/?#]{1,}/api/v1/cities($|[?])",
+        "^https{0,1}://[^/?#]{1,}/api/v1/cities/[^/?#]{1,}($|[?])",
+        "^https{0,1}://[^/?#]{1,}/api/v1/lines($|[?]|/)",
+        "^https{0,1}://[^/?#]{1,}/api/v1/stops/"
+      ],
       "cacheQueryOptions": { "ignoreVary": true },
       "cacheConfig": {
         "strategy": "freshness",

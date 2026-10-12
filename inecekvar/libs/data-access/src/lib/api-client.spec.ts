@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import {
   bodyResponse,
   FakeFetch,
@@ -303,7 +304,93 @@ describe('CatalogApi byte downloads', () => {
   let h: Harness;
 
   beforeEach(() => {
+    // JSDOM's VM exposes Response but omits the stream constructor.
+    vi.stubGlobal('ReadableStream', NodeReadableStream);
     h = setupDataAccess(false, 20);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('cancels an oversized byte stream without pulling another chunk', async () => {
+    let pulled = 0;
+    let cancelled = false;
+    h.fake.on(
+      'GET',
+      '/cities/ornek/pack',
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull: (controller) => {
+                pulled++;
+                if (pulled <= 4) controller.enqueue(new Uint8Array(3));
+                else controller.close();
+              },
+              cancel: () => {
+                cancelled = true;
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        ),
+    );
+    const error = await failure(TestBed.inject(CatalogApi).packBytes('ornek', { maxBytes: 5 }));
+    expect(error).toMatchObject({ kind: 'invalid_response', code: 'body_too_large' });
+    expect(pulled).toBe(2);
+    expect(cancelled).toBe(true);
+  });
+
+  it('rejects Content-Length above the byte cap before reading the body', async () => {
+    let pulled = 0;
+    h.fake.on(
+      'GET',
+      '/cities/ornek/pack',
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull: (controller) => {
+                pulled++;
+                controller.close();
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { headers: { 'Content-Length': '6' } },
+        ),
+    );
+    expect(
+      await failure(TestBed.inject(CatalogApi).packBytes('ornek', { maxBytes: 5 })),
+    ).toMatchObject({ kind: 'invalid_response', code: 'body_too_large' });
+    expect(pulled).toBe(0);
+  });
+
+  it('stops reading when a byte stream exceeds its declared length', async () => {
+    let pulled = 0;
+    h.fake.on(
+      'GET',
+      '/cities/ornek/tiles.pmtiles',
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull: (controller) => {
+                pulled++;
+                if (pulled < 4) controller.enqueue(new Uint8Array(3));
+                else controller.close();
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { headers: { 'Content-Length': '5' } },
+        ),
+    );
+    expect(await failure(TestBed.inject(CatalogApi).tilesArchive('ornek'))).toMatchObject({
+      code: 'body_too_large',
+    });
+    expect(pulled).toBe(2);
   });
 
   it('streams the pack with progress, the pack header and the declared length', async () => {

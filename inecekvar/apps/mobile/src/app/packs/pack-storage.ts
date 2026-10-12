@@ -30,7 +30,7 @@ export interface PackFiles {
   basemap: Uint8Array | null;
 }
 
-export type PackStorageErrorKind = 'quota' | 'integrity' | 'io' | 'unsupported';
+export type PackStorageErrorKind = 'quota' | 'integrity' | 'io' | 'unsupported' | 'aborted';
 
 export class PackStorageError extends Error {
   constructor(
@@ -65,8 +65,14 @@ export interface PackStorage {
   /** The dataset bytes of the committed install, or `null`. */
   readDataset(city: string): Promise<Uint8Array | null>;
   /** `length` bytes of the basemap from `offset` (fewer at the end), or `null`. */
-  readBasemap(city: string, offset: number, length: number): Promise<Uint8Array | null>;
-  install(manifest: PackManifest, files: PackFiles): Promise<void>;
+  readBasemap(
+    city: string,
+    offset: number,
+    length: number,
+    installId?: string,
+  ): Promise<Uint8Array | null>;
+  install(manifest: PackManifest, files: PackFiles, signal?: AbortSignal): Promise<void>;
+  subscribeInvalidation?(listener: () => void): () => void;
   remove(city: string): Promise<void>;
   estimate(): Promise<PackStorageEstimate>;
 }
@@ -171,18 +177,25 @@ export class MemoryPackStorage implements PackStorage {
     return this.installs.get(city)?.files.dataset ?? null;
   }
 
-  async readBasemap(city: string, offset: number, length: number): Promise<Uint8Array | null> {
+  async readBasemap(
+    city: string,
+    offset: number,
+    length: number,
+    installId?: string,
+  ): Promise<Uint8Array | null> {
+    if (installId && this.installs.get(city)?.manifest.installId !== installId) return null;
     const basemap = this.installs.get(city)?.files.basemap;
     return basemap ? basemap.slice(offset, offset + length) : null;
   }
 
-  async install(manifest: PackManifest, files: PackFiles): Promise<void> {
+  async install(manifest: PackManifest, files: PackFiles, signal?: AbortSignal): Promise<void> {
     const staged: PackFiles = {
       dataset: files.dataset.slice(),
       basemap: files.basemap ? files.basemap.slice() : null,
     };
     await verifyFile('dataset', staged.dataset, manifest.dataset);
     if (manifest.basemap) await verifyFile('basemap', staged.basemap, manifest.basemap);
+    throwIfAborted(signal);
     this.installs.set(manifest.city, { manifest, files: staged });
   }
 
@@ -193,6 +206,10 @@ export class MemoryPackStorage implements PackStorage {
   async estimate(): Promise<PackStorageEstimate> {
     return { packs: packBytesOf(await this.list()), usage: null, quota: null };
   }
+}
+
+export function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new PackStorageError('aborted', 'install cancelled');
 }
 
 export interface PackStorageFactories {

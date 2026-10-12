@@ -78,10 +78,13 @@ export class ApiClient {
   async requestBytes<P extends ApiPathTemplate = ApiPathTemplate>(
     req: ApiRequest<P>,
     onProgress?: ProgressListener,
+    maxBytes?: number,
   ): Promise<ApiBytes> {
     this.inFlight.update((n) => n + 1);
     try {
-      return await this.run<ApiBytes, P>(req, (response) => readBytes(response, onProgress));
+      return await this.run<ApiBytes, P>(req, (response, requestId) =>
+        readBytes(response, onProgress, maxBytes, requestId),
+      );
     } finally {
       this.inFlight.update((n) => n - 1);
     }
@@ -186,11 +189,24 @@ function buildQuery(query?: Readonly<Record<string, QueryValue>>): string {
  * Streams the body and reports progress. A content-encoded body is decoded by the browser, so
  * its `Content-Length` (the encoded size) is not comparable and is reported as unknown.
  */
-async function readBytes(response: Response, onProgress?: ProgressListener): Promise<ApiBytes> {
+async function readBytes(
+  response: Response,
+  onProgress?: ProgressListener,
+  maxBytes = Number.MAX_SAFE_INTEGER,
+  requestId = '',
+): Promise<ApiBytes> {
   const encoding = response.headers.get('Content-Encoding');
   const rawLength = response.headers.get('Content-Length');
   const parsed = rawLength !== null && /^\d+$/.test(rawLength) ? Number(rawLength) : null;
   const declaredLength = encoding && encoding !== 'identity' ? null : parsed;
+  const limit = Math.min(maxBytes, declaredLength ?? maxBytes);
+  const oversize = () =>
+    new ApiError('invalid_response', response.status, 'body_too_large', requestId);
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw oversize();
+  if (parsed !== null && parsed > maxBytes) {
+    await response.body?.cancel().catch(() => undefined);
+    throw oversize();
+  }
   const meta = {
     declaredLength,
     etag: response.headers.get('ETag'),
@@ -199,18 +215,27 @@ async function readBytes(response: Response, onProgress?: ProgressListener): Pro
   const reader = response.body?.getReader();
   if (!reader) {
     const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > limit) throw oversize();
     onProgress?.(bytes.length, declaredLength);
     return { bytes, ...meta };
   }
   const chunks: Uint8Array[] = [];
   let received = 0;
   onProgress?.(0, declaredLength);
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.length;
-    onProgress?.(received, declaredLength);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.length;
+      if (received > limit) throw oversize();
+      chunks.push(value);
+      onProgress?.(received, declaredLength);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    throw error;
+  } finally {
+    reader.releaseLock();
   }
   const bytes = new Uint8Array(received);
   let offset = 0;
