@@ -25,9 +25,16 @@ import type {
   TraceUpload,
 } from './api-types';
 import { AUTH_STRATEGY } from './auth/auth-strategy';
+import { ApiError } from './api-error';
+import { FETCH } from './config';
+import { newRequestId, send } from './http';
 
 /** Downloads can be large; the API serves the whole city dataset in one body. */
 const PACK_TIMEOUT_MS = 60_000;
+/** A photo is at most 4 MiB; slow mobile uplinks get a minute. */
+const UPLOAD_TIMEOUT_MS = 60_000;
+/** Headers a page may not set itself; the browser derives them from the body and the URL. */
+const FORBIDDEN_UPLOAD_HEADERS = new Set(['content-length', 'host', 'connection']);
 /** A city basemap archive is tens of megabytes. */
 const TILES_TIMEOUT_MS = 300_000;
 
@@ -211,6 +218,7 @@ export class AccountApi {
 @Injectable({ providedIn: 'root' })
 export class ContributionApi {
   private readonly api = inject(ApiClient);
+  private readonly fetchFn = inject(FETCH);
 
   myEdits(page: PageQuery = {}): Promise<Edit[]> {
     return this.api.request({ method: 'GET', path: '/edits', query: page });
@@ -247,5 +255,39 @@ export class ContributionApi {
   /** A presigned PUT for one photo; the upload itself goes straight to object storage. */
   presignPhoto(input: PresignRequest): Promise<PresignedUpload> {
     return this.api.request({ method: 'POST', path: '/media/presign', body: input });
+  }
+
+  /**
+   * Sends the photo bytes to the presigned URL. It goes to object storage, not the API: no
+   * credential, cookie or request id is attached, only the signed headers. The signed
+   * `Content-Length` must equal the body size (the store refuses any other length); the
+   * browser sets that header from the body itself.
+   */
+  async uploadPhoto(upload: PresignedUpload, body: Blob, signal?: AbortSignal): Promise<void> {
+    const signed = Object.entries(upload.headers).find(
+      ([name]) => name.toLowerCase() === 'content-length',
+    );
+    if (signed && Number(signed[1]) !== body.size) {
+      throw new ApiError('invalid_response', 0, 'upload.length_mismatch', 'upload');
+    }
+    if (!/^https?:\/\//i.test(upload.upload_url)) {
+      throw new ApiError('invalid_response', 0, 'upload.bad_url', 'upload');
+    }
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(upload.headers)) {
+      if (!FORBIDDEN_UPLOAD_HEADERS.has(name.toLowerCase())) headers.set(name, value);
+    }
+    const requestId = newRequestId();
+    await send(
+      this.fetchFn,
+      upload.upload_url,
+      { method: upload.method ?? 'PUT', headers, body, credentials: 'omit' },
+      { timeoutMs: UPLOAD_TIMEOUT_MS, signal, requestId },
+      async (response) => {
+        if (!response.ok) {
+          throw new ApiError('http', response.status, `upload.${response.status}`, requestId);
+        }
+      },
+    );
   }
 }
