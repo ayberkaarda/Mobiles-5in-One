@@ -58,7 +58,8 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_CLIENT_IP_HEADER` | `X-Real-IP` | The only header read for the client address. |
 | `INECEKVAR_HIBP_ENABLED` | `true` | Breached-password range check at registration. |
 | `INECEKVAR_LOG_LEVEL` | `INFO` | Log level of the JSON logs. |
-| `INECEKVAR_TOTP_ENCRYPTION_KEY` | none (per process locally) | AES-256-GCM key for stored TOTP secrets: URL-safe base64 of exactly 32 random bytes (for example `python -c "import secrets,base64;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`). Required in production; without it in test the TOTP routes answer 503 `auth.totp_unavailable`. Locally a per-process key is created, so enrolments do not survive an API restart. Rotating it invalidates every enrolment (users enrol again); it is on the rotation list of the history-purge runbook (section 6.2). ADR-0037. |
+| `INECEKVAR_TOTP_ENCRYPTION_KEY` | none (per process locally) | AES-256-GCM key for stored TOTP secrets: URL-safe base64 of exactly 32 random bytes (for example `python -c "import secrets,base64;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`). Required in production; without it in test the TOTP routes answer 503 `auth.totp_unavailable`. Locally a per-process key is created, so enrolments do not survive an API restart. To rotate, set the new key, move the old key to `INECEKVAR_TOTP_PREVIOUS_ENCRYPTION_KEY`, run `uv run python -m app.auth.totp_rotation`, then remove the previous key; it is on the rotation list of the history-purge runbook (section 6.2). ADR-0037. |
+| `INECEKVAR_TOTP_PREVIOUS_ENCRYPTION_KEY` | unset | Previous TOTP encryption key during rotation; the same URL-safe base64 format as the current key. Remove after re-encryption. |
 
 Object-storage, planner, offline-pack and retention settings are also read by the API:
 
@@ -70,10 +71,14 @@ Object-storage, planner, offline-pack and retention settings are also read by th
 | `INECEKVAR_S3_SECRET_ACCESS_KEY` | unset; local default `inecekvar_local_dev` | S3 secret key; local startup fills the compose MinIO credential. |
 | `INECEKVAR_MEDIA_BUCKET` | `inecekvar-media` | Bucket used for uploaded photos. |
 | `INECEKVAR_EXPORTS_BUCKET` | `inecekvar-exports` | Bucket used for exports. |
+| `INECEKVAR_EXPORT_MAX_FEATURES` | `50000` | Maximum line and stop features per export. |
+| `INECEKVAR_EXPORT_MAX_BYTES` | `52428800` (50 MiB) | Maximum encoded export size before upload. |
 | `INECEKVAR_PRESIGN_TTL_SECONDS` | `300` | Lifetime in seconds of signed media URLs. |
 | `INECEKVAR_MEDIA_MAX_BYTES` | `4194304` (4 MiB) | Maximum accepted photo size. |
 | `INECEKVAR_PLANNER_TIMEOUT_SECONDS` | `3.0` | Maximum time in seconds allowed for a planner request. |
 | `INECEKVAR_PLANNER_CACHE_TTL_SECONDS` | `600` | Planner result cache lifetime in seconds; the cache is held in Redis. |
+| `INECEKVAR_STOP_PAIRS_CACHE_TTL_SECONDS` | `3600` | Stop-pair cache lifetime in seconds; 60 to 86400, keyed by city and pack version. |
+| `INECEKVAR_STOP_PAIRS_TIMEOUT_MS` | `2000` | Stop-pair SQL timeout in milliseconds; 100 to 10000. |
 | `INECEKVAR_PMTILES_BASE_URL` | unset | HTTPS CDN base URL for offline city tile packs; when unset the tile route answers 404. |
 | `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
 | `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |

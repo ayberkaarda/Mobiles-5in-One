@@ -24,10 +24,14 @@ pairs") and a sitemap index with honest `lastmod`. Phase 4 also needs a stop sea
    cookie session id or the bearer refresh family id (`sid`), the same value as
    `Principal.session_id`, so it has no foreign key.
 2. Secrets: `pyotp.random_base32(32)`, encrypted with AES-256-GCM (`cryptography`), a 12-byte random
-   nonce and the AAD `inecekvar:totp:v1:` + user id, stored as version byte + nonce + ciphertext.
-   A ciphertext copied to another user does not decrypt. The key is
+   nonce and the AAD `inecekvar:totp:v2:` + key id + user id, stored as version byte `0x02` + an
+   8-byte key id (SHA-256 prefix of the key) + nonce + ciphertext; legacy `0x01` envelopes still
+   decrypt. A ciphertext copied to another user does not decrypt. The key is
    `INECEKVAR_TOTP_ENCRYPTION_KEY` (URL-safe base64 of 32 bytes): required in production, created
-   per process locally, absent means 503 `auth.totp_unavailable` (fail closed).
+   per process locally, absent means 503 `auth.totp_unavailable` (fail closed). Rotation:
+   `INECEKVAR_TOTP_PREVIOUS_ENCRYPTION_KEY` holds the old key, decryption picks the key by id,
+   `python -m app.auth.totp_rotation` re-encrypts every secret under the current key, and
+   `totp_enabled_at` and `totp_last_counter` stay unchanged (docs/ops/env.md).
 3. Routes: `GET me/totp` (status only), `POST me/totp/enrol` (201, returns the secret and the
    otpauth URI once, `Cache-Control: no-store`; needs a session or bearer family created within
    10 minutes, the same rule as `DELETE me`, else 403 `auth.reauth_required`; 409 when already
@@ -45,7 +49,7 @@ pairs") and a sitemap index with honest `lastmod`. Phase 4 also needs a stop sea
    so a step-up survives a bearer refresh within the window.
 7. Revocation: logout deletes the session's row; `revoke_user` (logout-all, account deletion)
    deletes all rows of the user; disabling TOTP deletes all rows; an admin demoting a moderator or
-   admin deletes the target's rows. There is no password-change route yet; any future one must
+   admin deletes the target's rows; refresh-token reuse detection deletes the row of that family. There is no password-change route yet; any future one must
    call `revoke_user`, which also clears step-ups.
 8. Policy: the step-up predicate also requires TOTP to be enrolled (`ResourceContext.totp_enrolled`).
    When only `totp_step_up` fails in an otherwise satisfied cell, `authorize` answers 403
@@ -55,22 +59,34 @@ pairs") and a sitemap index with honest `lastmod`. Phase 4 also needs a stop sea
    approval now work in production after a step-up.
 9. Audit (`app/security/audit.py`, moved from the moderation service): `totp.enrol`,
    `totp.confirm`, `totp.confirm_failed`, `auth.step_up`, `auth.step_up_failed`, `totp.disable`,
-   `admin.user_role`, `admin.export`. Diffs never hold the secret, the URI or a code. The log
+   `admin.user_role`, `admin.export`, `admin.users_read`, `admin.audit_read` (the two reads store
+   the actor, the filters and the result count, never user values). Diffs never hold the secret, the URI or a code. The log
    processor drops `secret`, `totp_secret`, `otpauth_uri`, `code`, `totp_code`, `totp_secret_enc`.
 
 ### Admin API
 
 10. `GET admin/users` (paged, limit 1..100, optional role filter), `PATCH admin/users/{id}/role`,
     `POST admin/exports/{city}`, `GET admin/audit-logs` (paged; `action` and `target_type` match
-    `^[a-z_.]{1,64}$`, UUID filters, time window at most 366 days). Every route depends on
+    `^[a-z_.]{1,64}$`, UUID filters; `until` defaults to now, `since` to `until` minus 30 days,
+    and every window is at most 366 days, so no query scans the whole table; offset paging is
+    kept so the contract stays unchanged). Every route depends on
     `require_step_up` with `manage_users` (users, audit log) or `export_admin` (export), so the
     policy table alone decides: non-admins 403 `auth.forbidden`, anonymous 401, admins need TOTP
     and a fresh step-up of the current session. Responses are `no-store`.
-11. Role changes lock all active admin rows, then the target: the last active admin cannot be
-    demoted (409 `admin.last_admin`, also for self-demotion); same role is a no-op without audit;
-    deactivated targets answer 409.
-12. The administrative export runs `export_city` inside the request (sample-size cities; a queue
-    can replace it when cities grow) and needs the object store (503 otherwise).
+11. Role changes and account deletion share one lock order (`app/security/admins.py`): an
+    advisory transaction lock, all active admin rows, then the user row. The last active admin
+    cannot be demoted or delete the account (409 `admin.last_admin`, also for self-demotion).
+    After the locks, in the same transaction as the change, the actor is checked again: still an
+    active admin with TOTP (else 403 `auth.forbidden`), the session or bearer family still live
+    (else 401), a fresh step-up row of this session (else 403 `auth.step_up_required`). A demoted
+    admin therefore cannot promote anyone while the demotion commits. Same role is a no-op
+    without audit; deactivated targets answer 409.
+12. The administrative export still runs inside the request, bounded: the city row is locked with
+    `NOWAIT` (a running export of the same city answers 409 `export.in_progress`), quota
+    `admin.export` 10 per hour per admin (429), at most `INECEKVAR_EXPORT_MAX_FEATURES` features
+    and `INECEKVAR_EXPORT_MAX_BYTES` encoded bytes (422 `export.too_large`, nothing uploaded).
+    The `exports` row and its audit row commit in one transaction. It needs the object store
+    (503 otherwise).
 
 ### Stop search and public page data
 
@@ -84,7 +100,11 @@ pairs") and a sitemap index with honest `lastmod`. Phase 4 also needs a stop sea
     (a count of 1 would reveal one person's choice). `GET cities` is unchanged.
 15. `GET cities/{slug}/stop-pairs?limit=` (1..200, default 200): unordered pairs of active stops on
     the current version of at least one shared published line, ranked by shared line count, then
-    summed favourites of those lines, then slugs, in one SQL statement. The section 7 rule is "top
+    summed favourites of those lines, then slugs, in one SQL statement. The top 200 are cached in
+    Redis per city and `pack_version` (a publish bumps it) with a TTL; a cold cache is computed
+    once (Redis single-flight lock, at most two computations per process, `statement_timeout`,
+    503 `public.busy` with `Retry-After` when busy) and the route has an IP quota
+    `public.stop_pairs` of 60 per minute. The section 7 rule is "top
     200 stop pairs by search volume"; the service records no searches, so this ranking is a proxy
     and the body says so (`basis: "shared_published_lines"`). The web keeps route pages `noindex`
     below 50 published lines (section 7).
@@ -125,6 +145,26 @@ Not exercised:
 
 - `not exercised: the CI run` (branch not pushed).
 - `not exercised: a real authenticator app` (codes come from `pyotp` in the tests).
-- `not exercised: key rotation` (rotating `INECEKVAR_TOTP_ENCRYPTION_KEY` invalidates enrolments; no re-encryption tool).
 - `not exercised: the admin and moderation UI` (phase 4 web packages).
-- `not exercised: export through a queue` (the admin export runs in the request).
+- `not exercised: export through a queue` (the admin export runs in the request, bounded as in item 12).
+- `not exercised: cursor paging of the audit log` (offset paging kept to keep the contract stable).
+
+## Review round
+
+A security review of this package reported eight findings and one side note. Each fix has a test
+that fails when the fix is undone (revert check: fix removed, named test red, fix restored, green).
+After the round: `uv run ruff check . && uv run mypy --strict app && uv run pytest -q` gives 709
+passed; `ruff format --check` and `mypy --strict app tests alembic` are clean (196 files); the
+contract written again by `app.contract` is identical to `docs/api/openapi.json`, so the types are unchanged.
+
+| # | Finding | Fix | Test | Revert check |
+| - | ------- | --- | ---- | ------------ |
+| 1 | High: a demoted admin could re-promote itself while the demotion committed | `revalidate_admin_actor` after the locks, in the mutation transaction (role, session, TOTP, fresh step-up) | `test_demoted_admin_cannot_repromote_self_during_race` | 1 red |
+| 2 | Medium: anonymous `stop-pairs` computed on every request | Redis cache per city and pack version, single flight, semaphore, `statement_timeout`, IP quota | `test_stop_pairs_are_cached_until_publish`, `test_stop_pairs_concurrent_cold_cache_computes_once`, `test_stop_pairs_ip_quota`, `test_stop_pairs_timeout_answers_503` | cache 2 red, quota 1 red, timeout 1 red |
+| 3 | Medium: admin export unbounded | `NOWAIT` city lock (409), quota (429), feature and byte caps (422) | `test_export_busy_city_answers_409`, `test_export_quota_answers_429`, `test_export_size_cap_answers_422` | 1 red each |
+| 4 | Medium: export row and audit row committed separately | audit written by a hook in the export transaction | `test_export_audit_failure_leaves_no_export_row` | 1 red |
+| 5 | Medium: key rotation locked users out | v2 envelope with key id, previous key, `app.auth.totp_rotation`, env.md corrected | `test_previous_key_still_decrypts_after_rotation`, `test_rotation_without_previous_key_fails_closed`, `test_reencrypt_moves_secrets_to_current_key`, `test_legacy_v1_blob_decrypts` | 2 red |
+| 6 | Medium: sensitive admin reads not audited | `admin.users_read`, `admin.audit_read` with filters and count only | `test_users_read_is_audited_without_pii`, `test_audit_read_is_audited` | 1 red each |
+| 7 | Low: unbounded audit-log query | default window 30 days, cap 366 days in every combination | `test_audit_logs_default_window_excludes_old_rows`, `test_audit_logs_since_only_is_range_capped` | 2 red |
+| 8 | Low: last admin could delete the account | shared advisory lock and check for role change and deletion | `test_concurrent_admin_self_deletions_keep_one_admin`, `test_last_admin_cannot_delete_account` | 2 red |
+| 9 | Side note: refresh reuse kept the step-up | reuse detection deletes the family's step-up row | `test_refresh_reuse_clears_step_up` | 1 red |
