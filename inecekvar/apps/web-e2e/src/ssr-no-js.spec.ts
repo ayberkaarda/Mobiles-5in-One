@@ -29,7 +29,14 @@ test('home content, metadata and structured data work without JavaScript', async
   expect(data['@graph']).toEqual([
     { '@type': 'Organization', name: 'İnecek Var', url: 'http://127.0.0.1:57992/' },
     { '@type': 'WebSite', name: 'İnecek Var', url: 'http://127.0.0.1:57992/' },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'İnecek Var', item: 'http://127.0.0.1:57992/' },
+      ],
+    },
   ]);
+  await expect(page.getByRole('link', { name: /İstanbul/ })).toHaveAttribute('href', '/istanbul');
 });
 
 test('missing page has 404, noindex and a keyboard reachable home link', async ({ page }) => {

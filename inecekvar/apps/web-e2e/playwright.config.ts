@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
+import { TEST_CERT_SHA256, TEST_TEAM_ID } from './src/support';
 
 const server = path.resolve(__dirname, '../../dist/apps/web/server/server.mjs');
 const webCommand = `node "${server}"`;
@@ -11,6 +12,7 @@ const sharedEnv = {
   IV_WEB_CACHE_QUERY_ALLOWLIST: 'sayfa',
   IV_WEB_CACHE_TTL_SECONDS: '600',
   IV_WEB_CACHE_MAX_ENTRIES: '500',
+  IV_WEB_APP_ORIGIN: 'https://app.inecekvar.app',
 };
 
 export default defineConfig({
@@ -32,9 +34,20 @@ export default defineConfig({
   projects: [
     { name: 'headers', testMatch: '**/headers.spec.ts' },
     {
-      name: 'browser',
-      testMatch: ['**/ssr-no-js.spec.ts', '**/csp-hydration.spec.ts'],
+      name: 'raw',
+      testMatch: ['**/machine-files.spec.ts', '**/routing.spec.ts'],
       dependencies: ['headers'],
+    },
+    {
+      name: 'browser',
+      testMatch: [
+        '**/ssr-no-js.spec.ts',
+        '**/csp-hydration.spec.ts',
+        '**/pages-no-js.spec.ts',
+        '**/structured-data.spec.ts',
+        '**/line-map.spec.ts',
+      ],
+      dependencies: ['raw'],
     },
   ],
   webServer: [
@@ -72,6 +85,8 @@ export default defineConfig({
         INECEKVAR_ENV: 'production',
         IV_WEB_CANONICAL_ORIGIN: 'https://inecekvar.app',
         IV_WEB_API_INTERNAL_URL: 'http://127.0.0.1:57991/v1',
+        IV_WEB_ANDROID_CERT_SHA256: TEST_CERT_SHA256,
+        IV_WEB_IOS_TEAM_ID: TEST_TEAM_ID,
       },
     },
     {
