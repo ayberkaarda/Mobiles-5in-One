@@ -7,3 +7,5 @@ export * from './lib/state.component';
 export * from './lib/stop-sequence.component';
 export * from './lib/itinerary-card.component';
 export * from './lib/itinerary-steps.component';
+export * from './lib/notice.component';
+export * from './lib/progress-bar.component';
