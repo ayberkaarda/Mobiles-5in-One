@@ -13,17 +13,21 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Timestamps, UUIDPrimaryKey
-from app.models.enums import SuppressionReason, WebhookProvider, enum_check
+from app.models.enums import SuppressionReason, WebhookOutcome, WebhookProvider, enum_check
 
 
 class WebhookEvent(UUIDPrimaryKey, Timestamps, Base):
     __tablename__ = "webhook_events"
     __table_args__ = (
         enum_check("provider", WebhookProvider),
+        enum_check("outcome", WebhookOutcome, nullable=True),
+        CheckConstraint("attempts >= 0", name="attempts_non_negative"),
         UniqueConstraint("provider", "event_id"),
+        Index("ix_webhook_events_received_at", "received_at"),
     )
 
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -35,6 +39,11 @@ class WebhookEvent(UUIDPrimaryKey, Timestamps, Base):
         server_default=text("now()"),
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The verified provider event, kept only until it is processed (RevenueCat); Resend events
+    # are applied in the request and store no payload, so no recipient address is kept.
+    payload: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    outcome: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class EmailSuppression(UUIDPrimaryKey, Timestamps, Base):

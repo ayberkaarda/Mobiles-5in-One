@@ -65,6 +65,14 @@ class SubscriptionStatus(StrEnum):
     GRACE = "grace"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
+class WebhookOutcome(StrEnum):
+    APPLIED = "applied"
+    IGNORED = "ignored"
+    STALE = "stale"
+    FAILED = "failed"
 
 
 class WebhookProvider(StrEnum):

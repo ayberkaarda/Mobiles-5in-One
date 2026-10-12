@@ -19,6 +19,7 @@ from fastapi import Depends, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.billing.revenuecat import SubscriberDirectory
 from app.core.errors import (
     AUTH_FORBIDDEN,
     AUTH_REQUIRED,
@@ -147,6 +148,8 @@ class Services:
     entitlements: EntitlementSource | None = None
     step_up: StepUpSource | None = None
     subscriber_deleter: SubscriberDeleter | None = None
+    # RevenueCat REST (reconciliation, transfers); None skips reconciliation.
+    revenuecat: SubscriberDirectory | None = None
 
 
 # --- Basic dependencies ---------------------------------------------------------------------

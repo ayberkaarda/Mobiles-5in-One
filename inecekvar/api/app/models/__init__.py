@@ -8,7 +8,7 @@ from app.models.accounts import (
     UserSession,
 )
 from app.models.base import Base
-from app.models.billing import PackDownload, Subscription
+from app.models.billing import PackDownload, PackDownloadStat, Subscription
 from app.models.contributions import Edit, Photo, Trace
 from app.models.geo import City, Line, LineStop, LineVersion, Stop
 from app.models.ops import AuditLog, EmailSuppression, Export, WebhookEvent
@@ -27,6 +27,7 @@ __all__ = [
     "LineVersion",
     "MagicLink",
     "PackDownload",
+    "PackDownloadStat",
     "Photo",
     "RefreshToken",
     "SessionStepUp",

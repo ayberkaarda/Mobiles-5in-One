@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     LargeBinary,
     String,
     UniqueConstraint,
@@ -23,6 +24,7 @@ class Subscription(UUIDPrimaryKey, Timestamps, Base):
     __table_args__ = (
         enum_check("status", SubscriptionStatus),
         UniqueConstraint("user_id", "product_id"),
+        Index("ix_subscriptions_rc_app_user_id", "rc_app_user_id"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -34,6 +36,9 @@ class Subscription(UUIDPrimaryKey, Timestamps, Base):
     product_id: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Provider time of the newest event or snapshot applied to this row; older events are
+    # stale and change nothing (out-of-order delivery).
+    last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class PackDownload(UUIDPrimaryKey, Timestamps, Base):
@@ -60,3 +65,21 @@ class PackDownload(UUIDPrimaryKey, Timestamps, Base):
         nullable=False,
     )
     day: Mapped[date] = mapped_column(Date, nullable=False)
+
+
+class PackDownloadStat(UUIDPrimaryKey, Timestamps, Base):
+    """Downloads per city and day, kept after the per-identity rows pass their retention."""
+
+    __tablename__ = "pack_download_stats"
+    __table_args__ = (
+        CheckConstraint("downloads >= 0", name="downloads_non_negative"),
+        UniqueConstraint("city_id", "day"),
+    )
+
+    city_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("cities.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    downloads: Mapped[int] = mapped_column(Integer, nullable=False)
