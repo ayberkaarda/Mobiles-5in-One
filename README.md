@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. The Inecek Var and Patika cards are placeholders for products that are still in the design stage.
+One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. The Inecek Var card is a placeholder (its API is merged, the app UI is not) and the Patika card is a placeholder for a product that is still in the design stage.
 
 <table>
   <tr>
@@ -45,8 +45,8 @@ One card per project. Kadro, Askıda and Cetele have applications. Each of the t
       <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Inecek Var</b>: in design stage, no app yet</sub>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: API merged (phases 0 to 2), app UI not yet" width="100%"><br>
+      <sub><b>Inecek Var</b>: API merged (phases 0 to 2), app UI not yet</sub>
     </td>
   </tr>
   <tr>
