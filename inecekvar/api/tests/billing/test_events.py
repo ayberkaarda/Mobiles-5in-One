@@ -4,6 +4,7 @@
 import asyncio
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytest
 from sqlalchemy import func, select
@@ -14,6 +15,7 @@ from app.billing.events import (
     pending_revenuecat_events,
     process_revenuecat_event,
 )
+from app.billing.reconcile import reconcile_subscriptions
 from app.billing.revenuecat import ProductState
 from app.core.deps import Services
 from app.models.billing import Subscription
@@ -29,6 +31,16 @@ from tests.support.billing import (
 )
 
 pytestmark = [pytest.mark.anyio, pytest.mark.postgis]
+
+
+def alias_fields(app_user_id: str, *aliases: str) -> dict[str, Any]:
+    """`original_app_user_id` and `aliases` of an event (the provider lists the current id
+    among the aliases)."""
+    return {"original_app_user_id": app_user_id, "aliases": [app_user_id, *aliases]}
+
+
+def subscriber_ids(app_user_id: str, *aliases: str) -> dict[str, object]:
+    return {"app_user_id": app_user_id, **alias_fields(app_user_id, *aliases)}
 
 
 async def store(services: Services, body: dict[str, object]) -> uuid.UUID:
@@ -176,8 +188,8 @@ async def test_processing_is_idempotent_per_stored_event(
         ("unknown-product", {"product_id": "iv_other", "entitlement_ids": []}),
         ("sandbox", {"environment": "SANDBOX"}),
         ("informational", {"type": "PRODUCT_CHANGE"}),
-        ("deleted-account", {"app_user_id": str(uuid.UUID(int=7))}),
-        ("anonymous-id", {"app_user_id": "$RCAnonymousID:abc"}),
+        ("deleted-account", subscriber_ids(str(uuid.UUID(int=7)))),
+        ("anonymous-id", subscriber_ids("$RCAnonymousID:abc")),
     ],
 )
 async def test_events_without_effect(
@@ -292,3 +304,70 @@ async def test_pending_events_are_listed_for_the_sweep(
     assert await pending_revenuecat_events(services.session_factory, clock.now()) == []
     clock.advance(minutes=2)
     assert await pending_revenuecat_events(services.session_factory, clock.now()) == [row_id]
+
+
+async def test_transfer_without_rest_key_keeps_the_purchase_for_the_target(
+    services: Services, user: Account, contributor: Account, clock: FixedClock
+) -> None:
+    now = clock.now()
+    # A lifetime purchase on the source account (no expiry: nothing else ever repairs it).
+    lifetime = rc_event("NON_RENEWING_PURCHASE", str(user.identity), now)
+    assert await run(services, lifetime) == WebhookOutcome.APPLIED
+    transfer = rc_event(
+        "TRANSFER",
+        None,
+        now + timedelta(hours=1),
+        product_id=None,
+        transferred_from=[str(user.identity)],
+        transferred_to=[str(contributor.identity)],
+    )
+    assert await run(services, transfer) == WebhookOutcome.APPLIED
+    assert (await state(services, user) or ("", None))[0] == "expired"
+    # The target holds the moved product as a stored row, so the nightly reconciliation (which
+    # iterates stored rows) fetches the target and restores the purchase once a key is set.
+    assert (await state(services, contributor) or ("", None))[0] == "expired"
+    directory = FakeRevenueCat(
+        snapshots={
+            str(contributor.identity): snapshot(
+                str(contributor.identity), ProductState(PLUS_PRODUCT, None, non_subscription=True)
+            )
+        }
+    )
+    summary = await reconcile_subscriptions(
+        services.session_factory, directory, services.settings, clock, dry_run=False
+    )
+    assert str(contributor.identity) in directory.calls
+    assert summary.failed == 0
+    assert await state(services, contributor) == ("active", None)
+
+
+async def test_event_for_an_aliased_anonymous_id_reaches_the_account(
+    services: Services, user: Account, clock: FixedClock
+) -> None:
+    body = rc_event(
+        "INITIAL_PURCHASE",
+        "$RCAnonymousID:abc",
+        clock.now(),
+        expires=clock.now() + timedelta(days=3),
+        **alias_fields("$RCAnonymousID:abc", str(user.identity)),
+    )
+    assert await run(services, body) == WebhookOutcome.APPLIED
+    assert await state(services, user) == ("active", clock.now() + timedelta(days=3))
+    async with services.session_factory() as db:
+        # The row is keyed to the account id, which the reconciliation fetches by.
+        assert await db.scalar(select(Subscription.rc_app_user_id)) == str(user.identity)
+
+
+async def test_aliases_naming_two_accounts_choose_neither(
+    services: Services, user: Account, contributor: Account, clock: FixedClock
+) -> None:
+    body = rc_event(
+        "INITIAL_PURCHASE",
+        "$RCAnonymousID:abc",
+        clock.now(),
+        expires=clock.now() + timedelta(days=3),
+        **alias_fields("$RCAnonymousID:abc", str(user.identity), str(contributor.identity)),
+    )
+    assert await run(services, body) == WebhookOutcome.IGNORED
+    assert await state(services, user) is None
+    assert await state(services, contributor) is None

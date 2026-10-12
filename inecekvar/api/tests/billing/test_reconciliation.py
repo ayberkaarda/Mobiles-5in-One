@@ -24,6 +24,10 @@ pytestmark = [pytest.mark.anyio, pytest.mark.postgis]
 API_KEY = SecretStr("sk_test_reconcile_0123456789abcdefghij")
 
 
+async def no_sleep(seconds: float) -> None:
+    return None
+
+
 async def seed(
     services: Services, account: Account, status: str, expires_at: datetime | None
 ) -> None:
@@ -223,7 +227,7 @@ async def test_rest_client_errors_change_nothing(
         transport=httpx.MockTransport(lambda request: httpx.Response(status, content=body)),
     )
     summary = await reconcile_subscriptions(
-        services.session_factory, client, services.settings, clock, dry_run=False
+        services.session_factory, client, services.settings, clock, dry_run=False, sleep=no_sleep
     )
     assert summary.failed == 1
     assert await rows(services) == before

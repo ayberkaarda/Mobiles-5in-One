@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -88,7 +89,19 @@ class FakeRevenueCat:
         self.snapshots.pop(app_user_id, None)
 
 
-def snapshot(app_user_id: str, *products: ProductState) -> SubscriberSnapshot:
+def snapshot(
+    app_user_id: str,
+    *products: ProductState,
+    entitled: Iterable[str] | None = None,
+    entitlement_expires_at: datetime | None = None,
+    request_date: datetime | None = None,
+) -> SubscriberSnapshot:
+    """A REST view. By default the Plus entitlement names every listed product; `entitled`
+    names exactly the given ones (empty: the entitlement was revoked or refunded)."""
     return SubscriberSnapshot(
-        app_user_id, frozenset(product.product_id for product in products), products
+        app_user_id,
+        frozenset((product.product_id for product in products) if entitled is None else entitled),
+        products,
+        entitlement_expires_at=entitlement_expires_at,
+        request_date=request_date,
     )

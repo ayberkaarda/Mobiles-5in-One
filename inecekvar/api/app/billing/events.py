@@ -9,6 +9,7 @@ already applied to a subscription row (`last_event_at`) are stale and change not
 
 import uuid
 from datetime import UTC, datetime
+from typing import Annotated
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -52,6 +53,8 @@ TEST = "TEST"
 # A cancellation with this reason is a refund issued through the store or the dashboard.
 REFUND_REASON = "CUSTOMER_SUPPORT"
 
+type AppUserId = Annotated[str, Field(max_length=255)]
+
 
 class RevenueCatEvent(BaseModel):
     # Provider payloads gain fields over time; unknown members are ignored, known ones bounded.
@@ -60,6 +63,8 @@ class RevenueCatEvent(BaseModel):
     id: str = Field(min_length=1, max_length=255)
     type: str = Field(min_length=1, max_length=64)
     app_user_id: str | None = Field(default=None, max_length=255)
+    original_app_user_id: str | None = Field(default=None, max_length=255)
+    aliases: list[AppUserId] = Field(default_factory=list, max_length=32)
     product_id: str | None = Field(default=None, max_length=128)
     entitlement_ids: list[str] | None = Field(default=None, max_length=32)
     event_timestamp_ms: int = Field(ge=0)
@@ -67,8 +72,8 @@ class RevenueCatEvent(BaseModel):
     grace_period_expiration_at_ms: int | None = Field(default=None, ge=0)
     cancel_reason: str | None = Field(default=None, max_length=64)
     environment: str | None = Field(default=None, max_length=32)
-    transferred_from: list[str] = Field(default_factory=list, max_length=32)
-    transferred_to: list[str] = Field(default_factory=list, max_length=32)
+    transferred_from: list[AppUserId] = Field(default_factory=list, max_length=32)
+    transferred_to: list[AppUserId] = Field(default_factory=list, max_length=32)
 
     @property
     def at(self) -> datetime:
@@ -87,10 +92,25 @@ def from_ms(value: int | None) -> datetime | None:
 
 
 def subject_ids(event: RevenueCatEvent) -> list[str]:
-    """The app user ids an event acts on; the route rejects events naming none we know."""
+    """The app user ids an event acts on; the route rejects events naming none we know. Besides
+    `app_user_id` an event names the subscriber's `original_app_user_id` and `aliases`: a
+    purchase made under an anonymous id before sign-in still reaches the account it was
+    aliased to."""
     if event.type == TRANSFER:
         return [*event.transferred_from, *event.transferred_to]
-    return [event.app_user_id] if event.app_user_id else []
+    candidates = [event.app_user_id, event.original_app_user_id, *event.aliases]
+    return list(dict.fromkeys(value for value in candidates if value))
+
+
+async def event_account(db: AsyncSession, event: RevenueCatEvent) -> uuid.UUID | None:
+    """The one account an event acts on: `app_user_id` when it is an account, otherwise the
+    single account among `original_app_user_id` and `aliases` (none or several: no account)."""
+    if event.app_user_id is not None:
+        direct = parse_user_id(event.app_user_id)
+        if direct is not None and await known_user_ids(db, [event.app_user_id]):
+            return direct
+    known = await known_user_ids(db, subject_ids(event))
+    return next(iter(known)) if len(known) == 1 else None
 
 
 def is_plus_product(event: RevenueCatEvent, settings: Settings) -> bool:
@@ -127,14 +147,16 @@ async def apply_subscription_event(
         return WebhookOutcome.IGNORED
     if not is_plus_product(event, settings):
         return WebhookOutcome.IGNORED
-    user_id = parse_user_id(event.app_user_id)
-    if user_id is None or not await known_user_ids(db, [event.app_user_id]):
+    user_id = await event_account(db, event)
+    if user_id is None:
         return WebhookOutcome.IGNORED
-    row, _ = await locked_subscription(db, user_id, event.app_user_id, event.product_id, now)
+    # The row is keyed to the account id, which the reconciliation fetches by.
+    app_user_id = str(user_id)
+    row, _ = await locked_subscription(db, user_id, app_user_id, event.product_id, now)
     if row.last_event_at is not None and event.at < row.last_event_at:
         return WebhookOutcome.STALE
     status, expires_at = mapped
-    set_state(row, status, expires_at, event.at, event.app_user_id, now)
+    set_state(row, status, expires_at, event.at, app_user_id, now)
     return WebhookOutcome.APPLIED
 
 
@@ -146,25 +168,32 @@ async def apply_transfer(
     directory: SubscriberDirectory | None,
 ) -> WebhookOutcome:
     """Purchases moved between app user ids: the source accounts lose their Plus rows; the
-    target accounts take the provider's current view through REST (no REST key: only the
-    source side is applied)."""
+    target accounts take the provider's current view through REST. Without a REST key the
+    target accounts receive the moved products as `expired` rows, so no purchase is lost: the
+    nightly reconciliation (which iterates stored rows) restores them once a key is set."""
     applied = False
+    moved: set[str] = {event.product_id} if event.product_id else set()
     for user_id in sorted(await known_user_ids(db, event.transferred_from)):
         rows = await db.scalars(
             select(Subscription).where(Subscription.user_id == user_id).with_for_update()
         )
         for row in rows:
+            moved.add(row.product_id)
             if row.last_event_at is not None and event.at < row.last_event_at:
                 continue
             set_state(
                 row, SubscriptionStatus.EXPIRED.value, event.at, event.at, row.rc_app_user_id, now
             )
             applied = True
-    if directory is not None:
-        for user_id in sorted(await known_user_ids(db, event.transferred_to)):
+    for user_id in sorted(await known_user_ids(db, event.transferred_to)):
+        if directory is not None:
             snapshot = await directory.get_subscriber(str(user_id))
             changes = await apply_snapshot(db, user_id, snapshot, settings, now, dry_run=False)
             applied = applied or changes.changed + changes.inserted > 0
+            continue
+        for product_id in sorted(moved):
+            _, created = await locked_subscription(db, user_id, str(user_id), product_id, now)
+            applied = applied or created
     return WebhookOutcome.APPLIED if applied else WebhookOutcome.IGNORED
 
 

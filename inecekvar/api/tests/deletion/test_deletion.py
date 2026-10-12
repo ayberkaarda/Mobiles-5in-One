@@ -242,7 +242,7 @@ async def test_hard_delete_leaves_no_pii_residue(
         deleter,
     )
     assert summary == {"deleted": 1, "deferred": 0}
-    assert deleter.calls == [provider_id]
+    assert sorted(deleter.calls) == sorted([provider_id, str(identity)])
     await assert_no_residue(services, [str(identity), email, display_name])
     async with services.session_factory() as db:
         kept = await db.get(Edit, approved_id)
@@ -303,7 +303,7 @@ async def test_hard_delete_defers_when_subscriber_deletion_fails(
             assert request.state == "scheduled"
             assert await db.scalar(select(Subscription.id)) is not None
     assert deleter is not None
-    assert deleter.calls == ["billing-user"]
+    assert "billing-user" in deleter.calls
 
 
 async def test_hard_delete_skips_cancelled_request(

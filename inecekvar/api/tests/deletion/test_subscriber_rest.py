@@ -68,6 +68,34 @@ async def test_hard_delete_removes_subscriber_through_rest(
         assert await db.get(User, uuid.UUID(identity)) is None
 
 
+@pytest.mark.parametrize("provider_status", [200, 404])
+async def test_hard_delete_removes_subscriber_of_non_paying_account(
+    provider_status: int, client: httpx.AsyncClient, services: Services, clock: FixedClock
+) -> None:
+    # The app identifies every signed-in user at RevenueCat, paying or not (ADR-0050 item 9).
+    identity, email = await create_account(services)
+    response = await client.request(
+        "DELETE", "/v1/me", json={"password": PASSWORD}, headers=await sign_in(client, email)
+    )
+    assert response.status_code == 202
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(provider_status, json={})
+
+    settings = services.settings.model_copy(update={"revenuecat_api_key": API_KEY})
+    deleter = RevenueCatRestClient(settings, transport=httpx.MockTransport(answer))
+    clock.advance(days=7)
+    summary = await hard_delete_due(
+        services.session_factory, None, services.settings, clock, services.mail_sender, deleter
+    )
+    assert summary == {"deleted": 1, "deferred": 0}
+    assert [(request.method, request.url.path) for request in seen] == [
+        ("DELETE", "/v1/subscribers/" + str(identity))
+    ]
+
+
 async def test_provider_error_defers_erasure(
     client: httpx.AsyncClient, services: Services, clock: FixedClock
 ) -> None:
