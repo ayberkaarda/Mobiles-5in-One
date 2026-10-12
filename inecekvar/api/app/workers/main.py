@@ -2,6 +2,9 @@
 
 Schedules (docs/ops/background-jobs.md, Europe/Istanbul): photo processing every minute, trace
 retention purge and account hard delete hourly, the GeoJSON export every Monday at 03:00.
+Phase 5 (ADR-0050): the pending webhook sweep every five minutes; nightly the RevenueCat
+reconciliation (04:10), the expired entitlement sweep (04:40), the retention purge (04:50) and
+the pack download roll-up (05:00), each idempotent with a dry-run switch.
 The jobs reuse the API composition (`build_services`), so they read the same settings and
 fail closed the same way: no object store defers photo and export work, no subscriber
 deleter defers erasure of subscribers. Every job logs counts only.
@@ -17,6 +20,7 @@ from arq.connections import RedisSettings
 from arq.cron import CronJob, cron
 
 from app.billing.events import pending_revenuecat_events, process_revenuecat_event
+from app.billing.reconcile import reconcile_subscriptions
 from app.core.deps import Services
 from app.core.jobs import ArqJobQueue
 from app.core.logging import configure_logging
@@ -25,6 +29,11 @@ from app.main import build_services, with_local_defaults
 from app.workers.deletion import hard_delete_due
 from app.workers.export import export_all_cities
 from app.workers.media import process_pending_photos
+from app.workers.nightly import (
+    purge_retention,
+    roll_up_pack_downloads,
+    sweep_expired_entitlements,
+)
 from app.workers.traces import purge_expired_traces
 
 type Context = dict[str, Any]
@@ -129,12 +138,65 @@ async def webhooks_pending_job(ctx: Context) -> int:
     return count
 
 
+def dry_run_of(services: Services, dry_run: bool | None) -> bool:
+    """An explicit job argument (`enqueue_job(name, dry_run=True)`) wins over the setting."""
+    return services.settings.jobs_dry_run if dry_run is None else dry_run
+
+
+async def reconcile_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    if services.revenuecat is None:
+        structlog.get_logger().warning("worker.reconcile.skipped_no_rest_key")
+        return 0
+    summary = await reconcile_subscriptions(
+        services.session_factory,
+        services.revenuecat,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.changed + summary.inserted
+
+
+async def entitlement_sweep_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    return await sweep_expired_entitlements(
+        services.session_factory, services.clock, dry_run=dry_run_of(services, dry_run)
+    )
+
+
+async def retention_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    summary = await purge_retention(
+        services.session_factory,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.webhook_events + summary.bounce_suppressions
+
+
+async def pack_rollup_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    summary = await roll_up_pack_downloads(
+        services.session_factory,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.rows_deleted
+
+
 CRON_JOBS: tuple[CronJob, ...] = (
     cron(photos_job, second=0),
     cron(traces_job, minute=5, second=0),
     cron(deletion_job, minute=20, second=0),
     cron(export_job, weekday="mon", hour=3, minute=0, second=0),
     cron(webhooks_pending_job, minute=set(range(0, 60, 5)), second=30),
+    cron(reconcile_job, hour=4, minute=10, second=0),
+    cron(entitlement_sweep_job, hour=4, minute=40, second=0),
+    cron(retention_job, hour=4, minute=50, second=0),
+    cron(pack_rollup_job, hour=5, minute=0, second=0),
 )
 
 
@@ -154,6 +216,10 @@ def worker_settings() -> type[Any]:
             export_job,
             revenuecat_event_job,
             webhooks_pending_job,
+            reconcile_job,
+            entitlement_sweep_job,
+            retention_job,
+            pack_rollup_job,
         ]
         cron_jobs: ClassVar[list[CronJob]] = list(CRON_JOBS)
         on_startup = startup

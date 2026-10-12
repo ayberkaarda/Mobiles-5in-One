@@ -22,6 +22,7 @@ from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
 from app.auth.router import router as auth_router
 from app.auth.step_up import SessionStepUpSource
+from app.auth.suppression import SuppressionAwareMailSender
 from app.auth.totp_router import router as totp_router
 from app.billing.entitlements import SubscriptionEntitlements
 from app.billing.revenuecat import RevenueCatRestClient
@@ -131,19 +132,20 @@ def build_services(settings: Settings) -> Services:
     engine = create_engine(settings.database_url.get_secret_value())
     redis = Redis.from_url(settings.redis_url.get_secret_value())
     clock = SystemClock()
+    session_factory = create_session_factory(engine)
     # One REST client serves the reconciliation and the subscriber deletion of account erasure;
     # without a key both stay unconfigured (reconciliation skipped, erasure of subscribers
     # deferred).
     revenuecat = RevenueCatRestClient(settings) if settings.revenuecat_api_key is not None else None
     return Services(
         settings=settings,
-        session_factory=create_session_factory(engine),
+        session_factory=session_factory,
         redis=redis,
         rate_limiter=RedisSlidingWindowLimiter(
             redis, settings.rate_limit_rules, settings.require_secret("log_hash_key"), clock
         ),
         authenticator=TokenSessionAuthenticator(settings, clock),
-        mail_sender=SmtpMailSender(settings),
+        mail_sender=SuppressionAwareMailSender(SmtpMailSender(settings), session_factory, settings),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
         entitlements=SubscriptionEntitlements(),

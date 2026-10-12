@@ -60,11 +60,18 @@ class RateLimitDecision:
     retry_after_seconds: int
 
 
+MailCategory = Literal["security", "transactional"]
+
+
 @dataclass(frozen=True, slots=True)
 class OutgoingMail:
+    """`security`: sign-in links and account notices the recipient asked for just now;
+    `transactional`: every other message (ADR-0050 decides how suppression treats each)."""
+
     to: str
     subject: str
     text: str
+    category: MailCategory = "transactional"
 
 
 # --- Service interfaces ------------------------------------------------------------------------

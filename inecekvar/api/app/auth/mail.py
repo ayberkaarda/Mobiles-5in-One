@@ -16,6 +16,7 @@ def magic_link_mail(email: str, token: str, settings: Settings) -> OutgoingMail:
         to=email,
         subject="İnecek Var giriş bağlantınız",
         text="Giriş yapmak için bu bağlantıyı açın:\n" + link + "\nBağlantı 15 dakika geçerlidir.",
+        category="security",
     )
 
 
@@ -27,6 +28,7 @@ def account_exists_mail(email: str, token: str, settings: Settings) -> OutgoingM
         text="Bu adresle bir hesabınız var. Giriş bağlantınız:\n"
         + link
         + "\nBağlantı 15 dakika geçerlidir. Parolanız değiştirilmedi.",
+        category="security",
     )
 
 

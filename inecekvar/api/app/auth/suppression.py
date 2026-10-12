@@ -11,11 +11,12 @@ import hmac
 from collections.abc import Iterable
 from datetime import datetime
 
+import structlog
 from sqlalchemy import case, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.deps import normalize_email
+from app.core.deps import MailCategory, MailSender, OutgoingMail, normalize_email
 from app.core.ids import uuid7
 from app.core.settings import Settings
 from app.models.enums import SuppressionReason
@@ -76,3 +77,38 @@ async def suppression_reason(db: AsyncSession, settings: Settings, email: str) -
             EmailSuppression.email_hash == suppression_hash(settings, email)
         )
     )
+
+
+def blocks(reason: str | None, category: MailCategory) -> bool:
+    """ADR-0050: a bounced or manually suppressed address receives nothing (it cannot or must
+    not receive mail); after a complaint only `security` mail the recipient requested just now
+    (sign-in links, the account-exists notice) is still sent, so a passwordless account is not
+    locked out. Request rate limits bound how often such mail can be triggered."""
+    if reason is None:
+        return False
+    if reason == SuppressionReason.COMPLAINT.value:
+        return category != "security"
+    return True
+
+
+class SuppressionAwareMailSender:
+    """Consults the suppression list before every message; the caller sees the same result
+    whether or not a message was suppressed (no address oracle)."""
+
+    def __init__(
+        self,
+        inner: MailSender,
+        session_factory: async_sessionmaker[AsyncSession],
+        settings: Settings,
+    ) -> None:
+        self.inner = inner
+        self.session_factory = session_factory
+        self.settings = settings
+
+    async def send(self, mail: OutgoingMail) -> None:
+        async with self.session_factory() as db:
+            reason = await suppression_reason(db, self.settings, mail.to)
+        if blocks(reason, mail.category):
+            structlog.get_logger().info("mail.suppressed", category=mail.category, reason=reason)
+            return
+        await self.inner.send(mail)
