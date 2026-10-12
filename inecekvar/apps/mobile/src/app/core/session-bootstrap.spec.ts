@@ -1,0 +1,77 @@
+import { TestBed } from '@angular/core/testing';
+import {
+  API_BASE_URL,
+  AUTH_STRATEGY,
+  FETCH,
+  IS_NATIVE_PLATFORM,
+  SessionStore,
+} from '@inecekvar/data-access';
+import { apiBaseFor, environment } from '../../environments/environment';
+import { appConfig } from '../app.config';
+import { bootstrapSession } from './session-bootstrap';
+
+function fakeSession() {
+  return { init: vi.fn(async () => undefined), consumeMagicLinkUrl: vi.fn(() => true) };
+}
+
+function fakeApp() {
+  let handler: ((event: { url: string }) => void) | undefined;
+  return {
+    addListener: vi.fn(async (_name: string, fn: (event: { url: string }) => void) => {
+      handler = fn;
+      return { remove: async () => undefined };
+    }),
+    open: (url: string) => handler?.({ url }),
+  };
+}
+
+describe('bootstrapSession', () => {
+  it('starts the session check on the web without a deep-link listener', () => {
+    const session = fakeSession();
+    const app = fakeApp();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: SessionStore, useValue: session },
+        { provide: IS_NATIVE_PLATFORM, useValue: false },
+      ],
+    });
+    TestBed.runInInjectionContext(() => bootstrapSession(app as never));
+    expect(session.init).toHaveBeenCalledTimes(1);
+    expect(app.addListener).not.toHaveBeenCalled();
+  });
+
+  it('captures magic links opened in the native app', () => {
+    const session = fakeSession();
+    const app = fakeApp();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: SessionStore, useValue: session },
+        { provide: IS_NATIVE_PLATFORM, useValue: true },
+      ],
+    });
+    TestBed.runInInjectionContext(() => bootstrapSession(app as never));
+    expect(app.addListener).toHaveBeenCalledWith('appUrlOpen', expect.any(Function));
+    app.open('https://app.inecekvar.app/giris/baglanti#token=abc');
+    expect(session.consumeMagicLinkUrl).toHaveBeenCalledWith(
+      'https://app.inecekvar.app/giris/baglanti#token=abc',
+    );
+  });
+});
+
+describe('environment and app wiring', () => {
+  it('holds public URLs only and picks the API base by platform', () => {
+    expect(Object.keys(environment).sort()).toEqual(['nativeApiBase', 'tilesBase', 'webApiBase']);
+    expect(apiBaseFor(environment, false)).toBe('/api/v1');
+    expect(apiBaseFor(environment, true)).toBe('https://api.inecekvar.app/v1');
+    expect(environment.tilesBase.startsWith('https://')).toBe(true);
+  });
+
+  it('uses the same-origin API path and the cookie strategy in the browser', () => {
+    const offline = (async () => Promise.reject(new TypeError('offline'))) as typeof fetch;
+    TestBed.configureTestingModule({
+      providers: [...appConfig.providers, { provide: FETCH, useValue: offline }],
+    });
+    expect(TestBed.inject(API_BASE_URL)).toBe('/api/v1');
+    expect(TestBed.inject(AUTH_STRATEGY).mode).toBe('cookie');
+  });
+});
