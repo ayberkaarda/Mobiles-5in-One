@@ -49,3 +49,12 @@ paths = [
   '''cetele/server/src/test/kotlin/app/cetele/server/reminders/delivery/SmsDlrWebhookTest\.kt''',
 ]
 targetRules = ['generic-api-key', 'private-key']
+
+[[allowlists]]
+description = "Fixed dummy passwords and magic-link tokens in the inecekvar sign-in unit tests"
+condition = "AND"
+paths = [
+  '''inecekvar/apps/mobile/src/app/pages/auth-pages\.spec\.ts''',
+  '''inecekvar/libs/data-access/src/lib/session\.store\.spec\.ts''',
+]
+targetRules = ['generic-api-key']
