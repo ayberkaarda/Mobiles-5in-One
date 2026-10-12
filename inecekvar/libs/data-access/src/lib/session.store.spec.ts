@@ -153,6 +153,30 @@ describe('SessionStore', () => {
       expect(session.logoutPending()).toBe(true);
     });
 
+    it('keeps the cookie session when deletion needs a fresh sign-in, and asks once', async () => {
+      h.fake.on('POST', '/auth/login', json(cookieSignIn()));
+      h.fake.on('DELETE', '/me', problem(401, 'auth.reauth_required'));
+      const session = TestBed.inject(SessionStore);
+      await session.login('deniz@example.test', 'correct horse battery');
+      await expect(session.deleteAccount()).rejects.toMatchObject({
+        code: 'auth.reauth_required',
+      });
+      expect(h.fake.callsTo('DELETE', '/me')).toHaveLength(1);
+      expect(h.fake.callsTo('DELETE', '/me')[0]?.headers.get('X-CSRF-Token')).toBe(
+        'csrf-from-login',
+      );
+      expect(session.status()).toBe('signed-in');
+    });
+
+    it('still ends the cookie session on a 401 that is not a re-authentication answer', async () => {
+      h.fake.on('POST', '/auth/login', json(cookieSignIn()));
+      h.fake.on('DELETE', '/me', problem(401, 'auth.required'));
+      const session = TestBed.inject(SessionStore);
+      await session.login('deniz@example.test', 'correct horse battery');
+      await expect(session.deleteAccount('pw')).rejects.toMatchObject({ code: 'auth.required' });
+      expect(session.status()).toBe('anonymous');
+    });
+
     it('discards init results received after logout', async () => {
       const reply = deferred<Response>();
       h.fake.on('GET', '/me', () => reply.promise);
@@ -297,6 +321,20 @@ describe('SessionStore', () => {
       });
       expect(h.store.value).toBeNull();
       expect(session.status()).toBe('anonymous');
+    });
+
+    it('keeps the session after a wrong deletion password, without refreshing or replaying', async () => {
+      h.fake.on('POST', '/auth/login', json(bearerSignIn()));
+      h.fake.on('DELETE', '/me', problem(401, 'auth.invalid_credentials'));
+      const session = TestBed.inject(SessionStore);
+      await session.login('deniz@example.test', 'correct horse battery');
+      await expect(session.deleteAccount('wrong one')).rejects.toMatchObject({
+        code: 'auth.invalid_credentials',
+      });
+      expect(h.fake.callsTo('DELETE', '/me')).toHaveLength(1);
+      expect(h.fake.callsTo('POST', '/auth/refresh')).toHaveLength(0);
+      expect(h.store.value).not.toBeNull();
+      expect(session.status()).toBe('signed-in');
     });
 
     it('logs out everywhere', async () => {

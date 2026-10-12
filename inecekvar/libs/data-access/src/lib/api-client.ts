@@ -24,6 +24,11 @@ export interface ApiRequest<P extends ApiPathTemplate> {
   auth?: boolean;
   /** Sign-in may replace a cookie while an earlier logout remains pending. */
   credentials?: RequestCredentials;
+  /**
+   * Problem codes that are answers when they come with a 401 (a wrong password on a
+   * re-authenticated call): the session is neither refreshed nor ended and nothing is replayed.
+   */
+  answerCodes?: readonly string[];
 }
 
 const IDEMPOTENT = new Set<HttpMethod>(['GET', 'PUT', 'DELETE']);
@@ -138,8 +143,11 @@ export class ApiClient {
       if (result.ok) return result.value;
 
       const error = result.error;
+      const answered =
+        error.status === 401 && error.kind === 'problem' && !!req.answerCodes?.includes(error.code);
       const authFailure =
-        error.status === 401 || (error.status === 403 && error.code === 'csrf.invalid');
+        (error.status === 401 && !answered) ||
+        (error.status === 403 && error.code === 'csrf.invalid');
       if (authFailure && attempt !== null && !authRetried) {
         authRetried = true;
         failedAttempt = { session: attempt.session, error };

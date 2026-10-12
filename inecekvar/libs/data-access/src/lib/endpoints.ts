@@ -39,6 +39,8 @@ const FORBIDDEN_UPLOAD_HEADERS = new Set(['content-length', 'host', 'connection'
 const TILES_TIMEOUT_MS = 300_000;
 export const MAX_PACK_DATASET_BYTES = 64 * 1024 * 1024;
 export const MAX_PACK_BASEMAP_BYTES = 512 * 1024 * 1024;
+/** 401 codes of `DELETE me` that mean "re-authenticate", not "the session ended". */
+export const REAUTH_ANSWERS = ['auth.invalid_credentials', 'auth.reauth_required'] as const;
 
 export interface BytesOptions {
   signal?: AbortSignal;
@@ -180,12 +182,17 @@ export class AccountApi {
     return this.api.request({ method: 'POST', path: '/me/licence-accept', body: {} });
   }
 
-  /** Re-authenticated deletion (ADR-0026); every local credential is dropped on success. */
+  /**
+   * Re-authenticated deletion (ADR-0026); every local credential is dropped on success. A wrong
+   * password (401 `auth.invalid_credentials`) or a passwordless session older than ten minutes
+   * (401 `auth.reauth_required`) is an answer: the session stays and nothing is retried.
+   */
   async deleteAccount(password?: string): Promise<StatusResponse> {
     const result = await this.api.request<StatusResponse>({
       method: 'DELETE',
       path: '/me',
       body: password === undefined ? {} : { password },
+      answerCodes: REAUTH_ANSWERS,
     });
     await this.strategy.clear();
     return result;
