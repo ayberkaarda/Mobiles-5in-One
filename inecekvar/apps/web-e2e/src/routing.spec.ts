@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { directives, LINE_PATH, PRODUCTION, PUBLIC_HOST, ROUTE_PATH, STOP_PATH } from './support';
+import {
+  directives,
+  LINE_PATH,
+  PRODUCTION,
+  PUBLIC_HOST,
+  ROUTE_PATH,
+  STOP_PATH,
+  TEST_ORIGIN,
+} from './support';
 
 function robotsMeta(html: string): string | undefined {
   return html.match(/<meta name="robots" content="([^"]*)"/)?.[1];
@@ -16,12 +24,43 @@ test('unknown cities, lines, stops, route pairs and bad slugs answer 404', async
     '/istanbul/durak/yok',
     '/istanbul/rota/moda-yok',
     '/istanbul/rota/moda-suadiye',
-    '/istanbul/hat/Bad_Slug!',
     '/yok-sehir/hatlar',
   ]) {
     const response = await request.get(path, { maxRedirects: 0 });
     expect(response.status(), path).toBe(404);
     expect(robotsMeta(await response.text()), path).toMatch(/\bnoindex\b/);
+  }
+});
+
+test('non-canonical paths are refused or redirected before rendering and never cached', async ({
+  request,
+}) => {
+  // The phase 4 review probes: matrix parameters, `~`, bad slugs and encoded letters.
+  for (const path of [
+    '/istanbul;x=1',
+    '/istanbul;x=2',
+    '/istanbul%3Bx=3',
+    '/istanbul~',
+    '/istanbul/hat/Bad_Slug!',
+    '/istanbul//hatlar',
+    '/%C4%B0zmir',
+  ]) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status(), path).toBe(404);
+      expect(response.headers()['cache-control'], path).toBe('no-store');
+      expect(response.headers()['x-cache'], path).toBeUndefined();
+      expect(await response.text(), path).toBe('Sayfa bulunamadı');
+    }
+  }
+  for (const path of ['/%69stanbul', '/i%73tanbul', '/%69%73tanbul']) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(301);
+    expect(response.headers()['location'], path).toBe('/istanbul');
+  }
+  for (const path of ['//evil.com/x', '/%2F%2Fevil.com', '/\\evil.com']) {
+    const response = await request.get(TEST_ORIGIN + path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(400);
   }
 });
 

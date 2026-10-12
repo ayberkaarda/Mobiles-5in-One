@@ -37,7 +37,17 @@ test('admin responses are noindex, never cached and carry the CSP', async ({ req
     [TEST_ORIGIN, {}],
     [PRODUCTION, PUBLIC_HOST],
   ] as const) {
-    for (const path of ['/admin', '/admin/kuyruk', '/admin/denetim']) {
+    for (const path of [
+      '/admin',
+      '/admin/giris',
+      '/admin/kuyruk',
+      '/admin/surumler',
+      '/admin/dogrulama',
+      '/admin/kullanicilar',
+      '/admin/disa-aktar',
+      '/admin/denetim',
+      '/admin/olmayan-sayfa',
+    ]) {
       const first = await request.get(origin + path, { headers });
       expect(first.status(), path).toBe(200);
       const head = first.headers();
@@ -56,6 +66,28 @@ test('admin responses are noindex, never cached and carry the CSP', async ({ req
         expect((await request.get(origin + path)).headers()['x-cache']).toBe('BYPASS');
       }
     }
+  }
+});
+
+test('matrix and encoded admin variants are noindex and never serve the shell', async ({
+  request,
+}) => {
+  for (const [origin, headers] of [
+    [TEST_ORIGIN, {}],
+    [PRODUCTION, PUBLIC_HOST],
+  ] as const) {
+    for (const path of ['/admin;x', '/ADMIN%3Bx', '/admin%3bx/kuyruk', '/admin/kuyruk;v=1']) {
+      const response = await request.get(origin + path, { headers, maxRedirects: 0 });
+      expect(response.status(), path).toBe(404);
+      const head = response.headers();
+      expect(head['x-robots-tag'], path).toBe('noindex, nofollow');
+      expect(head['cache-control'], path).toBe('no-store');
+      expect(await response.text(), path).not.toContain('ngcspnonce');
+    }
+    const encoded = await request.get(origin + '/%61dmin/kuyruk', { headers, maxRedirects: 0 });
+    expect(encoded.status()).toBe(301);
+    expect(encoded.headers()['location']).toBe('/admin/kuyruk');
+    expect(encoded.headers()['x-robots-tag']).toBe('noindex, nofollow');
   }
 });
 

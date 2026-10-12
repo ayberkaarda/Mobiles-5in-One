@@ -28,6 +28,27 @@ const banned = new RegExp(
   'i',
 );
 
+/** ADR-0040 item 7: no invented contact or registration data. Returns the kinds found. */
+function inventedContactData(text: string): string[] {
+  const checks: [string, RegExp][] = [
+    ['e-mail', /[\w.+-]+@[\w-]+\.[a-z]{2,}/i],
+    ['registration', /\bMERSİS\s*(No|numarası)?\s*:?\s*\d/i],
+    ['registration', /\b\d{10,16}\b/],
+    ['phone', /\+?90\s?\(?\d{3}\)?\s?\d{3}/],
+    ['phone', /\b0\s?\(?\d{3}\)?\s?\d{3}\s?\d{2}\s?\d{2}\b/],
+    ['address', /\b(Cadde(si)?|Sokak|Sokağı|Mahallesi|Bulvarı)\b[^.\n]{0,40}\bNo\s*:?\s*\d/i],
+    ['social', /(^|\s)@[a-z0-9_]{3,}\b/im],
+  ];
+  return [...new Set(checks.filter(([, pattern]) => pattern.test(text)).map(([kind]) => kind))];
+}
+
+/** ADR-0040 item 6: the licence is proposed, never presented as granted. */
+function claimsGrantedLicence(text: string): boolean {
+  return /lisansı altında (yayımlanır|sunulur|paylaşılır)|lisanslıdır|licensed under|lisans onaylandı|lisans verilmiştir/i.test(
+    text,
+  );
+}
+
 function allTexts(): string[] {
   return [
     ...GUIDES.flatMap((guide) => [
@@ -248,11 +269,41 @@ describe('legal and honesty rules', () => {
   });
 
   it('invents no registration numbers, addresses or contact addresses', () => {
-    const text = allTexts().join('\n');
-    expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
-    expect(text).not.toMatch(/\bMERSİS\s*(No|numarası)?\s*:?\s*\d/i);
-    expect(text).not.toMatch(/\b\d{10,16}\b/);
-    expect(text).not.toMatch(/\+?90\s?\(?\d{3}\)?\s?\d{3}/);
+    expect(inventedContactData(allTexts().join('\n'))).toEqual([]);
+  });
+
+  it.each([
+    ['an e-mail address', 'Bize destek@inecekvar.app adresinden yaz.', 'e-mail'],
+    ['a phone number', 'Telefon: +90 212 555 01 01', 'phone'],
+    ['a local phone number', 'Telefon: 0 (212) 555 01 01', 'phone'],
+    ['a MERSİS number', 'MERSİS No: 0123456789000017', 'registration'],
+    ['a tax number', 'Vergi no 1234567890', 'registration'],
+    ['a street address', 'Adres: Moda Caddesi No: 12, Kadıköy', 'address'],
+    ['a social handle', 'Bizi @inecekvar hesabından takip et.', 'social'],
+  ])('fails the honesty check when a page gains %s', (_name, sentence, kind) => {
+    const pages = STATIC_PAGES.map((page) => blocksText(page.blocks));
+    pages[0] = `${pages[0]}\n${sentence}`;
+    expect(inventedContactData(pages.join('\n'))).toContain(kind);
+  });
+
+  it('states the licence as pending wherever the proposed licence is named', () => {
+    for (const text of allTexts()) {
+      expect(claimsGrantedLicence(text), text).toBe(false);
+    }
+    for (const page of STATIC_PAGES) {
+      const text = [page.description, blocksText(page.blocks)].join('\n');
+      if (text.includes(FACTS.licence.proposed)) expect(text, page.path).toMatch(/onay/);
+    }
+    expect(llmsTxt(origin)).toContain(FACTS.licence.statusLine);
+  });
+
+  it.each([
+    'Veriler CC BY 4.0 lisansı altında yayımlanır.',
+    'Bu veri kümesi CC BY 4.0 ile lisanslıdır.',
+    'Licensed under CC BY 4.0.',
+    'Lisans onaylandı: CC BY 4.0.',
+  ])('fails the licence check for the granted-licence claim "%s"', (sentence) => {
+    expect(claimsGrantedLicence(sentence)).toBe(true);
   });
 
   it('says the web deletion flow does not exist and shows no form', () => {
