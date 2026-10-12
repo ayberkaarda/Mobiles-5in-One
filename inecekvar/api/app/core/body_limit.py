@@ -21,11 +21,12 @@ class BodyLimitMiddleware:
             await self.app(scope, receive, send)
             return
         path = scope["path"]
-        limit = (
-            self.settings.max_trace_body_bytes
-            if path.startswith("/v1/traces")
-            else self.settings.max_body_bytes
-        )
+        if path.startswith("/v1/traces"):
+            limit = self.settings.max_trace_body_bytes
+        elif path.startswith("/v1/webhooks/"):
+            limit = self.settings.max_webhook_body_bytes
+        else:
+            limit = self.settings.max_body_bytes
         headers = Headers(scope=scope)
         lengths = headers.getlist("content-length")
         declared = 0

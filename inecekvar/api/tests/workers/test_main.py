@@ -16,11 +16,13 @@ def test_schedule() -> None:
         "cron:traces_job",
         "cron:deletion_job",
         "cron:export_job",
+        "cron:webhooks_pending_job",
     }
     export = jobs["cron:export_job"]
     assert (export.weekday, export.hour, export.minute) == ("mon", 3, 0)
     assert jobs["cron:traces_job"].minute == 5
     assert jobs["cron:deletion_job"].minute == 20
+    assert jobs["cron:webhooks_pending_job"].minute == set(range(0, 60, 5))
 
 
 def test_worker_settings_resolve_lazily(monkeypatch: pytest.MonkeyPatch) -> None:

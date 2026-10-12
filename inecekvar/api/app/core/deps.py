@@ -124,6 +124,12 @@ class StepUpSource(Protocol):
         ...
 
 
+class JobQueue(Protocol):
+    async def enqueue(self, function: str, *args: str, job_id: str) -> None:
+        """Queue `function(*args)` for the worker; `job_id` deduplicates queued jobs."""
+        ...
+
+
 class SubscriberDeleter(Protocol):
     async def delete_subscriber(self, app_user_id: str) -> None:
         """Remove the subscriber at the billing provider (spec section 6.21); raises on failure."""
@@ -150,6 +156,9 @@ class Services:
     subscriber_deleter: SubscriberDeleter | None = None
     # RevenueCat REST (reconciliation, transfers); None skips reconciliation.
     revenuecat: SubscriberDirectory | None = None
+    # Background job trigger; None (or a failing queue) leaves stored webhook events to the
+    # worker's pending-event sweep.
+    job_queue: JobQueue | None = None
 
 
 # --- Basic dependencies ---------------------------------------------------------------------

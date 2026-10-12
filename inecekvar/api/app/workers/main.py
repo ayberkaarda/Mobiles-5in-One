@@ -7,6 +7,8 @@ fail closed the same way: no object store defers photo and export work, no subsc
 deleter defers erasure of subscribers. Every job logs counts only.
 """
 
+import uuid
+from datetime import timedelta
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
@@ -14,7 +16,9 @@ import structlog
 from arq.connections import RedisSettings
 from arq.cron import CronJob, cron
 
+from app.billing.events import pending_revenuecat_events, process_revenuecat_event
 from app.core.deps import Services
+from app.core.jobs import ArqJobQueue
 from app.core.logging import configure_logging
 from app.core.settings import load_settings
 from app.main import build_services, with_local_defaults
@@ -43,6 +47,8 @@ async def shutdown(ctx: Context) -> None:
     services = ctx.get("services")
     if isinstance(services, Services):
         await services.redis.aclose()
+        if isinstance(services.job_queue, ArqJobQueue):
+            await services.job_queue.close()
 
 
 async def photos_job(ctx: Context) -> int:
@@ -92,11 +98,43 @@ async def export_job(ctx: Context) -> int:
     return len(exports)
 
 
+async def revenuecat_event_job(ctx: Context, row_id: str) -> str | None:
+    """Enqueued by `POST /v1/webhooks/revenuecat` for one stored event."""
+    services = services_of(ctx)
+    outcome = await process_revenuecat_event(
+        services.session_factory,
+        uuid.UUID(row_id),
+        services.settings,
+        services.clock,
+        services.revenuecat,
+    )
+    return outcome.value if outcome is not None else None
+
+
+async def webhooks_pending_job(ctx: Context) -> int:
+    """Processes stored events whose enqueue was lost or whose processing failed (retry)."""
+    services = services_of(ctx)
+    before = services.clock.now() - timedelta(minutes=1)
+    count = 0
+    for row_id in await pending_revenuecat_events(services.session_factory, before):
+        outcome = await process_revenuecat_event(
+            services.session_factory,
+            row_id,
+            services.settings,
+            services.clock,
+            services.revenuecat,
+        )
+        count += outcome is not None
+    structlog.get_logger().info("worker.webhooks.pending", count=count)
+    return count
+
+
 CRON_JOBS: tuple[CronJob, ...] = (
     cron(photos_job, second=0),
     cron(traces_job, minute=5, second=0),
     cron(deletion_job, minute=20, second=0),
     cron(export_job, weekday="mon", hour=3, minute=0, second=0),
+    cron(webhooks_pending_job, minute=set(range(0, 60, 5)), second=30),
 )
 
 
@@ -109,7 +147,14 @@ def worker_settings() -> type[Any]:
     redis = RedisSettings.from_dsn(settings.redis_url.get_secret_value())
 
     class WorkerSettings:
-        functions: ClassVar[list[Any]] = [photos_job, traces_job, deletion_job, export_job]
+        functions: ClassVar[list[Any]] = [
+            photos_job,
+            traces_job,
+            deletion_job,
+            export_job,
+            revenuecat_event_job,
+            webhooks_pending_job,
+        ]
         cron_jobs: ClassVar[list[CronJob]] = list(CRON_JOBS)
         on_startup = startup
         on_shutdown = shutdown

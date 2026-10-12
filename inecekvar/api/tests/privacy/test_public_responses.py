@@ -138,6 +138,10 @@ PRIVATE_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/v1/traces/{identity}"),
         ("DELETE", "/v1/traces/{identity}"),
         ("POST", "/v1/media/presign"),
+        # Provider-authenticated (shared secret or Svix signature), no human role: ADR-0050,
+        # tests/webhooks and tests/security/test_webhook_routes.py.
+        ("POST", "/v1/webhooks/revenuecat"),
+        ("POST", "/v1/webhooks/resend"),
     }
 )
 
