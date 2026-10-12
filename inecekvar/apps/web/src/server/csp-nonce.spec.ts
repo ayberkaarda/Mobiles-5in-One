@@ -46,6 +46,24 @@ describe('response CSP nonces', () => {
     expect(applyNonce(html, createNonce())).toBe(html);
   });
 
+  it('never puts the live nonce into text nodes, whose quotes the server renderer leaves raw', () => {
+    const hostile = `foo nonce="${NONCE_PLACEHOLDER}" bar`;
+    const html =
+      `<h1>${hostile}</h1>` +
+      `<li>Durak ngcspnonce="${NONCE_PLACEHOLDER}"/></li>` +
+      `<p>a</p> nonce="${NONCE_PLACEHOLDER}">` +
+      `<td>&lt;b nonce="${NONCE_PLACEHOLDER}"&gt;</td>` +
+      `<script type="module" data-x="1" nonce="${NONCE_PLACEHOLDER}"></script>`;
+    const nonce = createNonce();
+    const body = applyNonce(html, nonce);
+    expect(body.split(nonce)).toHaveLength(2);
+    expect(body).toContain(`<script type="module" data-x="1" nonce="${nonce}"></script>`);
+    expect(body).toContain(`<h1>${hostile}</h1>`);
+    expect(body).toContain(`<li>Durak ngcspnonce="${NONCE_PLACEHOLDER}"/></li>`);
+    expect(body).toContain(`<p>a</p> nonce="${NONCE_PLACEHOLDER}">`);
+    expect(body).toContain(`<td>&lt;b nonce="${NONCE_PLACEHOLDER}"&gt;</td>`);
+  });
+
   it('rejects a nonce that is unsafe to place in an attribute', () => {
     expect(() => applyNonce('<iv-root></iv-root>', 'bad"nonce')).toThrow('Invalid CSP nonce');
   });

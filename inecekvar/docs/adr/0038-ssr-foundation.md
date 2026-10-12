@@ -48,10 +48,15 @@ its session and auth parts, which public SSR pages must not carry.
 4. Nonce: `index.html` carries `ngCspNonce="ivcspnonce0placeholder0value"`. The build reads it into
    the manifest, so the critical-CSS styles and the stylesheet swap script get it, and the server
    config provides the same value as `CSP_NONCE`, so the event-replay script gets it too. Every
-   response, rendered or cached, then replaces the placeholder in ` nonce="…"` and
-   ` ngcspnonce="…"` attributes only with 16 fresh random bytes. Escaped user text cannot contain a
-   raw quote, so content never matches. Data blocks (`application/json`, `application/ld+json`)
-   are not executed and carry no nonce.
+   response, rendered or cached, then replaces the placeholder with 16 fresh random bytes only in
+   a ` nonce="…"` or ` ngcspnonce="…"` attribute inside a start tag (`<tag … nonce="…"`, matched by
+   `applyNonce` in `server/csp-nonce.ts`). The server renderer (Domino) escapes `&`, `<`, `>` and
+   no-break spaces in text nodes but leaves quotes raw, so a stop or line name can spell
+   `nonce="ivcspnonce0placeholder0value"` in text; such text never sits between a `<` and its `>`,
+   so it is never substituted (`csp-nonce.spec.ts`, "never puts the live nonce into text nodes").
+   An earlier version of this item claimed escaped text cannot contain a raw quote; that premise
+   was false and the substitution was anchored to start tags after the phase 4 review. Data blocks
+   (`application/json`, `application/ld+json`) are not executed and carry no nonce.
 5. Every SSR render receives a new `Request` for `canonicalOrigin + path + allowlisted query` with
    only `Accept: text/html`. Cookies, `Authorization`, `Accept-Language`, `Host` and forwarded
    headers never reach Angular, so the output depends only on the cache key and rendered URLs come
