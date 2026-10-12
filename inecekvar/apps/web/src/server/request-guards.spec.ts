@@ -60,6 +60,28 @@ describe('request guards', () => {
   });
 
   it.each([
+    '//evil.com/x',
+    '//evil.com',
+    '///istanbul',
+    '/\\evil.com/x',
+    '/istanbul\\hatlar',
+    '/%5Cevil.com',
+    '/%2F%2Fevil.com',
+    '/%2f/evil.com',
+  ])('rejects the authority-form or backslash path %s with 400 and no error log', async (path) => {
+    const log = vi.fn();
+    const render = vi.fn<PageRenderer>(async () => {
+      throw new Error('NG05702');
+    });
+    const port = await startApp(createWebApp({ config: loadWebServerConfig({}), render, log }));
+    const result = await httpRequest(port, { path });
+    expect(result.status).toBe(400);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(render).not.toHaveBeenCalled();
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it.each([
     'evil.example',
     'inecekvar.app.evil.example',
     'inecekvar.app@evil.example',

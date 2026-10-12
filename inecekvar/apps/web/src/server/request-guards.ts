@@ -49,6 +49,19 @@ export const urlLengthGuard: RequestHandler = (req, res, next) => {
     reject(res, 400, 'Bad request');
     return;
   }
+  // Network-path (`//host`) and backslash forms never reach rendering, raw or decoded.
+  const separator = req.originalUrl.indexOf('?');
+  const path = separator < 0 ? req.originalUrl : req.originalUrl.slice(0, separator);
+  let decoded = path;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    // Undecodable paths are refused later by URL normalization.
+  }
+  if ([path, decoded].some((value) => value.startsWith('//') || value.includes('\\'))) {
+    reject(res, 400, 'Bad request');
+    return;
+  }
   next();
 };
 
