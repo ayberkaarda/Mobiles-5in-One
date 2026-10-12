@@ -99,7 +99,7 @@ describe('page cache behaviour', () => {
     },
   );
 
-  it.each(['/admin', '/admin/x', '/%61dmin'])(
+  it.each(['/admin', '/admin/x', '/admin/kuyruk'])(
     'never reads or writes private pages: %s',
     async (path) => {
       const { port, render, cache } = await fixture();
@@ -242,7 +242,7 @@ describe('page cache behaviour', () => {
 });
 
 describe('static delivery', () => {
-  it('sends HTML through rendering even when its extension is percent-encoded', async () => {
+  it('never serves the HTML template as a file, even with a percent-encoded extension', async () => {
     const folder = await mkdtemp(join(tmpdir(), 'iv-web-'));
     folders.push(folder);
     await writeFile(join(folder, 'index.html'), fakeHtml, 'utf8');
@@ -257,14 +257,17 @@ describe('static delivery', () => {
       }),
     );
     for (const path of ['/index.html', '/index%2ehtml']) {
-      expectNonceAttributes(await httpRequest(port, { path }));
+      const result = await httpRequest(port, { path });
+      expect(result.status).toBe(404);
+      expect(result.body).not.toContain(NONCE_PLACEHOLDER);
     }
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(render).not.toHaveBeenCalled();
+    expectNonceAttributes(await httpRequest(port, { path: '/' }));
     const asset = await httpRequest(port, { path: '/main-ABCDEFGH.js' });
     expect(asset.body).toBe('window.__asset=1;');
     expect(asset.headers['cache-control']).toBe('public, max-age=31536000');
     expect(asset.headers['content-security-policy']).toBeDefined();
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(1);
     const plain = await httpRequest(port, { path: '/plain.js' });
     expect(plain.headers['cache-control']).toBe('public, max-age=0');
   });

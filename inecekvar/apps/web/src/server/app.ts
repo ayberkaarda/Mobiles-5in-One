@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import helmet from 'helmet';
+import { BypassRenderLimiter } from './bypass-limiter';
 import type { WebServerConfig } from './config';
 import { applyNonce, createNonce } from './csp-nonce';
 import {
@@ -68,6 +69,10 @@ export function createWebApp(options: {
       maxEntries: config.cacheMaxEntries,
       maxBytes: config.cacheMaxBytes,
     });
+  const bypassLimiter = new BypassRenderLimiter(
+    config.bypassRenderBurst,
+    config.bypassRenderPerMinute,
+  );
   const security = helmet(helmetOptions(config));
   const log = (event: string): void => {
     try {
@@ -160,6 +165,19 @@ export function createWebApp(options: {
       },
       config,
     );
+    if (key === undefined && !res.locals['admin']) {
+      // The admin shell is a static client render; every other bypass costs API calls.
+      const retryAfter = bypassLimiter.take(req.socket.remoteAddress ?? 'unknown');
+      if (retryAfter > 0) {
+        res
+          .status(429)
+          .set('Retry-After', String(retryAfter))
+          .set('Cache-Control', 'no-store')
+          .type('text/plain')
+          .send('Too many requests');
+        return;
+      }
+    }
     if (config.cacheDebugHeader) {
       res.set('X-Cache', key === undefined ? 'BYPASS' : 'MISS');
     }

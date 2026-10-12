@@ -160,13 +160,13 @@ describe('machine files', () => {
     '/og/bad--city/hat/ornek-hat.svg',
     '/og/ornek-sehir/hat/bad--line.svg',
     '/og/ornek-sehir/hat/ornek-hat.png',
-  ])('falls through for an invalid file without fetching: %s', async (path) => {
+  ])('falls through for an invalid file without fetching or rendering: %s', async (path) => {
     const { port, apiFetch, render } = await fixture();
     const result = await httpRequest(port, { path });
     expect(result.status).toBe(404);
     expect(result.body).toBe('Sayfa bulunamadı');
     expect(apiFetch).not.toHaveBeenCalled();
-    expect(render).toHaveBeenCalledOnce();
+    expect(render).not.toHaveBeenCalled();
   });
 
   it.each(['/.well-known/assetlinks.json', '/.well-known/apple-app-site-association'])(

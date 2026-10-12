@@ -20,6 +20,8 @@ describe('web server config', () => {
       cacheMaxBytes: 32 * 1024 * 1024,
       cacheQueryAllowlist: ['sayfa'],
       cacheDebugHeader: false,
+      bypassRenderBurst: 60,
+      bypassRenderPerMinute: 60,
       robotsIndexable: true,
     });
   });

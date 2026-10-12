@@ -17,6 +17,8 @@ export interface WebServerConfig {
   cacheMaxBytes: number;
   cacheQueryAllowlist: readonly string[];
   cacheDebugHeader: boolean;
+  bypassRenderBurst: number;
+  bypassRenderPerMinute: number;
   robotsIndexable: boolean;
 }
 
@@ -177,6 +179,16 @@ export function loadWebServerConfig(
       ),
     ],
     cacheDebugHeader: webEnv !== 'production',
+    bypassRenderBurst: positiveInteger(
+      env['IV_WEB_BYPASS_RENDER_BURST'],
+      60,
+      'IV_WEB_BYPASS_RENDER_BURST',
+    ),
+    bypassRenderPerMinute: positiveInteger(
+      env['IV_WEB_BYPASS_RENDER_PER_MINUTE'],
+      60,
+      'IV_WEB_BYPASS_RENDER_PER_MINUTE',
+    ),
     robotsIndexable: webEnv === 'production',
   };
 }
