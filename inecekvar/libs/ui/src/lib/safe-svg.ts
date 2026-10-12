@@ -67,10 +67,18 @@ export function svgDocument(model: {
   width: number;
   height: number;
   title: string;
+  background?: SvgColor;
   paths: { points: SvgPoint[]; stroke: SvgColor; width: number }[];
-  labels: { x: number; y: number; text: string }[];
+  labels: { x: number; y: number; text: string; size?: number; weight?: 'normal' | 'bold' }[];
 }): string {
   const viewBox = svgViewBox(model.width, model.height);
+  if (model.background !== undefined && !colors.includes(model.background)) {
+    throw new Error('Invalid SVG background');
+  }
+  const background =
+    model.background === undefined
+      ? ''
+      : `<rect width="${svgNumber(model.width)}" height="${svgNumber(model.height)}" fill="${model.background}"/>`;
   const paths = model.paths.map((path) => {
     if (!colors.includes(path.stroke) || path.width <= 0) {
       throw new Error('Invalid SVG stroke');
@@ -80,16 +88,29 @@ export function svgDocument(model: {
       ` stroke-width="${svgNumber(path.width)}"/>`
     );
   });
-  const labels = model.labels.map(
-    (label) =>
-      `<text x="${svgNumber(label.x)}" y="${svgNumber(label.y)}" fill="#14213D">` +
+  const labels = model.labels.map((label) => {
+    if (
+      label.size !== undefined &&
+      (!Number.isFinite(label.size) || label.size < 8 || label.size > 120)
+    ) {
+      throw new Error('Invalid SVG label size');
+    }
+    if (label.weight !== undefined && label.weight !== 'normal' && label.weight !== 'bold') {
+      throw new Error('Invalid SVG label weight');
+    }
+    const size = label.size === undefined ? '' : ` font-size="${svgNumber(label.size)}"`;
+    const weight = label.weight === undefined ? '' : ` font-weight="${label.weight}"`;
+    return (
+      `<text x="${svgNumber(label.x)}" y="${svgNumber(label.y)}" fill="#14213D"${size}${weight}>` +
       escapeXmlText(label.text) +
-      '</text>',
-  );
+      '</text>'
+    );
+  });
   // This standalone image string is never an HTML insertion source.
   return (
     '<svg xmlns="http://www.w3.org/2000/svg"' +
     ` width="${svgNumber(model.width)}" height="${svgNumber(model.height)}" viewBox="${viewBox}">` +
+    background +
     `<title>${escapeXmlText(model.title)}</title>` +
     paths.join('') +
     labels.join('') +
