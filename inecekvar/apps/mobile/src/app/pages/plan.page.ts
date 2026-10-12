@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import {
   ItineraryCardComponent,
@@ -14,6 +15,7 @@ import { TPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
 import { MapMarker } from '../map/map-style';
+import { PackRegistry } from '../packs/pack-registry';
 import { steps, summarize } from '../planner/itinerary';
 import { MAX_TRANSFER_CHOICES, MaxTransfers, PlanEnd, PlanFormError } from '../planner/plan-form';
 import { PlannerStore } from '../planner/planner.store';
@@ -65,6 +67,10 @@ export class PlanPage {
   private readonly picker = viewChild(CityPickerComponent);
   protected readonly cities = inject(CityStore);
   protected readonly planner = inject(PlannerStore);
+  private readonly router = inject(Router);
+  private readonly packs = inject(PackRegistry);
+  /** Offline with the city's pack installed: lines and stops can still be browsed. */
+  protected readonly offlinePack = computed(() => this.packs.has(this.cities.selectedSlug()));
 
   protected readonly ends: readonly EndView[] = [
     { end: 'from', label: 'plan.from', inputId: 'iv-plan-from' },
@@ -130,6 +136,11 @@ export class PlanPage {
 
   constructor() {
     void this.cities.init();
+    void this.packs.ready();
+  }
+
+  protected browseLines(): void {
+    void this.router.navigateByUrl('/ara');
   }
 
   protected text(end: PlanEnd): string {

@@ -1,5 +1,6 @@
 import { InjectionToken } from '@angular/core';
 import type { LngLatBoundsLike, MapOptions, StyleSpecification } from 'maplibre-gl';
+import type { BasemapSource } from '../packs/pack-registry';
 
 /** What the wrapper reads from MapLibre events: the failing source, or where a tap landed. */
 export interface MapEvent {
@@ -28,9 +29,10 @@ export interface CreateMapOptions {
 export interface MapLibrary {
   /**
    * True when the header of the `pmtiles://` archive can be read within the timeout; the archive
-   * is then registered with the protocol and served to the map.
+   * is then registered with the protocol and served to the map. With a `source` (an installed
+   * pack) the archive is read from it, and `url` must be `pmtiles://` + its key.
    */
-  probeBasemap(url: string, timeoutMs: number): Promise<boolean>;
+  probeBasemap(url: string, timeoutMs: number, source?: BasemapSource): Promise<boolean>;
   /** Throws when the map cannot start, for example without WebGL. */
   createMap(options: CreateMapOptions): MapHandle;
 }
@@ -68,9 +70,10 @@ export function createMapLibrary(
   const protocol = new pmtiles.Protocol();
   maplibre.addProtocol('pmtiles', protocol.tile);
   return {
-    async probeBasemap(url, timeoutMs) {
-      // The style names the archive as pmtiles://<https url>; the archive itself is the https URL.
-      const archive = new pmtiles.PMTiles(url.replace(/^pmtiles:\/\//, ''));
+    async probeBasemap(url, timeoutMs, source) {
+      // The style names the archive as pmtiles://<key>; the key is the https URL of the archive,
+      // or the key of a pack source (the protocol looks archives up by key).
+      const archive = new pmtiles.PMTiles(source ?? url.replace(/^pmtiles:\/\//, ''));
       try {
         await withTimeout(archive.getHeader(), timeoutMs);
         protocol.add(archive);

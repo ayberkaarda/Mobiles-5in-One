@@ -40,6 +40,22 @@ export function distanceMeters(a: readonly number[], b: readonly number[]): numb
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/** A byte count such as "840 kB" or "1,2 MB" (decimal units, as storage settings show them). */
+export function formatBytes(bytes: number, lang: AppLang): string {
+  const units = ['B', 'kB', 'MB', 'GB'];
+  let value = Math.max(0, bytes);
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  const digits = unit === 0 || value >= 100 ? 0 : 1;
+  const text = new Intl.NumberFormat(LOCALES[lang], { maximumFractionDigits: digits }).format(
+    value,
+  );
+  return `${text} ${units[unit]}`;
+}
+
 /** True when `[lng, lat]` lies inside `[minLng, minLat, maxLng, maxLat]`. */
 export function inBbox(point: readonly number[], bbox: readonly number[]): boolean {
   const [lng = NaN, lat = NaN] = point;

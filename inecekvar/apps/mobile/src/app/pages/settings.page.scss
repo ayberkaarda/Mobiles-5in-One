@@ -69,6 +69,48 @@
   stroke-linecap: round;
 }
 
+.offline-link {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-3);
+  color: var(--iv-ink);
+  text-decoration: none;
+}
+
+.offline-link:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.offline-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--iv-ink-muted);
+}
+
+.offline-text strong {
+  font-size: 16px;
+  color: var(--iv-ink);
+}
+
+.offline-update {
+  color: var(--iv-ink);
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.chevron {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--iv-ink-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
 .facts {
   display: grid;
   gap: var(--iv-space-2);

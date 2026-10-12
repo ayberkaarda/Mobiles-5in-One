@@ -12,6 +12,7 @@ import {
 import { ApiError, CatalogApi, LineDetail, PlanResult } from '@inecekvar/data-access';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
+import { CatalogSource } from '../packs/catalog-source';
 import { StopIndex } from '../search/stop-index';
 import { SEARCH_DEBOUNCE_MS } from '../search/search.store';
 import { ConnectivityService } from '../shared/connectivity.service';
@@ -69,6 +70,7 @@ const isOffline = (error: unknown) =>
 @Injectable()
 export class PlannerStore {
   private readonly api = inject(CatalogApi);
+  private readonly source = inject(CatalogSource);
   private readonly cities = inject(CityStore);
   private readonly stopIndex = inject(StopIndex);
   private readonly connectivity = inject(ConnectivityService);
@@ -337,7 +339,7 @@ export class PlannerStore {
       const key = `${city}/${leg.line_slug}`;
       let pending = this.lineCache.get(key);
       if (!pending) {
-        pending = this.api.line(leg.line_slug, city);
+        pending = this.source.line(leg.line_slug, city);
         this.lineCache.set(key, pending);
         pending.then(
           (line) => {

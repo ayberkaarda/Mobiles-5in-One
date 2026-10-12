@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import { CatalogApi, LineDetail } from '@inecekvar/data-access';
+import { LineDetail } from '@inecekvar/data-access';
 import { formatFareMinor } from '@inecekvar/domain';
 import {
   ModeChipComponent,
@@ -16,6 +16,9 @@ import { LanguageService } from '../core/language.service';
 import { TPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
+import { CatalogSource } from '../packs/catalog-source';
+import { apiLineId, PACK_ID_PREFIX } from '../packs/pack-data';
+import { PackRegistry } from '../packs/pack-registry';
 import { BackButtonComponent } from '../shared/back-button.component';
 import { ConnectivityService } from '../shared/connectivity.service';
 import { formatDate, lineMode } from '../shared/format';
@@ -49,7 +52,7 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
   styleUrl: './line.page.scss',
 })
 export class LinePage {
-  private readonly api = inject(CatalogApi);
+  private readonly api = inject(CatalogSource);
   private readonly router = inject(Router);
   private readonly i18n = inject(LanguageService);
   private readonly connectivity = inject(ConnectivityService);
@@ -71,6 +74,16 @@ export class LinePage {
     const error = this.line.error();
     if (error) return detailFailure(error, this.connectivity);
     return this.data() ? 'ready' : 'loading';
+  });
+
+  private readonly packs = inject(PackRegistry);
+  /** The pack version when this page was read from the installed pack. */
+  protected readonly packVersion = computed(() => {
+    const city = this.params()?.city;
+    const manifest = city ? this.packs.manifests().get(city) : undefined;
+    return manifest && this.data()?.id.startsWith(PACK_ID_PREFIX)
+      ? { version: manifest.packVersion }
+      : null;
   });
 
   protected readonly mode = computed(() => lineMode(this.data()?.mode ?? ''));
@@ -126,7 +139,7 @@ export class LinePage {
       code: line.code,
       name: line.name,
       mode: this.mode(),
-      lineId: line.id,
+      lineId: apiLineId(line.id),
     });
   }
 

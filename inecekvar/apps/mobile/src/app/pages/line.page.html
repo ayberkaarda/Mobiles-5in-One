@@ -126,6 +126,9 @@
         <li>{{ verifiedNote() }}</li>
         <li>{{ 'line.contributors' | t: { count: line.contributor_count } }}</li>
         <li>{{ 'line.version' | t: { version: line.version_no } }}</li>
+        @if (packVersion(); as pack) {
+        <li class="from-pack">{{ 'line.fromPack' | t: { version: pack.version } }}</li>
+        }
       </ul>
     </section>
 

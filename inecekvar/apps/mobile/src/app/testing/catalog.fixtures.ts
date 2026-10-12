@@ -1,6 +1,8 @@
 import { computed, Provider, signal } from '@angular/core';
 import {
   AccountApi,
+  ApiBytes,
+  BytesOptions,
   ApiError,
   CatalogApi,
   Favorite,
@@ -15,6 +17,11 @@ import {
   TILES_BASE_URL,
 } from '@inecekvar/data-access';
 import { PREFERENCE_STORE, PreferenceStore } from '../city/city.store';
+import { CityPackData } from '../packs/pack-data';
+import { MAP_WARMUP } from '../packs/pack-manager';
+import { MemoryPackStorage, PackStorage } from '../packs/pack-storage';
+import { PACK_STORAGE } from '../packs/pack-storage.provider';
+import { NETWORK_SOURCE, NetworkSource } from '../shared/connectivity.service';
 import { LOCATION_SOURCE, LocateResult } from '../shared/location';
 import { SEARCH_DEBOUNCE_MS } from '../search/search.store';
 
@@ -154,6 +161,59 @@ export function samplePlan(overrides: Partial<PlanResult> = {}): PlanResult {
   };
 }
 
+/** A format 1 pack of the sample city, as `GET cities/{slug}/pack` returns it. */
+export function samplePackData(packVersion = 1): CityPackData {
+  const stops = [1, 2, 3, 4].flatMap((row) => [1, 2, 3, 4, 5].map((col) => sampleStop(row, col)));
+  const routes: Record<string, [number, number][]> = {
+    'ornek-hat-1': [1, 2, 3, 4, 5].map((col) => [1, col] as [number, number]),
+    'ornek-hat-2': [1, 2, 3, 4].map((row) => [row, 3] as [number, number]),
+    'ornek-hat-3': [
+      [1, 1],
+      [2, 2],
+      [3, 3],
+      [4, 4],
+    ],
+  };
+  return {
+    city: {
+      name: SAMPLE_CITY.name,
+      slug: SAMPLE_CITY.slug,
+      is_sample: true,
+      bbox: [...SAMPLE_CITY.bbox],
+      centroid: [...SAMPLE_CITY.centroid],
+      timezone: SAMPLE_CITY.timezone,
+    },
+    pack_version: packVersion,
+    format: 1,
+    lines: SAMPLE_LINES.map((line) => {
+      const cells = routes[line.slug] ?? [];
+      return {
+        slug: line.slug,
+        code: line.code,
+        name: line.name,
+        mode: line.mode,
+        version_no: 1,
+        published_at: '2026-10-12T08:15:58Z',
+        geometry: cells.map(([r, c]) => sampleStop(r, c).location),
+        stops: cells.map(([r, c]) => sampleStop(r, c).slug),
+        fare_minor: 2500,
+        fare_updated_at: '2026-10-01T09:00:00Z',
+        hours_text: '[ÖRNEK] 06:00-23:00',
+        payment_methods: ['nakit'],
+        hail_notes: null,
+        last_verified_at: null,
+        contributor_count: 0,
+      };
+    }),
+    stops: stops.map((s) => ({ slug: s.slug, name: s.name, kind: s.kind, location: s.location })),
+  };
+}
+
+export function packBody(data: unknown = samplePackData()): ApiBytes {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  return { bytes, declaredLength: bytes.length, etag: null, contentType: 'application/json' };
+}
+
 export const notFound = (code = 'line.not_found') => new ApiError('problem', 404, code, 'req-test');
 export const offline = () => new ApiError('network', 0, 'network', 'req-test');
 
@@ -204,6 +264,16 @@ export function fakeCatalog() {
       return sampleStopDetail();
     }),
     stopsNear: spy(async (): Promise<StopSummary[]> => allStops),
+    packBytes: spy(async (slug: string, options?: BytesOptions): Promise<ApiBytes> => {
+      void options;
+      if (slug !== SAMPLE_CITY.slug) throw notFound('city.not_found');
+      return packBody();
+    }),
+    tilesArchive: spy(async (slug: string, options?: BytesOptions): Promise<ApiBytes> => {
+      void slug;
+      void options;
+      throw notFound('tiles.not_configured');
+    }),
     // Body and signal are recorded in `calls` for the tests to inspect.
     plan: spy(async (body: unknown, signal?: AbortSignal): Promise<PlanResult> => {
       void body;
@@ -289,7 +359,30 @@ export function fakeAccount(session: FakeSession) {
 
 export type FakeAccount = ReturnType<typeof fakeAccount>;
 
+/** A Capacitor Network stand-in; `set` fires the status listeners. */
+export class FakeNetwork implements NetworkSource {
+  connected = true;
+  private readonly listeners = new Set<(status: { connected: boolean }) => void>();
+
+  async getStatus() {
+    return { connected: this.connected };
+  }
+
+  async addListener(_event: 'networkStatusChange', listener: (s: { connected: boolean }) => void) {
+    this.listeners.add(listener);
+    return { remove: async () => void this.listeners.delete(listener) };
+  }
+
+  set(connected: boolean): void {
+    this.connected = connected;
+    for (const listener of this.listeners) listener({ connected });
+  }
+}
+
 export interface CatalogTestingOptions {
+  packs?: PackStorage;
+  network?: FakeNetwork;
+  warmup?: () => Promise<void>;
   session?: FakeSession;
   account?: FakeAccount;
   catalog?: FakeCatalog;
@@ -305,6 +398,9 @@ export function catalogTesting(options: CatalogTestingOptions = {}): Provider[] 
   const account = options.account ?? fakeAccount(session);
   return [
     { provide: CatalogApi, useValue: catalog },
+    { provide: PACK_STORAGE, useValue: options.packs ?? new MemoryPackStorage() },
+    { provide: NETWORK_SOURCE, useValue: options.network ?? new FakeNetwork() },
+    { provide: MAP_WARMUP, useValue: options.warmup ?? (async () => undefined) },
     { provide: SessionStore, useValue: session },
     { provide: AccountApi, useValue: account },
     { provide: PREFERENCE_STORE, useValue: prefs },

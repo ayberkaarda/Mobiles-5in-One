@@ -1,8 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ConnectivityService } from './connectivity.service';
+import { FakeNetwork } from '../testing/catalog.fixtures';
+import { ConnectivityService, NETWORK_SOURCE } from './connectivity.service';
 import { debounced } from './debounced';
-import { distanceMeters, fold, formatDate, inBbox, lineMode } from './format';
+import { distanceMeters, fold, formatBytes, formatDate, inBbox, lineMode } from './format';
 import { CapacitorLocationSource } from './location';
 
 describe('format helpers', () => {
@@ -50,12 +51,24 @@ describe('debounced', () => {
 });
 
 describe('ConnectivityService', () => {
-  it('follows the online and offline events', () => {
+  it('follows Capacitor Network status and changes', async () => {
+    const network = new FakeNetwork();
+    network.connected = false;
+    TestBed.configureTestingModule({ providers: [{ provide: NETWORK_SOURCE, useValue: network }] });
     const service = TestBed.inject(ConnectivityService);
-    window.dispatchEvent(new Event('offline'));
+    await new Promise((resolve) => setTimeout(resolve));
     expect(service.online()).toBe(false);
-    window.dispatchEvent(new Event('online'));
+    network.set(true);
     expect(service.online()).toBe(true);
+    network.set(false);
+    expect(service.online()).toBe(false);
+  });
+
+  it('formats byte counts per language', () => {
+    expect(formatBytes(840, 'en')).toBe('840 B');
+    expect(formatBytes(1234567, 'tr')).toBe('1,2 MB');
+    expect(formatBytes(1234567, 'en')).toBe('1.2 MB');
+    expect(formatBytes(512000, 'en')).toBe('512 kB');
   });
 });
 

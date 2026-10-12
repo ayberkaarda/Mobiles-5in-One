@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import { CatalogApi, StopDetail } from '@inecekvar/data-access';
+import { StopDetail } from '@inecekvar/data-access';
 import { RouteSketchComponent, StateComponent } from '@inecekvar/ui';
 import { CityStore } from '../city/city.store';
 import { TPipe } from '../i18n/i18n';
 import { MapComponent } from '../map/map.component';
+import { CatalogSource } from '../packs/catalog-source';
 import { BackButtonComponent } from '../shared/back-button.component';
 import { ConnectivityService } from '../shared/connectivity.service';
 import { lineMode } from '../shared/format';
@@ -125,7 +126,7 @@ import { detailFailure, detailRouteParams } from './detail-route';
   `,
 })
 export class StopPage {
-  private readonly api = inject(CatalogApi);
+  private readonly api = inject(CatalogSource);
   private readonly router = inject(Router);
   private readonly connectivity = inject(ConnectivityService);
   private readonly cities = inject(CityStore);

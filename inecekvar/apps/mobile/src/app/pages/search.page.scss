@@ -75,6 +75,21 @@
   color: var(--iv-ink-muted);
 }
 
+.pack[data-pack='installed'] {
+  border-left-color: var(--iv-color-onay-yesili);
+}
+
+.pack-action {
+  display: inline-block;
+  margin-top: var(--iv-space-2);
+  color: var(--iv-ink);
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.offline-note {
+  margin-top: var(--iv-space-5);
+}
+
 .pack-icon {
   flex: none;
   width: 24px;

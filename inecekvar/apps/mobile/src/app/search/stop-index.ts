@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { CatalogApi, City, StopSummary } from '@inecekvar/data-access';
+import { CatalogSource } from '../packs/catalog-source';
 import { distanceMeters, fold, inBbox } from '../shared/format';
 
 /** `GET stops/near` accepts at most 2 km. */
@@ -10,19 +11,24 @@ const CELL_M = 2500;
 const MAX_CELLS_PER_SIDE = 3;
 
 /**
- * Interim stop name search. The API has no `stops?city=&q=` route yet, so the stops of the
- * selected city are gathered once per session from `stops/near` calls on a small grid over the
- * city bbox (at most 9 calls), kept to the bbox and matched on the device. Large cities are only
- * partly covered; the offline pack (package 3E) or a stop search route replaces this.
+ * Stop name search for the Ara tab and the planner suggestions. With the city's pack installed
+ * the pack's complete stop list answers (`CatalogSource.searchStops`) and no request is made.
+ * Without a pack, and only while online, the interim fallback of package 3C remains: the API
+ * has no `stops?city=&q=` route, so the stops are gathered once per session from `stops/near`
+ * calls on a small grid over the city bbox (at most 9 calls); large cities are only partly
+ * covered there, which the Ara tab's pack prompt points out.
  */
 @Injectable({ providedIn: 'root' })
 export class StopIndex {
   private readonly api = inject(CatalogApi);
+  private readonly source = inject(CatalogSource);
   private readonly cache = new Map<string, Promise<StopSummary[]>>();
 
   async search(city: City, query: string, limit = 8): Promise<StopSummary[]> {
     const needle = fold(query);
     if (needle.length < 2) return [];
+    const packed = await this.source.searchStops(city.slug, query, limit);
+    if (packed) return packed;
     const stops = await this.stopsOf(city);
     return stops.filter((stop) => fold(stop.name).includes(needle)).slice(0, limit);
   }

@@ -8,9 +8,11 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ApiError, CatalogApi, LineListItem, StopSummary } from '@inecekvar/data-access';
+import { ApiError, LineListItem, StopSummary } from '@inecekvar/data-access';
 import { LineMode } from '@inecekvar/domain';
 import { CityStore } from '../city/city.store';
+import { CatalogSource } from '../packs/catalog-source';
+import { PackRegistry } from '../packs/pack-registry';
 import { ConnectivityService } from '../shared/connectivity.service';
 import { debounced } from '../shared/debounced';
 import { distanceMeters, inBbox } from '../shared/format';
@@ -52,12 +54,15 @@ const isOfflineError = (error: unknown) =>
 
 /**
  * State of the Ara tab: a debounced query and a mode filter over the lines of the selected
- * city (`GET lines?city=&q=`), stop names from the interim stop index, and nearby lines from
- * one foreground location fix (`GET stops/near`, then each stop's lines).
+ * city, stop names, and nearby lines from one foreground location fix. With the city's pack
+ * installed every read is answered on the device (`CatalogSource`); otherwise lines come from
+ * `GET lines?city=&q=`, stop names from the stop index and nearby lines from `GET stops/near`
+ * and each stop's lines. Installing or replacing the pack re-runs the search.
  */
 @Injectable()
 export class SearchStore {
-  private readonly api = inject(CatalogApi);
+  private readonly api = inject(CatalogSource);
+  private readonly packs = inject(PackRegistry);
   private readonly cities = inject(CityStore);
   private readonly stopIndex = inject(StopIndex);
   private readonly connectivity = inject(ConnectivityService);
@@ -74,7 +79,8 @@ export class SearchStore {
   private readonly linesResource = resource({
     params: () => {
       const city = this.cities.selectedSlug();
-      return city ? { city, q: this.term() } : undefined;
+      if (!city) return undefined;
+      return { city, q: this.term(), install: this.packs.manifest(city)?.installId ?? null };
     },
     loader: ({ params, abortSignal }) =>
       this.api.lines({ city: params.city, q: params.q || undefined, limit: 100 }, abortSignal),
@@ -84,7 +90,8 @@ export class SearchStore {
     params: () => {
       const city = this.cities.selected();
       const q = this.term();
-      return city && q.length >= 2 ? { city, q } : undefined;
+      if (!city || q.length < 2) return undefined;
+      return { city, q, install: this.packs.manifest(city.slug)?.installId ?? null };
     },
     loader: ({ params }) => this.stopIndex.search(params.city, params.q),
   });
@@ -159,11 +166,11 @@ export class SearchStore {
     this.nearby.set({ kind: 'loading' });
     const here = [fix.lng, fix.lat];
     try {
-      const near = await this.api.stopsNear({
-        lat: fix.lat,
-        lng: fix.lng,
-        radius: NEARBY_RADIUS_M,
-      });
+      // With the city's pack installed this is computed on the device, without a request.
+      const near = await this.api.stopsNear(
+        { lat: fix.lat, lng: fix.lng, radius: NEARBY_RADIUS_M },
+        slug,
+      );
       // `stops/near` is not scoped to a city; keep the selected city's stops only.
       const candidates = near
         .filter((stop) => !city || inBbox(stop.location, city.bbox))

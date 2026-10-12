@@ -45,6 +45,27 @@
     </section>
 
     <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'settings.offline' | t }}</h2>
+      <a class="iv-panel offline-link" routerLink="/ayarlar/cevrimdisi">
+        <span class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" />
+          </svg>
+        </span>
+        <span class="offline-text">
+          <strong>{{ 'settings.offline' | t }}</strong>
+          <span>{{ offlineSummary() }}</span>
+          @if (updates() > 0) {
+          <span class="offline-update"
+            >{{ 'settings.offlineUpdates' | t: { count: updates() } }}</span
+          >
+          }
+        </span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+      </a>
+    </section>
+
+    <section class="iv-section">
       <h2 class="iv-section-title">{{ 'settings.account' | t }}</h2>
       <div class="iv-panel guest">
         <span class="avatar" aria-hidden="true">

@@ -39,6 +39,10 @@ export const appRoutes: Route[] = [
         path: 'ayarlar',
         loadComponent: () => import('./pages/settings.page').then((m) => m.SettingsPage),
       },
+      {
+        path: 'ayarlar/cevrimdisi',
+        loadComponent: () => import('./pages/packs.page').then((m) => m.PacksPage),
+      },
     ],
   },
   {

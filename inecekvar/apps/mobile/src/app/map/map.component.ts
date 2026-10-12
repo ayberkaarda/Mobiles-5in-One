@@ -19,6 +19,8 @@ import { TILES_BASE_URL } from '@inecekvar/data-access';
 import { RouteSketchComponent } from '@inecekvar/ui';
 import { ThemeService } from '../core/theme.service';
 import { TPipe } from '../i18n/i18n';
+import { PackRegistry } from '../packs/pack-registry';
+import { ConnectivityService } from '../shared/connectivity.service';
 import { MAP_LIBRARY_LOADER, MapHandle } from './map-library';
 import {
   boundsOf,
@@ -41,7 +43,8 @@ export function basemapUrlFor(tilesBase: string, city: string): string {
 }
 
 /**
- * Interactive route map. MapLibre and PMTiles load on first use as their own chunk; until then,
+ * Interactive route map. The basemap is the city pack's PMTiles archive when one is installed,
+ * else the tiles host. MapLibre and PMTiles load on first use as their own chunk; until then,
  * and for good when the map cannot start (no WebGL), the static route sketch shows. When the
  * city basemap cannot be read the map still draws the route on a plain background. The style
  * follows light and dark mode; the map is removed on destroy.
@@ -158,6 +161,8 @@ export class MapComponent {
   private readonly tilesBase = inject(TILES_BASE_URL);
   private readonly baseUri = inject(DOCUMENT).baseURI;
   private readonly theme = inject(ThemeService);
+  private readonly packs = inject(PackRegistry);
+  private readonly connectivity = inject(ConnectivityService);
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
   private map: MapHandle | null = null;
   private appliedStyleKey = '';
@@ -266,8 +271,17 @@ export class MapComponent {
     try {
       const library = await this.loadLibrary(this.baseUri);
       const city = this.city();
-      const url = city && this.tilesBase ? basemapUrlFor(this.tilesBase, city) : null;
-      const basemap = url !== null && (await library.probeBasemap(url, BASEMAP_PROBE_MS));
+      await this.packs.ready();
+      // An installed pack's basemap first (read from the device); otherwise the tiles host,
+      // which is not tried without a connection so the offline map draws at once.
+      const source = city ? this.packs.basemapSource(city) : null;
+      const url = source
+        ? `pmtiles://${source.getKey()}`
+        : city && this.tilesBase && this.connectivity.online()
+          ? basemapUrlFor(this.tilesBase, city)
+          : null;
+      const basemap =
+        url !== null && (await library.probeBasemap(url, BASEMAP_PROBE_MS, source ?? undefined));
       if (this.destroyed) return;
       this.basemapUrl.set(basemap ? url : null);
       const bounds = untracked(() => this.fitBounds());

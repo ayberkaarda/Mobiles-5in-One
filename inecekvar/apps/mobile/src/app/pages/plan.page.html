@@ -181,7 +181,15 @@
         [actionLabel]="planner.retryIn() > 0 ? '' : ('planner.retry' | t)"
         (action)="planner.submit()"
       />
-      } @case ('offline') {
+      } @case ('offline') { @if (offlinePack()) {
+      <iv-state
+        kind="offline"
+        [heading]="'planner.offlineTitle' | t"
+        [message]="'planner.offlinePackBody' | t"
+        [actionLabel]="'planner.offlinePackAction' | t"
+        (action)="browseLines()"
+      />
+      } @else {
       <iv-state
         kind="offline"
         [heading]="'planner.offlineTitle' | t"
@@ -189,7 +197,7 @@
         [actionLabel]="'planner.retry' | t"
         (action)="planner.submit()"
       />
-      } @case ('outside-city') {
+      } } @case ('outside-city') {
       <iv-state
         kind="error"
         [heading]="'planner.outsideTitle' | t"
