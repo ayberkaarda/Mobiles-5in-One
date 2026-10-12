@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiClient } from './api-client';
+import { ApiClient, type ApiBytes, type ProgressListener } from './api-client';
 import type {
   City,
   CityPack,
@@ -28,6 +28,13 @@ import { AUTH_STRATEGY } from './auth/auth-strategy';
 
 /** Downloads can be large; the API serves the whole city dataset in one body. */
 const PACK_TIMEOUT_MS = 60_000;
+/** A city basemap archive is tens of megabytes. */
+const TILES_TIMEOUT_MS = 300_000;
+
+export interface BytesOptions {
+  signal?: AbortSignal;
+  onProgress?: ProgressListener;
+}
 
 /** Public reads used by search, line and stop pages, offline packs and the planner. */
 @Injectable({ providedIn: 'root' })
@@ -55,6 +62,44 @@ export class CatalogApi {
       timeoutMs: PACK_TIMEOUT_MS,
       signal,
     });
+  }
+
+  /**
+   * The offline dataset as raw bytes with progress, for storing and verifying exactly what was
+   * received. Same header and entitlement rules as `pack`.
+   */
+  packBytes(slug: string, options: BytesOptions = {}): Promise<ApiBytes> {
+    return this.api.requestBytes(
+      {
+        method: 'GET',
+        path: '/cities/{slug}/pack',
+        params: { slug },
+        headers: { 'X-Pack-Request': '1' },
+        timeoutMs: PACK_TIMEOUT_MS,
+        signal: options.signal,
+      },
+      options.onProgress,
+    );
+  }
+
+  /**
+   * The city's PMTiles basemap archive (the API redirects to the tiles host; 404
+   * `tiles.not_configured` when there is none). Public, so no credential is sent.
+   */
+  tilesArchive(slug: string, options: BytesOptions = {}): Promise<ApiBytes> {
+    return this.api.requestBytes(
+      {
+        method: 'GET',
+        path: '/cities/{slug}/tiles.pmtiles',
+        params: { slug },
+        headers: { Accept: 'application/vnd.pmtiles, application/octet-stream' },
+        timeoutMs: TILES_TIMEOUT_MS,
+        auth: false,
+        credentials: 'omit',
+        signal: options.signal,
+      },
+      options.onProgress,
+    );
   }
 
   lines(query: LineQuery, signal?: AbortSignal): Promise<LineListItem[]> {

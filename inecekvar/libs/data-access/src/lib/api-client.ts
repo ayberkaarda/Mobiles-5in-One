@@ -28,6 +28,18 @@ export interface ApiRequest<P extends ApiPathTemplate> {
 
 const IDEMPOTENT = new Set<HttpMethod>(['GET', 'PUT', 'DELETE']);
 
+/** Bytes received so far and the declared total (`null` when unknown or compressed). */
+export type ProgressListener = (received: number, total: number | null) => void;
+
+/** A response body as received, with what the server declared about it. */
+export interface ApiBytes {
+  bytes: Uint8Array;
+  /** `Content-Length` when the body was not content-encoded, else `null`. */
+  declaredLength: number | null;
+  etag: string | null;
+  contentType: string | null;
+}
+
 /**
  * The one HTTP entry point to the API: fetch with a timeout, an `X-Request-ID` per call, RFC 9457
  * problems as `ApiError`, one retry after a recoverable 401 (refresh or new CSRF token) and one
@@ -52,13 +64,33 @@ export class ApiClient {
   async request<T, P extends ApiPathTemplate = ApiPathTemplate>(req: ApiRequest<P>): Promise<T> {
     this.inFlight.update((n) => n + 1);
     try {
-      return await this.run<T, P>(req);
+      return await this.run<T, P>(req, readBody);
     } finally {
       this.inFlight.update((n) => n - 1);
     }
   }
 
-  private async run<T, P extends ApiPathTemplate>(req: ApiRequest<P>): Promise<T> {
+  /**
+   * Like `request`, but returns the raw body bytes with the length and validator headers, and
+   * reports progress while the body streams in. Used for offline pack and tile downloads, which
+   * are stored and verified as received.
+   */
+  async requestBytes<P extends ApiPathTemplate = ApiPathTemplate>(
+    req: ApiRequest<P>,
+    onProgress?: ProgressListener,
+  ): Promise<ApiBytes> {
+    this.inFlight.update((n) => n + 1);
+    try {
+      return await this.run<ApiBytes, P>(req, (response) => readBytes(response, onProgress));
+    } finally {
+      this.inFlight.update((n) => n - 1);
+    }
+  }
+
+  private async run<T, P extends ApiPathTemplate>(
+    req: ApiRequest<P>,
+    read: (response: Response, requestId: string) => Promise<T>,
+  ): Promise<T> {
     const url = this.baseUrl + buildPath(req.path, req.params) + buildQuery(req.query);
     const requestId = newRequestId();
     const useAuth = req.auth !== false;
@@ -91,7 +123,7 @@ export class ApiClient {
         { timeoutMs: req.timeoutMs ?? this.options.timeoutMs, signal: req.signal, requestId },
         async (response) => {
           if (response.ok) {
-            return { ok: true as const, value: await readBody<T>(response, requestId) };
+            return { ok: true as const, value: await read(response, requestId) };
           }
           return {
             ok: false as const,
@@ -148,6 +180,45 @@ function buildQuery(query?: Readonly<Record<string, QueryValue>>): string {
   }
   const text = search.toString();
   return text ? `?${text}` : '';
+}
+
+/**
+ * Streams the body and reports progress. A content-encoded body is decoded by the browser, so
+ * its `Content-Length` (the encoded size) is not comparable and is reported as unknown.
+ */
+async function readBytes(response: Response, onProgress?: ProgressListener): Promise<ApiBytes> {
+  const encoding = response.headers.get('Content-Encoding');
+  const rawLength = response.headers.get('Content-Length');
+  const parsed = rawLength !== null && /^\d+$/.test(rawLength) ? Number(rawLength) : null;
+  const declaredLength = encoding && encoding !== 'identity' ? null : parsed;
+  const meta = {
+    declaredLength,
+    etag: response.headers.get('ETag'),
+    contentType: response.headers.get('Content-Type'),
+  };
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    onProgress?.(bytes.length, declaredLength);
+    return { bytes, ...meta };
+  }
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  onProgress?.(0, declaredLength);
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    onProgress?.(received, declaredLength);
+  }
+  const bytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return { bytes, ...meta };
 }
 
 async function readBody<T>(response: Response, requestId: string): Promise<T> {

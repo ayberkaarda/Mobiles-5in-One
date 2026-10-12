@@ -298,3 +298,55 @@ describe('ApiClient', () => {
     ).rejects.toThrow('missing path parameter slug');
   });
 });
+
+describe('CatalogApi byte downloads', () => {
+  let h: Harness;
+
+  beforeEach(() => {
+    h = setupDataAccess(false, 20);
+  });
+
+  it('streams the pack with progress, the pack header and the declared length', async () => {
+    const body = new TextEncoder().encode(JSON.stringify({ format: 1, lines: [], stops: [] }));
+    h.fake.on(
+      'GET',
+      '/cities/ornek/pack',
+      new Response(body, {
+        headers: { 'Content-Type': 'application/json', 'Content-Length': String(body.length) },
+      }),
+    );
+    const progress: [number, number | null][] = [];
+    const result = await TestBed.inject(CatalogApi).packBytes('ornek', {
+      onProgress: (received, total) => progress.push([received, total]),
+    });
+    expect([...result.bytes]).toEqual([...body]);
+    expect(result.declaredLength).toBe(body.length);
+    expect(progress.at(-1)).toEqual([body.length, body.length]);
+    expect(h.fake.calls[0]?.headers.get('X-Pack-Request')).toBe('1');
+  });
+
+  it('does not compare the length of a compressed body', async () => {
+    h.fake.on(
+      'GET',
+      '/cities/ornek/pack',
+      new Response('{}', { headers: { 'Content-Length': '999', 'Content-Encoding': 'gzip' } }),
+    );
+    const result = await TestBed.inject(CatalogApi).packBytes('ornek');
+    expect(result.declaredLength).toBeNull();
+  });
+
+  it('surfaces an entitlement refusal as a problem', async () => {
+    h.fake.on('GET', '/cities/ornek/pack', problem(403, 'pack.entitlement_required'));
+    const error = await failure(TestBed.inject(CatalogApi).packBytes('ornek'));
+    expect(error.status).toBe(403);
+    expect(error.code).toBe('pack.entitlement_required');
+  });
+
+  it('fetches the tiles archive without credentials', async () => {
+    h.fake.on('GET', '/cities/ornek/tiles.pmtiles', new Response(new Uint8Array([1, 2, 3])));
+    const result = await TestBed.inject(CatalogApi).tilesArchive('ornek');
+    expect([...result.bytes]).toEqual([1, 2, 3]);
+    expect(h.fake.calls[0]?.credentials).toBe('omit');
+    expect(h.fake.calls[0]?.headers.get('Authorization')).toBeNull();
+  });
+});
