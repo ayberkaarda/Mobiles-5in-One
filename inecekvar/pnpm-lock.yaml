@@ -214,6 +214,9 @@ importers:
       '@jsverse/transloco':
         specifier: 8.4.0
         version: 8.4.0(@angular/core@22.2.2(@angular/compiler@22.2.2)(rxjs@7.8.2))(rxjs@7.8.2)(typescript@6.0.3)
+      capacitor-secure-storage-plugin:
+        specifier: 0.13.0
+        version: 0.13.0(@capacitor/core@8.5.3)
       express:
         specifier: 5.3.0
         version: 5.3.0(supports-color@10.2.2)
@@ -4441,6 +4444,11 @@ packages:
 
   caniuse-lite@1.0.30001815:
     resolution: {integrity: sha512-uDybUEyfgbyJJ93J1vikTylBX31AkdVYeVPeffMQpf8XN7hSfr0oZOn4VFOIMNvtU5+rHvC5Udg2TgtJKHm23Q==}
+
+  capacitor-secure-storage-plugin@0.13.0:
+    resolution: {integrity: sha512-+rLC/9Z0LTaRRt6L6HjBwcDh5gqgI3NPmDSwo4hk41XQOy3EBrRo81VleIqFsowsMA3oMT+E59Bl8/HiWk0nhQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   chai@6.3.0:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
@@ -11917,6 +11925,10 @@ snapshots:
   callsites@3.1.0: {}
 
   caniuse-lite@1.0.30001815: {}
+
+  capacitor-secure-storage-plugin@0.13.0(@capacitor/core@8.5.3):
+    dependencies:
+      '@capacitor/core': 8.5.3
 
   chai@6.3.0: {}
 
