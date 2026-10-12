@@ -208,8 +208,11 @@ Commands in `inecekvar/api` (Windows host, Docker 29.7.2, Testcontainers PostGIS
 `uv run mypy --strict app tests alembic` (no issues in 221 source files),
 `INECEKVAR_ENV=test INECEKVAR_REQUIRE_DOCKER=1 uv run pytest -q --junitxml=...`: **877 passed in
 488.12s, 0 skipped** in the JUnit report (phase 4 gate: 709). `uv run python -m app.contract`
-leaves `docs/api/openapi.json` unchanged (`git diff --exit-code` clean), so `libs/domain` is not
-rebuilt.
+left `docs/api/openapi.json` unchanged at the gate. After the review fixes: ruff and format clean
+(223 files), `mypy --strict app tests alembic` clean (223 files), **943 passed, 0 skipped**; the
+contract gained `DELETE /v1/admin/suppressions`, so `libs/domain` was rebuilt
+(`node libs/domain/scripts/build-api-types.mjs`) and
+`pnpm nx run-many -t lint test build -p domain data-access web mobile --skip-nx-cache` succeeded.
 
 | # | Check | Test | Result |
 | - | ----- | ---- | ------ |
@@ -223,10 +226,10 @@ rebuilt.
 | 8 | Resend rejections: missing headers, wrong key, tampered body, stale and future timestamp (301 s), non-numeric timestamp, signature for another id, unknown version, empty signature, wrong content type, oversized, malformed JSON, too many recipients; not configured | `test_resend_webhook.py::test_resend_rejections` (16 cases), `test_not_configured_accepts_nothing`; 299 s either way accepted (`test_timestamp_inside_tolerance_is_accepted`); rotation list (`test_rotated_secret_list_accepts_any_valid_signature`) | passed |
 | 9 | Published Svix example signature | `test_published_svix_vector` | passed |
 | 10 | Suppression stores the digest only; kinds; precedence; replay; concurrency | `test_bounce_suppresses_digest_only` (no address in either table), `test_event_kinds` (8), `test_complaint_is_not_downgraded_by_a_later_bounce`, `test_replayed_svix_id_has_no_second_effect`, `test_concurrent_delivery_has_one_effect` | passed |
-| 11 | Mailer honours the list | `tests/webhooks/test_suppressed_mail.py` (8-cell matrix, bounce stops magic links with the same 202, complaint keeps sign-in links and stops the deletion mail, production composition wraps SMTP) | passed |
+| 11 | Mailer honours the list | `tests/webhooks/test_suppressed_mail.py` (8-cell matrix at the gate, 10 cells after the review, bounce stops magic links with the same 202, complaint keeps sign-in links and stops the deletion mail, production composition wraps SMTP) | passed |
 | 12 | Event mapping, lifecycle, out-of-order, no-effect events, product mapping, sandbox, transfer, retries | `tests/billing/test_events.py` (32: 18 mapping cases and 14 more) | passed |
 | 13 | Entitlement matrix through the pack route | `tests/billing/test_entitlement_matrix.py` (12 cases: free tier, active, lifetime, active past expiry, cancelled within and after the period, grace within and after, expired, expired with a future date, refunded, cancelled without date; plus the row rule and another account's Plus), `tests/export/test_entitlements.py` (20) | passed |
-| 14 | Reconciliation: drift fixed, second run no-op, dry run, snapshot states, REST failures (fake, 500, 401, 429, HTML, wrong shape, connect timeout) change nothing, empty snapshot wipes nothing, request URL and bearer, id quoting, delete 200/404/500 | `tests/billing/test_reconciliation.py` (16) | passed |
+| 14 | Reconciliation: drift fixed, second run no-op, dry run, snapshot states (at the gate every listed product was entitled in the double, so a dropped entitlement was not exercised; review finding 1 added `tests/billing/test_reconcile_downgrades.py`), REST failures (fake, 500, 401, 429, HTML, wrong shape, connect timeout) change nothing, empty snapshot wipes nothing, request URL and bearer, id quoting, delete 200/404/500 | `tests/billing/test_reconciliation.py` (16) | passed |
 | 15 | Deletion removes the subscriber | `tests/deletion/test_subscriber_rest.py` (DELETE sent, rows and account gone for 200 and 404; 503 defers; composition wires the client) | passed |
 | 16 | Nightly jobs idempotent with dry run | `tests/workers/test_nightly.py` (sweep, retention, roll-up keeps the account first city, setting and argument, reconciliation needs a key, schedule), `tests/workers/test_main.py::test_schedule` | passed |
 | 17 | Harness | `tests/security/test_webhook_routes.py` (route table exact, absent from OpenAPI, anonymous and every role with a bearer token get 401 from both routes, nothing stored), `tests/privacy/test_public_responses.py::test_every_route_is_classified` | passed |
@@ -245,8 +248,34 @@ file restored and `git diff --quiet` confirmed):
 | M6 | Reconciliation expires rows on a REST error | 7 failed (`test_rest_failure_does_not_wipe_entitlements`, the `test_rest_client_errors_change_nothing` cases, `test_rest_client_network_error_changes_nothing`); restored |
 | M7 | Stale-event check removed | 1 failed (`test_out_of_order_event_is_stale`); restored |
 | M8 | `refunded` added to the entitling statuses | 2 failed (`test_pack_entitlement_matrix[refunded]`, `test_has_plus_matches_row_rule[refunded]`); restored |
-| M9 | Svix signature value not compared | 5 failed (`[wrong-secret]`, `[tampered-body]`, `[signature-for-other-id]`, `[empty-signature]` and one more); restored |
+| M9 | Svix signature value not compared | 5 failed (`[wrong-secret]`, `[tampered-body]`, `[signature-for-other-id]`, `[empty-signature]`, `test_signature_comparison_is_constant_time`); restored |
 | M10 | Resend idempotency key replaced by a fresh id | 2 failed (`test_replayed_svix_id_has_no_second_effect`, `test_concurrent_delivery_has_one_effect`); restored |
+
+### Phase 5 review (independent lane, findings 1 to 12)
+
+An independent review lane (it wrote none of the phase 5 code) reported 12 findings with
+executable probes for 1, 3, 5, 6 and 7. Every fix has a test that fails when the fix is undone;
+each revert below was applied by the same mutation script as M1 to M10, the named tests went red,
+the file was restored and `git diff --quiet` was confirmed.
+
+| Finding | Fix | Test | Revert check |
+| ------- | --- | ---- | ------------ |
+| 1 reconciliation never downgraded a product the entitlement dropped | stored products are wanted; not named or past `expires_date` → `expired`/`refunded` (item 8); the double `snapshot()` takes `entitled=` | `test_reconcile_downgrades.py::test_dropped_entitlement_downgrades_stored_product` (3, includes `entitled=()`), `test_expired_entitlement_date_is_honoured`, `test_dropped_entitlement_does_not_insert_unknown_products` | stored products not wanted: 3 red; expiry ignored: 1 red |
+| 2 refunded lifetime row re-activated | lifetime status from the entitlement; refunded lifetime row kept | `test_refunded_lifetime_row_is_not_reactivated`, `test_lifetime_status_follows_the_entitlement` (3) | refund check removed: 1 red; entitlement bound removed: 2 red |
+| 3 subscriber of non-paying users survived erasure | account id always deleted when a deleter is set (item 9) | `test_subscriber_rest.py::test_hard_delete_removes_subscriber_of_non_paying_account` (200, 404) | rows only: 2 red |
+| 4 any non-transient bounce locked security mail for a year | only `Permanent` suppresses; delivery clears a bounce; security mail after 30 days, 3 per address per day; admin un-suppress route (items 11 to 13) | `test_event_kinds` (8), `test_delivery_clears_a_bounce_but_not_a_complaint`, `test_suppressed_mail.py` (10-cell matrix, rate limit, magic link after 30 days), `tests/security/test_admin_suppressions.py` (9), `test_admin_routes.py` (route table and 9 actors), `test_idor.py::test_suppression_removal_idor_is_refused` (2), `test_policy_matrix.py` (60 cells) | old bounce rule: 2 red; delivery ignored: 1 red; security blocked: 3 red; no per-address limit: 1 red; audit renamed: 4 red; moderator allowed: 3 red |
+| 5 one bad subscriber aborted the run | per-subscriber boundary; product id bounded at parse | `test_one_unusable_subscriber_does_not_stop_the_run`, `test_parse_drops_product_ids_longer_than_the_column` | boundary removed: 1 red; bound removed: 1 red |
+| 6 TRANSFER without a key lost the target purchase | target gets `expired` rows of the moved products (item 5) | `test_events.py::test_transfer_without_rest_key_keeps_the_purchase_for_the_target` | no target rows: 1 red |
+| 7 event just before the REST answer dropped as stale | stamp = provider `request_date` minus 5 min (item 6) | `test_event_just_before_the_rest_answer_still_applies` (CANCELLATION at now-1 s), `test_reconciliation_stamp_uses_the_provider_clock` | server clock stamp: 2 red |
+| 8 401/429 hammered the provider | 401/403 stop; 429 backoff 2-4-8-16 s, cap 60 s, then stop | `test_refused_key_stops_the_run` (401, 403), `test_rate_limit_backs_off_exponentially_then_continues`, `test_persistent_rate_limit_is_capped_and_stops_the_run` | 401 not stopping: 2 red; no backoff: 1 red; no cap: 1 red |
+| 9 suppressed address answered faster | same lookup, message build and SMTP session on both paths (item 17) | `test_suppression_matrix` (discard asserted), `test_smtp_discard_opens_the_same_session_and_fails_like_send` (2) | no discard: 6 red; no session: 2 red |
+| 10 aliased anonymous ids were 422 | account among `app_user_id`, `original_app_user_id`, `aliases` (item 3) | `test_event_for_an_aliased_anonymous_id_reaches_the_account`, `test_aliases_naming_two_accounts_choose_neither`, `test_revenuecat_webhook.py::test_aliased_anonymous_id_is_accepted_and_reaches_the_account` | job ignores aliases: 1 red; route ignores aliases: 1 red |
+| 11 unauthenticated bodies buffered | kept (item 16) plus 411 without `Content-Length` | `test_body_without_declared_length_is_refused_before_reading` (both routes) | check removed: 2 red |
+| 12 documents | ADR-0024 status, `docs/ops/background-jobs.md`, items 4, 8 and 9, M9 named, row 14 | this document | not applicable |
+
+The ten original mutations were re-run on the fixed code with the same results as above (M5
+now runs `tests/billing` too; M6 also covers the abort branch of finding 8). No migration was
+needed (no schema change).
 
 Secret scan: `gitleaks git --redact --config .gitleaks.toml --log-opts="d8276d08..HEAD"` reports
 one `generic-api-key` finding in commit `8197119d` (`tests/webhooks/test_resend_webhook.py`): the
@@ -254,7 +283,8 @@ example signing values printed in the Svix documentation, not a credential. Comm
 removes the literal from the tree (`gitleaks dir` on `api/app`, `api/tests`, `api/alembic` and
 `docs`: no leaks). The history finding stays until the lead either allowlists that fingerprint
 in the root `.gitleaks.toml` or the branch history is rewritten; neither is in this package's
-scope.
+scope. Commit `b999e865` allowlists that one example; after the review fixes the same range scan
+reports no leaks.
 
 Not exercised:
 
