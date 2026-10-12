@@ -66,6 +66,66 @@ function failure(status: number, code: string | null = null): PublicApiResult<ne
   };
 }
 
+const STOP_PAIRS_PATH = /^\/cities\/[^/]+\/stop-pairs$/;
+export const STOP_PAIRS_TTL_MS = 10 * 60 * 1000;
+export const STOP_PAIRS_NEGATIVE_TTL_MS = 30 * 1000;
+export const STOP_PAIRS_MAX_ENTRIES = 256;
+
+interface CacheEntry {
+  promise: Promise<PublicApiResult<unknown>>;
+  expires: number;
+}
+
+/**
+ * Process-wide memo for the rate limited stop-pairs call. Concurrent callers share one request,
+ * successes live 10 minutes, failures 30 seconds, and the map is bounded.
+ */
+export class StopPairsCache {
+  private readonly entries = new Map<string, CacheEntry>();
+
+  constructor(
+    private readonly now: () => number = () => Date.now(),
+    private readonly maxEntries: number = STOP_PAIRS_MAX_ENTRIES,
+  ) {}
+
+  get size(): number {
+    return this.entries.size;
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  load<T>(key: string, fetcher: () => Promise<PublicApiResult<T>>): Promise<PublicApiResult<T>> {
+    const hit = this.entries.get(key);
+    if (hit && hit.expires > this.now()) {
+      return hit.promise as Promise<PublicApiResult<T>>;
+    }
+    this.entries.delete(key);
+    while (this.entries.size >= this.maxEntries) {
+      const oldest = this.entries.keys().next().value;
+      if (oldest === undefined) break;
+      this.entries.delete(oldest);
+    }
+    const entry: CacheEntry = {
+      promise: Promise.resolve().then(fetcher),
+      expires: Number.POSITIVE_INFINITY,
+    };
+    this.entries.set(key, entry);
+    entry.promise.then(
+      (result) => {
+        entry.expires = this.now() + (result.ok ? STOP_PAIRS_TTL_MS : STOP_PAIRS_NEGATIVE_TTL_MS);
+      },
+      () => {
+        if (this.entries.get(key) === entry) this.entries.delete(key);
+      },
+    );
+    return entry.promise as Promise<PublicApiResult<T>>;
+  }
+}
+
+export const stopPairsCache = new StopPairsCache();
+
 @Injectable({ providedIn: 'root' })
 export class PublicApiClient {
   private readonly server = isPlatformServer(inject(PLATFORM_ID));
@@ -101,7 +161,9 @@ export class PublicApiClient {
     }
     return new Promise((resolve) => {
       this.pending.run(async () => {
-        const result = await this.request(url, guard);
+        const result = STOP_PAIRS_PATH.test(path)
+          ? await stopPairsCache.load(url, () => this.request(url, guard))
+          : await this.request(url, guard);
         this.state.set(key, result);
         resolve(result);
       });

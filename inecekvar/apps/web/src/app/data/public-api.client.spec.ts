@@ -2,7 +2,13 @@ import { makeStateKey, PendingTasks, PLATFORM_ID, TransferState } from '@angular
 import { TestBed } from '@angular/core/testing';
 import { DEFAULT_PUBLIC_WEB_CONFIG, PUBLIC_WEB_CONFIG } from '../public-config';
 import { API_INTERNAL_BASE_URL } from './api-internal-base-url';
-import { apiPath, PublicApiClient, PublicApiResult } from './public-api.client';
+import {
+  apiPath,
+  PublicApiClient,
+  PublicApiResult,
+  StopPairsCache,
+  stopPairsCache,
+} from './public-api.client';
 
 interface Item {
   name: string;
@@ -36,6 +42,8 @@ function setup(platform: 'server' | 'browser' = 'browser', state = new TransferS
 }
 
 afterEach(() => {
+  stopPairsCache.clear();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   TestBed.resetTestingModule();
 });
@@ -226,4 +234,79 @@ describe('public API client', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('stop pairs memoization', () => {
+  const body = '{"name":"x"}';
+  const stopPairs = (slug: string) => `/cities/${slug}/stop-pairs`;
+
+  it('shares one request between concurrent server calls', async () => {
+    const fetchMock = vi.fn(async () => new Response(body));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = setup('server');
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => client.get(stopPairs('istanbul'), { limit: 200 }, isItem)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(results.every((result) => result.ok)).toBe(true);
+  });
+
+  it('expires after ten minutes on a fake clock', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    const fetchMock = vi.fn(async () => new Response(body));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = setup('server');
+    await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    vi.setSystemTime(new Date('2026-01-01T00:09:59Z'));
+    await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(new Date('2026-01-01T00:10:01Z'));
+    await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a failure for at most 30 seconds and then recovers', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    const fetchMock = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(new Response('{}', { status: 503 }))
+      .mockResolvedValue(new Response(body));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = setup('server');
+    const first = await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    expect(first.ok).toBe(false);
+    vi.setSystemTime(new Date('2026-01-01T00:00:20Z'));
+    expect((await client.get(stopPairs('istanbul'), { limit: 200 }, isItem)).ok).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(new Date('2026-01-01T00:00:31Z'));
+    expect((await client.get(stopPairs('istanbul'), { limit: 200 }, isItem)).ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('isolates cities and does not cache other paths', async () => {
+    const fetchMock = vi.fn(async () => new Response(body));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = setup('server');
+    await client.get(stopPairs('istanbul'), { limit: 200 }, isItem);
+    await client.get(stopPairs('ankara'), { limit: 200 }, isItem);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await client.get('/lines', undefined, isItem);
+    await client.get('/lines', undefined, isItem);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('bounds the number of entries and evicts the oldest', async () => {
+    const cache = new StopPairsCache(() => 0, 2);
+    const fetcher = vi.fn(async () => ({ ok: true, data: 1 }) as PublicApiResult<number>);
+    await cache.load('a', fetcher);
+    await cache.load('b', fetcher);
+    await cache.load('c', fetcher);
+    expect(cache.size).toBe(2);
+    await cache.load('a', fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
 });

@@ -136,3 +136,12 @@ e2e part (fake API, specs, Playwright config).
   could exhaust the limit before the page cache warms up. Proposal: exempt the internal web caller
   or size the limit for it (a busy or limited answer becomes an uncached 503 route page, never an
   indexable error). Optional API wish: a total count on `GET lines` (the list uses limit + 1).
+
+## Stop pairs memoization
+
+`GET cities/{slug}/stop-pairs` is rate limited per client IP and every SSR route page needs it from
+the web server's single IP. The server side of `PublicApiClient` therefore keeps a process-wide
+memo for that path only (`StopPairsCache` in `public-api.client.ts`): one entry per city and query,
+concurrent renders share a single in-flight request, successes live 10 minutes, failed or
+unavailable answers 30 seconds, and the map holds at most 256 entries (oldest evicted first). The
+cache lives outside the per-request injector on purpose, and the browser path is unchanged.
