@@ -14,9 +14,69 @@ from app.edits.schemas import (
     UpdateLine,
     UpdateStop,
 )
-from app.geo import Coordinate, bbox_contains, line_geojson, point_coordinates
+from app.geo import Coordinate, bbox_contains, line_geojson, point_coordinates, validate_polyline
 from app.lines.router import current_version
-from app.models import City, Edit, Line, LineVersion, Stop
+from app.models import City, Edit, Line, LineVersion, Photo, Stop, Trace
+from app.traces.derive import derive_line_geometry
+from app.traces.router import TraceInput
+
+
+async def resolve_attachments(
+    db: AsyncSession,
+    body: EditInput,
+    user_id: uuid.UUID,
+) -> tuple[Trace | None, uuid.UUID | None]:
+    trace: Trace | None = None
+    source = (
+        body
+        if isinstance(body, NewLine)
+        else (body.changes if isinstance(body, UpdateLine) else None)
+    )
+    if source is not None:
+        source.geometry_source = None
+        source.model_fields_set.discard("geometry_source")
+    if source is not None and source.trace_id is not None:
+        trace = await db.scalar(
+            select(Trace)
+            .where(Trace.id == source.trace_id, Trace.author_id == user_id)
+            .with_for_update()
+        )
+        if trace is None:
+            raise ProblemError("trace.not_found", 404)
+        if trace.linked_edit_id is not None:
+            raise ProblemError("trace.already_linked", 409)
+        validated = TraceInput.model_validate(
+            {
+                "city": "stored",
+                "started_at": trace.started_at,
+                "ended_at": trace.ended_at,
+                "points": trace.points,
+            }
+        )
+        geometry = derive_line_geometry(validated.points)
+        try:
+            validate_polyline(geometry)
+        except ValueError as error:
+            raise ProblemError("trace.invalid_geometry", 422) from error
+        source.geometry = geometry
+        source.trace_id = None
+        source.geometry_source = "trace"
+        source.model_fields_set.discard("trace_id")
+    photo_id = body.photo_id
+    if photo_id is not None:
+        photo = await db.scalar(
+            select(Photo)
+            .where(
+                Photo.id == photo_id,
+                Photo.owner_id == user_id,
+                Photo.processed_at.is_not(None),
+                Photo.moderation_state != "quarantined",
+            )
+            .with_for_update()
+        )
+        if photo is None:
+            raise ProblemError("photo.not_found", 404)
+    return trace, photo_id
 
 
 async def stored_line(db: AsyncSession, identity: uuid.UUID, *, lock: bool = False) -> Line:
@@ -88,7 +148,11 @@ async def prepare_edit(
     diff: dict[str, object]
     if isinstance(body, NewLine | NewStop):
         city = await get_city(db, body.city)
-        proposed = body.model_dump(mode="json", by_alias=True, exclude={"kind", "city"})
+        proposed = body.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude={"kind", "city", "trace_id", "photo_id", "geometry_source"},
+        )
         diff = {field: {"from": None, "to": value} for field, value in proposed.items()}
     elif isinstance(body, UpdateStop):
         stop = await stored_stop(db, body.stop)
@@ -113,7 +177,11 @@ async def prepare_edit(
         city = city_row
         version = await current_version(db, line)
         if isinstance(body, UpdateLine):
-            proposed = body.changes.model_dump(mode="json", exclude_unset=True)
+            proposed = body.changes.model_dump(
+                mode="json",
+                exclude_unset=True,
+                exclude={"trace_id", "geometry_source"},
+            )
         elif isinstance(body, FareUpdate):
             proposed = {"fare_minor": body.fare_minor}
         else:

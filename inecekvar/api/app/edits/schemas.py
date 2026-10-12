@@ -77,16 +77,27 @@ class NewLine(StrictModel):
     ]
     name: Name
     mode: LineMode
-    geometry: GeometryInput
+    geometry: GeometryInput | None = None
+    trace_id: uuid.UUID | None = None
+    geometry_source: Literal["trace"] | None = None
+    photo_id: uuid.UUID | None = None
     stop_ids: StopIds
     fare_minor: Fare | None = None
     hours_text: Hours | None = None
     payment_methods: Payments = Field(default_factory=list)
     hail_notes: HailNotes | None = None
 
+    @model_validator(mode="after")
+    def geometry_choice(self) -> Self:
+        if (self.geometry is None) == (self.trace_id is None):
+            raise ValueError("Bir geometri veya iz gerekli.")
+        return self
+
 
 class LineChanges(StrictModel):
     geometry: GeometryInput | None = None
+    trace_id: uuid.UUID | None = None
+    geometry_source: Literal["trace"] | None = None
     stop_ids: StopIds | None = None
     fare_minor: Fare | None = None
     hours_text: Hours | None = None
@@ -96,6 +107,10 @@ class LineChanges(StrictModel):
 
     @model_validator(mode="after")
     def present(self) -> Self:
+        if self.trace_id is not None and self.geometry is not None:
+            raise ValueError("Tek geometri kaynagi gerekli.")
+        if "trace_id" in self.model_fields_set and self.trace_id is None:
+            raise ValueError("Iz bos olamaz.")
         if not self.model_fields_set:
             raise ValueError("En az bir değişiklik gerekli.")
         for field in ("geometry", "stop_ids", "payment_methods", "name"):
@@ -109,6 +124,7 @@ class UpdateLine(StrictModel):
     line: uuid.UUID
     base_version_no: Annotated[int, Field(ge=1, le=2147483647)]
     changes: LineChanges
+    photo_id: uuid.UUID | None = None
 
 
 class NewStop(StrictModel):
@@ -117,6 +133,7 @@ class NewStop(StrictModel):
     name: Name
     location: Location
     stop_kind: StopKind
+    photo_id: uuid.UUID | None = None
 
 
 class StopChanges(StrictModel):
@@ -137,6 +154,7 @@ class UpdateStop(StrictModel):
     kind: Literal["update_stop"]
     stop: uuid.UUID
     changes: StopChanges
+    photo_id: uuid.UUID | None = None
 
 
 class FareUpdate(StrictModel):
@@ -144,12 +162,14 @@ class FareUpdate(StrictModel):
     line: uuid.UUID
     base_version_no: Annotated[int, Field(ge=1, le=2147483647)]
     fare_minor: Fare
+    photo_id: uuid.UUID | None = None
 
 
 class Retire(StrictModel):
     kind: Literal["retire"]
     line: uuid.UUID
     reason: Annotated[str, BeforeValidator(clean_text), Field(min_length=1, max_length=500)]
+    photo_id: uuid.UUID | None = None
 
 
 type EditInput = Annotated[

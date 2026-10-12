@@ -8,7 +8,7 @@ from app.core.errors import AUTH_FORBIDDEN, ProblemError
 from app.core.ids import uuid7
 from app.core.settings import EDITS_REPUTATION_THRESHOLD
 from app.edits.schemas import EditInput, EditOut
-from app.edits.service import edit_response, prepare_edit
+from app.edits.service import edit_response, prepare_edit, resolve_attachments
 from app.lines.router import Limit, Offset
 from app.models import Edit, User
 from app.security.deps import require_permission
@@ -29,6 +29,7 @@ async def propose_edit(
     clock: ClockDep,
     limiter: RateLimiterDep,
 ) -> EditOut:
+    trace, photo_id = await resolve_attachments(db, body, principal.user_id)
     city, line_id, stop_id, diff = await prepare_edit(db, body)
     user = await db.get(User, principal.user_id)
     if user is None:
@@ -43,7 +44,13 @@ async def propose_edit(
         city_id=city.id,
         line_id=line_id,
         stop_id=stop_id,
-        payload=body.model_dump(mode="json", by_alias=True, exclude_unset=True),
+        payload=body.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_unset=True,
+            exclude={"trace_id": True, "photo_id": True, "changes": {"trace_id"}},
+        ),
+        photo_id=photo_id,
         diff=diff,
         state="pending",
         author_id=principal.user_id,
@@ -52,6 +59,8 @@ async def propose_edit(
     )
     db.add(edit)
     await db.flush()
+    if trace is not None:
+        trace.linked_edit_id = edit.id
     result = await edit_response(db, edit)
     await db.commit()
     return result

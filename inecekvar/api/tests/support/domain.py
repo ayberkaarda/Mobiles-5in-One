@@ -2,7 +2,6 @@ import uuid
 
 import httpx
 from fastapi import FastAPI
-from starlette.routing import Route
 
 from app.auth.passwords import hash_password
 from app.auth.router import router as auth_router
@@ -19,6 +18,7 @@ from app.moderation.router import router as moderation_router
 from app.seed.sample_city import seed_sample_city
 from app.stops.router import router as stops_router
 from tests.support.app import build_test_app
+from tests.support.routes import has_route
 
 PASSWORD = "domain-password-42"
 
@@ -81,6 +81,17 @@ def domain_app(services: Services) -> FastAPI:
         (moderation_router, "/v1/moderation/edits"),
         (favorites_router, "/v1/me/favorites"),
     ):
-        if not any(isinstance(route, Route) and route.path == path for route in application.routes):
+        if not has_route(application, path):
+            application.include_router(router, prefix="/v1")
+    return application
+
+
+def trace_media_app(services: Services) -> FastAPI:
+    from app.media.router import router as media_router
+    from app.traces.router import router as traces_router
+
+    application = domain_app(services)
+    for router, path in ((traces_router, "/v1/traces"), (media_router, "/v1/media/presign")):
+        if not has_route(application, path):
             application.include_router(router, prefix="/v1")
     return application
