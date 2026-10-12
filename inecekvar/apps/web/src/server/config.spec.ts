@@ -8,6 +8,8 @@ describe('web server config', () => {
       canonicalOrigin: 'https://inecekvar.app',
       allowedHosts: ['inecekvar.app', 'www.inecekvar.app'],
       apiPublicOrigin: 'https://api.inecekvar.app',
+      apiPublicBaseUrl: 'https://api.inecekvar.app/v1',
+      appStoreId: null,
       tilesOrigin: 'https://tiles.inecekvar.app',
       apiInternalUrl: 'http://127.0.0.1:57800/v1',
       cacheTtlMs: 600_000,
@@ -64,6 +66,24 @@ describe('web server config', () => {
 
   it('treats an unknown environment as production', () => {
     expect(loadWebServerConfig({ INECEKVAR_ENV: 'preview' }).env).toBe('production');
+  });
+
+  it.each(['123456', '123456789012'])('accepts an app store id %s', (appStoreId) => {
+    expect(loadWebServerConfig({ IV_WEB_IOS_APP_ID: appStoreId }).appStoreId).toBe(appStoreId);
+  });
+
+  it.each(['', '12345', '1234567890123', '12abc345', ' 123456'])(
+    'ignores an invalid app store id %s',
+    (appStoreId) => {
+      expect(loadWebServerConfig({ IV_WEB_IOS_APP_ID: appStoreId }).appStoreId).toBeNull();
+    },
+  );
+
+  it('derives the public API base from the public origin', () => {
+    expect(
+      loadWebServerConfig({ IV_WEB_API_PUBLIC_ORIGIN: 'https://api.example.test/' })
+        .apiPublicBaseUrl,
+    ).toBe('https://api.example.test/v1');
   });
 
   it('normalizes origin casing and keeps nondefault ports out of hostnames', () => {

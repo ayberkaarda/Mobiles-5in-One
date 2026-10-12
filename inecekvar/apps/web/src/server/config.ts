@@ -5,6 +5,8 @@ export interface WebServerConfig {
   canonicalOrigin: string;
   allowedHosts: readonly string[];
   apiPublicOrigin: string;
+  apiPublicBaseUrl: string;
+  appStoreId: string | null;
   tilesOrigin: string;
   apiInternalUrl: string;
   cacheTtlMs: number;
@@ -119,15 +121,20 @@ export function loadWebServerConfig(
     throw new Error('Invalid IV_WEB_CACHE_TTL_SECONDS');
   }
 
+  const apiPublicOrigin = origin(
+    env['IV_WEB_API_PUBLIC_ORIGIN'] ?? 'https://api.inecekvar.app',
+    'IV_WEB_API_PUBLIC_ORIGIN',
+    webEnv,
+  );
+  const appStoreId = env['IV_WEB_IOS_APP_ID'];
+
   return {
     env: webEnv,
     canonicalOrigin,
     allowedHosts: [...allowedHosts],
-    apiPublicOrigin: origin(
-      env['IV_WEB_API_PUBLIC_ORIGIN'] ?? 'https://api.inecekvar.app',
-      'IV_WEB_API_PUBLIC_ORIGIN',
-      webEnv,
-    ),
+    apiPublicOrigin,
+    apiPublicBaseUrl: apiPublicOrigin + '/v1',
+    appStoreId: appStoreId !== undefined && /^\d{6,12}$/.test(appStoreId) ? appStoreId : null,
     tilesOrigin: origin(
       env['IV_WEB_TILES_ORIGIN'] ?? 'https://tiles.inecekvar.app',
       'IV_WEB_TILES_ORIGIN',

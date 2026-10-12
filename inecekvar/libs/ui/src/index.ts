@@ -10,3 +10,4 @@ export * from './lib/itinerary-steps.component';
 export * from './lib/notice.component';
 export * from './lib/progress-bar.component';
 export * from './lib/status-badge.component';
+export * from './lib/safe-svg';
