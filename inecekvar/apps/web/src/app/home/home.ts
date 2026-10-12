@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FACTS } from '../../content/facts';
 import { HomeData } from '../content/page-data';
 import { PageView } from '../content/page-view';
 import { StatusPageComponent } from '../pages/status-page.component';
@@ -12,8 +13,7 @@ export function homeSeo(): PageSeo {
     path: '/',
     index: true,
     follow: true,
-    description:
-      'Dolmuş, minibüs ve servis hatları için mahallelinin birlikte haritaladığı, çevrimdışı da çalışan hat rehberi.',
+    description: FACTS.description,
   };
 }
 export function homeJsonLd(origin: string, name = 'İnecek Var'): JsonLdNode[] {

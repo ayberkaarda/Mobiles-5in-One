@@ -44,6 +44,7 @@ export default defineConfig({
         '**/ssr-no-js.spec.ts',
         '**/csp-hydration.spec.ts',
         '**/pages-no-js.spec.ts',
+        '**/content-pages.spec.ts',
         '**/structured-data.spec.ts',
         '**/line-map.spec.ts',
       ],

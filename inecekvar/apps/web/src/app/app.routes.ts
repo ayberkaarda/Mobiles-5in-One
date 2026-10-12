@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { durumResolver } from './pages/durum.page';
+import { contentRoutes } from './content/site/content.routes';
 import {
   cityHubResolver,
   homeResolver,
@@ -21,6 +22,7 @@ export const appRoutes: Route[] = [
     resolve: { health: durumResolver },
     loadComponent: () => import('./pages/durum.page').then((m) => m.DurumPage),
   },
+  ...contentRoutes,
   {
     path: ':sehir',
     pathMatch: 'full',

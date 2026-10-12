@@ -11,6 +11,7 @@ import {
   urlLengthGuard,
 } from './request-guards';
 import { robotsTxt } from './robots';
+import { registerContentFiles } from '../content/llms-route';
 import { createApiReader } from './api-reader';
 import { registerMachineFiles } from './machine-files';
 import { normalizeUrls } from './normalize';
@@ -93,6 +94,7 @@ export function createWebApp(options: {
       .type('text/plain; charset=utf-8')
       .send(robotsTxt(config));
   });
+  registerContentFiles(app, config.canonicalOrigin);
   registerMachineFiles(app, {
     config,
     reader: createApiReader({ baseUrl: config.apiInternalUrl, fetch: options.apiFetch }),
