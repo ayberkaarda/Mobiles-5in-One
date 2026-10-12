@@ -1,16 +1,11 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, UrlTree } from '@angular/router';
 import { ApiError, SessionStore } from '@inecekvar/data-access';
+import { firstValueFrom, Observable } from 'rxjs';
 import { FakeSession } from '../testing/catalog.fixtures';
-import {
-  authFailure,
-  displayNameError,
-  emailError,
-  loginPasswordIssue,
-  passwordIssues,
-  safeNext,
-} from './auth-form';
-import { signedInGuard } from './auth.guard';
+import { authFailure, emailError, loginPasswordIssue, passwordIssues, safeNext } from './auth-form';
+import { SESSION_WAIT_MS, signedInGuard } from './auth.guard';
 import { LicenceGate } from './licence-gate';
 
 const problem = (status: number, code: string, retry: number | null = null) =>
@@ -43,13 +38,6 @@ describe('auth validators (mirroring the API bounds)', () => {
     expect(loginPasswordIssue('')).toBe('required');
     expect(loginPasswordIssue('kisa')).toBeNull();
     expect(loginPasswordIssue('x'.repeat(1025))).toBe('long');
-  });
-
-  it('accepts an empty display name and refuses long or control characters', () => {
-    expect(displayNameError('')).toBeNull();
-    expect(displayNameError('Deniz')).toBeNull();
-    expect(displayNameError('x'.repeat(61))).toBe('invalid');
-    expect(displayNameError('De\u0007niz')).toBe('invalid');
   });
 });
 
@@ -121,10 +109,32 @@ describe('signedInGuard (UX only)', () => {
     );
   });
 
-  it('lets signed-in users and an undecided session through', () => {
+  it('lets signed-in users through', () => {
     expect(run({ status: () => 'signed-in' })).toBe(true);
-    TestBed.resetTestingModule();
-    expect(run({ status: () => 'unknown' })).toBe(true);
+  });
+
+  it('waits for the start-up session check before deciding on a deep link', async () => {
+    const status = signal('unknown');
+    const result = run({ status }) as unknown as Observable<boolean | UrlTree>;
+    const decision = firstValueFrom(result);
+    status.set('anonymous');
+    TestBed.tick();
+    expect(TestBed.inject(Router).serializeUrl((await decision) as UrlTree)).toBe(
+      '/giris?sonra=%2Fkatki%2Fkayit',
+    );
+  });
+
+  it('lets a session that stays unknown (offline start) through after the wait', async () => {
+    vi.useFakeTimers();
+    try {
+      const result = run({ status: signal('unknown') }) as unknown as Observable<boolean>;
+      const decision = firstValueFrom(result);
+      TestBed.tick();
+      vi.advanceTimersByTime(SESSION_WAIT_MS);
+      expect(await decision).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -7,6 +7,7 @@ import { ApiError, Edit } from '@inecekvar/data-access';
 import { LicenceGate } from '../auth/licence-gate';
 import { CityStore } from '../city/city.store';
 import { MAP_LIBRARY_LOADER } from '../map/map-library';
+import { PhotoUploader } from '../proposals/photo-upload';
 import {
   catalogTesting,
   fakeContributions,
@@ -209,7 +210,7 @@ describe('proposal page', () => {
   });
 
   it('uploads a stop sign photo and attaches its id to a new stop', async () => {
-    const { harness, root, contributions } = await open('/katki/oneri?tur=new_stop');
+    const { harness, root, contributions, clock } = await open('/katki/oneri?tur=new_stop');
     await type(harness, root.querySelector<HTMLInputElement>('#iv-stop-name'), 'Fırın önü');
     await click(harness, buttonByText(root, 'Konumumu kullan'));
     const input = root.querySelector<HTMLInputElement>('input[type="file"]');
@@ -225,7 +226,19 @@ describe('proposal page', () => {
       content_type: 'image/jpeg',
       byte_size: 6,
     });
-    await click(harness, root.querySelector('button[type="submit"]'));
+    // The server processes the photo after its presign window: sending waits for it, since
+    // a refused attempt would still count against the daily quota.
+    const submit = root.querySelector<HTMLButtonElement>('button[type="submit"]');
+    expect(submit?.disabled).toBe(true);
+    expect(text(submit)).toBe('Fotoğraf işleniyor…');
+    expect(root.textContent).toContain('yaklaşık 6 dk sonra');
+    clock.advance(361_000);
+    (
+      harness.routeDebugElement?.componentInstance as { photo: PhotoUploader }
+    ).photo.processing.refresh();
+    await settle(harness.fixture);
+    expect(submit?.disabled).toBe(false);
+    await click(harness, submit);
     expect(contributions.proposeEdit.calls[0]?.[0]).toEqual({
       kind: 'new_stop',
       city: SAMPLE_CITY.slug,

@@ -260,6 +260,10 @@ describe('PhotoUploader', () => {
       bytes: 2048,
     });
     expect(uploader.photoId()).toBe('01920000-0000-7000-8000-0000000000aa');
+    // Attachable once the presign window (300 s) and one worker run have passed.
+    expect(uploader.processing.seconds()).toBe(360);
+    uploader.clear();
+    expect(uploader.processing.active()).toBe(false);
   });
 
   it('refuses a wrong file before any request', async () => {

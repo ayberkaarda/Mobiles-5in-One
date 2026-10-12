@@ -198,3 +198,11 @@ iv-notice {
   margin: 6px 0 12px;
   line-height: 1.45;
 }
+
+.stats--small + .iv-hint {
+  margin-top: 6px;
+}
+
+[data-view='review'] > .iv-hint:last-of-type {
+  margin: var(--iv-space-4) 0 var(--iv-space-2);
+}

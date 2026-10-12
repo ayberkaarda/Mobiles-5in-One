@@ -252,7 +252,8 @@ describe('RecorderStore', () => {
     r.positions.emit(34.0112, 42.53, 120);
     expect(r.rec.weakSignal()).toBe(true);
     expect(r.rec.pointCount()).toBe(5);
-    expect(r.rec.distanceMetres()).toBeCloseTo(distanceMeters(walk(5)[0]!, walk(5)[4]!), 0);
+    const [first, , , , last] = walk(5) as [LngLat, LngLat, LngLat, LngLat, LngLat];
+    expect(r.rec.distanceMetres()).toBeCloseTo(distanceMeters(first, last), 0);
     expect(r.rec.elapsedSeconds()).toBe(5);
   });
 

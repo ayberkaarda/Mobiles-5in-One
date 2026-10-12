@@ -193,8 +193,9 @@
         >
         @if (current === 'fare_update' && line(); as l) {
         <p class="iv-hint current-fare">
-          @if (l.fare_minor !== null) { {{ 'proposal.currentFare' | t: { fare: (l.fare_minor |
-          ivFare), date: fareDate() ?? '—' } }} } @else { {{ 'proposal.noFare' | t }} }
+          @if (l.fare_minor === null) { {{ 'proposal.noFare' | t }} } @else if (fareDate(); as date)
+          { {{ 'proposal.currentFare' | t: { fare: (l.fare_minor | ivFare), date } }} } @else { {{
+          'proposal.currentFareNoDate' | t: { fare: (l.fare_minor | ivFare) } }} }
         </p>
         }
         <div class="money">
@@ -348,6 +349,11 @@
         </legend>
         @switch (photo.state().status) { @case ('done') {
         <p class="photo-ok">{{ 'proposal.photo.done' | t }}</p>
+        @if (photo.processing.active()) {
+        <p class="iv-hint" role="status">
+          {{ 'proposal.photo.processing' | t: { minutes: processingMinutes() } }}
+        </p>
+        }
         <p class="iv-hint">{{ 'proposal.photo.privacy' | t }}</p>
         <button type="button" class="iv-link-button" (click)="removePhoto()">
           {{ 'proposal.photo.remove' | t }}
@@ -402,7 +408,8 @@
         class="iv-button iv-button--block"
         [disabled]="busy() || photoBusy() || countdown.active()"
       >
-        {{ (busy() ? 'proposal.sending' : 'proposal.send') | t }}
+        {{ (busy() ? 'proposal.sending' : photo.processing.active() ? 'proposal.waitPhoto' :
+        'proposal.send') | t }}
       </button>
     </form>
     } @else {

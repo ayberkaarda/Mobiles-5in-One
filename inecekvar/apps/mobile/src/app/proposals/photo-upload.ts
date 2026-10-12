@@ -8,6 +8,11 @@ import { Countdown } from '../shared/countdown';
 export const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
 export type PhotoType = 'image/jpeg' | 'image/webp';
 export type PhotoKind = 'fare_table' | 'stop_sign';
+/**
+ * The worker picks a photo up once its presign window has passed and runs every minute
+ * (ADR-0023), so an upload becomes attachable about this long after the window.
+ */
+export const WORKER_SLACK_SECONDS = 60;
 
 export type PhotoState =
   | { status: 'idle' }
@@ -68,6 +73,11 @@ export class PhotoUploader {
 
   readonly state = signal<PhotoState>({ status: 'idle' });
   readonly countdown = new Countdown();
+  /**
+   * Seconds until the uploaded photo is processed on the server and can be attached; the API
+   * refuses an unprocessed photo, and every refused attempt counts against the daily quota.
+   */
+  readonly processing = new Countdown();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
@@ -101,6 +111,7 @@ export class PhotoUploader {
     this.controller?.abort();
     this.controller = null;
     this.file = null;
+    this.processing.stop();
     this.state.set({ status: 'idle' });
   }
 
@@ -125,6 +136,7 @@ export class PhotoUploader {
       this.state.set({ status: 'uploading', step: 'upload' });
       await this.api.uploadPhoto(presigned, file, controller.signal);
       if (controller.signal.aborted) return;
+      this.processing.start(presigned.expires_in + WORKER_SLACK_SECONDS);
       this.state.set({ status: 'done', photoId: presigned.photo_id, bytes: file.size });
     } catch (error) {
       if (controller.signal.aborted) return;

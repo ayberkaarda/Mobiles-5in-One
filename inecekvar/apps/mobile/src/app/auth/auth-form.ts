@@ -11,11 +11,8 @@ export const PASSWORD_MIN = 10;
 export const PASSWORD_MAX = 128;
 /** The login and verify schemas accept up to 1024 characters; the policy itself stops at 128. */
 export const PASSWORD_INPUT_MAX = 1024;
-export const DISPLAY_NAME_MAX = 60;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Unicode "C" categories (control, format, unassigned, private use), refused by the API.
-const CONTROL = /\p{C}/u;
 
 export type EmailError = 'required' | 'invalid' | 'too-long';
 export type PasswordIssue = 'required' | 'short' | 'long' | 'same-as-email';
@@ -55,13 +52,6 @@ export function passwordIssues(password: string, email: string): PasswordIssue[]
     issues.push('same-as-email');
   }
   return issues;
-}
-
-/** Optional; when given, 1 to 60 visible characters. */
-export function displayNameError(value: string): 'invalid' | null {
-  const name = value.trim();
-  if (name === '') return null;
-  return length(name) > DISPLAY_NAME_MAX || CONTROL.test(name) ? 'invalid' : null;
 }
 
 export const EMAIL_ERRORS: Record<EmailError, TranslationKey> = {

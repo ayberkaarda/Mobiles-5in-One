@@ -131,8 +131,8 @@ select.iv-input {
 }
 
 .iv-segmented button[aria-pressed='true'] {
-  background: var(--iv-chrome);
-  color: var(--iv-chrome-ink);
+  background: var(--iv-ink);
+  color: var(--iv-bg);
 }
 
 .iv-chip-toggle {

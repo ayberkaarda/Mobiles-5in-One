@@ -34,8 +34,6 @@ export const contribEn: ContribTranslation = {
     registerHeading: 'Create an account',
     registerLead:
       'A confirmation link comes to your email; when you open it we ask for your password once more.',
-    displayName: 'Display name (optional)',
-    displayNameHint: 'Shown next to your contributions; at most {{max}} characters.',
     policyLength: 'Between {{min}} and {{max}} characters',
     policyNotEmail: 'Not your email address or its first part',
     policyBreached: 'The server refuses passwords seen in data breaches',
@@ -59,7 +57,6 @@ export const contribEn: ContribTranslation = {
       passwordShort: 'The password needs at least 10 characters.',
       passwordLong: 'The password is too long.',
       passwordEmail: 'The password cannot be your email address.',
-      displayName: 'The display name can have at most 60 visible characters.',
       credentials: 'Wrong email or password.',
       verifyPassword:
         'The password did not match the registration. Open the emailed link again and retry.',
@@ -200,6 +197,7 @@ export const contribEn: ContribTranslation = {
     fare: 'Fare (₺)',
     newFare: 'New fare (₺)',
     currentFare: 'Current fare {{fare}} · last updated {{date}}',
+    currentFareNoDate: 'Current fare {{fare}} · no update date',
     noFare: 'This line has no fare yet.',
     fareDate: 'The fare is reported as of {{date}}; once approved this becomes its update date.',
     hours: 'Operating hours',
@@ -225,6 +223,8 @@ export const contribEn: ContribTranslation = {
       preparing: 'Preparing the upload…',
       uploading: 'Uploading the photo…',
       done: 'Photo uploaded.',
+      processing:
+        'The server is processing the photo; it can go with the proposal in about {{minutes}} min. Remove it if you do not want to wait.',
       privacy:
         'Location and device details are removed from the photo on the server; the app never reads them.',
       remove: 'Remove photo',
@@ -242,6 +242,7 @@ export const contribEn: ContribTranslation = {
     reviewNote: 'Proposals are published after a moderator approves them.',
     send: 'Send proposal',
     sending: 'Sending…',
+    waitPhoto: 'Processing photo…',
     errors: {
       required: 'This field is required.',
       tooLong: 'Too long.',
@@ -256,7 +257,7 @@ export const contribEn: ContribTranslation = {
       line: 'Choose the line first.',
       stop: 'Choose the stop first.',
       invalidStops: 'One of the stops is not in this city or was removed.',
-      photoPending: 'The photo is still being processed; send again in a minute.',
+      photoPending: 'The photo is still being processed; send again shortly.',
       traceUnavailable: 'The trace was not found or is used by another proposal.',
       traceTooShort: 'With its ends trimmed the trace is too short; no route could be drawn.',
       gone: 'The line or stop no longer exists.',

@@ -111,7 +111,13 @@
 }
 
 .photo legend {
-  padding: 0 4px;
+  float: left;
+  width: 100%;
+  padding: 0;
+}
+
+.photo legend + * {
+  clear: both;
 }
 
 .photo p {

@@ -6,8 +6,6 @@ import { SessionStore } from '@inecekvar/data-access';
 import { map } from 'rxjs';
 import {
   authFailure,
-  DISPLAY_NAME_MAX,
-  displayNameError,
   EMAIL_ERRORS,
   EMAIL_MAX,
   emailError,
@@ -108,23 +106,6 @@ import { Countdown } from '../shared/countdown';
                 <p class="iv-error">{{ message | t }}</p>
               }
             </div>
-            <div class="iv-field">
-              <label class="iv-label" for="iv-register-name">{{ 'auth.displayName' | t }}</label>
-              <input
-                id="iv-register-name"
-                class="iv-input"
-                type="text"
-                autocomplete="nickname"
-                [attr.maxlength]="nameMax"
-                [value]="displayName()"
-                [attr.aria-invalid]="nameMessage() ? 'true' : null"
-                (input)="displayName.set(value($event))"
-              />
-              <p class="iv-hint">{{ 'auth.displayNameHint' | t: { max: nameMax } }}</p>
-              @if (nameMessage(); as message) {
-                <p class="iv-error">{{ message | t }}</p>
-              }
-            </div>
             @if (failure(); as key) {
               <p class="iv-error failure" role="alert">
                 @if (countdown.active()) {
@@ -216,10 +197,8 @@ export class RegisterPage {
   protected readonly emailMax = EMAIL_MAX;
   protected readonly passwordMin = PASSWORD_MIN;
   protected readonly passwordMax = PASSWORD_MAX;
-  protected readonly nameMax = DISPLAY_NAME_MAX;
   protected readonly email = signal('');
   protected readonly password = signal('');
-  protected readonly displayName = signal('');
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly failure = signal<TranslationKey | null>(null);
@@ -250,10 +229,6 @@ export class RegisterPage {
     return issue ? PASSWORD_ERRORS[issue] : null;
   });
 
-  protected readonly nameMessage = computed<TranslationKey | null>(() =>
-    this.submitted() && displayNameError(this.displayName()) ? 'auth.errors.displayName' : null,
-  );
-
   protected value(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
@@ -265,7 +240,7 @@ export class RegisterPage {
   protected submit(event: Event): void {
     event.preventDefault();
     this.submitted.set(true);
-    if (this.emailMessage() || this.passwordMessage() || this.nameMessage()) return;
+    if (this.emailMessage() || this.passwordMessage()) return;
     void this.register();
   }
 
@@ -274,12 +249,7 @@ export class RegisterPage {
     this.busy.set(true);
     this.failure.set(null);
     try {
-      const name = this.displayName().trim();
-      await this.session.register(
-        normalizeEmail(this.email()),
-        this.password(),
-        name === '' ? undefined : name,
-      );
+      await this.session.register(normalizeEmail(this.email()), this.password());
       // The link asks for the password again on this device; nothing keeps it meanwhile.
       this.password.set('');
       this.sent.set(true);

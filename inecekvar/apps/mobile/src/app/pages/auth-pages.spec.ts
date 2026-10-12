@@ -238,7 +238,7 @@ describe('register page', () => {
 
     session.register.impl = async () => ({ status: 'check_email' });
     await submit(harness, root);
-    expect(session.register.calls.at(-1)).toEqual(['deniz@ornek.test', SECRET, undefined]);
+    expect(session.register.calls.at(-1)).toEqual(['deniz@ornek.test', SECRET]);
     expect(root.querySelector('[data-state="register-sent"]')).not.toBeNull();
     expectNoSecretKept(router);
   });

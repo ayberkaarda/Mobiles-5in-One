@@ -201,11 +201,16 @@ export class ProposalPage {
     return at ? [{ kind: 'to', at }] : [];
   });
   protected readonly photoKind = computed(() => (this.aboutStop() ? 'stop_sign' : 'fare_table'));
+  protected readonly processingMinutes = computed(() =>
+    Math.max(1, Math.ceil(this.photo.processing.seconds() / 60)),
+  );
   protected readonly photoStep = computed(() => {
     const state = this.photo.state();
     return state.status === 'uploading' ? state.step : null;
   });
-  protected readonly photoBusy = computed(() => this.photo.state().status === 'uploading');
+  protected readonly photoBusy = computed(
+    () => this.photo.state().status === 'uploading' || this.photo.processing.active(),
+  );
 
   constructor() {
     void this.cities.init();

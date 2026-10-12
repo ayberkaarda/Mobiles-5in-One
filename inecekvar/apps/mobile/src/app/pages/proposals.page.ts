@@ -41,8 +41,12 @@ export function subjectOf(edit: Edit): string | null {
   if (name) return name;
   const changes = payload['changes'];
   if (typeof changes === 'object' && changes !== null) {
-    const changed = text((changes as Record<string, unknown>)['name']);
+    const c = changes as Record<string, unknown>;
+    const changed = text(c['name']) ?? text(c['hours_text']) ?? text(c['hail_notes']);
     if (changed) return changed;
+    if (typeof c['fare_minor'] === 'number' && Number.isInteger(c['fare_minor'])) {
+      return formatFareMinor(c['fare_minor']);
+    }
   }
   const fare = payload['fare_minor'];
   if (typeof fare === 'number' && Number.isInteger(fare) && fare >= 0) return formatFareMinor(fare);
