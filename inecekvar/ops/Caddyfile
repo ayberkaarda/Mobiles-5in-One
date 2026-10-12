@@ -9,7 +9,11 @@
 
 (api_proxy) {
 	handle_path /api/* {
-		reverse_proxy host.docker.internal:57800
+		reverse_proxy host.docker.internal:57800 {
+			# The API trusts only this header, and only from a trusted proxy address
+			# (INECEKVAR_TRUSTED_PROXY_CIDRS); X-Forwarded-For is never read for client IPs.
+			header_up X-Real-IP {remote_host}
+		}
 	}
 }
 
