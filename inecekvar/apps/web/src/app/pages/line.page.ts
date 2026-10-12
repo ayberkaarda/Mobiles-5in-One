@@ -19,7 +19,8 @@ export function lineSeo({ city, line }: LineData): PageSeo {
     description: lineDescription(line, city.name),
     path: `/${city.slug}/hat/${line.slug}`,
     ogType: 'article',
-    ogImagePath: `/og/${city.slug}/hat/${line.slug}.svg`,
+    // The image route serves no sample-city lines, so their pages name no image.
+    ...(city.is_sample ? {} : { ogImagePath: `/og/${city.slug}/hat/${line.slug}.svg` }),
     appBanner: true,
     index: !city.is_sample,
   };
