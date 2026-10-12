@@ -75,7 +75,7 @@ identity; it sends no ETag and no pack size, and `GET cities/{slug}/tiles.pmtile
    worker modules). `namedChunks` is on in production so the groups can name the map chunks.
    One `catalog-reads` data group (freshness, 4 s timeout, 3 days, 200 entries) covers
    `cities`, `cities/{slug}`, `lines*` and `stops/*` GETs. Data group patterns are unanchored
-   regular expressions in the generated `ngsw.json`, so the city patterns end in `$`: the pack
+   regular expressions in the built `ngsw.json`, so the city patterns end in `$`: the pack
    and tiles routes are not cached by the worker (the app stores the pack itself). Auth, `me`,
    favourites, plan, traces and edits match no pattern. An update prompt
    (`iv-update-prompt`) offers a reload when a new version is ready, or when the cached files are
@@ -197,7 +197,7 @@ state, version, marker storage and activation events for tests.
 | E9 | Catalog versions stay stale | Refresh on activation and reconnect; ignore older responses | `packs/packs.spec.ts`: `refreshes catalog versions whenever the packs page is activated`. `city/city.store.spec.ts`: `refreshes catalog versions on reconnect even when the list came from the API`; `ignores an older catalog response that arrives after a newer refresh` |
 | E10 | Tabs lose index entries or install older versions | Shared Web Lock, version guard and invalidation | `packs/pack-storage.spec.ts`: `uses the named browser Web Lock for pack index operations`; `preserves concurrent city installs across two tabs sharing the index lock`; `refuses version three after version four is committed by another tab`; `publishes invalidations after successful pack commits and removals`. `packs/packs.spec.ts`: `refreshes committed manifests after a cross-tab invalidation` |
 | E11 | Warmup skips control and app-version changes | Persist success per app version; retry failures and activation | `packs/map-warmup.spec.ts`: `defers warmup until a service worker controller appears`; `warms map assets again when the app version changes with a pack installed`; `retries a failed warmup without recording a successful version`; `rejects warmup when a lazy map asset responds with an error` |
-| E12 | Offline e2e misses control timing and private queries | Delay registration until installation; authenticate the private GET | Unit: `packs/map-warmup.spec.ts`: `warms an existing pack on activation after an uncontrolled installation`; `core/ngsw-config.spec.ts`: `excludes authenticated private queries from every generated data group`. Playwright: `apps/mobile-e2e/src/offline-pack.spec.ts`: `recovers map warmup for a pack installed before service worker control`; `never caches an authenticated private query containing a catalog pathname` |
+| E12 | Offline e2e misses control timing and private queries | Delay registration until installation; authenticate the private GET | Unit: `packs/map-warmup.spec.ts`: `warms an existing pack on activation after an uncontrolled installation`; `core/ngsw-config.spec.ts`: `excludes authenticated private queries from every built data group`. Playwright: `apps/mobile-e2e/src/offline-pack.spec.ts`: `recovers map warmup for a pack installed before service worker control`; `never caches an authenticated private query containing a catalog pathname` |
 
 Existing scenario assertions and screenshot names remain unchanged. The authenticated e2e
 uses the existing Mailpit stack (`IV_E2E_MAIL`) and a bearer account. The stack still provides

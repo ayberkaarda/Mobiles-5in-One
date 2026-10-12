@@ -2,7 +2,7 @@ import { Config, Filesystem, Generator } from '@angular/service-worker/config';
 import config from '../../../ngsw-config.json';
 
 describe('catalog service-worker cache', () => {
-  it('excludes authenticated private queries from every generated data group', async () => {
+  it('excludes authenticated private queries from every built data group', async () => {
     const fs: Filesystem = {
       list: async () => [],
       read: async () => '',
