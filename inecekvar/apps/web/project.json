@@ -73,6 +73,14 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     },
+    "bundle-check": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": false,
+      "options": {
+        "command": "node apps/web/scripts/check-public-bundle.mjs"
+      }
+    },
     "test": {
       "executor": "@angular/build:unit-test",
       "options": {

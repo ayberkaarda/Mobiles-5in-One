@@ -17,6 +17,11 @@ export const fakeHtml =
   `<iv-root ngcspnonce="${NONCE_PLACEHOLDER}">İnecek Var</iv-root>` +
   `<script nonce="${NONCE_PLACEHOLDER}">window.__x=1</script>` +
   `<script NONCE="${NONCE_PLACEHOLDER}">window.__y=2</script>` +
+  `<script type="" nonce="${NONCE_PLACEHOLDER}">window.__z=3</script>` +
+  `<script type="text/javascript" nonce="${NONCE_PLACEHOLDER}">window.__a=4</script>` +
+  `<script type="module" nonce="${NONCE_PLACEHOLDER}">window.__b=5</script>` +
+  '<script id="ng-state" type="application/json">{"kept":true}</script>' +
+  '<script type="application/ld+json">{"@type":"WebSite"}</script>' +
   '<script type="module" src="main.js"></script></body></html>';
 
 export function htmlResponse(status = 200, headers: Record<string, string> = {}): Response {
@@ -119,14 +124,28 @@ export function expectNonceAttributes(result: HttpResult): void {
   const nonce = responseNonce(result);
   expect(nonce).toMatch(/^[A-Za-z0-9+/]{22}==$/);
   const attributes = [...result.body.matchAll(/\s(?:nonce|ngcspnonce)="([^"]+)"/gi)];
-  expect(attributes.length).toBe(4);
+  expect(attributes.length).toBe(7);
   for (const attribute of attributes) {
     expect(attribute[1]).toBe(nonce);
   }
-  const inlineScripts = [...result.body.matchAll(/<script\b(?![^>]*\bsrc=)([^>]*)>/gi)];
-  expect(inlineScripts.length).toBe(2);
+  const inlineScripts = [...result.body.matchAll(/<script\b([^>]*)>/gi)].filter((match) => {
+    const attributes = match[1] ?? '';
+    const type = attributes.match(/\stype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const value = (type?.[1] ?? type?.[2] ?? type?.[3] ?? '').trim().toLowerCase();
+    return (
+      !/\ssrc(?:\s*=|\s|$)/i.test(attributes) && ['', 'text/javascript', 'module'].includes(value)
+    );
+  });
+  expect(inlineScripts.length).toBe(5);
   for (const script of inlineScripts) {
     expect(script[1]).toMatch(new RegExp(`\\snonce="${nonce.replace(/[+]/g, '\\+')}"`, 'i'));
+  }
+  const dataScripts = [...result.body.matchAll(/<script\b([^>]*)>/gi)].filter((match) =>
+    /\stype="application\/(?:json|ld\+json)"/i.test(match[1] ?? ''),
+  );
+  expect(dataScripts).toHaveLength(2);
+  for (const script of dataScripts) {
+    expect(script[1]).not.toMatch(/\snonce(?:\s*=|\s|$)/i);
   }
   expect(result.body).not.toMatch(
     new RegExp(`\\s(?:nonce|ngcspnonce)="${NONCE_PLACEHOLDER}"`, 'i'),

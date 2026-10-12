@@ -1,6 +1,6 @@
 // @vitest-environment node
 import express from 'express';
-import { createWebApp } from './app';
+import { createWebApp, type PageRenderer } from './app';
 import { loadWebServerConfig } from './config';
 import { stripProxyHeaders } from './request-guards';
 import { closeServers, htmlResponse, httpRequest, renderedRequest, startApp } from './test-helpers';
@@ -8,7 +8,7 @@ import { closeServers, htmlResponse, httpRequest, renderedRequest, startApp } fr
 afterEach(closeServers);
 
 async function fixture(env: Record<string, string | undefined> = {}) {
-  const render = vi.fn(async (_request: Request) => htmlResponse());
+  const render = vi.fn<PageRenderer>(async () => htmlResponse());
   const port = await startApp(createWebApp({ config: loadWebServerConfig(env), render }));
   return { port, render };
 }

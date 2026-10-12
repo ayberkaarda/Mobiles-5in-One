@@ -157,7 +157,7 @@ describe('Redis page cache', () => {
     const values = new Map<string, string>();
     const client: RedisLikeClient = {
       get: vi.fn(async (key: string) => values.get(key) ?? null),
-      set: vi.fn(async (key: string, value: string, _mode: 'PX', _ttlMs: number) => {
+      set: vi.fn(async (key: string, value: string) => {
         values.set(key, value);
         return 'OK';
       }),

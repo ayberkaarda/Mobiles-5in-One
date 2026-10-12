@@ -12,9 +12,9 @@ export class JsonLdService {
     const text = serializeJsonLd(nodes);
     this.clear(id);
     const script = this.renderer.createElement('script');
-    // A JSON-LD data block is not executed and needs no nonce.
     this.renderer.setAttribute(script, 'type', 'application/ld+json');
     this.renderer.setAttribute(script, 'data-iv-jsonld', id);
+    // A JSON-LD data block is not executed and needs no nonce.
     this.renderer.appendChild(script, this.renderer.createText(text));
     this.renderer.appendChild(this.document.head, script);
   }

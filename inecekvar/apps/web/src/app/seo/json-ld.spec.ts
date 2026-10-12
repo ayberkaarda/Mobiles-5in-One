@@ -1,4 +1,4 @@
-import { PLATFORM_ID } from '@angular/core';
+import { CSP_NONCE, PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   article,
@@ -168,6 +168,16 @@ describe('JSON-LD service', () => {
     expect(document.head.querySelectorAll('script[data-iv-jsonld]')).toHaveLength(1);
     service.clearAll();
     expect(document.head.querySelectorAll('script[data-iv-jsonld]')).toHaveLength(0);
+  });
+
+  it('leaves its data block without a nonce when a CSP nonce is supplied', () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: CSP_NONCE, useValue: 'test-nonce' }],
+    });
+    TestBed.inject(JsonLdService).set('site', [organization(origin), webSite(origin)]);
+    const script = document.head.querySelector<HTMLScriptElement>('script[data-iv-jsonld="site"]');
+    expect(script).not.toBeNull();
+    expect(script?.hasAttribute('nonce')).toBe(false);
   });
 
   it.each(['', 'UPPER', 'a'.repeat(33), 'a"b'])('rejects an invalid id', (id) => {

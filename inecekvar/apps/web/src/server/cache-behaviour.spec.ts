@@ -37,7 +37,7 @@ async function fixture(
   const config = loadWebServerConfig({ INECEKVAR_ENV: 'test', ...options.env });
   const cache =
     options.cache ?? new MemoryLruPageCache({ maxEntries: 10, maxBytes: 4 * 1024 * 1024 });
-  const render = vi.fn(options.render ?? (async (_request: Request) => htmlResponse()));
+  const render = vi.fn<PageRenderer>(options.render ?? (async () => htmlResponse()));
   const port = await startApp(createWebApp({ config, cache, render, log: options.log }));
   return { port, render, cache };
 }
@@ -248,7 +248,7 @@ describe('static delivery', () => {
     await writeFile(join(folder, 'index.html'), fakeHtml, 'utf8');
     await writeFile(join(folder, 'main-ABCDEFGH.js'), 'window.__asset=1;', 'utf8');
     await writeFile(join(folder, 'plain.js'), 'window.__plain=1;', 'utf8');
-    const render = vi.fn(async (_request: Request) => htmlResponse());
+    const render = vi.fn<PageRenderer>(async () => htmlResponse());
     const port = await startApp(
       createWebApp({
         config: loadWebServerConfig({ INECEKVAR_ENV: 'test' }),

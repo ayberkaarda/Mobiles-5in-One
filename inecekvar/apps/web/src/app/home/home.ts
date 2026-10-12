@@ -1,7 +1,13 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { PUBLIC_WEB_CONFIG } from '../public-config';
+import { organization, webSite } from '../seo/json-ld';
+import { JsonLdService } from '../seo/json-ld.service';
+import { SeoService } from '../seo/seo.service';
 
 @Component({
   selector: 'iv-home',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="home">
       <h1>İnecek Var</h1>
@@ -25,4 +31,28 @@ import { Component } from '@angular/core';
     }
   `,
 })
-export class Home {}
+export class Home implements OnInit, OnDestroy {
+  private readonly config = inject(PUBLIC_WEB_CONFIG);
+  private readonly seo = inject(SeoService);
+  private readonly jsonLd = inject(JsonLdService);
+
+  ngOnInit(): void {
+    this.seo.apply({
+      title: null,
+      description:
+        'Dolmuş, minibüs ve servis hatları için mahallelinin birlikte haritaladığı, ' +
+        'çevrimdışı da çalışan hat rehberi.',
+      path: '/',
+      index: true,
+      follow: true,
+    });
+    this.jsonLd.set('site', [
+      organization(this.config.canonicalOrigin),
+      webSite(this.config.canonicalOrigin),
+    ]);
+  }
+
+  ngOnDestroy(): void {
+    this.jsonLd.clear('site');
+  }
+}

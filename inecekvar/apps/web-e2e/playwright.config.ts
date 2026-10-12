@@ -1,0 +1,92 @@
+import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
+
+const server = path.resolve(__dirname, '../../dist/apps/web/server/server.mjs');
+const webCommand = `node "${server}"`;
+const sharedEnv = {
+  HOST: '127.0.0.1',
+  IV_WEB_ALLOWED_HOSTS: 'inecekvar.app,www.inecekvar.app',
+  IV_WEB_API_PUBLIC_ORIGIN: 'https://api.inecekvar.app',
+  IV_WEB_TILES_ORIGIN: 'https://tiles.inecekvar.app',
+  IV_WEB_CACHE_QUERY_ALLOWLIST: 'sayfa',
+  IV_WEB_CACHE_TTL_SECONDS: '600',
+  IV_WEB_CACHE_MAX_ENTRIES: '500',
+};
+
+export default defineConfig({
+  testDir: './src',
+  outputDir: '../../dist/.playwright/web-e2e',
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  reporter: [['list']],
+  use: {
+    ...devices['Desktop Chrome'],
+    baseURL: 'http://127.0.0.1:57992',
+    locale: 'tr-TR',
+    trace: 'retain-on-failure',
+  },
+  // Header checks run before browser visits so the first home request sees an empty cache.
+  projects: [
+    { name: 'headers', testMatch: '**/headers.spec.ts' },
+    {
+      name: 'browser',
+      testMatch: ['**/ssr-no-js.spec.ts', '**/csp-hydration.spec.ts'],
+      dependencies: ['headers'],
+    },
+  ],
+  webServer: [
+    {
+      command: 'node fake-api.mjs',
+      cwd: __dirname,
+      url: 'http://127.0.0.1:57991/ready',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: { IV_E2E_FAKE_API_PORT: '57991' },
+    },
+    {
+      command: webCommand,
+      cwd: __dirname,
+      url: 'http://127.0.0.1:57992/healthz',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        ...sharedEnv,
+        PORT: '57992',
+        INECEKVAR_ENV: 'test',
+        IV_WEB_CANONICAL_ORIGIN: 'http://127.0.0.1:57992',
+        IV_WEB_API_INTERNAL_URL: 'http://127.0.0.1:57991/v1',
+      },
+    },
+    {
+      command: webCommand,
+      cwd: __dirname,
+      url: 'http://127.0.0.1:57993/healthz',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        ...sharedEnv,
+        PORT: '57993',
+        INECEKVAR_ENV: 'production',
+        IV_WEB_CANONICAL_ORIGIN: 'https://inecekvar.app',
+        IV_WEB_API_INTERNAL_URL: 'http://127.0.0.1:57991/v1',
+      },
+    },
+    {
+      command: webCommand,
+      cwd: __dirname,
+      url: 'http://127.0.0.1:57994/healthz',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        ...sharedEnv,
+        PORT: '57994',
+        INECEKVAR_ENV: 'test',
+        IV_WEB_CANONICAL_ORIGIN: 'http://127.0.0.1:57994',
+        IV_WEB_API_INTERNAL_URL: 'http://127.0.0.1:57995/v1',
+      },
+    },
+  ],
+});
