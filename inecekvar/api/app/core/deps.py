@@ -28,6 +28,7 @@ from app.core.errors import (
     ProblemError,
 )
 from app.core.settings import Settings
+from app.core.storage import ObjectStore
 from app.models.enums import UserRole
 
 AuthMode = Literal["cookie", "bearer"]
@@ -110,6 +111,24 @@ class Authenticator(Protocol):
         ...
 
 
+class EntitlementSource(Protocol):
+    async def has_plus(self, db: AsyncSession, user_id: uuid.UUID, now: datetime) -> bool:
+        """True when the user holds an active Plus entitlement at `now` (spec section 3 story 8)."""
+        ...
+
+
+class StepUpSource(Protocol):
+    async def step_up_at(self, db: AsyncSession, principal: Principal) -> datetime | None:
+        """When this session last passed a verified TOTP step-up, or None (spec section 6.18)."""
+        ...
+
+
+class SubscriberDeleter(Protocol):
+    async def delete_subscriber(self, app_user_id: str) -> None:
+        """Remove the subscriber at the billing provider (spec section 6.21); raises on failure."""
+        ...
+
+
 @dataclass(slots=True)
 class Services:
     settings: Settings
@@ -120,6 +139,13 @@ class Services:
     mail_sender: MailSender
     breach_checker: BreachChecker
     clock: Clock
+    # Phase 2 collaborators. None means "not configured" and every consumer fails closed:
+    # no object store answers 503, no entitlement source grants no Plus, no step-up source
+    # denies destructive moderation, no subscriber deleter defers erasure of subscribers.
+    object_store: ObjectStore | None = None
+    entitlements: EntitlementSource | None = None
+    step_up: StepUpSource | None = None
+    subscriber_deleter: SubscriberDeleter | None = None
 
 
 # --- Basic dependencies ---------------------------------------------------------------------
@@ -165,6 +191,16 @@ def get_breach_checker(services: ServicesDep) -> BreachChecker:
     return services.breach_checker
 
 
+STORAGE_UNAVAILABLE = "storage.unavailable"
+
+
+def get_object_store(services: ServicesDep) -> ObjectStore:
+    """The configured object store; 503 when the deployment has none."""
+    if services.object_store is None:
+        raise ProblemError(STORAGE_UNAVAILABLE, 503)
+    return services.object_store
+
+
 def get_client_ip(request: Request) -> str:
     """The trusted client IP set by the 1C middleware; fails closed when it is missing."""
     value = getattr(request.state, "client_ip", None)
@@ -187,6 +223,7 @@ MailSenderDep = Annotated[MailSender, Depends(get_mail_sender)]
 BreachCheckerDep = Annotated[BreachChecker, Depends(get_breach_checker)]
 ClientIpDep = Annotated[str, Depends(get_client_ip)]
 RequestIdDep = Annotated[str, Depends(get_request_id)]
+ObjectStoreDep = Annotated[ObjectStore, Depends(get_object_store)]
 
 
 # --- Email normalization ---------------------------------------------------------------------

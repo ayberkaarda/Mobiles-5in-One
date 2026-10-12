@@ -89,6 +89,7 @@ class Trace(UUIDPrimaryKey, Timestamps, Base):
         CheckConstraint("ended_at >= started_at", name="time_order"),
         Index("ix_traces_delete_after", "delete_after"),
         Index("ix_traces_author_id", "author_id"),
+        Index("ix_traces_linked_edit_id", "linked_edit_id"),
     )
 
     author_id: Mapped[uuid.UUID] = mapped_column(
@@ -136,3 +137,5 @@ class Photo(UUIDPrimaryKey, Timestamps, Base):
     )
     content_type: Mapped[str] = mapped_column(String(32), nullable=False)
     byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Set by the media worker once the upload is re-encoded or quarantined.
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

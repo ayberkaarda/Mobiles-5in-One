@@ -28,7 +28,11 @@ Read from the process environment by other Phase 0 code (not from `.env`):
 | `HOST`, `PORT` | `apps/web/src/server.ts` | SSR bind address and port; default `127.0.0.1` and `4000`. A deployment sets `HOST`. |
 | `NG_ALLOWED_HOSTS` | Angular SSR | Extra allowed `Host` values for local production-build runs (for example `127.0.0.1`). |
 | `INECEKVAR_TEST_DATABASE_URL` | `api/tests/conftest.py` | Use an existing PostGIS database instead of Testcontainers (the CI service container). |
-| `INECEKVAR_REQUIRE_DOCKER` | `api/tests/conftest.py` | `1` turns a skipped PostGIS test into a failure (set in CI). |
+| `INECEKVAR_TEST_REDIS_URL` | `api/tests/conftest.py` | Use an existing Redis service instead of Testcontainers. |
+| `INECEKVAR_TEST_S3_URL` | `api/tests/conftest.py` | Use an existing S3-compatible service instead of Testcontainers. |
+| `INECEKVAR_TEST_S3_ACCESS_KEY` | `api/tests/conftest.py` | Access key for the configured S3 service (default `inecekvar-test`). |
+| `INECEKVAR_TEST_S3_SECRET_KEY` | `api/tests/conftest.py` | Secret key for the configured S3 service (default `inecekvar-test-only`). |
+| `INECEKVAR_REQUIRE_DOCKER` | `api/tests/conftest.py` | `1` turns a skipped container-backed test into a failure (set in CI). |
 
 The API bind address and port are uvicorn flags, not environment keys: `uv run uvicorn app.main:app --host 127.0.0.1 --port 57800` (Caddy proxies `/api/*` to port 57800).
 
@@ -40,7 +44,7 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | --- | --- | --- |
 | `INECEKVAR_ENV` | `local` | `local`, `test` or `production`; selects defaults and the local CORS origins. |
 | `INECEKVAR_DATABASE_URL` | `postgresql+asyncpg://inecekvar:inecekvar_local_dev@localhost:57432/inecekvar` | PostgreSQL connection (also read by Alembic and the seed). |
-| `INECEKVAR_REDIS_URL` | `redis://localhost:57379/0` | Redis for rate limits. |
+| `INECEKVAR_REDIS_URL` | `redis://localhost:57379/0` | Redis for rate limits and planner cache. |
 | `INECEKVAR_JWT_PRIVATE_KEY_PEM` or `INECEKVAR_JWT_PRIVATE_KEY_PATH` | none (per process locally) | ES256 signing key, PEM text or a file outside the repository. |
 | `INECEKVAR_JWT_PUBLIC_KEY_PEM` or `INECEKVAR_JWT_PUBLIC_KEY_PATH` | none (per process locally) | ES256 verification key. |
 | `INECEKVAR_CSRF_SECRET` | none (per process locally) | HMAC key binding CSRF tokens to sessions; at least 32 characters. |
@@ -55,19 +59,28 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_HIBP_ENABLED` | `true` | Breached-password range check at registration. |
 | `INECEKVAR_LOG_LEVEL` | `INFO` | Log level of the JSON logs. |
 
-Token lifetimes, Argon2 parameters, body limits and rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
+Object-storage, planner, offline-pack and retention settings are also read by the API:
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_S3_ENDPOINT_URL` | unset; local default `http://localhost:57900` | S3-compatible object-storage endpoint; local startup fills the MinIO endpoint, and without an endpoint outside local the media and export routes answer 503. |
+| `INECEKVAR_S3_REGION` | `auto`; local default `us-east-1` | Signing region for S3 requests. |
+| `INECEKVAR_S3_ACCESS_KEY_ID` | unset; local default `inecekvar` | S3 access key; local startup fills the compose MinIO credential. |
+| `INECEKVAR_S3_SECRET_ACCESS_KEY` | unset; local default `inecekvar_local_dev` | S3 secret key; local startup fills the compose MinIO credential. |
+| `INECEKVAR_MEDIA_BUCKET` | `inecekvar-media` | Bucket used for uploaded photos. |
+| `INECEKVAR_EXPORTS_BUCKET` | `inecekvar-exports` | Bucket used for exports. |
+| `INECEKVAR_PRESIGN_TTL_SECONDS` | `300` | Lifetime in seconds of signed media URLs. |
+| `INECEKVAR_MEDIA_MAX_BYTES` | `4194304` (4 MiB) | Maximum accepted photo size. |
+| `INECEKVAR_PLANNER_TIMEOUT_SECONDS` | `3.0` | Maximum time in seconds allowed for a planner request. |
+| `INECEKVAR_PLANNER_CACHE_TTL_SECONDS` | `600` | Planner result cache lifetime in seconds; the cache is held in Redis. |
+| `INECEKVAR_PMTILES_BASE_URL` | unset | HTTPS CDN base URL for offline city tile packs; when unset the tile route answers 404. |
+| `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
+| `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |
+
+The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours. These limits are fixed rules, not environment keys.
+
+Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 
 The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
-
-## Planned for Phase 2
-
-Object storage keys are in `.env.example` so the local values are written down once; the API does not read them yet.
-
-| Key | Local value | Purpose |
-| --- | --- | --- |
-| `S3_ENDPOINT_URL` | `http://localhost:57900` | Local MinIO S3-compatible endpoint. |
-| `S3_BUCKET` | `inecekvar-media` | Local object bucket (the compose init also creates inecekvar-exports and inecekvar-backups). |
-| `S3_ACCESS_KEY_ID` | `inecekvar` | Local MinIO access key. |
-| `S3_SECRET_ACCESS_KEY` | `inecekvar_local_dev` | Local MinIO secret key. |
 
 Do not place signing keys, provider credentials, production endpoints or other secrets in the example file. Production hosting, the public domain, TLS and HSTS preload are not exercised: no domain, no host.

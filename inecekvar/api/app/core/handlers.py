@@ -3,6 +3,7 @@
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -70,6 +71,16 @@ async def run_with_error_response(app: ASGIApp, scope: Scope, receive: Receive, 
 
     try:
         await app(scope, receive, track_start)
+    except DBAPIError as exc:
+        # Database messages can quote the failing row (for example trace points or an email);
+        # only the error class and SQLSTATE are logged.
+        structlog.get_logger().error(
+            "request.database_error",
+            error_type=type(exc.orig).__name__,
+            sqlstate=getattr(exc.orig, "sqlstate", None),
+        )
+        if not started:
+            await send_problem(scope, receive, send, INTERNAL, 500)
     except Exception:
         structlog.get_logger().error("request.unhandled_error", exc_info=True)
         if not started:

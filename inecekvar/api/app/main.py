@@ -19,23 +19,51 @@ from app.auth.authenticator import TokenSessionAuthenticator
 from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
 from app.auth.router import router as auth_router
+from app.billing.entitlements import SubscriptionEntitlements
+from app.cities.router import router as cities_router
 from app.core.deps import Services, SystemClock
 from app.core.health import router as health_router
 from app.core.logging import configure_logging
 from app.core.ratelimit import RedisSlidingWindowLimiter
 from app.core.settings import Settings, load_settings
 from app.core.setup import install_core
+from app.core.storage import S3ObjectStore
+from app.edits.router import router as edits_router
+from app.export.router import router as export_router
+from app.favorites.router import router as favorites_router
+from app.lines.router import router as lines_router
+from app.media.router import router as media_router
 from app.models.session import create_engine, create_session_factory
+from app.moderation.router import router as moderation_router
+from app.planner.router import router as planner_router
+from app.stops.router import router as stops_router
+from app.traces.router import router as traces_router
 
 API_PREFIX = "/v1"
 
 # Fixed registration list: routers are mounted in this order and nowhere else.
-ROUTERS: tuple[APIRouter, ...] = (health_router, auth_router)
+ROUTERS: tuple[APIRouter, ...] = (
+    health_router,
+    auth_router,
+    cities_router,
+    lines_router,
+    stops_router,
+    edits_router,
+    moderation_router,
+    favorites_router,
+    traces_router,
+    media_router,
+    planner_router,
+    export_router,
+)
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing
 # values outside env=local, so these never reach test or production.
 LOCAL_DATABASE_URL = "postgresql+asyncpg://inecekvar:inecekvar_local_dev@localhost:57432/inecekvar"
 LOCAL_REDIS_URL = "redis://localhost:57379/0"
+LOCAL_S3_URL = "http://localhost:57900"
+LOCAL_S3_USER = "inecekvar"
+LOCAL_S3_PASSWORD = "inecekvar_local_dev"  # noqa: S105 (compose default, local only)
 
 
 def with_local_defaults(settings: Settings) -> Settings:
@@ -48,6 +76,12 @@ def with_local_defaults(settings: Settings) -> Settings:
         update["database_url"] = SecretStr(LOCAL_DATABASE_URL)
     if settings.redis_url is None:
         update["redis_url"] = SecretStr(LOCAL_REDIS_URL)
+    if settings.s3_endpoint_url is None:
+        update["s3_endpoint_url"] = LOCAL_S3_URL
+        update["s3_region"] = "us-east-1"
+    if settings.s3_access_key_id is None and settings.s3_secret_access_key is None:
+        update["s3_access_key_id"] = SecretStr(LOCAL_S3_USER)
+        update["s3_secret_access_key"] = SecretStr(LOCAL_S3_PASSWORD)
     if settings.csrf_secret is None:
         update["csrf_secret"] = SecretStr(secrets.token_urlsafe(32))
     if settings.log_hash_key is None:
@@ -91,6 +125,10 @@ def build_services(settings: Settings) -> Services:
         mail_sender=SmtpMailSender(settings),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
+        entitlements=SubscriptionEntitlements(),
+        object_store=(
+            S3ObjectStore.from_settings(settings) if settings.s3_endpoint_url is not None else None
+        ),
     )
 
 

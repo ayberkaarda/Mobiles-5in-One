@@ -127,6 +127,13 @@ jobs:
       - name: Brand tokens are in sync with libs/ui
         run: node brand/scripts/build-tokens.mjs --check
 
+      # libs/domain/src/lib/api.ts is derived from docs/api/openapi.json (openapi-typescript,
+      # pinned in package.json); a stale file fails here.
+      - name: API types are in sync with the OpenAPI contract
+        run: |
+          node libs/domain/scripts/build-api-types.mjs
+          git diff --exit-code -- libs/domain/src/lib/api.ts
+
       - name: Format check (Prettier)
         run: pnpm exec prettier --check .
 
@@ -168,6 +175,8 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 12
+    # MinIO for the photo and export tests comes from Testcontainers (a service container cannot
+    # pass the `server /data` command); Docker is available on the hosted runner.
     env:
       INECEKVAR_TEST_DATABASE_URL: postgresql://inecekvar:inecekvar_ci_only@127.0.0.1:5432/inecekvar_test
       INECEKVAR_REQUIRE_DOCKER: "1"
@@ -232,7 +241,14 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Type check (mypy --strict)
-        run: uv run mypy --strict app tests
+        run: uv run mypy --strict app tests alembic
+
+      # docs/api/openapi.json is emitted by FastAPI from the real app; a route or schema change
+      # without the regenerated contract fails here.
+      - name: OpenAPI contract is fresh
+        run: |
+          uv run python -m app.contract
+          git diff --exit-code -- ../docs/api/openapi.json
 
       - name: Tests
         run: |
