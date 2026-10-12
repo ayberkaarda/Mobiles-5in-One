@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '../api-client';
 import type { Me, SignInResponse, StatusResponse } from '../api-types';
 import { AUTH_STRATEGY } from './auth-strategy';
+import { PENDING_LOGOUT_MARKER } from './pending-logout-marker';
 
 /**
  * Sign-in endpoints. The response body (with its CSRF or bearer tokens) goes straight to the
@@ -11,6 +12,9 @@ import { AUTH_STRATEGY } from './auth-strategy';
 export class AuthApi {
   private readonly api = inject(ApiClient);
   private readonly strategy = inject(AUTH_STRATEGY);
+  private readonly marker = inject(PENDING_LOGOUT_MARKER);
+  private epoch = 0;
+  private completion: Promise<boolean> | null = null;
 
   register(email: string, password: string, displayName?: string): Promise<StatusResponse> {
     return this.api.request({
@@ -42,23 +46,46 @@ export class AuthApi {
     return this.signIn('/auth/login', { email, password, mode: this.strategy.mode });
   }
 
-  /** Ends this session on the server when reachable; local credentials are dropped regardless. */
+  /** Resolves only after the server confirms revocation and local credentials are removed. */
   async logout(): Promise<void> {
-    try {
-      await this.api.request({ method: 'POST', path: '/auth/logout' });
-    } catch {
-      // Offline or already expired: the device forgets the session anyway.
-    } finally {
-      await this.strategy.clear();
-    }
+    await this.revoke('/auth/logout');
   }
 
   /** Revokes every session of the account; a failure is reported after the local sign-out. */
   async logoutEverywhere(): Promise<void> {
+    await this.revoke('/auth/logout-all');
+  }
+
+  completePendingLogout(): Promise<boolean> {
+    if (!this.marker.isSet()) return Promise.resolve(true);
+    if (this.completion !== null) return this.completion;
+    const epoch = this.epoch;
+    const pending: Promise<boolean> = this.strategy
+      .completePendingLogout()
+      .then(
+        () => {
+          if (epoch === this.epoch) this.marker.clear();
+          return !this.marker.isSet();
+        },
+        () => !this.marker.isSet(),
+      )
+      .finally(() => {
+        if (this.completion === pending) this.completion = null;
+      });
+    this.completion = pending;
+    return pending;
+  }
+
+  private async revoke(path: '/auth/logout' | '/auth/logout-all'): Promise<void> {
+    this.marker.set();
+    const epoch = ++this.epoch;
+    this.completion = null;
     try {
-      await this.api.request({ method: 'POST', path: '/auth/logout-all' });
-    } finally {
-      await this.strategy.clear();
+      await this.strategy.logout(path);
+      if (epoch === this.epoch) this.marker.clear();
+    } catch (error) {
+      if (epoch === this.epoch) this.marker.set();
+      throw error;
     }
   }
 
@@ -66,13 +93,17 @@ export class AuthApi {
     path: '/auth/login' | '/auth/magic-link/verify',
     body: Record<string, unknown>,
   ): Promise<Me> {
+    const epoch = ++this.epoch;
+    await this.completePendingLogout();
+    if (epoch !== this.epoch) throw new Error('sign-in was superseded');
     const response = await this.api.request<SignInResponse>({
       method: 'POST',
       path,
       body,
       auth: false,
+      credentials: this.strategy.mode === 'cookie' ? 'include' : 'omit',
     });
-    await this.strategy.establish(response);
+    if (epoch === this.epoch) await this.strategy.establish(response);
     return response.user;
   }
 }

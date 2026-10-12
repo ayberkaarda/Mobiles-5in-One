@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   bearerSignIn,
   cookieSignIn,
+  deferred,
   json,
   ME,
   noContent,
@@ -194,6 +195,109 @@ describe('BearerAuthStrategy (native)', () => {
       TestBed.inject(AuthApi).login('deniz@example.test', 'pw-1234567890'),
     ).rejects.toThrow('bearer strategy received a cookie sign-in');
     expect(h.store.value).toBeNull();
+  });
+
+  it('serializes clear behind a refresh write already in progress', async () => {
+    await signIn();
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const set = h.store.set.bind(h.store);
+    vi.spyOn(h.store, 'set').mockImplementation(async (token: string) => {
+      entered.resolve(undefined);
+      await release.promise;
+      await set(token);
+    });
+    h.fake.on('POST', '/auth/refresh', json(refreshed('access-late', 'refresh-late')));
+    const strategy = TestBed.inject(BearerAuthStrategy);
+    const refresh = strategy.refresh();
+    await entered.promise;
+    const clear = strategy.clear();
+    release.resolve(undefined);
+    await expect(refresh).resolves.toBe(false);
+    await clear;
+    expect(h.store.value).toBeNull();
+    h.fake.on('GET', '/me', json(ME));
+    await TestBed.inject(AccountApi).me();
+    expect(auth('GET', '/me')).toEqual([null]);
+  });
+
+  it('never retries an old account POST with the new account token', async () => {
+    const reply = deferred<Response>();
+    h.fake.on(
+      'POST',
+      '/auth/login',
+      json(bearerSignIn()),
+      json(bearerSignIn('access-B', 'refresh-B')),
+    );
+    const api = TestBed.inject(AuthApi);
+    await api.login('a@example.test', 'password-A');
+    const ended = vi.fn();
+    TestBed.inject(AUTH_STRATEGY).onSessionEnded(ended);
+    h.fake.on('POST', '/me/licence-accept', () => reply.promise, json(ME));
+    const pending = TestBed.inject(AccountApi).acceptLicence();
+    const rejected = expect(pending).rejects.toMatchObject({ status: 401 });
+    await vi.waitFor(() => expect(h.fake.callsTo('POST', '/me/licence-accept')).toHaveLength(1));
+    await api.login('b@example.test', 'password-B');
+    reply.resolve(problem(401, 'auth.required'));
+    await rejected;
+    expect(auth('POST', '/me/licence-accept')).toEqual(['Bearer access-1']);
+    expect(h.fake.callsTo('POST', '/auth/refresh')).toHaveLength(0);
+    expect(ended).not.toHaveBeenCalled();
+    h.fake.on('GET', '/me', json(ME));
+    await TestBed.inject(AccountApi).me();
+    expect(auth('GET', '/me')).toEqual(['Bearer access-B']);
+    expect(h.store.value).toBe('refresh-B');
+  });
+
+  it('discards an old account refresh after a new sign-in', async () => {
+    const reply = deferred<Response>();
+    h.fake.on(
+      'POST',
+      '/auth/login',
+      json(bearerSignIn()),
+      json(bearerSignIn('access-B', 'refresh-B')),
+    );
+    const api = TestBed.inject(AuthApi);
+    await api.login('a@example.test', 'password-A');
+    h.fake.on('POST', '/auth/refresh', () => reply.promise);
+    const pending = TestBed.inject(BearerAuthStrategy).refresh();
+    await vi.waitFor(() => expect(h.fake.callsTo('POST', '/auth/refresh')).toHaveLength(1));
+    await api.login('b@example.test', 'password-B');
+    reply.resolve(json(refreshed('access-late-A', 'refresh-late-A')));
+    await expect(pending).resolves.toBe(false);
+    expect(h.store.value).toBe('refresh-B');
+    expect(h.store.writes).not.toContain('refresh-late-A');
+    h.fake.on('GET', '/me', json(ME));
+    await TestBed.inject(AccountApi).me();
+    expect(auth('GET', '/me')).toEqual(['Bearer access-B']);
+  });
+
+  it('blocks restore after a failed secure clear and retries removal', async () => {
+    await signIn();
+    const clear = h.store.clear.bind(h.store);
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const removal = vi
+      .spyOn(h.store, 'clear')
+      .mockImplementationOnce(async () => {
+        entered.resolve(undefined);
+        await release.promise;
+        throw new Error('Keystore locked');
+      })
+      .mockImplementation(clear);
+    const strategy = TestBed.inject(BearerAuthStrategy);
+    const pending = strategy.clear();
+    const rejected = expect(pending).rejects.toThrow('Keystore locked');
+    await entered.promise;
+    release.resolve(undefined);
+    await rejected;
+    expect(h.marker.isSet()).toBe(true);
+    await expect(strategy.restore()).resolves.toBe(false);
+    h.fake.on('POST', '/auth/refresh', problem(401, 'auth.token_invalid'));
+    await expect(TestBed.inject(AuthApi).completePendingLogout()).resolves.toBe(true);
+    expect(removal).toHaveBeenCalledTimes(2);
+    expect(h.store.value).toBeNull();
+    expect(h.marker.isSet()).toBe(false);
   });
 
   it('keeps tokens out of web storage, cookies and the console', async () => {

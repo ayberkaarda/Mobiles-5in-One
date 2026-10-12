@@ -51,8 +51,9 @@ export class CapacitorSecureTokenStore implements SecureTokenStore {
     this.assertNative();
     try {
       await this.plugin.remove({ key: REFRESH_TOKEN_KEY });
-    } catch {
-      // Nothing stored.
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.toLowerCase().includes('item with given key does not exist')) throw error;
     }
   }
 

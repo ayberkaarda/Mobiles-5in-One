@@ -19,14 +19,15 @@ export interface SendOptions {
 
 /**
  * One fetch with a timeout and an optional caller signal. Transport failures become an
- * `ApiError` of kind `network`, `timeout` or `aborted`; any HTTP answer is returned as is.
+ * `ApiError` of kind `network`, `timeout` or `aborted`, including body stream failures.
  */
-export async function send(
+export async function send<T>(
   fetchFn: typeof fetch,
   url: string,
   init: RequestInit,
   options: SendOptions,
-): Promise<Response> {
+  reader: (response: Response) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -40,13 +41,24 @@ export async function send(
   const onAbort = () => controller.abort();
   options.signal?.addEventListener('abort', onAbort, { once: true });
   try {
-    return await fetchFn(url, { ...init, signal: controller.signal });
-  } catch {
+    const response = await fetchFn(url, { ...init, signal: controller.signal });
+    return await reader(response);
+  } catch (error) {
     if (timedOut) throw ApiError.noResponse('timeout', options.requestId);
     if (options.signal?.aborted) throw ApiError.noResponse('aborted', options.requestId);
+    if (error instanceof ApiError) throw error;
     throw ApiError.noResponse('network', options.requestId);
   } finally {
     clearTimeout(timer);
     options.signal?.removeEventListener('abort', onAbort);
+  }
+}
+
+export async function readJson(response: Response, requestId: string): Promise<unknown> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ApiError('invalid_response', response.status, 'invalid_response', requestId);
   }
 }

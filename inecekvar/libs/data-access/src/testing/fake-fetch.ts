@@ -12,6 +12,46 @@ export interface RecordedCall {
 
 export type Responder = (call: RecordedCall, signal?: AbortSignal) => Response | Promise<Response>;
 
+export function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
+} {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (reason: unknown) => void = () => undefined;
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+/** A real `Response` for status and headers whose `text()` is replaced by `read`. */
+export function bodyResponse(
+  read: () => Promise<string>,
+  init: ResponseInit = { headers: { 'Content-Type': 'application/json' } },
+): Response {
+  const response = new Response(null, init);
+  Object.defineProperty(response, 'text', { value: read });
+  return response;
+}
+
+/** Headers arrive immediately; the body never finishes and fails only when fetch is aborted. */
+export function hangingBodyWith(init?: ResponseInit): Responder {
+  return (_call, signal) =>
+    bodyResponse(
+      () =>
+        new Promise<string>((_resolve, reject) => {
+          const abort = () => reject(new DOMException('aborted', 'AbortError'));
+          if (signal?.aborted) abort();
+          else signal?.addEventListener('abort', abort, { once: true });
+        }),
+      init,
+    );
+}
+
+export const hangingBody: Responder = hangingBodyWith();
+
 interface Route {
   method: string;
   path: string;

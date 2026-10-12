@@ -1,5 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { FakeFetch, hang, json, noContent, problem } from '../testing/fake-fetch';
+import {
+  bodyResponse,
+  FakeFetch,
+  hang,
+  hangingBody,
+  hangingBodyWith,
+  json,
+  noContent,
+  problem,
+} from '../testing/fake-fetch';
 import { type Harness, setupDataAccess } from '../testing/setup';
 import { ApiClient } from './api-client';
 import { ApiError, parseRetryAfter } from './api-error';
@@ -232,6 +241,39 @@ describe('ApiClient', () => {
     fake.on('GET', '/cities', new Response('<html>', { status: 200 }));
     const error = await failure(TestBed.inject(CatalogApi).cities());
     expect(error.kind).toBe('invalid_response');
+  });
+
+  it('times out while reading a success body after headers arrive', async () => {
+    fake.on('GET', '/cities', hangingBody);
+    const error = await failure(TestBed.inject(CatalogApi).cities());
+    expect(error.kind).toBe('timeout');
+  });
+
+  it('keeps caller cancellation active while reading the body', async () => {
+    fake.on('GET', '/cities', hangingBody);
+    const controller = new AbortController();
+    const pending = failure(TestBed.inject(CatalogApi).cities(controller.signal));
+    await vi.waitFor(() => expect(fake.callsTo('GET', '/cities')).toHaveLength(1), { interval: 1 });
+    controller.abort();
+    expect((await pending).kind).toBe('aborted');
+  });
+
+  it('normalizes a body stream failure as a network error', async () => {
+    fake.on('GET', '/cities', () =>
+      bodyResponse(() => Promise.reject(new TypeError('connection lost'))),
+    );
+    const error = await failure(TestBed.inject(CatalogApi).cities());
+    expect(error.kind).toBe('network');
+  });
+
+  it('times out while reading an error body after headers arrive', async () => {
+    fake.on(
+      'GET',
+      '/cities',
+      hangingBodyWith({ status: 503, headers: { 'Content-Type': 'application/problem+json' } }),
+    );
+    const error = await failure(TestBed.inject(CatalogApi).cities());
+    expect(error.kind).toBe('timeout');
   });
 
   it('tracks requests in flight as a signal', async () => {

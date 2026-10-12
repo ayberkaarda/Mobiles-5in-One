@@ -1,5 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { bearerSignIn, cookieSignIn, json, ME, noContent, problem } from '../testing/fake-fetch';
+import {
+  bearerSignIn,
+  cookieSignIn,
+  deferred,
+  json,
+  ME,
+  noContent,
+  problem,
+} from '../testing/fake-fetch';
 import { type Harness, setupDataAccess } from '../testing/setup';
 import { readMagicLinkFragment } from './auth/magic-link';
 import { AccountApi } from './endpoints';
@@ -140,8 +148,102 @@ describe('SessionStore', () => {
       expect(h.fake.callsTo('POST', '/me/licence-accept')[0]?.headers.get('X-CSRF-Token')).toBe(
         'csrf-from-login',
       );
-      await session.logout();
+      await expect(session.logout()).rejects.toMatchObject({ kind: 'network' });
       expect(session.status()).toBe('anonymous');
+      expect(session.logoutPending()).toBe(true);
+    });
+
+    it('discards init results received after logout', async () => {
+      const reply = deferred<Response>();
+      h.fake.on('GET', '/me', () => reply.promise);
+      h.fake.on('POST', '/auth/csrf', json({ csrf_token: 'csrf-A' }));
+      h.fake.on('POST', '/auth/logout', noContent());
+      const session = TestBed.inject(SessionStore);
+      const pending = session.init(fakeLocation('').location, fakeLocation('').history);
+      await vi.waitFor(() => expect(h.fake.callsTo('GET', '/me')).toHaveLength(1));
+      await session.logout();
+      reply.resolve(json(ME));
+      await pending;
+      expect(session.status()).toBe('anonymous');
+    });
+
+    it('discards reload results received after logout', async () => {
+      const reply = deferred<Response>();
+      h.fake.on('POST', '/auth/login', json(cookieSignIn()));
+      h.fake.on('GET', '/me', () => reply.promise);
+      h.fake.on('POST', '/auth/logout', noContent());
+      const session = TestBed.inject(SessionStore);
+      await session.login('a@example.test', 'password-A');
+      const pending = session.reload();
+      await vi.waitFor(() => expect(h.fake.callsTo('GET', '/me')).toHaveLength(1));
+      await session.logout();
+      reply.resolve(json(ME));
+      await expect(pending).resolves.toEqual(ME);
+      expect(session.status()).toBe('anonymous');
+    });
+
+    it('discards licence results received after logout', async () => {
+      const reply = deferred<Response>();
+      h.fake.on('POST', '/auth/login', json(cookieSignIn()));
+      h.fake.on('POST', '/me/licence-accept', () => reply.promise);
+      h.fake.on('POST', '/auth/logout', noContent());
+      const session = TestBed.inject(SessionStore);
+      await session.login('a@example.test', 'password-A');
+      const pending = session.acceptLicence();
+      await vi.waitFor(() => expect(h.fake.callsTo('POST', '/me/licence-accept')).toHaveLength(1));
+      await session.logout();
+      reply.resolve(json({ ...ME, licence_accepted: true }));
+      await pending;
+      expect(session.status()).toBe('anonymous');
+    });
+
+    it('discards login results received after logout', async () => {
+      const reply = deferred<Response>();
+      h.fake.on('POST', '/auth/login', () => reply.promise);
+      h.fake.on('POST', '/auth/csrf', problem(401, 'auth.required'));
+      const session = TestBed.inject(SessionStore);
+      const pending = session.login('a@example.test', 'password-A');
+      await vi.waitFor(() => expect(h.fake.callsTo('POST', '/auth/login')).toHaveLength(1));
+      await session.logout();
+      reply.resolve(json(cookieSignIn()));
+      await pending;
+      expect(session.status()).toBe('anonymous');
+    });
+
+    it('discards magic-link results received after logout', async () => {
+      const reply = deferred<Response>();
+      h.fake.on('POST', '/auth/magic-link/verify', () => reply.promise);
+      h.fake.on('POST', '/auth/csrf', problem(401, 'auth.required'));
+      const session = TestBed.inject(SessionStore);
+      session.consumeMagicLinkUrl(`https://app.test/#token=${TOKEN}`);
+      const pending = session.completeMagicLink();
+      await vi.waitFor(() =>
+        expect(h.fake.callsTo('POST', '/auth/magic-link/verify')).toHaveLength(1),
+      );
+      await session.logout();
+      reply.resolve(json(cookieSignIn()));
+      await pending;
+      expect(session.status()).toBe('anonymous');
+    });
+
+    it('discards reload results received after another sign-in', async () => {
+      const reply = deferred<Response>();
+      const userB = { ...ME, id: 'user-B', display_name: 'B' };
+      h.fake.on(
+        'POST',
+        '/auth/login',
+        json(cookieSignIn()),
+        json({ ...cookieSignIn('csrf-B'), user: userB }),
+      );
+      h.fake.on('GET', '/me', () => reply.promise);
+      const session = TestBed.inject(SessionStore);
+      await session.login('a@example.test', 'password-A');
+      const pending = session.reload();
+      await vi.waitFor(() => expect(h.fake.callsTo('GET', '/me')).toHaveLength(1));
+      await session.login('b@example.test', 'password-B');
+      reply.resolve(json(ME));
+      await pending;
+      expect(session.user()).toEqual(userB);
     });
 
     it('passes register and magic-link requests through', async () => {

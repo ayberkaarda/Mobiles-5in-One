@@ -1,3 +1,4 @@
+import { deferred } from '../../testing/fake-fetch';
 import { CapacitorSecureTokenStore, REFRESH_TOKEN_KEY } from './secure-token-store';
 
 function fakePlugin() {
@@ -41,5 +42,24 @@ describe('CapacitorSecureTokenStore', () => {
     await expect(store.clear()).rejects.toThrow('native app only');
     expect(plugin.set).not.toHaveBeenCalled();
     expect(plugin.get).not.toHaveBeenCalled();
+  });
+
+  it('swallows only the plugin key-not-found error on removal', async () => {
+    const plugin = fakePlugin();
+    plugin.remove.mockRejectedValueOnce('ITEM WITH GIVEN KEY DOES NOT EXIST');
+    const store = new CapacitorSecureTokenStore(plugin, () => true);
+    await expect(store.clear()).resolves.toBeUndefined();
+    await expect(store.clear()).resolves.toBeUndefined();
+  });
+
+  it('surfaces secure storage removal failures', async () => {
+    const plugin = fakePlugin();
+    const gate = deferred<{ value: boolean }>();
+    plugin.remove.mockImplementationOnce(() => gate.promise);
+    const store = new CapacitorSecureTokenStore(plugin, () => true);
+    const error = new Error('Remove failed');
+    const pending = expect(store.clear()).rejects.toBe(error);
+    gate.reject(error);
+    await pending;
   });
 });

@@ -22,6 +22,8 @@ export interface ApiRequest<P extends ApiPathTemplate> {
    * (wrong password), not a reason to refresh.
    */
   auth?: boolean;
+  /** Sign-in may replace a cookie while an earlier logout remains pending. */
+  credentials?: RequestCredentials;
 }
 
 const IDEMPOTENT = new Set<HttpMethod>(['GET', 'PUT', 'DELETE']);
@@ -62,33 +64,50 @@ export class ApiClient {
     const useAuth = req.auth !== false;
     let authRetried = false;
     let rateRetried = false;
+    let failedAttempt: { session: number; error: ApiError } | null = null;
 
     for (;;) {
+      if (failedAttempt !== null && !this.strategy.isCurrentSession(failedAttempt.session)) {
+        throw failedAttempt.error;
+      }
       const headers = new Headers({ Accept: 'application/json', ...req.headers });
       headers.set(REQUEST_ID_HEADER, requestId);
       if (req.body !== undefined) headers.set('Content-Type', 'application/json');
       let attempt: AuthAttempt | null = null;
       if (useAuth) attempt = await this.strategy.authorize(req.method, headers);
+      if (failedAttempt !== null && attempt?.session !== failedAttempt.session) {
+        throw failedAttempt.error;
+      }
 
-      const response = await send(
+      const result = await send(
         this.fetchFn,
         url,
         {
           method: req.method,
           headers,
           body: req.body === undefined ? undefined : JSON.stringify(req.body),
-          credentials: this.strategy.credentials,
+          credentials: req.credentials ?? this.strategy.credentials,
         },
         { timeoutMs: req.timeoutMs ?? this.options.timeoutMs, signal: req.signal, requestId },
+        async (response) => {
+          if (response.ok) {
+            return { ok: true as const, value: await readBody<T>(response, requestId) };
+          }
+          return {
+            ok: false as const,
+            error: await ApiError.fromResponse(response, requestId, this.options.now()),
+          };
+        },
       );
 
-      if (response.ok) return readBody<T>(response, requestId);
+      if (result.ok) return result.value;
 
-      const error = await ApiError.fromResponse(response, requestId, this.options.now());
+      const error = result.error;
       const authFailure =
         error.status === 401 || (error.status === 403 && error.code === 'csrf.invalid');
       if (authFailure && attempt !== null && !authRetried) {
         authRetried = true;
+        failedAttempt = { session: attempt.session, error };
         if (await this.strategy.recover(error, attempt)) continue;
         throw error;
       }

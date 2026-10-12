@@ -4,6 +4,7 @@ import type { Me, StatusResponse, UserRole } from './api-types';
 import { AuthApi } from './auth/auth-api';
 import { AUTH_STRATEGY } from './auth/auth-strategy';
 import { fragmentOf, readMagicLinkFragment } from './auth/magic-link';
+import { PENDING_LOGOUT_MARKER } from './auth/pending-logout-marker';
 import { AccountApi } from './endpoints';
 
 export type SessionState =
@@ -24,10 +25,13 @@ export class SessionStore {
   private readonly auth = inject(AuthApi);
   private readonly account = inject(AccountApi);
   private readonly strategy = inject(AUTH_STRATEGY);
+  private readonly marker = inject(PENDING_LOGOUT_MARKER);
+  private epoch = 0;
 
   private readonly state = signal<SessionState>({ status: 'unknown' });
   private magicLinkToken: string | null = null;
   private readonly magicLinkPending = signal(false);
+  private readonly pendingLogout = signal(this.marker.isSet());
 
   readonly session = this.state.asReadonly();
   readonly status = computed(() => this.state().status);
@@ -40,9 +44,14 @@ export class SessionStore {
   readonly licenceAccepted = computed(() => this.user()?.licence_accepted ?? false);
   /** A magic-link token was captured and waits for `completeMagicLink`. */
   readonly hasPendingMagicLink = this.magicLinkPending.asReadonly();
+  readonly logoutPending = this.pendingLogout.asReadonly();
 
   constructor() {
-    this.strategy.onSessionEnded(() => this.state.set({ status: 'anonymous' }));
+    this.strategy.onSessionEnded(() => {
+      this.epoch += 1;
+      this.state.set({ status: 'anonymous' });
+      this.pendingLogout.set(this.marker.isSet());
+    });
   }
 
   /**
@@ -55,14 +64,22 @@ export class SessionStore {
     history: HistoryLike = globalThis.history,
   ): Promise<void> {
     this.consumeMagicLinkFragment(location, history);
+    const epoch = this.epoch;
     try {
-      if (!(await this.strategy.restore())) {
+      if (this.marker.isSet()) {
         this.state.set({ status: 'anonymous' });
+        await this.retryPendingLogout();
         return;
       }
-      this.state.set({ status: 'signed-in', user: await this.account.me() });
+      if (!(await this.strategy.restore())) {
+        if (epoch === this.epoch) this.state.set({ status: 'anonymous' });
+        return;
+      }
+      if (epoch !== this.epoch) return;
+      const user = await this.account.me();
+      if (epoch === this.epoch) this.state.set({ status: 'signed-in', user });
     } catch (error) {
-      if (isApiError(error) && error.status === 401) {
+      if (epoch === this.epoch && isApiError(error) && error.status === 401) {
         this.state.set({ status: 'anonymous' });
       }
       // Offline or server trouble: keep `unknown` and any stored credential for a later retry.
@@ -91,22 +108,30 @@ export class SessionStore {
   async completeMagicLink(password?: string): Promise<Me> {
     const token = this.magicLinkToken;
     if (token === null) throw new Error('no magic link is pending');
+    const epoch = ++this.epoch;
     try {
       const user = await this.auth.verifyMagicLink(token, password);
-      this.dropMagicLink();
-      this.state.set({ status: 'signed-in', user });
+      if (epoch === this.epoch) {
+        this.dropMagicLink();
+        this.state.set({ status: 'signed-in', user });
+        this.pendingLogout.set(this.marker.isSet());
+      }
       return user;
     } catch (error) {
       const askPassword =
         password === undefined && isApiError(error) && error.code === 'auth.invalid_credentials';
-      if (!askPassword) this.dropMagicLink();
+      if (epoch === this.epoch && !askPassword) this.dropMagicLink();
       throw error;
     }
   }
 
   async login(email: string, password: string): Promise<Me> {
+    const epoch = ++this.epoch;
     const user = await this.auth.login(email, password);
-    this.state.set({ status: 'signed-in', user });
+    if (epoch === this.epoch) {
+      this.state.set({ status: 'signed-in', user });
+      this.pendingLogout.set(this.marker.isSet());
+    }
     return user;
   }
 
@@ -120,40 +145,66 @@ export class SessionStore {
 
   /** Re-reads the user (role and licence can change on the server). */
   async reload(): Promise<Me> {
+    const epoch = this.epoch;
     const user = await this.account.me();
-    this.state.set({ status: 'signed-in', user });
+    if (epoch === this.epoch) this.state.set({ status: 'signed-in', user });
     return user;
   }
 
   async acceptLicence(): Promise<Me> {
+    const epoch = this.epoch;
     const user = await this.account.acceptLicence();
-    this.state.set({ status: 'signed-in', user });
+    if (epoch === this.epoch) this.state.set({ status: 'signed-in', user });
     return user;
   }
 
   async logout(): Promise<void> {
+    this.beginLogout();
+    const epoch = this.epoch;
     try {
       await this.auth.logout();
     } finally {
-      this.dropMagicLink();
-      this.state.set({ status: 'anonymous' });
+      if (epoch === this.epoch) this.pendingLogout.set(this.marker.isSet());
     }
   }
 
   async logoutEverywhere(): Promise<void> {
+    this.beginLogout();
+    const epoch = this.epoch;
     try {
       await this.auth.logoutEverywhere();
     } finally {
-      this.dropMagicLink();
-      this.state.set({ status: 'anonymous' });
+      if (epoch === this.epoch) this.pendingLogout.set(this.marker.isSet());
     }
   }
 
   async deleteAccount(password?: string): Promise<StatusResponse> {
+    const epoch = ++this.epoch;
     const result = await this.account.deleteAccount(password);
+    if (epoch === this.epoch) {
+      this.dropMagicLink();
+      this.state.set({ status: 'anonymous' });
+      this.pendingLogout.set(this.marker.isSet());
+    }
+    return result;
+  }
+
+  async retryPendingLogout(): Promise<boolean> {
+    const epoch = this.epoch;
+    if (this.marker.isSet()) {
+      this.state.set({ status: 'anonymous' });
+      this.pendingLogout.set(true);
+    }
+    const done = await this.auth.completePendingLogout();
+    if (epoch === this.epoch) this.pendingLogout.set(this.marker.isSet());
+    return done;
+  }
+
+  private beginLogout(): void {
+    this.epoch += 1;
     this.dropMagicLink();
     this.state.set({ status: 'anonymous' });
-    return result;
+    this.pendingLogout.set(true);
   }
 
   private capture(token: string | null): boolean {

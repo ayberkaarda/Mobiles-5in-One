@@ -68,7 +68,7 @@ export class ApiError extends Error {
     super(status > 0 ? `${code} (HTTP ${status})` : code);
   }
 
-  /** Reads a non-2xx response into an error; never throws. */
+  /** Reads a non-2xx response into an error; stream failures propagate to the transport. */
   static async fromResponse(
     response: Response,
     sentRequestId: string,
@@ -78,9 +78,10 @@ export class ApiError extends Error {
     const retryAfter = parseRetryAfter(response.headers.get('Retry-After'), nowMs);
     let problem: ProblemBody | null = null;
     const contentType = response.headers.get('Content-Type') ?? '';
+    const text = await response.text();
     if (contentType.includes('json')) {
       try {
-        const body: unknown = await response.json();
+        const body: unknown = JSON.parse(text);
         if (isProblemBody(body)) problem = body;
       } catch {
         problem = null;

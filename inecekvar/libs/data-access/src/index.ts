@@ -6,6 +6,7 @@ export * from './lib/auth/auth-strategy';
 export * from './lib/auth/bearer-auth.strategy';
 export * from './lib/auth/cookie-auth.strategy';
 export * from './lib/auth/magic-link';
+export * from './lib/auth/pending-logout-marker';
 export * from './lib/auth/secure-token-store';
 export * from './lib/config';
 export * from './lib/endpoints';

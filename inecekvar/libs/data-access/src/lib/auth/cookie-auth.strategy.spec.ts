@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { cookieSignIn, json, ME, noContent, problem } from '../../testing/fake-fetch';
+import { cookieSignIn, deferred, json, ME, noContent, problem } from '../../testing/fake-fetch';
 import { type Harness, setupDataAccess } from '../../testing/setup';
 import { ApiError } from '../api-error';
 import { AccountApi, CatalogApi } from '../endpoints';
@@ -160,5 +160,88 @@ describe('CookieAuthStrategy (web and PWA)', () => {
     h.fake.on('PUT', '/me/favorites/l1', problem(401, 'auth.required'));
     await expect(TestBed.inject(AccountApi).addFavorite('l1')).rejects.toBeInstanceOf(ApiError);
     expect(h.fake.callsTo('PUT', '/me/favorites/l1')[0]?.headers.has('X-CSRF-Token')).toBe(false);
+  });
+
+  it('keeps the new session CSRF token after an old CSRF reply', async () => {
+    await signIn('csrf-A');
+    const reply = deferred<Response>();
+    h.fake.on('POST', '/auth/csrf', () => reply.promise);
+    const strategy = TestBed.inject(CookieAuthStrategy);
+    const attempt = await strategy.authorize('GET', new Headers());
+    const pending = strategy.recover(
+      new ApiError('problem', 403, 'csrf.invalid', 'request-A'),
+      attempt,
+    );
+    await vi.waitFor(() => expect(h.fake.callsTo('POST', '/auth/csrf')).toHaveLength(1));
+    await strategy.establish(cookieSignIn('csrf-B'));
+    reply.resolve(json({ csrf_token: 'csrf-late-A' }));
+    await expect(pending).resolves.toBe(false);
+    h.fake.on('PUT', '/me/favorites/l1', noContent());
+    await TestBed.inject(AccountApi).addFavorite('l1');
+    expect(h.fake.callsTo('PUT', '/me/favorites/l1')[0]?.headers.get('X-CSRF-Token')).toBe(
+      'csrf-B',
+    );
+  });
+
+  it('ignores an old CSRF 401 after a new sign-in', async () => {
+    await signIn();
+    const reply = deferred<Response>();
+    h.fake.on('POST', '/auth/csrf', () => reply.promise);
+    const strategy = TestBed.inject(CookieAuthStrategy);
+    const ended = vi.fn();
+    strategy.onSessionEnded(ended);
+    const attempt = await strategy.authorize('GET', new Headers());
+    const pending = strategy.recover(
+      new ApiError('problem', 403, 'csrf.invalid', 'request-A'),
+      attempt,
+    );
+    await vi.waitFor(() => expect(h.fake.callsTo('POST', '/auth/csrf')).toHaveLength(1));
+    await strategy.establish(cookieSignIn('csrf-B'));
+    reply.resolve(problem(401, 'auth.required'));
+    await expect(pending).resolves.toBe(false);
+    expect(ended).not.toHaveBeenCalled();
+    expect((await strategy.authorize('GET', new Headers())).authenticated).toBe(true);
+  });
+
+  it('ignores an old request 401 after a new cookie sign-in', async () => {
+    await signIn();
+    const reply = deferred<Response>();
+    h.fake.on('GET', '/me', () => reply.promise);
+    const strategy = TestBed.inject(CookieAuthStrategy);
+    const ended = vi.fn();
+    strategy.onSessionEnded(ended);
+    const pending = TestBed.inject(AccountApi).me();
+    const rejected = expect(pending).rejects.toMatchObject({ status: 401 });
+    await vi.waitFor(() => expect(h.fake.callsTo('GET', '/me')).toHaveLength(1));
+    await strategy.establish(cookieSignIn('csrf-B'));
+    reply.resolve(problem(401, 'auth.required'));
+    await rejected;
+    expect(ended).not.toHaveBeenCalled();
+    expect((await strategy.authorize('GET', new Headers())).authenticated).toBe(true);
+    expect(h.fake.callsTo('GET', '/me')).toHaveLength(1);
+  });
+
+  it('does not share a CSRF flight across cookie sessions', async () => {
+    await signIn();
+    const reply = deferred<Response>();
+    h.fake.on('POST', '/auth/csrf', () => reply.promise, json({ csrf_token: 'csrf-B-fresh' }));
+    const strategy = TestBed.inject(CookieAuthStrategy);
+    const error = new ApiError('problem', 403, 'csrf.invalid', 'request-A');
+    const first = strategy.recover(error, await strategy.authorize('GET', new Headers()));
+    await vi.waitFor(() => expect(h.fake.callsTo('POST', '/auth/csrf')).toHaveLength(1));
+    await strategy.establish(cookieSignIn('csrf-B'));
+    const second = strategy.recover(error, await strategy.authorize('GET', new Headers()));
+    const observed = await vi
+      .waitFor(() => expect(h.fake.callsTo('POST', '/auth/csrf')).toHaveLength(2), { timeout: 100 })
+      .then(
+        () => true,
+        () => false,
+      );
+    reply.resolve(json({ csrf_token: 'csrf-late-A' }));
+    await Promise.all([first, second]);
+    expect(observed).toBe(true);
+    const headers = new Headers();
+    await strategy.authorize('POST', headers);
+    expect(headers.get('X-CSRF-Token')).toBe('csrf-B-fresh');
   });
 });

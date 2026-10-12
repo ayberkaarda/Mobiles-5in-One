@@ -6,8 +6,10 @@ import type { AuthMode, SignInResponse } from '../api-types';
 export interface AuthAttempt {
   /** True when the attempt carried a credential (bearer token, or a known cookie session). */
   readonly authenticated: boolean;
-  /** Credential generation at the time of the attempt; a newer one means "retry, do not refresh". */
+  /** Credential generation within the session; a newer one allows retry without refresh. */
   readonly generation: number;
+  /** Session identity, unchanged by token rotation and changed by establish or clear. */
+  readonly session: number;
 }
 
 /**
@@ -20,11 +22,12 @@ export interface AuthStrategy {
   readonly mode: AuthMode;
   /** `fetch` credentials mode for every API request. */
   readonly credentials: RequestCredentials;
+  isCurrentSession(session: number): boolean;
   /** Adds the credential headers for one attempt; may fetch a CSRF token or refresh first. */
   authorize(method: string, headers: Headers): Promise<AuthAttempt>;
   /**
    * Called once after an authenticated attempt answered 401, or 403 `csrf.invalid`.
-   * Resolves true when the request should be retried once; false ends the session.
+   * Resolves true when the request should be retried once. Stale attempts leave the new session alone.
    */
   recover(error: ApiError, attempt: AuthAttempt): Promise<boolean>;
   /** Takes the body of a successful login or magic-link verification. */
@@ -33,6 +36,10 @@ export interface AuthStrategy {
   restore(): Promise<boolean>;
   /** Forgets every credential held on this device. */
   clear(): Promise<void>;
+  /** Drops memory immediately, then revokes with the captured credential. */
+  logout(path: '/auth/logout' | '/auth/logout-all'): Promise<void>;
+  /** Completes revocation using only the retained cookie or secure refresh token. */
+  completePendingLogout(): Promise<void>;
   /** Called when the server ends the session (expired, revoked, refresh refused). */
   onSessionEnded(listener: () => void): () => void;
 }
