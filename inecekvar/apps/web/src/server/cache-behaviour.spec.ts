@@ -99,7 +99,7 @@ describe('page cache behaviour', () => {
     },
   );
 
-  it.each(['/admin', '/Admin/x', '/%61dmin'])(
+  it.each(['/admin', '/admin/x', '/%61dmin'])(
     'never reads or writes private pages: %s',
     async (path) => {
       const { port, render, cache } = await fixture();

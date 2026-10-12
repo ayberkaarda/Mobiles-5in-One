@@ -1,5 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  input,
+  OnInit,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { filter } from 'rxjs';
 import { PageStatus } from '../data/page-status';
 import { assertPublicPath } from '../public-path';
 import { SeoService } from '../seo/seo.service';
@@ -38,6 +47,7 @@ export class StatusPageComponent implements OnInit {
   private readonly status = inject(PageStatus);
   private readonly seo = inject(SeoService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   get heading(): string {
     return this.kind() === 'not-found' ? 'Sayfa bulunamadı' : 'Şu anda yanıt veremiyoruz';
@@ -50,6 +60,16 @@ export class StatusPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.applyStatus();
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => this.applyStatus());
+  }
+
+  private applyStatus(): void {
     if (this.kind() === 'not-found') {
       this.status.notFound();
     } else {

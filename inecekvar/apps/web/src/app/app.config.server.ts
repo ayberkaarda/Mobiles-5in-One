@@ -17,6 +17,8 @@ import { PUBLIC_CONFIG_STATE_KEY, PUBLIC_WEB_CONFIG, PublicWebConfig } from './p
 const webConfig = loadWebServerConfig(process.env);
 const publicConfig: PublicWebConfig = {
   canonicalOrigin: webConfig.canonicalOrigin,
+  appOrigin: webConfig.appOrigin,
+  tilesOrigin: webConfig.tilesOrigin,
   apiPublicBaseUrl: webConfig.apiPublicBaseUrl,
   appStoreId: webConfig.appStoreId,
 };

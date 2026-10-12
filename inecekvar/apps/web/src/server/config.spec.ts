@@ -6,10 +6,13 @@ describe('web server config', () => {
     expect(loadWebServerConfig({})).toEqual({
       env: 'production',
       canonicalOrigin: 'https://inecekvar.app',
+      appOrigin: 'https://app.inecekvar.app',
       allowedHosts: ['inecekvar.app', 'www.inecekvar.app'],
       apiPublicOrigin: 'https://api.inecekvar.app',
       apiPublicBaseUrl: 'https://api.inecekvar.app/v1',
       appStoreId: null,
+      androidCertFingerprints: [],
+      iosTeamId: null,
       tilesOrigin: 'https://tiles.inecekvar.app',
       apiInternalUrl: 'http://127.0.0.1:57800/v1',
       cacheTtlMs: 600_000,
@@ -36,18 +39,20 @@ describe('web server config', () => {
     expect(config.robotsIndexable).toBe(false);
   });
 
-  it.each(['IV_WEB_CANONICAL_ORIGIN', 'IV_WEB_API_PUBLIC_ORIGIN', 'IV_WEB_TILES_ORIGIN'])(
-    'rejects cleartext %s in production without echoing its value',
-    (variable) => {
-      const value = 'http://example.test';
-      expect(() => loadWebServerConfig({ [variable]: value })).toThrow(`Invalid ${variable}`);
-      try {
-        loadWebServerConfig({ [variable]: value });
-      } catch (error) {
-        expect(String(error)).not.toContain(value);
-      }
-    },
-  );
+  it.each([
+    'IV_WEB_CANONICAL_ORIGIN',
+    'IV_WEB_API_PUBLIC_ORIGIN',
+    'IV_WEB_TILES_ORIGIN',
+    'IV_WEB_APP_ORIGIN',
+  ])('rejects cleartext %s in production without echoing its value', (variable) => {
+    const value = 'http://example.test';
+    expect(() => loadWebServerConfig({ [variable]: value })).toThrow(`Invalid ${variable}`);
+    try {
+      loadWebServerConfig({ [variable]: value });
+    } catch (error) {
+      expect(String(error)).not.toContain(value);
+    }
+  });
 
   it.each([
     'https://example.test/path',
@@ -86,6 +91,26 @@ describe('web server config', () => {
     ).toBe('https://api.example.test/v1');
   });
 
+  it('validates and normalizes the app origin with the same origin rules', () => {
+    expect(loadWebServerConfig({ IV_WEB_APP_ORIGIN: 'https://APP.EXAMPLE/' }).appOrigin).toBe(
+      'https://app.example',
+    );
+    expect(
+      loadWebServerConfig({ INECEKVAR_ENV: 'local', IV_WEB_APP_ORIGIN: 'http://localhost:8100' })
+        .appOrigin,
+    ).toBe('http://localhost:8100');
+    for (const value of [
+      'invalid',
+      'https://app.example/path',
+      'https://name:pass@app.example',
+      'https://app.example?x=1',
+    ]) {
+      expect(() => loadWebServerConfig({ IV_WEB_APP_ORIGIN: value })).toThrow(
+        'Invalid IV_WEB_APP_ORIGIN',
+      );
+    }
+  });
+
   it('normalizes origin casing and keeps nondefault ports out of hostnames', () => {
     const config = loadWebServerConfig({
       INECEKVAR_ENV: 'local',
@@ -114,6 +139,53 @@ describe('web server config', () => {
   it.each(['0', '-1', '1.5', 'invalid'])('rejects invalid cache limits: %s', (value) => {
     expect(() => loadWebServerConfig({ IV_WEB_CACHE_MAX_ENTRIES: value })).toThrow(
       'IV_WEB_CACHE_MAX_ENTRIES',
+    );
+  });
+
+  it.each([undefined, '', '  '])('leaves Android certificates absent for %s', (value) => {
+    expect(
+      loadWebServerConfig({ IV_WEB_ANDROID_CERT_SHA256: value }).androidCertFingerprints,
+    ).toEqual([]);
+  });
+
+  it('trims and uppercases every configured Android certificate', () => {
+    const first = Array.from({ length: 32 }, () => 'ab').join(':');
+    const second = Array.from({ length: 32 }, () => 'cd').join(':');
+    const config = loadWebServerConfig({ IV_WEB_ANDROID_CERT_SHA256: ` ${first} , ${second} ` });
+    expect(config.androidCertFingerprints).toEqual([first.toUpperCase(), second.toUpperCase()]);
+  });
+
+  it.each([
+    'private-invalid-certificate',
+    'AB'.repeat(32),
+    Array.from({ length: 31 }, () => 'AB').join(':'),
+    Array.from({ length: 33 }, () => 'AB').join(':'),
+    Array.from({ length: 32 }, () => 'GG').join(':'),
+    ',',
+    Array.from({ length: 32 }, () => 'AB').join(':') + ',',
+  ])('rejects any invalid certificate entry without echoing it: %s', (value) => {
+    expect(() => loadWebServerConfig({ IV_WEB_ANDROID_CERT_SHA256: value })).toThrow(
+      new Error('Invalid IV_WEB_ANDROID_CERT_SHA256'),
+    );
+  });
+
+  it('accepts a configured Apple team and leaves an unset team absent', () => {
+    const team = 'A1B2C3D4E5';
+    expect(loadWebServerConfig({ IV_WEB_IOS_TEAM_ID: team }).iosTeamId).toBe(team);
+    expect(loadWebServerConfig({}).iosTeamId).toBeNull();
+  });
+
+  it.each([
+    '',
+    '  ',
+    'private-invalid-team',
+    'abcdefghij',
+    'A1B2C3D4E',
+    'A1B2C3D4E56',
+    ' A1B2C3D4E5',
+  ])('rejects an invalid Apple team without echoing it: %s', (value) => {
+    expect(() => loadWebServerConfig({ IV_WEB_IOS_TEAM_ID: value })).toThrow(
+      new Error('Invalid IV_WEB_IOS_TEAM_ID'),
     );
   });
 });

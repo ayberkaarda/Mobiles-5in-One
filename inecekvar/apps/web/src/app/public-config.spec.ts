@@ -29,6 +29,8 @@ describe('public config hydration', () => {
   it('uses and removes the public server config', () => {
     const expected = {
       canonicalOrigin: 'https://canonical.example',
+      appOrigin: 'https://app.example',
+      tilesOrigin: 'https://tiles.example',
       apiPublicBaseUrl: 'https://api.example/v1',
       appStoreId: '123456',
     };
@@ -44,7 +46,15 @@ describe('public config hydration', () => {
     { ...DEFAULT_PUBLIC_WEB_CONFIG, canonicalOrigin: '//evil.example' },
     { ...DEFAULT_PUBLIC_WEB_CONFIG, apiPublicBaseUrl: 'https://name:pass@api.example/v1' },
     { ...DEFAULT_PUBLIC_WEB_CONFIG, appStoreId: 'invalid' },
+    { ...DEFAULT_PUBLIC_WEB_CONFIG, appOrigin: 'https://app.example/path' },
+    { ...DEFAULT_PUBLIC_WEB_CONFIG, appOrigin: 'https://name:pass@app.example' },
+    { ...DEFAULT_PUBLIC_WEB_CONFIG, tilesOrigin: 'https://tiles.example/path' },
+    { ...DEFAULT_PUBLIC_WEB_CONFIG, tilesOrigin: 12 },
   ])('falls back when public config is absent or invalid', (value) => {
     expect(read(value).config).toEqual(DEFAULT_PUBLIC_WEB_CONFIG);
+  });
+
+  it('accepts an absent tiles origin', () => {
+    expect(read({ ...DEFAULT_PUBLIC_WEB_CONFIG, tilesOrigin: null }).config.tilesOrigin).toBeNull();
   });
 });

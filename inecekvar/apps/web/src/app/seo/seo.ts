@@ -54,4 +54,14 @@ export interface PageSeo {
   ogType?: 'website' | 'article';
   ogImagePath?: string;
   appBanner?: boolean;
+  page?: number;
+  pagination?: { prevPage: number | null; nextPage: number | null };
+}
+
+export function pagePath(path: string, page?: number): string {
+  assertPublicPath(path);
+  if (page !== undefined && (!Number.isInteger(page) || page < 1 || page > 9999)) {
+    throw new RangeError('Invalid page number');
+  }
+  return path + (page !== undefined && page > 1 ? `?sayfa=${page}` : '');
 }

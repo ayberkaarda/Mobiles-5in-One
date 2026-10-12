@@ -3,10 +3,13 @@ export type WebEnv = 'local' | 'test' | 'production';
 export interface WebServerConfig {
   env: WebEnv;
   canonicalOrigin: string;
+  appOrigin: string;
   allowedHosts: readonly string[];
   apiPublicOrigin: string;
   apiPublicBaseUrl: string;
   appStoreId: string | null;
+  androidCertFingerprints: readonly string[];
+  iosTeamId: string | null;
   tilesOrigin: string;
   apiInternalUrl: string;
   cacheTtlMs: number;
@@ -127,14 +130,31 @@ export function loadWebServerConfig(
     webEnv,
   );
   const appStoreId = env['IV_WEB_IOS_APP_ID'];
+  const certificates = env['IV_WEB_ANDROID_CERT_SHA256']?.trim() ?? '';
+  const androidCertFingerprints =
+    certificates === '' ? [] : certificates.split(',').map((entry) => entry.trim().toUpperCase());
+  if (androidCertFingerprints.some((entry) => !/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(entry))) {
+    throw new Error('Invalid IV_WEB_ANDROID_CERT_SHA256');
+  }
+  const iosTeamId = env['IV_WEB_IOS_TEAM_ID'] ?? null;
+  if (iosTeamId !== null && !/^[A-Z0-9]{10}$/.test(iosTeamId)) {
+    throw new Error('Invalid IV_WEB_IOS_TEAM_ID');
+  }
 
   return {
     env: webEnv,
     canonicalOrigin,
+    appOrigin: origin(
+      env['IV_WEB_APP_ORIGIN'] ?? 'https://app.inecekvar.app',
+      'IV_WEB_APP_ORIGIN',
+      webEnv,
+    ),
     allowedHosts: [...allowedHosts],
     apiPublicOrigin,
     apiPublicBaseUrl: apiPublicOrigin + '/v1',
     appStoreId: appStoreId !== undefined && /^\d{6,12}$/.test(appStoreId) ? appStoreId : null,
+    androidCertFingerprints,
+    iosTeamId,
     tilesOrigin: origin(
       env['IV_WEB_TILES_ORIGIN'] ?? 'https://tiles.inecekvar.app',
       'IV_WEB_TILES_ORIGIN',

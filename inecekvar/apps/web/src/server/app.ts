@@ -11,6 +11,9 @@ import {
   urlLengthGuard,
 } from './request-guards';
 import { robotsTxt } from './robots';
+import { createApiReader } from './api-reader';
+import { registerMachineFiles } from './machine-files';
+import { normalizeUrls } from './normalize';
 import { helmetOptions, nonceMiddleware, PERMISSIONS_POLICY } from './security-headers';
 
 export type PageRenderer = (request: Request) => Promise<Response | null>;
@@ -47,6 +50,7 @@ export function createWebApp(options: {
   render: PageRenderer;
   browserDistFolder?: string;
   cache?: PageCacheStore;
+  apiFetch?: typeof fetch;
   log?: (event: string, fields?: Record<string, unknown>) => void;
 }): express.Express {
   const { config, render } = options;
@@ -89,6 +93,14 @@ export function createWebApp(options: {
       .type('text/plain; charset=utf-8')
       .send(robotsTxt(config));
   });
+  registerMachineFiles(app, {
+    config,
+    reader: createApiReader({ baseUrl: config.apiInternalUrl, fetch: options.apiFetch }),
+    cache: new MemoryLruPageCache({
+      maxEntries: config.cacheMaxEntries,
+      maxBytes: config.cacheMaxBytes,
+    }),
+  });
 
   if (options.browserDistFolder) {
     const staticFiles = express.static(options.browserDistFolder, {
@@ -118,6 +130,8 @@ export function createWebApp(options: {
       staticFiles(req, res, next);
     });
   }
+
+  app.use(normalizeUrls(config.cacheQueryAllowlist));
 
   app.use(async (req, res, next) => {
     const separator = req.originalUrl.indexOf('?');

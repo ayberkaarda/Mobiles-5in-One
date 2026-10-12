@@ -1,7 +1,7 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { DEFAULT_PUBLIC_WEB_CONFIG, PUBLIC_WEB_CONFIG } from '../public-config';
-import { BRAND, clampText, DESCRIPTION_MAX, pageTitle, TITLE_MAX } from './seo';
+import { BRAND, clampText, DESCRIPTION_MAX, pagePath, pageTitle, TITLE_MAX } from './seo';
 import { SeoService } from './seo.service';
 
 const origin = 'https://canonical.example';
@@ -61,6 +61,68 @@ describe('SEO text', () => {
 });
 
 describe('SEO service', () => {
+  it.each([
+    { page: 1, prevPage: null, nextPage: 2 },
+    { page: 2, prevPage: 1, nextPage: 3 },
+    { page: 3, prevPage: 2, nextPage: null },
+  ])('writes canonical and pagination links for page $page', ({ page, prevPage, nextPage }) => {
+    const seo = setup();
+    seo.apply({
+      title: 'Hatlar',
+      description: 'Hat listesi',
+      path: '/istanbul/hatlar',
+      page,
+      pagination: { prevPage, nextPage },
+      alternates: { en: '/en/istanbul/hatlar' },
+    });
+    const canonical = origin + pagePath('/istanbul/hatlar', page);
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      canonical,
+    );
+    expect(content('og:url', 'property')).toBe(canonical);
+    for (const language of ['tr-TR', 'x-default']) {
+      expect(
+        document.head.querySelector(`link[hreflang="${language}"]`)?.getAttribute('href'),
+      ).toBe(canonical);
+    }
+    expect(document.head.querySelector('link[hreflang="en"]')?.getAttribute('href')).toBe(
+      origin + pagePath('/en/istanbul/hatlar', page),
+    );
+    for (const [rel, number] of [
+      ['prev', prevPage],
+      ['next', nextPage],
+    ] as const) {
+      expect(document.head.querySelector(`link[rel="${rel}"]`)?.getAttribute('href') ?? null).toBe(
+        number === null ? null : origin + pagePath('/istanbul/hatlar', number),
+      );
+    }
+    seo.apply({ title: null, description: 'Ana sayfa', path: '/' });
+    expect(document.head.querySelector('link[rel="prev"]')).toBeNull();
+    expect(document.head.querySelector('link[rel="next"]')).toBeNull();
+  });
+
+  it.each([0, -1, 1.5, 10000, NaN, Infinity])(
+    'rejects invalid page number %s before changing metadata',
+    (page) => {
+      const seo = setup();
+      seo.apply({ title: null, description: 'Ana sayfa', path: '/' });
+      expect(() => seo.apply({ title: null, description: '', path: '/', page })).toThrow(
+        'Invalid page number',
+      );
+      for (const pagination of [
+        { prevPage: page, nextPage: null },
+        { prevPage: null, nextPage: page },
+      ]) {
+        expect(() => seo.apply({ title: null, description: '', path: '/', pagination })).toThrow(
+          'Invalid page number',
+        );
+      }
+      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        origin + '/',
+      );
+    },
+  );
+
   it('replaces canonical, alternate, OG and Twitter tags without duplicates', () => {
     const seo = setup('123456');
     seo.apply({

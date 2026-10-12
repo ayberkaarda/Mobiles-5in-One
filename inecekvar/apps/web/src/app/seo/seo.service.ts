@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, RendererFactory2 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { PUBLIC_WEB_CONFIG } from '../public-config';
-import { BRAND, clampText, DESCRIPTION_MAX, PageSeo, pageTitle, siteUrl } from './seo';
+import { BRAND, clampText, DESCRIPTION_MAX, PageSeo, pagePath, pageTitle, siteUrl } from './seo';
 
 @Injectable({ providedIn: 'root' })
 export class SeoService {
@@ -15,11 +15,17 @@ export class SeoService {
 
   apply(seo: PageSeo): void {
     // Validate every path before changing the current page metadata.
-    const canonical = siteUrl(this.config.canonicalOrigin, seo.path);
+    const pagedUrl = (path: string, page?: number) => {
+      siteUrl(this.config.canonicalOrigin, path);
+      return this.config.canonicalOrigin + pagePath(path, page);
+    };
+    const canonical = pagedUrl(seo.path, seo.page);
     const english =
-      seo.alternates?.en === undefined
-        ? undefined
-        : siteUrl(this.config.canonicalOrigin, seo.alternates.en);
+      seo.alternates?.en === undefined ? undefined : pagedUrl(seo.alternates.en, seo.page);
+    const previous = seo.pagination?.prevPage;
+    const next = seo.pagination?.nextPage;
+    const previousUrl = previous == null ? null : pagedUrl(seo.path, previous);
+    const nextUrl = next == null ? null : pagedUrl(seo.path, next);
     const image =
       seo.ogImagePath === undefined
         ? undefined
@@ -42,6 +48,8 @@ export class SeoService {
         (index ? ',max-image-preview:large' : ''),
     );
     this.setLink('canonical', canonical);
+    if (previousUrl) this.setLink('prev', previousUrl);
+    if (nextUrl) this.setLink('next', nextUrl);
     this.setLink('alternate', canonical, 'tr-TR');
     this.setLink('alternate', canonical, 'x-default');
     if (english) {

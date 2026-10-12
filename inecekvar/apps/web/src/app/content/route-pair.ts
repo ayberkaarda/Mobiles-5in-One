@@ -2,11 +2,23 @@ import { isSlug, SLUG_PATTERN, StopPairOut } from './public-types';
 
 export const ROUTE_INDEX_MIN_LINES = 50;
 
+export function isRoutePairParam(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 241 || !SLUG_PATTERN.test(value)) return false;
+  for (
+    let separator = value.indexOf('-');
+    separator >= 0;
+    separator = value.indexOf('-', separator + 1)
+  ) {
+    if (isSlug(value.slice(0, separator)) && isSlug(value.slice(separator + 1))) return true;
+  }
+  return false;
+}
+
 export function resolveRoutePair(
   param: string,
   pairs: StopPairOut[],
 ): { pair: StopPairOut; canonical: boolean } | null {
-  if (param.length > 241 || !SLUG_PATTERN.test(param)) return null;
+  if (!isRoutePairParam(param)) return null;
   const direct = pairs.find((pair) => param === `${pair.from_stop.slug}-${pair.to_stop.slug}`);
   if (direct) return { pair: direct, canonical: true };
   const reverse = pairs.find((pair) => param === `${pair.to_stop.slug}-${pair.from_stop.slug}`);
