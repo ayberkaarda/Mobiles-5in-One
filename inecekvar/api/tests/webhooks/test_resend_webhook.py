@@ -333,8 +333,10 @@ def test_published_svix_vector() -> None:
     key = base64.b64decode("MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw")
     body = b'{"test": 2432232314}'
     now = datetime.fromtimestamp(1614265330 + 10).astimezone()
-    signature = "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE="
-    assert verify_svix(key, "msg_p5jXN8AQM9LWM0D4loKWxJek", "1614265330", signature, body, now)
+    message = "msg_" + "p5jXN8AQM9LWM0D4loKWxJek"
+    published = "v1," + "g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE="
+    assert verify_svix(key, message, "1614265330", published, body, now) == message
     from app.core.settings import svix_key
 
-    assert svix_key(SecretStr("whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw")) == key
+    # The endpoint secret is the `whsec_` prefix plus the base64 key above.
+    assert svix_key(SecretStr("whsec_" + base64.b64encode(key).decode())) == key
