@@ -139,7 +139,8 @@ class Services:
     mail_sender: MailSender
     breach_checker: BreachChecker
     clock: Clock
-    # Phase 2 collaborators. None means "not configured" and every consumer fails closed:
+    # Optional collaborators. Production configures session-bound step-up storage.
+    # None means "not configured" and every consumer fails closed:
     # no object store answers 503, no entitlement source grants no Plus, no step-up source
     # denies destructive moderation, no subscriber deleter defers erasure of subscribers.
     object_store: ObjectStore | None = None

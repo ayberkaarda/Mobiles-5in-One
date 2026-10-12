@@ -58,6 +58,7 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_CLIENT_IP_HEADER` | `X-Real-IP` | The only header read for the client address. |
 | `INECEKVAR_HIBP_ENABLED` | `true` | Breached-password range check at registration. |
 | `INECEKVAR_LOG_LEVEL` | `INFO` | Log level of the JSON logs. |
+| `INECEKVAR_TOTP_ENCRYPTION_KEY` | none (per process locally) | AES-256-GCM key for stored TOTP secrets: URL-safe base64 of exactly 32 random bytes (for example `python -c "import secrets,base64;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`). Required in production; without it in test the TOTP routes answer 503 `auth.totp_unavailable`. Locally a per-process key is created, so enrolments do not survive an API restart. Rotating it invalidates every enrolment (users enrol again); it is on the rotation list of the history-purge runbook (section 6.2). ADR-0037. |
 
 Object-storage, planner, offline-pack and retention settings are also read by the API:
 
@@ -77,7 +78,7 @@ Object-storage, planner, offline-pack and retention settings are also read by th
 | `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
 | `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |
 
-The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours. These limits are fixed rules, not environment keys.
+The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP. These limits are fixed rules, not environment keys.
 
 Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 

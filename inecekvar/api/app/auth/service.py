@@ -16,6 +16,7 @@ from app.core.errors import (
     AUTH_INVALID_CREDENTIALS,
     AUTH_REQUIRED,
     AUTH_TOKEN_INVALID,
+    REAUTH_REQUIRED,
     ProblemError,
 )
 from app.core.ids import uuid7
@@ -224,6 +225,25 @@ async def accept_licence(db: AsyncSession, user: User, now: datetime) -> None:
     )
 
 
+REAUTH_WINDOW = timedelta(minutes=10)
+
+
+async def session_started_at(db: AsyncSession, principal: Principal) -> datetime | None:
+    if principal.auth_mode == "cookie":
+        return await db.scalar(
+            select(UserSession.created_at).where(
+                UserSession.id == principal.session_id, UserSession.user_id == principal.user_id
+            )
+        )
+    created: datetime | None = await db.scalar(
+        select(func.min(RefreshToken.created_at)).where(
+            RefreshToken.family_id == principal.session_id,
+            RefreshToken.user_id == principal.user_id,
+        )
+    )
+    return created
+
+
 async def request_deletion(
     db: AsyncSession,
     settings: Settings,
@@ -238,20 +258,9 @@ async def request_deletion(
             raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     else:
         await verify_password(password or "", await dummy_hash(settings), settings)
-        created: datetime | None
-        if principal.auth_mode == "cookie":
-            created = await db.scalar(
-                select(UserSession.created_at).where(UserSession.id == principal.session_id)
-            )
-        else:
-            created = await db.scalar(
-                select(func.min(RefreshToken.created_at)).where(
-                    RefreshToken.family_id == principal.session_id,
-                    RefreshToken.user_id == user.id,
-                )
-            )
-        if created is None or created < now - timedelta(minutes=10):
-            raise ProblemError("auth.reauth_required", 401)
+        created = await session_started_at(db, principal)
+        if created is None or created < now - REAUTH_WINDOW:
+            raise ProblemError(REAUTH_REQUIRED, 401)
     user.deactivated_at = now
     user.updated_at = now
     scheduled = await db.scalar(

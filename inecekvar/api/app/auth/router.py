@@ -40,6 +40,7 @@ from app.auth.sessions import (
     revoke_user,
     roll_session,
 )
+from app.auth.step_up import revoke_session_step_up
 from app.core.deps import (
     BreachCheckerDep,
     ClientIpDep,
@@ -201,6 +202,7 @@ async def logout(
         clear_session_cookie(response, settings)
     else:
         await revoke_family(db, principal.session_id, now, RefreshRevokeReason.LOGOUT)
+    await revoke_session_step_up(db, principal.session_id)
     await db.commit()
     structlog.get_logger().info("auth.logout.succeeded", user_id=str(principal.user_id))
 

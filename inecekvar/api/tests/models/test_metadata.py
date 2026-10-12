@@ -37,6 +37,7 @@ TABLE_NAMES = {
     "photos",
     "refresh_tokens",
     "sessions",
+    "session_step_ups",
     "stops",
     "subscriptions",
     "traces",
@@ -55,6 +56,9 @@ def test_common_columns() -> None:
             assert "created_at" in table.c
             assert "id" not in table.c
             assert "updated_at" not in table.c
+        elif name == "session_step_ups":
+            assert {"session_id", "created_at", "updated_at"} <= set(table.c.keys())
+            assert "id" not in table.c
         else:
             assert {"id", "created_at", "updated_at"} <= set(table.c.keys())
         assert not table.c.created_at.nullable

@@ -34,6 +34,7 @@ async def test_upgrade_downgrade_upgrade(migrated_url: str) -> None:
     assert expected <= await table_names(migrated_url)
     connection = await asyncpg.connect(asyncpg_dsn(migrated_url))
     try:
+        assert await connection.fetchval("SELECT version_num FROM alembic_version") == "0004"
         assert await connection.fetchval(
             "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'postgis')"
         )

@@ -3,6 +3,7 @@ from app.models.accounts import (
     Favorite,
     MagicLink,
     RefreshToken,
+    SessionStepUp,
     User,
     UserSession,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "PackDownload",
     "Photo",
     "RefreshToken",
+    "SessionStepUp",
     "Stop",
     "Subscription",
     "Trace",

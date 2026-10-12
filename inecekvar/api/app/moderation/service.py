@@ -1,6 +1,5 @@
-import hashlib
-import json
 import uuid
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from geoalchemy2.shape import from_shape
@@ -16,8 +15,10 @@ from app.edits.schemas import EditInput, FareUpdate, NewLine, NewStop, Retire, U
 from app.edits.service import prepare_edit, stored_line, stored_stop, version_values
 from app.geo import slugify
 from app.lines.router import current_version
-from app.models import AuditLog, City, Edit, Line, LineStop, LineVersion, Stop, Trace, User
+from app.models import City, Edit, Line, LineStop, LineVersion, Stop, Trace, User
 from app.models.enums import EditState
+from app.security.audit import audit as audit
+from app.security.deps import step_up_context
 from app.security.policy import Action, ResourceContext, authorize
 
 EDIT_ADAPTER = TypeAdapter[EditInput](EditInput)
@@ -36,38 +37,10 @@ async def context_for(
     services: Services,
     edit: Edit | None = None,
 ) -> ResourceContext:
-    step_up = await services.step_up.step_up_at(db, principal) if services.step_up else None
-    return ResourceContext(
-        actor_id=principal.user_id,
+    return replace(
+        await step_up_context(db, principal, services),
         edit_author_id=edit.author_id if edit else None,
         edit_state=EditState(edit.state) if edit else None,
-        step_up_at=step_up,
-        now=services.clock.now(),
-    )
-
-
-def audit(
-    db: AsyncSession,
-    principal: Principal,
-    action: str,
-    target_type: str,
-    target_id: uuid.UUID,
-    diff: object,
-    now: datetime,
-) -> None:
-    canonical = json.dumps(diff, sort_keys=True, separators=(",", ":")).encode()
-    digest = hashlib.sha256(canonical).digest()
-    db.add(
-        AuditLog(
-            id=uuid7(),
-            actor_id=principal.user_id,
-            action=action,
-            target_type=target_type,
-            target_id=target_id,
-            diff_hash=digest,
-            created_at=now,
-            updated_at=now,
-        )
     )
 
 

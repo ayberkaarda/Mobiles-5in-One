@@ -5,6 +5,8 @@ default and are never read from a file in the repository. Tests build a `Setting
 directly (see `tests/support/app.py`) with a key pair created for the test session.
 """
 
+import base64
+import re
 from dataclasses import dataclass
 from functools import cached_property
 from ipaddress import IPv4Network, IPv6Network, ip_network
@@ -33,6 +35,7 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     "auth.register": RateLimitRule(limit=5, window_seconds=15 * 60),
     "auth.magic_link": RateLimitRule(limit=5, window_seconds=15 * 60),
     "auth.refresh": RateLimitRule(limit=5, window_seconds=15 * 60),
+    "auth.step_up": RateLimitRule(limit=5, window_seconds=15 * 60),
     "edits.low_reputation": RateLimitRule(limit=10, window_seconds=24 * 60 * 60),
     "edits.default": RateLimitRule(limit=100, window_seconds=24 * 60 * 60),
     "traces": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
@@ -99,6 +102,7 @@ class Settings(BaseSettings):
     csrf_header_name: Literal["X-CSRF-Token"] = "X-CSRF-Token"
     # HMAC key that binds a CSRF token to one session; at least 32 bytes of entropy.
     csrf_secret: SecretStr | None = None
+    totp_encryption_key: SecretStr | None = None
 
     # --- Magic links (spec section 3 story 5, section 6.11) --------------------------------
     magic_link_ttl_minutes: int = Field(default=15, ge=1, le=15)
@@ -162,6 +166,13 @@ class Settings(BaseSettings):
     log_hash_key: SecretStr | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
+    @field_validator("totp_encryption_key")
+    @classmethod
+    def _valid_totp_key(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None:
+            _decode_totp_key(value)
+        return value
+
     @field_validator("trusted_proxy_cidrs")
     @classmethod
     def _valid_networks(cls, value: tuple[str, ...]) -> tuple[str, ...]:
@@ -201,6 +212,8 @@ class Settings(BaseSettings):
             missing.append("jwt_private_key_pem|jwt_private_key_path")
         if self.jwt_public_key_pem is None and self.jwt_public_key_path is None:
             missing.append("jwt_public_key_pem|jwt_public_key_path")
+        if self.env == "production" and self.totp_encryption_key is None:
+            missing.append("totp_encryption_key")
         if missing:
             raise ValueError("missing required settings: " + ", ".join(missing))
         if self.env == "production" and not self.smtp_use_tls:
@@ -236,6 +249,14 @@ class Settings(BaseSettings):
     def jwt_private_key(self) -> bytes:
         return _pem(self.jwt_private_key_pem, self.jwt_private_key_path, "private")
 
+    def totp_key(self) -> bytes:
+        if self.totp_encryption_key is None:
+            raise RuntimeError("TOTP encryption key is not configured")
+        try:
+            return _decode_totp_key(self.totp_encryption_key)
+        except ValueError:
+            raise RuntimeError("TOTP encryption key is invalid") from None
+
     def jwt_public_key(self) -> bytes:
         public = SecretStr(self.jwt_public_key_pem) if self.jwt_public_key_pem else None
         return _pem(public, self.jwt_public_key_path, "public")
@@ -245,6 +266,19 @@ class Settings(BaseSettings):
         if value is None:
             raise RuntimeError("INECEKVAR_" + name.upper() + " is not configured")
         return value.get_secret_value().encode()
+
+
+def _decode_totp_key(secret: SecretStr) -> bytes:
+    value = secret.get_secret_value()
+    if re.fullmatch(r"[A-Za-z0-9_-]{43}=?", value) is None:
+        raise ValueError("TOTP encryption key must encode exactly 32 bytes")
+    try:
+        decoded = base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True)
+    except ValueError:
+        raise ValueError("TOTP encryption key must encode exactly 32 bytes") from None
+    if len(decoded) != 32:
+        raise ValueError("TOTP encryption key must encode exactly 32 bytes")
+    return decoded
 
 
 def _pem(text: SecretStr | None, path: Path | None, kind: str) -> bytes:

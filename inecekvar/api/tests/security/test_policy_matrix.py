@@ -7,7 +7,13 @@ from typing import cast
 import pytest
 
 from app.core.deps import Principal
-from app.core.errors import AUTH_FORBIDDEN, AUTH_REQUIRED, ProblemError
+from app.core.errors import (
+    AUTH_FORBIDDEN,
+    AUTH_REQUIRED,
+    STEP_UP_REQUIRED,
+    TOTP_ENROLMENT_REQUIRED,
+    ProblemError,
+)
 from app.models.enums import EditState, UserRole
 from app.security.policy import (
     PERMISSIONS,
@@ -93,6 +99,7 @@ FULL = ResourceContext(
     edit_state=EditState.PENDING,
     licence_accepted_at=NOW,
     step_up_at=NOW,
+    totp_enrolled=True,
     now=NOW,
 )
 CELLS = [(role, action) for role in ROLES for action in Action]
@@ -164,6 +171,38 @@ def test_unknown_action_and_role_denied() -> None:
 def test_step_up_window(age: int, allowed: bool) -> None:
     context = replace(FULL, step_up_at=NOW - timedelta(seconds=age))
     assert decide(UserRole.MODERATOR, Action.ROLLBACK, context) is allowed
+
+
+@pytest.mark.parametrize(
+    ("role", "action"),
+    [(role, action) for role, action in CELLS if "totp_step_up" in cell(role, action)],
+)
+@pytest.mark.parametrize(
+    ("enrolled", "fresh", "code"),
+    [
+        (False, False, TOTP_ENROLMENT_REQUIRED),
+        (False, True, TOTP_ENROLMENT_REQUIRED),
+        (True, False, STEP_UP_REQUIRED),
+        (True, True, None),
+    ],
+)
+def test_step_up_denial_codes(
+    role: Role, action: Action, enrolled: bool, fresh: bool, code: str | None
+) -> None:
+    assert isinstance(role, UserRole)
+    principal = Principal(ACTOR, role, uuid.UUID(int=3), "bearer")
+    context = replace(
+        FULL,
+        edit_author_id=OTHER,
+        totp_enrolled=enrolled,
+        step_up_at=NOW if fresh else NOW - timedelta(minutes=16),
+    )
+    if code is None:
+        authorize(principal, action, context)
+    else:
+        with pytest.raises(ProblemError) as exc:
+            authorize(principal, action, context)
+        assert (exc.value.status, exc.value.code) == (403, code)
 
 
 def test_authorize_ignores_supplied_actor_id() -> None:
