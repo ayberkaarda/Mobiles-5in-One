@@ -4,6 +4,7 @@ import { createWebApp, type PageRenderer } from './app';
 import { loadWebServerConfig } from './config';
 import { MemoryLruPageCache } from './page-cache';
 import { closeServers, httpRequest, startApp } from './test-helpers';
+import { FACTS } from '../content/facts';
 
 afterEach(async () => {
   await closeServers();
@@ -78,6 +79,8 @@ describe('machine files', () => {
     expect(first.body).toBe(
       '<?xml version="1.0" encoding="UTF-8"?>' +
         '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+        '<sitemap><loc>https://inecekvar.app/sitemap-pages.xml</loc>' +
+        `<lastmod>${FACTS.contentDate}T00:00:00Z</lastmod></sitemap>` +
         '<sitemap><loc>https://inecekvar.app/sitemaps/istanbul.xml</loc>' +
         '<lastmod>2026-10-01T09:30:00Z</lastmod></sitemap></sitemapindex>',
     );
@@ -254,6 +257,22 @@ describe('machine files', () => {
     ]);
     expect(render).not.toHaveBeenCalled();
   });
+
+  it.each(['retired', 'draft', 'pending_review'])(
+    'returns 404 without caching for a %s line, like the line page',
+    async (status) => {
+      const { port } = await fixture({
+        response: (url) =>
+          url.pathname === '/v1/lines/ornek-hat'
+            ? Response.json(lineData({ status }))
+            : publicResponse(url),
+      });
+      const result = await httpRequest(port, { path: '/og/ornek-sehir/hat/ornek-hat.svg' });
+      expect(result.status).toBe(404);
+      expect(result.headers['cache-control']).toBe('no-store');
+      expect(result.body).not.toContain('<svg');
+    },
+  );
 
   it('returns 404 when the line is missing', async () => {
     const { port } = await fixture({

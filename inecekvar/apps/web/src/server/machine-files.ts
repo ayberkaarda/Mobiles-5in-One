@@ -19,6 +19,7 @@ import { apiPath } from '../app/data/public-api.client';
 import type { ApiReader } from './api-reader';
 import type { WebServerConfig } from './config';
 import type { MemoryLruPageCache } from './page-cache';
+import { FACTS } from '../content/facts';
 
 type MachineResult = { ok: true; body: string } | { ok: false; kind: 'not_found' | 'unavailable' };
 
@@ -98,7 +99,11 @@ export function registerMachineFiles(
       if (!index.ok) return index;
       return {
         ok: true,
-        body: sitemapIndexXml(config.canonicalOrigin, sitemapIndexEntries(index.data)),
+        body: sitemapIndexXml(config.canonicalOrigin, [
+          // The static content pages (`/sitemap-pages.xml`) date from the content release.
+          { path: '/sitemap-pages.xml', lastmod: `${FACTS.contentDate}T00:00:00Z` },
+          ...sitemapIndexEntries(index.data),
+        ]),
       };
     }),
   );
@@ -203,6 +208,8 @@ export function registerMachineFiles(
         );
         if (!line.ok) return line;
         if (line.data.slug !== slug) return unavailable;
+        // Same rule as the line page resolver: only published lines get a shareable image.
+        if (line.data.status !== 'published') return missing;
         return {
           ok: true,
           body: lineOgSvg({

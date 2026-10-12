@@ -11,6 +11,7 @@ test('sitemap index is well-formed and lists only public cities with honest last
   const xml = await response.text();
   const locs = await parseXml(page, xml);
   expect(locs).toEqual([
+    TEST_ORIGIN + '/sitemap-pages.xml',
     TEST_ORIGIN + '/sitemaps/istanbul.xml',
     TEST_ORIGIN + '/sitemaps/izmir.xml',
   ]);
