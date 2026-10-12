@@ -4,7 +4,7 @@ import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/
 import { StopDetail } from '@inecekvar/data-access';
 import { RouteSketchComponent, StateComponent } from '@inecekvar/ui';
 import { CityStore } from '../city/city.store';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { MapComponent } from '../map/map.component';
 import { CatalogSource } from '../packs/catalog-source';
 import { BackButtonComponent } from '../shared/back-button.component';
@@ -29,6 +29,7 @@ import { detailFailure, detailRouteParams } from './detail-route';
     RouteSketchComponent,
     StateComponent,
     TPipe,
+    TpPipe,
   ],
   template: `
     <ion-header>
@@ -96,7 +97,7 @@ import { detailFailure, detailRouteParams } from './detail-route';
               <section class="iv-section">
                 <h2 class="iv-section-title">
                   {{ 'stop.linesTitle' | t }}
-                  <small>{{ 'search.lineCount' | t: { count: lines().length } }}</small>
+                  <small>{{ 'search.lineCount' | tp: lines().length }}</small>
                 </h2>
                 @if (lines().length > 0) {
                   <iv-line-list [lines]="lines()" />

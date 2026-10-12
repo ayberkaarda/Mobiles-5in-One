@@ -1,7 +1,7 @@
 import { PlanResult } from '@inecekvar/data-access';
 import { formatFareMinor } from '@inecekvar/domain';
 import { ItineraryLegView, ItineraryStep, ItinerarySummary } from '@inecekvar/ui';
-import { TranslationKey, TranslationParams } from '../i18n/translation';
+import { PluralKey, TranslationKey, TranslationParams } from '../i18n/translation';
 import { Place } from './plan-form';
 
 export type Itinerary = PlanResult['itineraries'][number];
@@ -9,7 +9,24 @@ export type ItineraryLeg = Itinerary['legs'][number];
 export type RideLeg = Extract<ItineraryLeg, { kind: 'ride' }>;
 export type WalkLeg = Extract<ItineraryLeg, { kind: 'walk' }>;
 
-export type Translate = (key: TranslationKey, params?: TranslationParams) => string;
+/**
+ * Translation for the itinerary texts. The page also passes the plural lookup and the number and
+ * fare formats of the active language; without them (unit tests) the plain key with its values
+ * is used.
+ */
+export type Translate = ((key: TranslationKey, params?: TranslationParams) => string) & {
+  tp?: (key: PluralKey, count: number, params?: TranslationParams) => string;
+  num?: (value: number) => string;
+  fare?: (minor: number) => string;
+};
+
+function plural(t: Translate, key: PluralKey, count: number, params?: TranslationParams): string {
+  return t.tp
+    ? t.tp(key, count, params)
+    : t(key as unknown as TranslationKey, { ...params, count });
+}
+
+const num = (t: Translate, value: number) => (t.num ? t.num(value) : value);
 
 /**
  * Rough travel time. The API returns stops and metres but no times (there are no timetables),
@@ -47,13 +64,15 @@ export function roundMetres(metres: number): number {
 export function fareText(itinerary: Itinerary, t: Translate): string {
   const minor = itinerary.estimated_fare_minor;
   if (minor === null || minor === undefined) return t('fare.unknown');
-  return minor === 0 ? t('fare.free') : t('planner.fareEstimate', { fare: formatFareMinor(minor) });
+  return minor === 0
+    ? t('fare.free')
+    : t('planner.fareEstimate', { fare: t.fare ? t.fare(minor) : formatFareMinor(minor) });
 }
 
 export function transfersText(itinerary: Itinerary, t: Translate): string {
   return itinerary.transfers === 0
     ? t('planner.direct')
-    : t('planner.transfers', { count: itinerary.transfers });
+    : plural(t, 'planner.transfers', itinerary.transfers);
 }
 
 /** The card: a chain of line placards and walks, duration, fare and transfers. */
@@ -61,9 +80,12 @@ export function summarize(itinerary: Itinerary, index: number, t: Translate): It
   const legs: ItineraryLegView[] = visibleLegs(itinerary).map((leg) =>
     isRide(leg)
       ? { kind: 'ride', code: leg.line_code, name: leg.line_name }
-      : { kind: 'walk', label: t('planner.walkShort', { metres: roundMetres(leg.metres) }) },
+      : {
+          kind: 'walk',
+          label: t('planner.walkShort', { metres: num(t, roundMetres(leg.metres)) }),
+        },
   );
-  const duration = t('planner.duration', { minutes: estimateMinutes(itinerary) });
+  const duration = t('planner.duration', { minutes: num(t, estimateMinutes(itinerary)) });
   const fare = fareText(itinerary, t);
   const transfers = transfersText(itinerary, t);
   return {
@@ -75,7 +97,7 @@ export function summarize(itinerary: Itinerary, index: number, t: Translate): It
     walk:
       itinerary.walk_m < MIN_WALK_M
         ? t('planner.noWalk')
-        : t('planner.walkTotal', { metres: roundMetres(itinerary.walk_m) }),
+        : t('planner.walkTotal', { metres: num(t, roundMetres(itinerary.walk_m)) }),
   };
 }
 
@@ -87,14 +109,13 @@ export function steps(itinerary: Itinerary, t: Translate): ItineraryStep[] {
         kind: 'ride',
         code: leg.line_code,
         title: t('planner.stepRide', { code: leg.line_code, name: leg.line_name }),
-        detail: t('planner.stepRideDetail', {
+        detail: plural(t, 'planner.stepRideDetail', leg.stop_count, {
           board: leg.board_stop.name,
           alight: leg.alight_stop.name,
-          count: leg.stop_count,
         }),
       };
     }
-    const metres = roundMetres(leg.metres);
+    const metres = num(t, roundMetres(leg.metres));
     const title =
       leg.to_stop === null
         ? t('planner.stepWalkToDestination', { metres })

@@ -5,7 +5,7 @@ import { NoticeComponent, StateComponent } from '@inecekvar/ui';
 import { CityPickerComponent } from '../city/city-picker.component';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { PackManager } from '../packs/pack-manager';
 import { apiLineId } from '../packs/pack-data';
@@ -43,6 +43,7 @@ interface PackPrompt {
     NoticeComponent,
     StateComponent,
     TPipe,
+    TpPipe,
   ],
   providers: [SearchStore],
   templateUrl: './search.page.html',

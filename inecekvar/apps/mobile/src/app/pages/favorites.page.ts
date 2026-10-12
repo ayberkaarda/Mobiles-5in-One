@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { StateComponent } from '@inecekvar/ui';
 import { FavoritesStore } from '../core/favorites.store';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { LineItem, LineListComponent } from '../shared/line-list.component';
 
 /**
@@ -22,6 +22,7 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
     LineListComponent,
     StateComponent,
     TPipe,
+    TpPipe,
   ],
   template: `
     <ion-header>
@@ -46,13 +47,13 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
             @case ('done') {
               @if (mergedCount() > 0) {
                 <p class="note note--ok" role="status">
-                  {{ 'favorites.merged' | t: { count: mergedCount() } }}
+                  {{ 'favorites.merged' | tp: mergedCount() }}
                 </p>
               }
             }
             @case ('partial') {
               <div class="note note--warn" role="alert">
-                <span>{{ 'favorites.mergePartial' | t: { failed: mergeFailed() } }}</span>
+                <span>{{ 'favorites.mergePartial' | tp: mergeFailed() }}</span>
                 <button type="button" class="inline-action" (click)="favorites.retrySync()">
                   {{ 'favorites.retry' | t }}
                 </button>
@@ -76,7 +77,7 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
                 @if (lines().length > 0) {
                   <h2 class="iv-section-title">
                     {{ 'favorites.accountTitle' | t }}
-                    <small>{{ 'favorites.count' | t: { count: lines().length } }}</small>
+                    <small>{{ 'favorites.count' | tp: lines().length }}</small>
                   </h2>
                   <iv-line-list [lines]="lines()" />
                 } @else {
@@ -98,7 +99,7 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
             @if (lines().length > 0) {
               <h2 class="iv-section-title">
                 {{ 'favorites.guestTitle' | t }}
-                <small>{{ 'favorites.count' | t: { count: lines().length } }}</small>
+                <small>{{ 'favorites.count' | tp: lines().length }}</small>
               </h2>
               <iv-line-list [lines]="lines()" />
             } @else {

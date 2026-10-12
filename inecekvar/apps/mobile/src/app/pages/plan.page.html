@@ -142,7 +142,7 @@
       } @case ('results') {
       <h2 class="iv-section-title">
         {{ 'planner.resultsTitle' | t }}
-        <small>{{ 'planner.resultsCount' | t: { count: summaries().length } }}</small>
+        <small>{{ 'planner.resultsCount' | tp: summaries().length }}</small>
       </h2>
       @if (planner.degraded()) {
       <p class="banner" role="status">{{ 'planner.degradedNote' | t }}</p>

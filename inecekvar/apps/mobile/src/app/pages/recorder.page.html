@@ -50,8 +50,8 @@
     <section class="iv-panel done" role="status">
       <h1>{{ 'recorder.uploadedTitle' | t }}</h1>
       <p>
-        {{ 'recorder.uploadedBody' | t: { count: rec.uploaded()?.point_count ?? 0, date:
-        deleteAfter() } }}
+        {{ 'recorder.uploadedBody' | tp: rec.uploaded()?.point_count ?? 0 : { date: deleteAfter() }
+        }}
       </p>
       <button type="button" class="iv-button iv-button--block" (click)="proposeLine()">
         {{ 'recorder.proposeLine' | t }}
@@ -182,7 +182,7 @@
         </div>
       </dl>
       <p class="meta">
-        {{ 'recorder.stopsMarked' | t: { count: rec.stops().length } }} · {{ (rec.wakeLockOn() ?
+        {{ 'recorder.stopsMarked' | tp: rec.stops().length }} · {{ (rec.wakeLockOn() ?
         'recorder.screenOn' : rec.wakeLockSupported ? 'recorder.screenOff' :
         'recorder.screenUnsupported') | t }}
       </p>

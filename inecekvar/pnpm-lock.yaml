@@ -226,6 +226,9 @@ importers:
       '@jsverse/transloco':
         specifier: 8.4.0
         version: 8.4.0(@angular/core@22.2.2(@angular/compiler@22.2.2)(rxjs@7.8.2))(rxjs@7.8.2)(typescript@6.0.3)
+      '@revenuecat/purchases-capacitor':
+        specifier: 13.6.1
+        version: 13.6.1(@capacitor/core@8.5.3)
       capacitor-secure-storage-plugin:
         specifier: 0.13.0
         version: 0.13.0(@capacitor/core@8.5.3)
@@ -3483,6 +3486,14 @@ packages:
   '@redocly/openapi-core@1.34.20':
     resolution: {integrity: sha512-ypeBZ/6BKXR9+7/TtbKhbl4UgD7raHhPS12oknlKno2A8+lnFkxIwiE/Aklu6L2cd/ioH+fCWuMxi9/p3EyAPw==}
     engines: {node: '>=18.17.0', npm: '>=9.5.0'}
+
+  '@revenuecat/purchases-capacitor@13.6.1':
+    resolution: {integrity: sha512-HXTFmqjGkYjUBSscsrKyHJ3hCKvHehWkH0v95D45yiHhy9JKO3WPvTTFnMkhGInVRrUpCx5v7OkmmLZRbygcJg==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@revenuecat/purchases-typescript-internal-esm@19.3.1':
+    resolution: {integrity: sha512-EJ3AI3T0cOd57IgLktjjRZfUQK1WRvfuIDeHzfgwhfRZYX00hUxxsKctjwOgKjFztRoE7CNW1e3NzBMIJNFuNw==}
 
   '@rolldown/binding-android-arm-eabi@1.2.13':
     resolution: {integrity: sha512-Vu/NICrgdRvUOeaJZIyB2FP63s6fO/4ud5l8dXmxDx9yDyn+mN0y+gsvsVviSli+T361Aqo0h46EuMoobrwawA==}
@@ -11099,6 +11110,13 @@ snapshots:
       yaml-ast-parser: 0.0.43
     transitivePeerDependencies:
       - supports-color
+
+  '@revenuecat/purchases-capacitor@13.6.1(@capacitor/core@8.5.3)':
+    dependencies:
+      '@capacitor/core': 8.5.3
+      '@revenuecat/purchases-typescript-internal-esm': 19.3.1
+
+  '@revenuecat/purchases-typescript-internal-esm@19.3.1': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.13':
     optional: true

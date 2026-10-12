@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { City } from '@inecekvar/data-access';
 import { NoticeComponent, ProgressBarComponent, StateComponent } from '@inecekvar/ui';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { PackFailureKind, PackJob, PackManager } from '../packs/pack-manager';
 import { PackRegistry } from '../packs/pack-registry';
@@ -44,7 +45,9 @@ const PHASE_KEYS: Record<PackJob['phase'], TranslationKey> = {
     NoticeComponent,
     ProgressBarComponent,
     StateComponent,
+    RouterLink,
     TPipe,
+    TpPipe,
   ],
   templateUrl: './packs.page.html',
   styleUrl: './packs.page.scss',
@@ -56,7 +59,6 @@ export class PacksPage {
   protected readonly manager = inject(PackManager);
   /** City whose delete button was tapped once. */
   protected readonly confirming = signal<string | null>(null);
-  protected readonly plusInfo = signal<string | null>(null);
 
   /** Cities from the API (or the installed packs offline), plus packs of cities no longer listed. */
   protected readonly cities = computed<City[]>(() => {
@@ -169,11 +171,6 @@ export class PacksPage {
     }
     this.confirming.set(null);
     void this.manager.remove(city.slug);
-  }
-
-  /** Plus arrives with the paywall package; until then the button says so. */
-  protected showPlus(city: City): void {
-    this.plusInfo.set(city.slug);
   }
 
   protected retryList(): void {

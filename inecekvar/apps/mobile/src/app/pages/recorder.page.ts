@@ -7,7 +7,7 @@ import { CityStore } from '../city/city.store';
 import { RecorderProblem, RecorderStore, ReviewIssue } from '../contribute/recorder.store';
 import { MAX_STOP_NAME } from '../contribute/trace-draft';
 import { LanguageService } from '../core/language.service';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
 import { MapMarker } from '../map/map-style';
@@ -43,6 +43,7 @@ const PROBLEMS: Record<RecorderProblem, TranslationKey> = {
     MapComponent,
     NoticeComponent,
     TPipe,
+    TpPipe,
   ],
   templateUrl: './recorder.page.html',
   styleUrl: './recorder.page.scss',

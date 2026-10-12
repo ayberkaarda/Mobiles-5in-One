@@ -4,6 +4,7 @@ import { LINE_MODES, LineMode } from '@inecekvar/domain';
 import { LineCardComponent, LineCardLabels } from '@inecekvar/ui';
 import { FavoritesStore } from '../core/favorites.store';
 import { LanguageService } from '../core/language.service';
+import { localeOf } from './format';
 
 /** One row of a line list; `fareMinor` left out hides the fare chip (search results carry none). */
 export interface LineItem {
@@ -37,6 +38,7 @@ export function linePageLink(line: Pick<LineItem, 'city' | 'slug'>): [string[], 
             [name]="line.name"
             [mode]="line.mode"
             [fareMinor]="line.fareMinor"
+            [locale]="locale()"
             [meta]="line.meta ?? []"
             [labels]="labels()[line.mode]"
             [favorite]="favorites.has(line.city, line.slug)"
@@ -57,6 +59,8 @@ export function linePageLink(line: Pick<LineItem, 'city' | 'slug'>): [string[], 
 })
 export class LineListComponent {
   private readonly i18n = inject(LanguageService);
+  protected readonly locale = computed(() => localeOf(this.i18n.lang()));
+
   private readonly router = inject(Router);
   protected readonly favorites = inject(FavoritesStore);
 

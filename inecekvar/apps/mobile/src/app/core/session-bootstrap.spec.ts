@@ -80,7 +80,13 @@ describe('bootstrapSession', () => {
 
 describe('environment and app wiring', () => {
   it('holds public URLs only and picks the API base by platform', () => {
-    expect(Object.keys(environment).sort()).toEqual(['nativeApiBase', 'tilesBase', 'webApiBase']);
+    expect(Object.keys(environment).sort()).toEqual([
+      'nativeApiBase',
+      'revenueCatPublicKey',
+      'tilesBase',
+      'webApiBase',
+    ]);
+    expect(environment.revenueCatPublicKey).toBe('');
     expect(apiBaseFor(environment, false)).toBe('/api/v1');
     expect(apiBaseFor(environment, true)).toBe('https://api.inecekvar.app/v1');
     expect(environment.tilesBase.startsWith('https://')).toBe(true);

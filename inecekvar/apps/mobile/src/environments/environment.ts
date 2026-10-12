@@ -13,12 +13,19 @@ export interface AppEnvironment {
   readonly nativeApiBase: string;
   /** PMTiles CDN for the offline map tiles. */
   readonly tilesBase: string;
+  /**
+   * RevenueCat **public** SDK key of the native app (`goog_…`), set for a store build only. It
+   * identifies the app to RevenueCat and is meant to ship in the binary; it is not a secret.
+   * Empty here: without it the native app offers no purchase and the web never does.
+   */
+  readonly revenueCatPublicKey: string;
 }
 
 export const environment: AppEnvironment = {
   webApiBase: '/api/v1',
   nativeApiBase: 'https://api.inecekvar.app/v1',
   tilesBase: 'https://tiles.inecekvar.app',
+  revenueCatPublicKey: '',
 };
 
 export function apiBaseFor(env: AppEnvironment, native: boolean): string {

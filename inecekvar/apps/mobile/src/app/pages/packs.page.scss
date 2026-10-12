@@ -199,8 +199,11 @@ h3 {
 }
 
 .plus {
+  display: inline-flex;
+  align-items: center;
   margin-top: var(--iv-space-3);
   border-color: var(--iv-accent);
+  text-decoration: none;
 }
 
 .danger.confirm {

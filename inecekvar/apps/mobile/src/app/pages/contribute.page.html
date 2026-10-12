@@ -38,7 +38,7 @@
       class="draft"
       tone="warn"
       [heading]="'contribute.draftTitle' | t"
-      [message]="'contribute.draftBody' | t: { count: recorder.pointCount() }"
+      [message]="'contribute.draftBody' | tp: recorder.pointCount()"
     />
     <a class="iv-button iv-button--block draft-action" routerLink="/katki/kayit"
       >{{ 'contribute.draftAction' | t }}</a

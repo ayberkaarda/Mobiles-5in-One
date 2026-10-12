@@ -47,7 +47,7 @@
             <div class="title">
               <h3>{{ city.name }}</h3>
               <p class="meta">
-                <span>{{ 'packs.lineCount' | t: { count: city.published_line_count } }}</span>
+                <span>{{ 'packs.lineCount' | tp: city.published_line_count }}</span>
                 @if (city.is_sample) {
                 <span class="badge">{{ 'packs.sample' | t }}</span>
                 }
@@ -88,12 +88,9 @@
           <div class="entitlement" role="alert">
             <strong>{{ 'packs.failEntitlementTitle' | t }}</strong>
             <p>{{ 'packs.failEntitlementBody' | t }}</p>
-            <button type="button" class="plus" (click)="showPlus(city)">
+            <a class="plus" routerLink="/plus" [queryParams]="{ sehir: city.slug }">
               {{ 'packs.plusAction' | t }}
-            </button>
-            @if (plusInfo() === city.slug) {
-            <p class="iv-note">{{ 'packs.plusSoon' | t }}</p>
-            }
+            </a>
           </div>
           } @else {
           <p class="warn" role="alert">{{ failureKey(failed) | t }}</p>

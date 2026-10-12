@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { IonContent, IonModal } from '@ionic/angular';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { CityStore } from './city.store';
 
 /**
@@ -10,7 +10,7 @@ import { CityStore } from './city.store';
 @Component({
   selector: 'iv-city-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonModal, IonContent, TPipe],
+  imports: [IonModal, IonContent, TPipe, TpPipe],
   template: `
     <button type="button" class="trigger" aria-haspopup="dialog" (click)="open.set(true)">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -54,7 +54,7 @@ import { CityStore } from './city.store';
                   >
                     <span class="city-name">{{ city.name }}</span>
                     <span class="city-meta">
-                      {{ 'city.lineCount' | t: { count: city.published_line_count } }}
+                      {{ 'city.lineCount' | tp: city.published_line_count }}
                       @if (city.is_sample) {
                         <span class="sample">{{ 'city.sample' | t }}</span>
                       }

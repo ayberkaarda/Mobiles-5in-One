@@ -1,0 +1,86 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <iv-back-button />
+    </ion-buttons>
+    <ion-title>{{ 'plus.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page" [attr.data-availability]="plus.availability">
+    <p class="iv-kicker">{{ 'plus.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'plus.heading' | t }}</h1>
+    @if (cityName(); as city) {
+    <p class="iv-lead" data-context="city">{{ 'plus.cityLead' | t: { city } }}</p>
+    } @else {
+    <p class="iv-lead">{{ 'plus.lead' | t }}</p>
+    }
+
+    <ul class="benefits" role="list">
+      <li>{{ 'plus.benefitCities' | t }}</li>
+      <li>{{ 'plus.benefitBadge' | t }}</li>
+      <li>{{ 'plus.benefitFree' | t }}</li>
+    </ul>
+
+    <p class="iv-note server">{{ 'plus.serverDecides' | t }}</p>
+
+    @switch (plus.availability) { @case ('web') {
+    <iv-notice tone="info" [message]="'plus.webOnly' | t" data-state="web" />
+    } @case ('not-configured') {
+    <iv-notice tone="info" [message]="'plus.notConfigured' | t" data-state="not-configured" />
+    } @default { @if (plus.needsSignIn()) {
+    <div class="iv-panel signin" data-state="sign-in">
+      <p>{{ 'plus.signInBody' | t }}</p>
+      <a class="iv-button" routerLink="/giris" [queryParams]="{ sonra: '/plus' }"
+        >{{ 'plus.signIn' | t }}</a
+      >
+    </div>
+    } @else {
+    <section class="iv-section" aria-labelledby="offers-title">
+      <h2 class="iv-section-title" id="offers-title">{{ 'plus.offersTitle' | t }}</h2>
+      @if (plus.state() === 'loading') {
+      <p class="iv-note" role="status">{{ 'plus.loading' | t }}</p>
+      } @else if (plus.offers().length === 0 && plus.state() !== 'error') {
+      <p class="iv-note">{{ 'plus.noOffers' | t }}</p>
+      }
+      <ul class="offers" role="list">
+        @for (offer of plus.offers(); track offer.id) {
+        <li class="iv-panel offer" [attr.data-offer]="offer.id">
+          <span class="price">{{ price(offer) }}</span>
+          <button type="button" class="iv-button" [disabled]="plus.busy()" (click)="buy(offer)">
+            {{ (plus.state() === 'purchasing' ? 'plus.buying' : 'plus.buy') | t }}
+          </button>
+        </li>
+        }
+      </ul>
+      <button
+        type="button"
+        class="iv-button iv-button--ghost restore"
+        [disabled]="plus.busy()"
+        (click)="restore()"
+      >
+        {{ (plus.state() === 'restoring' ? 'plus.restoring' : 'plus.restore') | t }}
+      </button>
+    </section>
+    } } } @if (outcome(); as key) {
+    <div class="outcome" role="status" [attr.data-outcome]="plus.state()">
+      <p>{{ key | t }}</p>
+      @if (plus.state() === 'purchased' || plus.state() === 'restored') {
+      <p class="iv-note">
+        {{ (plus.storeSaysPlus() ? 'plus.storeActive' : 'plus.storePending') | t }}
+      </p>
+      <a class="iv-button" routerLink="/ayarlar/cevrimdisi">{{ 'plus.toPacks' | t }}</a>
+      } @if (plus.state() === 'error') {
+      <button type="button" class="iv-button iv-button--ghost" (click)="retry()">
+        {{ 'plus.retry' | t }}
+      </button>
+      }
+    </div>
+    }
+
+    <p class="iv-note">
+      <a routerLink="/ayarlar/cevrimdisi">{{ 'plus.freeCity' | t }}</a>
+    </p>
+  </div>
+</ion-content>

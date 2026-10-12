@@ -15,7 +15,8 @@
           "/*.css",
           "/*.js",
           "!/maplibre-gl-*.js",
-          "!/map.component-*.js"
+          "!/map.component-*.js",
+          "!/revenuecat-purchases-*.js"
         ]
       }
     },

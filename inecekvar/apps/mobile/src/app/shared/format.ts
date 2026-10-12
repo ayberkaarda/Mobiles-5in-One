@@ -18,6 +18,38 @@ export function fold(value: string): string {
 
 const LOCALES: Record<AppLang, string> = { tr: 'tr-TR', en: 'en-GB' };
 
+/** The BCP 47 locale used for `Intl` formatting in each app language. */
+export function localeOf(lang: AppLang): string {
+  return LOCALES[lang];
+}
+
+const pluralRules = new Map<AppLang, Intl.PluralRules>();
+
+/** `one` or `other` for `count` in `lang` (CLDR rules through `Intl.PluralRules`). */
+export function pluralForm(lang: AppLang, count: number): 'one' | 'other' {
+  let rules = pluralRules.get(lang);
+  if (!rules) pluralRules.set(lang, (rules = new Intl.PluralRules(LOCALES[lang])));
+  return rules.select(count) === 'one' ? 'one' : 'other';
+}
+
+/** A whole or decimal number with the language's grouping, for example "1.250" or "1,250". */
+export function formatNumber(value: number, lang: AppLang, maximumFractionDigits = 0): string {
+  return new Intl.NumberFormat(LOCALES[lang], { maximumFractionDigits }).format(value);
+}
+
+/** A price in major units of `currency`, for example "₺29,99" or "₺29.99". */
+export function formatMoney(amount: number, currency: string, lang: AppLang): string {
+  try {
+    return new Intl.NumberFormat(LOCALES[lang], {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+    }).format(amount);
+  } catch {
+    return `${formatNumber(amount, lang, 2)} ${currency}`;
+  }
+}
+
 /** A calendar date such as "12 Ekim 2026"; `null` for a missing or unparsable value. */
 export function formatDate(iso: string | null | undefined, lang: AppLang): string | null {
   if (!iso) return null;

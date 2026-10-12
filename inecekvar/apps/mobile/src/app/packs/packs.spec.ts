@@ -616,9 +616,10 @@ describe('PacksPage', () => {
     await settle(fixture);
     fixture.detectChanges();
     expect(row(el).textContent).toContain('Ücretsiz planda 1 şehir');
-    button(el, 'Plus’a bak')?.click();
-    fixture.detectChanges();
-    expect(row(el).textContent).toContain('Plus yakında');
+    const link = [...row(el).querySelectorAll('a')].find(
+      (a) => a.textContent?.trim() === 'Plus’a bak',
+    );
+    expect(link?.getAttribute('href')).toBe(`/plus?sehir=${CITY}`);
   });
 
   it('shows progress with a cancel button while downloading', async () => {

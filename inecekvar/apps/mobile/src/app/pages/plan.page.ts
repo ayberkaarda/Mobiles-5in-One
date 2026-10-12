@@ -11,12 +11,14 @@ import {
 import { CityPickerComponent } from '../city/city-picker.component';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
-import { TPipe } from '../i18n/i18n';
-import { TranslationKey } from '../i18n/translation';
+import { TPipe, TpPipe } from '../i18n/i18n';
+import { PluralKey, TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
 import { MapMarker } from '../map/map-style';
 import { PackRegistry } from '../packs/pack-registry';
-import { steps, summarize } from '../planner/itinerary';
+import { steps, summarize, Translate } from '../planner/itinerary';
+import { formatFare } from '@inecekvar/ui';
+import { formatNumber, localeOf } from '../shared/format';
 import { MAX_TRANSFER_CHOICES, MaxTransfers, PlanEnd, PlanFormError } from '../planner/plan-form';
 import { PlannerStore } from '../planner/planner.store';
 
@@ -57,6 +59,7 @@ interface EndView {
     MapComponent,
     StateComponent,
     TPipe,
+    TpPipe,
   ],
   providers: [PlannerStore],
   templateUrl: './plan.page.html',
@@ -86,8 +89,15 @@ export class PlanPage {
     return error ? FORM_ERRORS[error] : null;
   });
 
-  private readonly t = (key: TranslationKey, params?: Record<string, unknown>) =>
-    this.i18n.t(key, params);
+  private readonly t: Translate = Object.assign(
+    (key: TranslationKey, params?: Record<string, unknown>) => this.i18n.t(key, params),
+    {
+      tp: (key: PluralKey, count: number, params?: Record<string, unknown>) =>
+        this.i18n.tp(key, count, params),
+      num: (value: number) => formatNumber(value, this.i18n.lang()),
+      fare: (minor: number) => formatFare(minor, localeOf(this.i18n.lang())),
+    },
+  );
 
   protected readonly summaries = computed<ItinerarySummary[]>(() => {
     this.i18n.lang();

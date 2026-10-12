@@ -6,9 +6,11 @@ import {
   AppLang,
   DEFAULT_LANG,
   isAppLang,
+  PluralKey,
   TranslationKey,
   TranslationParams,
 } from '../i18n/translation';
+import { formatNumber, pluralForm } from '../shared/format';
 import { PREF_KEYS, readPref, writePref } from './local-prefs';
 
 /** Active UI language: Turkish by default, English on request; mirrored to <html lang>. */
@@ -29,6 +31,19 @@ export class LanguageService {
   t(key: TranslationKey, params?: TranslationParams): string {
     this.lang();
     return this.transloco.translate(key, params);
+  }
+
+  /**
+   * A count-dependent text: the plural form comes from `Intl.PluralRules` of the active
+   * language and `{{count}}` is formatted with its number format (1.250 / 1,250).
+   */
+  tp(key: PluralKey, count: number, params?: TranslationParams): string {
+    const lang = this.lang();
+    const form = pluralForm(lang, count);
+    return this.transloco.translate(`${key}.${form}`, {
+      ...params,
+      count: formatNumber(count, lang),
+    });
   }
 
   async set(lang: AppLang): Promise<void> {

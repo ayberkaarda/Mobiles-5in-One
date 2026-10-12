@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource } from '
 import { Router } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { LineDetail } from '@inecekvar/data-access';
-import { formatFareMinor } from '@inecekvar/domain';
+import { formatFare } from '@inecekvar/ui';
 import {
   ModeChipComponent,
   RouteSketchComponent,
@@ -13,7 +13,7 @@ import {
 import { CityStore } from '../city/city.store';
 import { FavoritesStore } from '../core/favorites.store';
 import { LanguageService } from '../core/language.service';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
 import { CatalogSource } from '../packs/catalog-source';
@@ -21,7 +21,7 @@ import { apiLineId, PACK_ID_PREFIX } from '../packs/pack-data';
 import { PackRegistry } from '../packs/pack-registry';
 import { BackButtonComponent } from '../shared/back-button.component';
 import { ConnectivityService } from '../shared/connectivity.service';
-import { formatDate, lineMode } from '../shared/format';
+import { formatDate, lineMode, localeOf } from '../shared/format';
 import { detailFailure, detailRouteParams } from './detail-route';
 
 const PAYMENT_KEYS: Record<string, TranslationKey> = {
@@ -47,6 +47,7 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
     StateComponent,
     StopSequenceComponent,
     TPipe,
+    TpPipe,
   ],
   templateUrl: './line.page.html',
   styleUrl: './line.page.scss',
@@ -103,7 +104,7 @@ export class LinePage {
   protected readonly fare = computed(() => {
     const minor = this.data()?.fare_minor;
     if (minor === null || minor === undefined) return this.i18n.t('fare.unknown');
-    return minor === 0 ? this.i18n.t('fare.free') : formatFareMinor(minor);
+    return minor === 0 ? this.i18n.t('fare.free') : formatFare(minor, localeOf(this.i18n.lang()));
   });
 
   protected readonly fareNote = computed(() => {

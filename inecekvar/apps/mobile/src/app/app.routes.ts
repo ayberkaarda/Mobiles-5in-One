@@ -73,6 +73,12 @@ export const appRoutes: Route[] = [
         path: 'ayarlar/cevrimdisi',
         loadComponent: () => import('./pages/packs.page').then((m) => m.PacksPage),
       },
+      {
+        // The Plus paywall; purchases exist in the native app only (the web stays free).
+        path: 'plus',
+        canActivate: [contributorCopy],
+        loadComponent: () => import('./pages/plus.page').then((m) => m.PlusPage),
+      },
     ],
   },
   {

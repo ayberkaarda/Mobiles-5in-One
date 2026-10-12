@@ -111,7 +111,7 @@
     <section class="iv-section">
       <h2 class="iv-section-title">
         {{ 'line.stopsTitle' | t }}
-        <small>{{ 'line.stops' | t: { count: line.stops.length } }}</small>
+        <small>{{ 'line.stops' | tp: line.stops.length }}</small>
       </h2>
       @if (stopItems().length > 0) {
       <iv-stop-sequence [stops]="stopItems()" (selected)="openStop($event)" />
@@ -124,7 +124,7 @@
       <h2 class="iv-section-title">{{ 'line.trustTitle' | t }}</h2>
       <ul class="trust-list" role="list">
         <li>{{ verifiedNote() }}</li>
-        <li>{{ 'line.contributors' | t: { count: line.contributor_count } }}</li>
+        <li>{{ 'line.contributors' | tp: line.contributor_count }}</li>
         <li>{{ 'line.version' | t: { version: line.version_no } }}</li>
         @if (packVersion(); as pack) {
         <li class="from-pack">{{ 'line.fromPack' | t: { version: pack.version } }}</li>

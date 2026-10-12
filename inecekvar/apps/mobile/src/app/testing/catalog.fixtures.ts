@@ -11,6 +11,7 @@ import {
   Favorite,
   Me,
   SessionStore,
+  StatusResponse,
   City,
   LineDetail,
   LineListItem,
@@ -32,6 +33,8 @@ import { PACK_STORAGE } from '../packs/pack-storage.provider';
 import { NETWORK_SOURCE, NetworkSource } from '../shared/connectivity.service';
 import { LOCATION_SOURCE, LocateResult } from '../shared/location';
 import { SEARCH_DEBOUNCE_MS } from '../search/search.store';
+import { PURCHASES_ADAPTER, PurchasesAdapter } from '../plus/purchases';
+import { FakePurchases } from './fake-purchases';
 
 /**
  * API-shaped fixtures mirroring `api/app/seed/sample_city.py` (`[ÖRNEK] Test Şehri`). They exist
@@ -327,6 +330,13 @@ export class FakeSession {
     return user;
   });
 
+  /** Succeeds by default (the API scheduled the deletion) and signs the user out. */
+  readonly deleteAccount = spy(async (password?: string): Promise<StatusResponse> => {
+    void password;
+    this.signOut();
+    return { status: 'deletion_scheduled' };
+  });
+
   signIn(id = 'user-a', licenceAccepted = false): void {
     this.current.set({
       id,
@@ -452,6 +462,7 @@ export interface CatalogTestingOptions {
   prefs?: MemoryPreferences;
   locate?: () => Promise<LocateResult>;
   contributions?: FakeContributions;
+  purchases?: PurchasesAdapter;
 }
 
 /** Providers for pages and stores: fake API, in-memory preferences, no debounce, fake location. */
@@ -479,6 +490,7 @@ export function catalogTesting(options: CatalogTestingOptions = {}): Provider[] 
     { provide: AccountApi, useValue: account },
     { provide: ContributionApi, useValue: options.contributions ?? fakeContributions() },
     { provide: PREFERENCE_STORE, useValue: prefs },
+    { provide: PURCHASES_ADAPTER, useValue: options.purchases ?? new FakePurchases() },
     { provide: SEARCH_DEBOUNCE_MS, useValue: 0 },
     { provide: TILES_BASE_URL, useValue: 'https://tiles.test' },
     {

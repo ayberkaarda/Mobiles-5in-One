@@ -119,13 +119,13 @@
       } @case ('results') { @if (lineItems().length > 0) {
       <h2 class="iv-section-title">
         {{ (search.term() ? 'search.linesHeading' : 'search.allLinesHeading') | t }}
-        <small>{{ 'search.lineCount' | t: { count: lineItems().length } }}</small>
+        <small>{{ 'search.lineCount' | tp: lineItems().length }}</small>
       </h2>
       <iv-line-list [lines]="lineItems()" />
       } @if (search.stops().length > 0) {
       <h2 class="iv-section-title stops-title">
         {{ 'search.stopsHeading' | t }}
-        <small>{{ 'search.stopCount' | t: { count: search.stops().length } }}</small>
+        <small>{{ 'search.stopCount' | tp: search.stops().length }}</small>
       </h2>
       <ul class="stops" role="list">
         @for (stop of search.stops(); track stop.id) {

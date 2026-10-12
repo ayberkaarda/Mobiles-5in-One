@@ -5,7 +5,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { SessionStore } from '@inecekvar/data-access';
 import { NoticeComponent } from '@inecekvar/ui';
 import { RecorderStore } from '../contribute/recorder.store';
-import { TPipe } from '../i18n/i18n';
+import { TPipe, TpPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 
 interface ContributionAction {
@@ -63,7 +63,16 @@ const LINE_ACTIONS: readonly { kind: string; label: TranslationKey }[] = [
 @Component({
   selector: 'iv-contribute-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, RouterLink, NoticeComponent, TPipe],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    RouterLink,
+    NoticeComponent,
+    TPipe,
+    TpPipe,
+  ],
   templateUrl: './contribute.page.html',
   styleUrl: './contribute.page.scss',
 })

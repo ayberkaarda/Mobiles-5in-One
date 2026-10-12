@@ -190,6 +190,28 @@ export class FavoritesStore {
     return this.sync(this.epoch, id);
   }
 
+  /**
+   * Account deletion: forgets what this device recorded about the account (its id and which
+   * guest entries were copied into it). The account list itself lives in memory and went with
+   * the session; the guest list belongs to the device and stays. Rejects when storage refused.
+   */
+  forgetAccount(userId: string): Promise<void> {
+    // The legacy migration queues itself first, so the removal below runs after it.
+    this.legacyMerged ??= this.migrateMerged();
+    const work = this.storageQueue.then(async () => {
+      await this.prefs.remove(mergedFavoritesKey(userId));
+      const accounts = parseKeys(await this.readPref(MERGED_ACCOUNTS_KEY));
+      if (accounts.includes(userId)) {
+        await this.prefs.set(
+          MERGED_ACCOUNTS_KEY,
+          JSON.stringify(accounts.filter((id) => id !== userId)),
+        );
+      }
+    });
+    this.storageQueue = work.catch(() => undefined);
+    return work;
+  }
+
   private async toggleGuest(entry: FavoriteLine): Promise<void> {
     await this.guestRestored;
     await this.storeSerial(async () => {
