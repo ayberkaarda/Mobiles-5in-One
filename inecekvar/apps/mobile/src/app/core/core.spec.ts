@@ -65,21 +65,33 @@ describe('LanguageService', () => {
 describe('FavoritesStore', () => {
   beforeEach(() => localStorage.clear());
 
-  it('toggles favourites and persists them on the device', () => {
+  const line = {
+    city: 'ornek-test-sehri',
+    slug: 'ornek-hat-1',
+    code: 'ORN-1',
+    name: '[ÖRNEK] Hat ORN-1',
+    mode: 'dolmus',
+  } as const;
+
+  it('toggles favourites by city and slug and persists them on the device', () => {
     const store = TestBed.inject(FavoritesStore);
-    store.toggle('ornek-hat-1');
-    expect(store.has('ornek-hat-1')).toBe(true);
+    store.toggle(line);
+    expect(store.has(line.city, line.slug)).toBe(true);
+    expect(store.has('baska-sehir', line.slug)).toBe(false);
     expect(store.count()).toBe(1);
-    expect(JSON.parse(localStorage.getItem(PREF_KEYS.favorites) ?? '[]')).toEqual(['ornek-hat-1']);
-    store.toggle('ornek-hat-1');
-    expect(store.has('ornek-hat-1')).toBe(false);
+    expect(JSON.parse(localStorage.getItem(PREF_KEYS.favorites) ?? '[]')).toEqual([line]);
+    store.toggle(line);
+    expect(store.has(line.city, line.slug)).toBe(false);
   });
 
-  it('survives corrupt storage', () => {
+  it('survives corrupt storage and drops entries it cannot resolve', () => {
     localStorage.setItem(PREF_KEYS.favorites, '{not json');
     expect(TestBed.inject(FavoritesStore).all()).toEqual([]);
     TestBed.resetTestingModule();
-    localStorage.setItem(PREF_KEYS.favorites, JSON.stringify(['a', 3, 'b']));
-    expect(TestBed.inject(FavoritesStore).all()).toEqual(['a', 'b']);
+    localStorage.setItem(
+      PREF_KEYS.favorites,
+      JSON.stringify(['ornek-hat-1', 3, line, { ...line, mode: 'roket' }]),
+    );
+    expect(TestBed.inject(FavoritesStore).all()).toEqual([line]);
   });
 });

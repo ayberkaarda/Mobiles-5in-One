@@ -24,6 +24,14 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/contribute.page').then((m) => m.ContributePage),
       },
       {
+        path: 'hat/:slug',
+        loadComponent: () => import('./pages/line.page').then((m) => m.LinePage),
+      },
+      {
+        path: 'durak/:slug',
+        loadComponent: () => import('./pages/stop.page').then((m) => m.StopPage),
+      },
+      {
         path: 'ayarlar',
         loadComponent: () => import('./pages/settings.page').then((m) => m.SettingsPage),
       },

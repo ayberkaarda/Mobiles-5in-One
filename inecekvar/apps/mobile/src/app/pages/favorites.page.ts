@@ -4,8 +4,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { StateComponent } from '@inecekvar/ui';
 import { FavoritesStore } from '../core/favorites.store';
 import { TPipe } from '../i18n/i18n';
-import { SAMPLE_CITY_LINES } from '../sample/sample-lines';
-import { LineListComponent } from '../shared/line-list.component';
+import { LineItem, LineListComponent } from '../shared/line-list.component';
 
 @Component({
   selector: 'iv-favorites-page',
@@ -46,11 +45,8 @@ export class FavoritesPage {
   private readonly router = inject(Router);
   private readonly favorites = inject(FavoritesStore);
 
-  /** Favourited lines that this device can resolve; today that is the labelled sample set. */
-  protected readonly lines = computed(() => {
-    const slugs = this.favorites.all();
-    return SAMPLE_CITY_LINES.filter((line) => slugs.includes(line.slug));
-  });
+  /** Favourited lines as saved on this device; each opens its line page in its own city. */
+  protected readonly lines = computed<LineItem[]>(() => [...this.favorites.all()]);
 
   protected goToSearch(): void {
     void this.router.navigateByUrl('/ara');
