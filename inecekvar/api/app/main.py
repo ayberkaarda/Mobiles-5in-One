@@ -16,6 +16,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import SecretStr
 from redis.asyncio import Redis
 
+from app.admin.router import router as admin_router
 from app.auth.authenticator import TokenSessionAuthenticator
 from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
@@ -59,6 +60,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     media_router,
     planner_router,
     export_router,
+    admin_router,
 )
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing

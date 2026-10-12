@@ -9,12 +9,15 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.step_up import SessionStepUpSource
 from app.core.deps import Services
 from app.core.ids import uuid7
+from app.models.accounts import User
 from app.models.contributions import Edit, Trace
 from app.models.enums import UserRole
 from tests.security.conftest import create_account, sign_in
-from tests.support.app import build_test_app
+from tests.support.app import FixedClock, build_test_app
+from tests.totp.test_totp_step_up import enrol, problem, verify
 
 pytestmark = [pytest.mark.anyio, pytest.mark.postgis]
 
@@ -334,3 +337,57 @@ async def test_idor_case(case: IdorCase, services: Services) -> None:
         # An allowed caller gets this resource and no other identity's account data.
         assert response.json()["id"] == str(identity)
         assert "author_id" not in response.json()
+
+
+ADMIN_IDOR_CASES = (
+    (UserRole.MODERATOR, True, "auth.forbidden"),
+    (UserRole.ADMIN, False, "auth.step_up_required"),
+)
+
+
+@pytest.mark.parametrize(("role", "fresh", "code"), ADMIN_IDOR_CASES)
+async def test_admin_role_idor_is_refused(
+    services: Services, clock: FixedClock, role: UserRole, fresh: bool, code: str
+) -> None:
+    services.step_up = SessionStepUpSource()
+    target, email = await create_account(services, UserRole.USER)
+    _, actor_email = await create_account(services, role)
+    transport = httpx.ASGITransport(app=build_test_app(services), client=("203.0.113.10", 50000))
+    async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
+        headers = await sign_in(client, actor_email)
+        output = await enrol(client, headers)
+        assert (
+            await verify(client, headers, output.secret, clock, "/v1/me/totp/confirm")
+        ).status_code == 200
+        if fresh:
+            clock.advance(seconds=30)
+            assert (await verify(client, headers, output.secret, clock)).status_code == 200
+        response = await client.patch(
+            f"/v1/admin/users/{target}/role", headers=headers, json={"role": "admin"}
+        )
+    problem(response, 403, code)
+    assert email not in response.text
+    assert str(target) not in response.text
+    async with services.session_factory() as db:
+        stored = await db.get(User, target)
+        assert stored is not None
+        assert stored.role == "user"
+
+
+async def test_stepped_up_contributor_cannot_read_admin_users(
+    services: Services, clock: FixedClock
+) -> None:
+    services.step_up = SessionStepUpSource()
+    _, email = await create_account(services, UserRole.CONTRIBUTOR)
+    transport = httpx.ASGITransport(app=build_test_app(services), client=("203.0.113.10", 50000))
+    async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
+        headers = await sign_in(client, email)
+        output = await enrol(client, headers)
+        assert (
+            await verify(client, headers, output.secret, clock, "/v1/me/totp/confirm")
+        ).status_code == 200
+        clock.advance(seconds=30)
+        assert (await verify(client, headers, output.secret, clock)).status_code == 200
+        response = await client.get("/v1/admin/users", headers=headers)
+    problem(response, 403, "auth.forbidden")
+    assert email not in response.text

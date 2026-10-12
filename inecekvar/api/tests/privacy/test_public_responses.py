@@ -60,6 +60,7 @@ PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
     ("GET", "/v1/lines/{slug}"): Probe("/v1/lines/ornek-hat-1", {"city": CITY}),
     ("GET", "/v1/lines/{slug}/versions"): Probe("/v1/lines/ornek-hat-1/versions", {"city": CITY}),
     ("GET", "/v1/stops/{slug}"): Probe("/v1/stops/ornek-durak-1-1", {"city": CITY}),
+    ("GET", "/v1/stops"): Probe("/v1/stops", {"city": CITY, "q": "durak"}),
     ("GET", "/v1/stops/near"): Probe("/v1/stops/near", {"lng": "34.01", "lat": "42.51"}),
     ("POST", "/v1/auth/register"): Probe(
         "/v1/auth/register",
@@ -104,6 +105,10 @@ PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
 }
 PRIVATE_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
+        ("GET", "/v1/admin/users"),
+        ("PATCH", "/v1/admin/users/{identity}/role"),
+        ("POST", "/v1/admin/exports/{city}"),
+        ("GET", "/v1/admin/audit-logs"),
         ("POST", "/v1/auth/csrf"),
         ("POST", "/v1/auth/logout"),
         ("POST", "/v1/auth/logout-all"),
