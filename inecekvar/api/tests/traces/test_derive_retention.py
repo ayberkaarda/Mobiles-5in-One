@@ -1,3 +1,4 @@
+import itertools
 import uuid
 
 import httpx
@@ -29,6 +30,42 @@ def test_too_short_trace_rejected() -> None:
         derive_line_geometry([(0.0, 0.0), (0.004, 0.0)])
     assert caught.value.code == "trace.too_short"
     assert caught.value.status == 422
+
+
+def densified(
+    coordinates: list[tuple[float, float]], step: float = 5.0
+) -> list[tuple[float, float]]:
+    points = [coordinates[0]]
+    for first, second in itertools.pairwise(coordinates):
+        count = max(1, int(geodesic_length([first, second]) / step))
+        points.extend(
+            (
+                first[0] + (second[0] - first[0]) * index / count,
+                first[1] + (second[1] - first[1]) * index / count,
+            )
+            for index in range(1, count + 1)
+        )
+    return points
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # Leaves the start, comes back through it, then ends elsewhere (A B C A D).
+        [(34.02, 42.52), (34.05, 42.52), (34.05, 42.55), (34.02, 42.52), (34.02, 42.57)],
+        # Ends where it started (a closed loop).
+        [(34.02, 42.52), (34.05, 42.52), (34.05, 42.55), (34.02, 42.55), (34.02, 42.52)],
+        # Passes the end point before finishing there (A B D C D).
+        [(34.02, 42.52), (34.05, 42.52), (34.05, 42.57), (34.08, 42.57), (34.05, 42.57)],
+    ],
+    ids=["revisits-start", "closed-loop", "passes-end-early"],
+)
+def test_trim_excludes_every_return_to_the_endpoints(raw: list[tuple[float, float]]) -> None:
+    result = derive_line_geometry(raw)
+    assert geodesic_length(result) >= 100
+    for point in densified(result):
+        assert geodesic_length([point, raw[0]]) >= 194
+        assert geodesic_length([point, raw[-1]]) >= 194
 
 
 def proposal(sample: Sample, identity: uuid.UUID) -> dict[str, object]:
