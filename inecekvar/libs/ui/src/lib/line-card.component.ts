@@ -31,12 +31,14 @@ export interface LineCardLabels {
           </span>
           <span class="chips">
             <iv-mode-chip [mode]="mode()" [label]="labels().mode" />
-            <iv-fare-chip
-              [fareMinor]="fareMinor()"
-              [srLabel]="labels().fare"
-              [freeLabel]="labels().fareFree"
-              [unknownLabel]="labels().fareUnknown"
-            />
+            @if (fareMinor() !== undefined) {
+              <iv-fare-chip
+                [fareMinor]="fareMinor() ?? null"
+                [srLabel]="labels().fare"
+                [freeLabel]="labels().fareFree"
+                [unknownLabel]="labels().fareUnknown"
+              />
+            }
           </span>
           @if (meta().length > 0) {
             <span class="meta">
@@ -170,8 +172,8 @@ export class LineCardComponent {
   readonly name = input.required<string>();
   readonly mode = input.required<LineMode>();
   readonly labels = input.required<LineCardLabels>();
-  /** Fare in kuruş, `null` when unknown. */
-  readonly fareMinor = input<number | null>(null);
+  /** Fare in kuruş, `null` when unknown, `undefined` to leave the fare chip out. */
+  readonly fareMinor = input<number | null | undefined>(null);
   /** Secondary facts such as stop count and hours; each part wraps as a whole. */
   readonly meta = input<readonly string[]>([]);
   /** `null` hides the star; `true`/`false` shows it pressed or not. */
