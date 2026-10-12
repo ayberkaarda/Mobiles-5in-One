@@ -43,6 +43,9 @@ class Network:
     adjacent: dict[str, tuple[Edge, ...]]
 
 
+WALK_NEIGHBOURS = 12
+
+
 def haversine(first: StopNode, second: StopNode) -> float:
     lat1, lat2 = math.radians(first.lat), math.radians(second.lat)
     term = math.sin((lat2 - lat1) / 2) ** 2
@@ -86,12 +89,23 @@ def build_network(
     # Chord distance never exceeds arc distance, so all nearby pairs are in adjacent cells.
     buckets: dict[tuple[int, int, int], list[StopNode]] = defaultdict(list)
     size = max(walk_limit_m, 0.001)
+    # Each stop keeps walking links to at most WALK_NEIGHBOURS nearest stops (a pair is linked
+    # when it is among the nearest of either end), so a dense cluster cannot make the graph
+    # quadratic in size.
+    nearest: dict[str, list[tuple[float, str]]] = defaultdict(list)
     for stop in nodes.values():
         cell = _cell(stop, size)
         for dx, dy, dz in product((-1, 0, 1), repeat=3):
             for other in buckets.get((cell[0] + dx, cell[1] + dy, cell[2] + dz), ()):
                 distance = haversine(stop, other)
                 if distance <= walk_limit_m:
-                    connect(stop.id, other.id, None, distance)
+                    nearest[stop.id].append((distance, other.id))
+                    nearest[other.id].append((distance, stop.id))
         buckets[cell].append(stop)
+    linked: dict[tuple[str, str], float] = {}
+    for identity, found in nearest.items():
+        for distance, neighbour in sorted(found)[:WALK_NEIGHBOURS]:
+            linked[min(identity, neighbour), max(identity, neighbour)] = distance
+    for (first, second), distance in sorted(linked.items()):
+        connect(first, second, None, distance)
     return Network(graph, nodes, routes, {key: tuple(value) for key, value in adjacent.items()})

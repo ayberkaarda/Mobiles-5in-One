@@ -4,7 +4,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from app.planner.graph import EARTH_M, Network, RouteLine, StopNode, build_network
+from app.planner.graph import EARTH_M, WALK_NEIGHBOURS, Network, RouteLine, StopNode, build_network
 from app.planner.search import PlannerTimeout, PlanResult, RideLeg, WalkLeg, plan
 
 
@@ -161,3 +161,12 @@ def test_property_itineraries_are_well_formed(network: Network) -> None:
         assert itinerary.transfers == max(0, len(sequence) - 1)
         assert tuple(sequence) not in sequences
         sequences.add(tuple(sequence))
+
+
+def test_walking_links_are_capped_per_stop() -> None:
+    # 60 stops within a few metres of each other: without the cap this is 1770 pairs.
+    stops = [StopNode(str(index), 34.05 + index * 1e-6, 42.54) for index in range(60)]
+    network = build_network(stops, [])
+    assert max(len(edges) for edges in network.adjacent.values()) <= 2 * WALK_NEIGHBOURS
+    assert network.graph.number_of_edges() <= 2 * WALK_NEIGHBOURS * len(stops)
+    assert all(network.adjacent[stop.id] for stop in stops)

@@ -195,3 +195,15 @@ async def test_plan_rejects_invalid_body(
     request = body()
     request.update(extra)
     assert (await planner_client.post("/v1/plan", json=request)).status_code == 422
+
+
+async def test_plan_city_beyond_capacity_degrades(
+    planner_client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "MAX_PLANNER_STOPS", 5)
+    request = body()
+    request["max_transfers"] = 1
+    response = await planner_client.post("/v1/plan", json=request)
+    assert response.status_code == 200
+    assert response.json()["degraded"] is True
+    assert response.json()["itineraries"] == []

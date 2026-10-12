@@ -85,16 +85,26 @@ def response(city: str, stored: CityNetwork, result: PlanResult, degraded: bool)
     return PlanOutput(city=city, degraded=degraded, itineraries=itineraries)
 
 
+# Upper bound of active stops per city the in-process graph accepts.
+MAX_PLANNER_STOPS = 20_000
+
+
+class PlannerCapacityError(Exception):
+    """The city has more stops than the planner builds a graph for."""
+
+
 class PlannerService:
     """Application-local LRU with serialized cold builds and immutable search inputs."""
 
     def __init__(self) -> None:
         self.networks: OrderedDict[tuple[uuid.UUID, int], CityNetwork] = OrderedDict()
-        self.lock = asyncio.Lock()
+        self.locks: dict[uuid.UUID, asyncio.Lock] = {}
 
     async def load_network(self, db: AsyncSession, city: City) -> CityNetwork:
         key = city.id, city.pack_version
-        async with self.lock:
+        # One cold build per city at a time; other cities are not blocked.
+        lock = self.locks.setdefault(city.id, asyncio.Lock())
+        async with lock:
             existing = self.networks.get(key)
             if existing is not None:
                 self.networks.move_to_end(key)
@@ -107,8 +117,11 @@ class PlannerService:
                         Stop.status == "active",
                     )
                     .order_by(Stop.id)
+                    .limit(MAX_PLANNER_STOPS + 1)
                 )
             )
+            if len(rows) > MAX_PLANNER_STOPS:
+                raise PlannerCapacityError(city.slug)
             stops: dict[str, StopOutput] = {}
             nodes: list[StopNode] = []
             for stop in rows:
@@ -156,7 +169,13 @@ class PlannerService:
         cached = await services.redis.get(key)
         if cached is not None:
             return PlanOutput.model_validate_json(cached), True
-        stored = await self.load_network(db, city)
+        try:
+            stored = await self.load_network(db, city)
+        except PlannerCapacityError:
+            # Fails closed and cheap: a city beyond the planner's capacity answers degraded.
+            empty = PlanOutput(city=city.slug, degraded=True, itineraries=[])
+            await services.redis.set(key, empty.model_dump_json(), ex=60)
+            return empty, False
         origins = candidates(stored.network, origin)
         destinations = candidates(stored.network, destination)
 
