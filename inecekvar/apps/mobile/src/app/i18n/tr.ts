@@ -1,0 +1,118 @@
+/**
+ * Turkish copy, the default language and the source of the key set. `en.ts` must provide the
+ * same keys (checked by the compiler through `Translation`). Placeholders use {{name}}.
+ */
+export const tr = {
+  app: {
+    name: 'İnecek Var',
+    tagline: 'Dolmuş nereden geçer? Mahalle bilir.',
+  },
+  tabs: {
+    label: 'Ana sekmeler',
+    search: 'Ara',
+    plan: 'Planla',
+    favorites: 'Favoriler',
+    contribute: 'Katkı',
+    settings: 'Ayarlar',
+  },
+  mode: {
+    dolmus: 'Dolmuş',
+    minibus: 'Minibüs',
+    servis: 'Servis',
+  },
+  fare: {
+    label: 'Ücret',
+    free: 'Ücretsiz',
+    unknown: 'Ücret bilinmiyor',
+  },
+  line: {
+    favoriteAdd: 'Favorilere ekle',
+    favoriteRemove: 'Favorilerden çıkar',
+    stops: '{{count}} durak',
+  },
+  search: {
+    kicker: 'Hat rehberi',
+    heading: 'Hat nereden geçer?',
+    lead: 'Hat kodunu, adını ya da bir durağı yaz. Resmî listede olmayan hatlar da burada.',
+    placeholder: 'Hat kodu, adı ya da durak',
+    filterLabel: 'Araç türü',
+    filterAll: 'Hepsi',
+    packTitle: 'Henüz şehir paketi yok',
+    packBody:
+      'Şehir paketi hatları ve haritayı telefona indirir; internet yokken de açılır. Ücretsiz planda 1 şehir.',
+    sampleHeading: 'Örnek şehrin hatları',
+    sampleCount: '{{count}} hat',
+    sampleNote: '[ÖRNEK] Test Şehri geliştirme verisidir, gerçek bir hat değildir.',
+    emptyTitle: 'Bu aramaya uyan hat yok',
+    emptyBody: 'Hat eksikse ekleyelim. Katkı sekmesinden öner, mahalle bilsin.',
+    emptyAction: 'Aramayı temizle',
+  },
+  plan: {
+    kicker: 'A’dan B’ye',
+    heading: 'Nereden nereye?',
+    lead: 'En fazla 2 aktarma, duraklar arası en çok 300 m yürüme. Tahmini ücreti de söyleriz.',
+    from: 'Nereden',
+    to: 'Nereye',
+    placeholder: 'Durak ya da mahalle',
+    swap: 'Kalkış ile varışı değiştir',
+    submit: 'Rota bul',
+    noCityTitle: 'Önce şehrini seç',
+    noCityBody:
+      'Rotalar bir şehrin hatları üzerinden çizilir. Ara sekmesinden bir şehir paketi seç.',
+    noCityAction: 'Ara sekmesine git',
+    hint: 'Kalkış ve varış yazınca rota seçenekleri, aktarmalar ve tahmini ücret burada çıkar.',
+  },
+  favorites: {
+    kicker: 'Cebindeki hatlar',
+    heading: 'Favoriler',
+    lead: 'Her gün bindiğin hatlar tek dokunuşla burada.',
+    emptyTitle: 'Henüz favori hat yok',
+    emptyBody:
+      'Bir hat kartındaki yıldıza dokun. Misafirken bu cihazda saklanır, giriş yapınca hesabına eşitlenir.',
+    emptyAction: 'Hat ara',
+    count: '{{count}} hat',
+  },
+  contribute: {
+    kicker: 'Mahalle bilir',
+    heading: 'Bu hat değişti mi? Söyle.',
+    lead: 'Hatları yolcular çiziyor. Bindiğin hattı kaydet, eksik durağı ekle, yeni ücreti yaz.',
+    actionsTitle: 'Neler yapabilirsin',
+    signInRequired: 'Giriş gerekir',
+    traceTitle: 'Yolculuğunu kaydet',
+    traceBody: 'Binince başlat, inince bitir. Güzergâh telefonda sadeleşir, sonra gönderilir.',
+    newLineTitle: 'Yeni hat öner',
+    newLineBody: 'Haritada olmayan dolmuş, minibüs ya da servis hattını ekle.',
+    fareTitle: 'Ücreti güncelle',
+    fareBody: 'Ücret tablosunun fotoğrafıyla yeni fiyatı bildir.',
+    stopTitle: 'Durak işaretle',
+    stopBody: 'Yolculuk sırasında durulan yerleri tek dokunuşla işaretle.',
+    privacyTitle: 'İzin sende',
+    privacyBody:
+      'Ham GPS izini yalnızca sen ve moderatörler görür. Hat yayımlandıktan 30 gün sonra silinir.',
+  },
+  settings: {
+    kicker: 'Tercihler',
+    heading: 'Ayarlar',
+    appearance: 'Görünüm',
+    themeSystem: 'Sistem',
+    themeLight: 'Açık',
+    themeDark: 'Koyu',
+    language: 'Dil',
+    languageTr: 'Türkçe',
+    languageEn: 'English',
+    account: 'Hesap',
+    guestTitle: 'Misafir olarak kullanıyorsun',
+    guestBody:
+      'Arama, rota ve favoriler hesapsız çalışır. Katkı vermek ve favorileri eşitlemek için hesap gerekir.',
+    privacy: 'Gizlilik',
+    privacyLocation: 'Konum yalnızca uygulama açıkken ve sen izin verdiğinde kullanılır.',
+    privacyData: 'Hatlar mahallelinin katkısıdır; resmî veri değildir.',
+    about: 'Hakkında',
+    version: 'Sürüm {{version}}',
+  },
+  notFound: {
+    title: 'Bu durak haritada yok',
+    body: 'Aradığın sayfa taşınmış ya da hiç olmamış olabilir. Ana sayfaya dönelim.',
+    action: 'Ara sekmesine dön',
+  },
+} as const;

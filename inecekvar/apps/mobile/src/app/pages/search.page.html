@@ -1,0 +1,66 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="brand">
+      <img src="brand/inecekvar-wordmark.svg" width="105" height="40" [attr.alt]="'app.name' | t" />
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'search.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'search.heading' | t }}</h1>
+    <p class="iv-lead">{{ 'search.lead' | t }}</p>
+
+    <ion-searchbar
+      class="search"
+      mode="md"
+      [value]="query()"
+      [placeholder]="'search.placeholder' | t"
+      [debounce]="0"
+      (ionInput)="onQuery($event.detail.value)"
+    />
+
+    <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
+      @for (filter of filters; track filter.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.on]="mode() === filter.value"
+        [attr.aria-pressed]="mode() === filter.value"
+        (click)="mode.set(filter.value)"
+      >
+        {{ filter.label | t }}
+      </button>
+      }
+    </div>
+
+    <section class="iv-section pack">
+      <svg class="pack-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+      </svg>
+      <div>
+        <h2>{{ 'search.packTitle' | t }}</h2>
+        <p>{{ 'search.packBody' | t }}</p>
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">
+        {{ 'search.sampleHeading' | t }}
+        <small>{{ 'search.sampleCount' | t: { count: results().length } }}</small>
+      </h2>
+      @if (results().length > 0) {
+      <iv-line-list [lines]="results()" />
+      <p class="iv-note">{{ 'search.sampleNote' | t }}</p>
+      } @else {
+      <iv-state
+        [heading]="'search.emptyTitle' | t"
+        [message]="'search.emptyBody' | t"
+        [actionLabel]="'search.emptyAction' | t"
+        (action)="clear()"
+      />
+      }
+    </section>
+  </div>
+</ion-content>

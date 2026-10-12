@@ -1,0 +1,68 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'tabs.plan' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'plan.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'plan.heading' | t }}</h1>
+    <p class="iv-lead">{{ 'plan.lead' | t }}</p>
+
+    <form class="route" (submit)="$event.preventDefault(); submit()">
+      <div class="rail" aria-hidden="true">
+        <span class="dot dot--from"></span>
+        <span class="dash"></span>
+        <span class="dot dot--to"></span>
+      </div>
+      <div class="fields">
+        <label class="field">
+          <span>{{ 'plan.from' | t }}</span>
+          <input
+            type="text"
+            name="from"
+            autocomplete="off"
+            enterkeyhint="next"
+            [value]="from()"
+            [placeholder]="'plan.placeholder' | t"
+            (input)="onInput('from', $event)"
+          />
+        </label>
+        <label class="field">
+          <span>{{ 'plan.to' | t }}</span>
+          <input
+            type="text"
+            name="to"
+            autocomplete="off"
+            enterkeyhint="search"
+            [value]="to()"
+            [placeholder]="'plan.placeholder' | t"
+            (input)="onInput('to', $event)"
+          />
+        </label>
+      </div>
+      <button type="button" class="swap" [attr.aria-label]="'plan.swap' | t" (click)="swap()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3" />
+        </svg>
+      </button>
+      <button type="submit" class="iv-button iv-button--block submit" [disabled]="!canSubmit()">
+        {{ 'plan.submit' | t }}
+      </button>
+    </form>
+
+    <div class="iv-section">
+      @if (submitted()) {
+      <iv-state
+        [heading]="'plan.noCityTitle' | t"
+        [message]="'plan.noCityBody' | t"
+        [actionLabel]="'plan.noCityAction' | t"
+        (action)="goToSearch()"
+      />
+      } @else {
+      <p class="iv-note hint">{{ 'plan.hint' | t }}</p>
+      }
+    </div>
+  </div>
+</ion-content>

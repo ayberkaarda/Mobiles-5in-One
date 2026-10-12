@@ -1,0 +1,118 @@
+import { Translation } from './translation';
+
+/** English copy, loaded on demand when the user picks English. */
+export const en: Translation = {
+  app: {
+    name: 'İnecek Var',
+    tagline: 'Where does the dolmuş go? The neighbourhood knows.',
+  },
+  tabs: {
+    label: 'Main tabs',
+    search: 'Search',
+    plan: 'Plan',
+    favorites: 'Favourites',
+    contribute: 'Contribute',
+    settings: 'Settings',
+  },
+  mode: {
+    dolmus: 'Dolmuş',
+    minibus: 'Minibus',
+    servis: 'Shuttle',
+  },
+  fare: {
+    label: 'Fare',
+    free: 'Free',
+    unknown: 'Fare unknown',
+  },
+  line: {
+    favoriteAdd: 'Add to favourites',
+    favoriteRemove: 'Remove from favourites',
+    stops: '{{count}} stops',
+  },
+  search: {
+    kicker: 'Line guide',
+    heading: 'Where does the line go?',
+    lead: 'Type a line code, a line name or a stop. Lines missing from official lists live here too.',
+    placeholder: 'Line code, name or stop',
+    filterLabel: 'Vehicle type',
+    filterAll: 'All',
+    packTitle: 'No city pack yet',
+    packBody:
+      'A city pack stores lines and the map on your phone so they open without internet. The free plan includes 1 city.',
+    sampleHeading: 'Lines in the sample city',
+    sampleCount: '{{count}} lines',
+    sampleNote: '[ÖRNEK] Test Şehri is development data, not a real line.',
+    emptyTitle: 'No line matches this search',
+    emptyBody: 'Missing a line? Propose it from the Contribute tab so the neighbourhood knows.',
+    emptyAction: 'Clear search',
+  },
+  plan: {
+    kicker: 'From A to B',
+    heading: 'Where to?',
+    lead: 'Up to 2 transfers and at most 300 m on foot between stops. We estimate the fare too.',
+    from: 'From',
+    to: 'To',
+    placeholder: 'Stop or neighbourhood',
+    swap: 'Swap start and destination',
+    submit: 'Find a route',
+    noCityTitle: 'Pick your city first',
+    noCityBody:
+      'Routes are built from the lines of one city. Choose a city pack in the Search tab.',
+    noCityAction: 'Go to Search',
+    hint: 'Enter a start and a destination to see route options, transfers and the estimated fare.',
+  },
+  favorites: {
+    kicker: 'Lines in your pocket',
+    heading: 'Favourites',
+    lead: 'The lines you ride every day, one tap away.',
+    emptyTitle: 'No favourite lines yet',
+    emptyBody:
+      'Tap the star on a line card. As a guest it stays on this device; once you sign in it syncs to your account.',
+    emptyAction: 'Search lines',
+    count: '{{count}} lines',
+  },
+  contribute: {
+    kicker: 'The neighbourhood knows',
+    heading: 'Has this line changed? Tell us.',
+    lead: 'Riders draw the lines. Record the line you ride, add a missing stop, report a new fare.',
+    actionsTitle: 'What you can do',
+    signInRequired: 'Sign-in required',
+    traceTitle: 'Record your ride',
+    traceBody:
+      'Start when you board, stop when you get off. The route is simplified on the phone, then sent.',
+    newLineTitle: 'Propose a new line',
+    newLineBody: 'Add a dolmuş, minibus or shuttle line that is missing from the map.',
+    fareTitle: 'Update the fare',
+    fareBody: 'Report the new price with a photo of the fare table.',
+    stopTitle: 'Mark a stop',
+    stopBody: 'Mark the places the vehicle stops with one tap during the ride.',
+    privacyTitle: 'Your trace, your call',
+    privacyBody:
+      'Only you and moderators see your raw GPS trace. It is deleted 30 days after the line is published.',
+  },
+  settings: {
+    kicker: 'Preferences',
+    heading: 'Settings',
+    appearance: 'Appearance',
+    themeSystem: 'System',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    language: 'Language',
+    languageTr: 'Türkçe',
+    languageEn: 'English',
+    account: 'Account',
+    guestTitle: 'You are using the app as a guest',
+    guestBody:
+      'Search, routes and favourites work without an account. Contributing and syncing favourites need one.',
+    privacy: 'Privacy',
+    privacyLocation: 'Location is used only while the app is open and only when you allow it.',
+    privacyData: 'Lines come from neighbourhood contributors; this is not official data.',
+    about: 'About',
+    version: 'Version {{version}}',
+  },
+  notFound: {
+    title: 'This stop is not on the map',
+    body: 'The page you are looking for has moved or never existed. Let us head back.',
+    action: 'Back to Search',
+  },
+};

@@ -6,7 +6,21 @@
       "name": "app-shell",
       "installMode": "prefetch",
       "resources": {
-        "files": ["/favicon.ico", "/index.html", "/manifest.webmanifest", "/*.css", "/*.js"]
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/brand/*.svg",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "fonts",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/media/*.woff2"]
       }
     },
     {

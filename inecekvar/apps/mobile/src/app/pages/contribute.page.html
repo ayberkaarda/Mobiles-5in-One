@@ -1,0 +1,38 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'tabs.contribute' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <section class="sign">
+      <p class="sign-kicker">{{ 'contribute.kicker' | t }}</p>
+      <h1>{{ 'contribute.heading' | t }}</h1>
+      <p class="sign-lead">{{ 'contribute.lead' | t }}</p>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'contribute.actionsTitle' | t }}</h2>
+      <ul class="actions" role="list">
+        @for (action of actions; track action.id) {
+        <li class="action">
+          <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path [attr.d]="action.icon" />
+          </svg>
+          <div class="action-text">
+            <h3>{{ action.title | t }}</h3>
+            <p>{{ action.body | t }}</p>
+            <span class="badge">{{ 'contribute.signInRequired' | t }}</span>
+          </div>
+        </li>
+        }
+      </ul>
+    </section>
+
+    <section class="iv-section privacy">
+      <h2>{{ 'contribute.privacyTitle' | t }}</h2>
+      <p>{{ 'contribute.privacyBody' | t }}</p>
+    </section>
+  </div>
+</ion-content>

@@ -1,0 +1,119 @@
+.route {
+  display: grid;
+  grid-template-columns: 20px 1fr 44px;
+  column-gap: var(--iv-space-3);
+  row-gap: var(--iv-space-4);
+  margin-top: var(--iv-space-5);
+  padding: var(--iv-space-4);
+  background: var(--iv-surface);
+  border: 1px solid var(--iv-line);
+  border-radius: var(--iv-radius-l);
+  box-shadow: var(--iv-shadow-hard);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 0 18px;
+}
+
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.dot--from {
+  background: var(--iv-stripe);
+}
+
+.dot--to {
+  background: var(--iv-accent);
+  box-shadow: inset 0 0 0 3px var(--iv-ink);
+}
+
+.dash {
+  flex: 1;
+  width: 0;
+  margin: 4px 0;
+  border-left: 2px dashed var(--iv-line-strong);
+}
+
+.fields {
+  display: grid;
+  gap: var(--iv-space-3);
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field span {
+  font-size: 12px;
+  font-weight: var(--iv-font-body-weight-600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--iv-ink-muted);
+}
+
+.field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--iv-line-strong);
+  border-radius: var(--iv-radius-s);
+  background: var(--iv-bg);
+  color: var(--iv-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.field input::placeholder {
+  color: var(--iv-ink-muted);
+  opacity: 1;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--iv-ink);
+  box-shadow: var(--iv-focus);
+}
+
+.swap {
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--iv-line-strong);
+  border-radius: 50%;
+  background: var(--iv-surface);
+  color: var(--iv-ink);
+  cursor: pointer;
+}
+
+.swap svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.swap:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.submit {
+  grid-column: 1 / -1;
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+}

@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'tabs.settings' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'settings.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'settings.heading' | t }}</h1>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title" id="appearance-title">{{ 'settings.appearance' | t }}</h2>
+      <div class="segmented" role="radiogroup" aria-labelledby="appearance-title">
+        @for (option of themeOptions; track option.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="theme.pref() === option.value"
+          [attr.data-value]="option.value"
+          (click)="theme.set(option.value)"
+        >
+          {{ option.label | t }}
+        </button>
+        }
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title" id="language-title">{{ 'settings.language' | t }}</h2>
+      <div class="segmented" role="radiogroup" aria-labelledby="language-title">
+        @for (option of langOptions; track option.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.lang]="option.value"
+          [attr.aria-checked]="language.lang() === option.value"
+          [attr.data-value]="option.value"
+          (click)="setLang(option.value)"
+        >
+          {{ option.label | t }}
+        </button>
+        }
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'settings.account' | t }}</h2>
+      <div class="iv-panel guest">
+        <span class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0" />
+          </svg>
+        </span>
+        <div>
+          <h3>{{ 'settings.guestTitle' | t }}</h3>
+          <p>{{ 'settings.guestBody' | t }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'settings.privacy' | t }}</h2>
+      <ul class="facts" role="list">
+        <li>{{ 'settings.privacyLocation' | t }}</li>
+        <li>{{ 'settings.privacyData' | t }}</li>
+      </ul>
+    </section>
+
+    <section class="iv-section about">
+      <h2 class="iv-section-title">{{ 'settings.about' | t }}</h2>
+      <img src="brand/inecekvar-wordmark.svg" width="126" height="48" [attr.alt]="'app.name' | t" />
+      <p class="tagline">{{ 'app.tagline' | t }}</p>
+      <p class="iv-note">{{ 'settings.version' | t: { version } }}</p>
+    </section>
+  </div>
+</ion-content>
