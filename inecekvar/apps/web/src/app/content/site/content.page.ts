@@ -79,7 +79,7 @@ import { ContentData } from './content-view';
       font-weight: 600;
     }
     .meta {
-      color: var(--iv-color-yol-grisi);
+      color: var(--iv-color-text);
       font-size: 0.9rem;
     }
     h2 {
