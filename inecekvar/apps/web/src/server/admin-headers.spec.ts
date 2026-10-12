@@ -15,16 +15,22 @@ async function fixture(env: Record<string, string> = { INECEKVAR_ENV: 'test' }) 
 }
 
 describe('admin responses', () => {
-  it.each(['/admin', '/admin/kuyruk', '/%61dmin/giris', '/ADMIN/denetim'])(
-    'are noindex and no-store: %s',
-    async (path) => {
-      const { port } = await fixture();
-      const result = await httpRequest(port, { path });
-      expect(result.headers['x-robots-tag']).toBe('noindex, nofollow');
-      if (result.status === 200) expect(result.headers['cache-control']).toBe('no-store');
-      expect(result.headers['content-security-policy']).toContain("frame-ancestors 'none'");
-    },
-  );
+  it.each([
+    '/admin',
+    '/admin/kuyruk',
+    '/%61dmin/giris',
+    '/ADMIN/denetim',
+    '/admin;x',
+    '/ADMIN%3Bx',
+    '/admin%3bx/kuyruk',
+    '/admin/kuyruk;v=1',
+  ])('are noindex and no-store: %s', async (path) => {
+    const { port } = await fixture();
+    const result = await httpRequest(port, { path });
+    expect(result.headers['x-robots-tag']).toBe('noindex, nofollow');
+    if (result.status === 200) expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.headers['content-security-policy']).toContain("frame-ancestors 'none'");
+  });
 
   it('leaves public pages indexable and privately cacheable', async () => {
     const { port } = await fixture();
@@ -39,6 +45,10 @@ describe('admin responses', () => {
     ['/Admin', true],
     ['/%61dmin', true],
     ['/%E0%A4%A', true],
+    ['/admin;x', true],
+    ['/ADMIN%3Bx', true],
+    ['/%61dmin%3b', true],
+    ['/admin;x/kuyruk', true],
     ['/administration', false],
     ['/istanbul/admin', false],
   ] as const)('classifies %s', (path, expected) => {
