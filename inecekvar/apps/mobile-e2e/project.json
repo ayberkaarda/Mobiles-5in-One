@@ -1,0 +1,19 @@
+{
+  "name": "mobile-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/mobile-e2e/src",
+  "implicitDependencies": ["mobile"],
+  "tags": [],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "dependsOn": [{ "projects": ["mobile"], "target": "build" }],
+      "cache": false,
+      "options": {
+        "cwd": "apps/mobile-e2e",
+        "command": "playwright test --config playwright.config.ts"
+      }
+    }
+  }
+}
