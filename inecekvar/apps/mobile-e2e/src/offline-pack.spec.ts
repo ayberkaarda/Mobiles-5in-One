@@ -63,6 +63,30 @@ async function controlledByServiceWorker(page: Page): Promise<void> {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 30_000 });
 }
 
+/**
+ * True once the service worker holds every app-shell file. The Angular worker fills its caches
+ * after activation, so a worker registered late may control the page before the shell is stored.
+ */
+function appShellCached(page: Page) {
+  return page.waitForFunction(
+    async () => {
+      const manifest = (await (await fetch('/ngsw.json', { cache: 'no-store' })).json()) as {
+        assetGroups: { name: string; urls: string[] }[];
+      };
+      const wanted = manifest.assetGroups.find((group) => group.name === 'app-shell')?.urls ?? [];
+      const stored = new Set<string>();
+      for (const name of await caches.keys()) {
+        if (!name.startsWith('ngsw:') || !name.includes(':app-shell:')) continue;
+        const cache = await caches.open(name);
+        for (const request of await cache.keys()) stored.add(new URL(request.url).pathname);
+      }
+      return wanted.length > 0 && wanted.every((url) => stored.has(url));
+    },
+    null,
+    { timeout: 60_000, polling: 500 },
+  );
+}
+
 /** True once the service worker's lazy map group holds the MapLibre chunk and worker files. */
 function mapAssetsCached(page: Page) {
   return page.waitForFunction(
@@ -216,6 +240,7 @@ test('recovers map warmup for a pack installed before service worker control', a
     ).ivAllowServiceWorkerRegistration();
   });
   await controlledByServiceWorker(page);
+  await appShellCached(page);
   await mapAssetsCached(page);
   await context.setOffline(true);
   await page.goto(`/hat/ornek-hat-2?city=${CITY}`);
@@ -253,4 +278,18 @@ test('never caches an authenticated private query containing a catalog pathname'
   }, token);
   expect(result.status).toBe(200);
   expect(result.cached).toEqual([]);
+});
+
+test('picks a planner endpoint at the map centre with the keyboard', async ({ page }) => {
+  await page.goto('/planla');
+  await page.evaluate((city) => localStorage.setItem('CapacitorStorage.iv.city', city), CITY);
+  await page.reload();
+  await page.getByRole('button', { name: 'Haritadan seç' }).first().click();
+  const pick = page.getByRole('button', { name: 'Harita merkezini seç' });
+  await expect(pick).toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator('iv-plan-page iv-map .iv-map-crosshair')).toBeVisible();
+  await shoot(page, 'planla-map-pick', page.locator('iv-plan-page iv-map'));
+  await pick.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('iv-plan-page iv-map .iv-map-announcement')).not.toBeEmpty();
 });

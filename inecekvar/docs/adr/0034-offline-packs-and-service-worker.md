@@ -209,3 +209,11 @@ under 720 kB. Revert checks: restoring the old `ngsw-config.json` turns both
 unreadable-index tests red; running `list` outside the lock without the active-install guard
 turns `keeps staged files when list runs during a deferred install write` red. Native device
 behaviour remains `not exercised`.
+
+The late-registration scenario waits until the worker has stored every app-shell file before
+going offline: the Angular worker fills its caches after activation, so control alone is not
+enough. A fifth scenario picks a planner endpoint at the map centre with the keyboard and
+records `planla-map-pick`. Run on 2026-10-12 against a freshly seeded local stack (compose
+project `inecekvar-p3r`, ports 57962-57967, API 127.0.0.1:57980, Redis flushed):
+`pnpm nx run mobile-e2e:e2e` 5 passed; the workspace gate passed with data-access 107, domain
+4, ui 22 and mobile 372 tests; initial bundle 713.2 kB.
