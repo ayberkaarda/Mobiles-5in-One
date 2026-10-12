@@ -83,6 +83,18 @@ describe('line list page builders', () => {
     expect(lineListSeo(data).index).toBe(false);
   });
   it.each([
+    [false, 12, true],
+    [false, 0, false],
+    [true, 12, false],
+    [true, 0, false],
+  ])(
+    'indexes the line list only for a real city with lines (sample %s, %s lines)',
+    (isSample, count, expected) => {
+      const city = cityData({ is_sample: isSample, published_line_count: count });
+      expect(lineListSeo({ city, lines: [], page: 1, hasNext: false }).index).toBe(expected);
+    },
+  );
+  it.each([
     {
       page: 1,
       hasNext: true,

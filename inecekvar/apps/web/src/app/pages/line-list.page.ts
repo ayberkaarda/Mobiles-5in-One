@@ -15,7 +15,7 @@ export function lineListSeo({ city, page, hasNext }: LineListData): PageSeo {
     description: lineListDescription(city.name, page),
     path: `/${city.slug}/hatlar`,
     page,
-    index: !city.is_sample,
+    index: !city.is_sample && city.published_line_count > 0,
     pagination: {
       prevPage: page > 1 ? page - 1 : null,
       nextPage: hasNext && page < 9999 ? page + 1 : null,

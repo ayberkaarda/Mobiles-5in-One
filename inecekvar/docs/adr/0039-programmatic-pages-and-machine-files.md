@@ -29,7 +29,9 @@ exposes the inputs (ADR-0025, ADR-0037): `GET cities`, `cities/{slug}` (hub data
    status page; other failures a 503 with `Retry-After: 120`; neither is cached. A page past the end
    of the list is a 404. The list fetches 51 rows to know whether a next page exists, because the
    API returns no total.
-3. Empty city (0 published lines): 200 with "Bu şehirde henüz yayımlanmış hat yok." and `noindex`.
+3. Empty city (0 published lines): the hub and the line list (`/:sehir/hatlar`) render 200 with
+   "Bu şehirde henüz yayımlanmış hat yok." and are `noindex` (both use
+   `!is_sample && published_line_count > 0`).
    Sample cities (`is_sample`): every page renders with an "örnek veri" notice, is `noindex`, has no
    OG image and is left out of the sitemaps. Sample data must not be indexed as real transport data.
 4. Line page: h1, the 40-60 word summary, the server SVG, a lazy interactive map, ordered stops,

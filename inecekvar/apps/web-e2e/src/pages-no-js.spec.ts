@@ -124,6 +124,9 @@ test('an empty city and a sample city are rendered but not indexed', async ({ pa
   expect(empty?.status()).toBe(200);
   await expect(page.locator('main')).toContainText('Bu şehirde henüz yayımlanmış hat yok.');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /\bnoindex\b/);
+  const emptyList = await page.goto('/bos-sehir/hatlar');
+  expect(emptyList?.status()).toBe(200);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /\bnoindex\b/);
 
   const sample = await page.goto('/ornek-test-sehri');
   expect(sample?.status()).toBe(200);
