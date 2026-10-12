@@ -62,12 +62,10 @@ async def read_favorite(line_id: uuid.UUID, db: DbDep, principal: PrincipalDep) 
 async def put_favorite(line_id: uuid.UUID, db: DbDep, principal: PrincipalDep) -> Response:
     await locked_user(db, principal.user_id)
     line = await db.scalar(
-        select(Line)
-        .where(
+        select(Line).where(
             Line.id == line_id,
             Line.status == "published",
         )
-        .with_for_update()
     )
     if line is None:
         raise ProblemError("line.not_found", 404)
