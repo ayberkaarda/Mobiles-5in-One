@@ -1,6 +1,13 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { AdminApi } from '../admin-api';
-import { adminErrorMessage, hasCode, isSessionEnded, StepUpCancelled } from '../admin-errors';
+import {
+  AccountChanged,
+  adminErrorMessage,
+  hasCode,
+  isSessionEnded,
+  StepUpCancelled,
+} from '../admin-errors';
+import { AdminSession } from '../admin-session';
 
 export const TOTP_CODE_PATTERN = /^[0-9]{6}$/;
 
@@ -18,6 +25,7 @@ interface PendingVerification {
 @Injectable()
 export class StepUpService {
   private readonly api = inject(AdminApi);
+  private readonly session = inject(AdminSession);
   private pending: PendingVerification | null = null;
 
   /** True while the code dialog is open. */
@@ -28,12 +36,20 @@ export class StepUpService {
   readonly verifiedUntil = signal<Date | null>(null);
 
   async run<T>(action: () => Promise<T>): Promise<T> {
+    const owner = this.session.user()?.id ?? null;
     try {
       return await action();
     } catch (error) {
       if (!hasCode(error, 'auth.step_up_required')) throw error;
     }
     await this.verify();
+    // The code was checked against whatever session the cookie holds now; the retry runs only if
+    // that is still the account that started the action.
+    const unchanged = await this.session.recheck();
+    if (!unchanged || (this.session.user()?.id ?? null) !== owner) {
+      this.reset();
+      throw new AccountChanged();
+    }
     return action();
   }
 

@@ -1,5 +1,5 @@
 import { ApiError } from '@inecekvar/data-access';
-import { adminErrorMessage, StepUpCancelled } from './admin-errors';
+import { AccountChanged, adminErrorMessage, StepUpCancelled } from './admin-errors';
 
 const problem = (status: number, code: string, retryAfter: number | null = null) =>
   new ApiError(
@@ -56,6 +56,7 @@ describe('adminErrorMessage', () => {
 
   it('covers cancellation and non-API failures', () => {
     expect(adminErrorMessage(new StepUpCancelled())).toContain('iptal');
+    expect(adminErrorMessage(new AccountChanged())).toContain('başka bir sekmede değişti');
     expect(adminErrorMessage(new Error('boom'))).toContain('Beklenmeyen');
   });
 });

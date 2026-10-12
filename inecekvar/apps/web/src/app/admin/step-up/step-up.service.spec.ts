@@ -1,7 +1,9 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ApiError } from '@inecekvar/data-access';
 import { AdminApi } from '../admin-api';
-import { StepUpCancelled } from '../admin-errors';
+import { AccountChanged, StepUpCancelled } from '../admin-errors';
+import { AdminSession } from '../admin-session';
 import { StepUpService } from './step-up.service';
 
 const problem = (status: number, code: string) => new ApiError('problem', status, code, 'req-1');
@@ -10,10 +12,20 @@ const stepUpRequired = () => problem(403, 'auth.step_up_required');
 function setup(
   stepUp = vi.fn(async () => ({ verified_at: 'x', expires_at: '2026-10-12T12:15:00Z' })),
 ) {
+  const user = signal<{ id: string } | null>({ id: 'user-a' });
+  const session = {
+    user,
+    /** By default the account stays the same; a test can switch it from "another tab". */
+    recheck: vi.fn(async () => true),
+  };
   TestBed.configureTestingModule({
-    providers: [StepUpService, { provide: AdminApi, useValue: { stepUp } }],
+    providers: [
+      StepUpService,
+      { provide: AdminApi, useValue: { stepUp } },
+      { provide: AdminSession, useValue: session },
+    ],
   });
-  return { service: TestBed.inject(StepUpService), stepUp };
+  return { service: TestBed.inject(StepUpService), stepUp, session, user };
 }
 
 /** Lets pending promise callbacks run. */
@@ -124,6 +136,49 @@ describe('StepUpService', () => {
     await service.submit('123456');
     await expect(results).resolves.toEqual([1, 2]);
     expect(stepUp).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-checks the account after a valid code and aborts the retry when another tab switched it', async () => {
+    const { service, session, user } = setup();
+    session.recheck.mockImplementation(async () => {
+      user.set({ id: 'user-b' });
+      return false;
+    });
+    const action = vi.fn().mockRejectedValueOnce(stepUpRequired()).mockResolvedValueOnce('ran');
+    const result = service.run(action);
+    await flush();
+    service.verifiedUntil.set(new Date());
+    await service.submit('123456');
+    await expect(result).rejects.toBeInstanceOf(AccountChanged);
+    expect(session.recheck).toHaveBeenCalledTimes(1);
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(service.open()).toBe(false);
+    expect(service.verifiedUntil()).toBeNull();
+  });
+
+  it('aborts the retry when the user id differs from the one that opened the dialog', async () => {
+    const { service, session, user } = setup();
+    session.recheck.mockImplementation(async () => {
+      user.set({ id: 'user-b' });
+      return true;
+    });
+    const action = vi.fn().mockRejectedValueOnce(stepUpRequired()).mockResolvedValueOnce('ran');
+    const result = service.run(action);
+    await flush();
+    await service.submit('123456');
+    await expect(result).rejects.toBeInstanceOf(AccountChanged);
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-checks the account before the retry when it is unchanged', async () => {
+    const { service, session } = setup();
+    const action = vi.fn().mockRejectedValueOnce(stepUpRequired()).mockResolvedValueOnce('ran');
+    const result = service.run(action);
+    await flush();
+    expect(session.recheck).not.toHaveBeenCalled();
+    await service.submit('123456');
+    await expect(result).resolves.toBe('ran');
+    expect(session.recheck).toHaveBeenCalledTimes(1);
   });
 
   it('reset closes the dialog and forgets the window', async () => {

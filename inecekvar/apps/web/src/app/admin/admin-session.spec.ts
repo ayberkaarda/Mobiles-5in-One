@@ -17,6 +17,11 @@ function setup() {
       return next;
     }),
     logout: vi.fn(async () => user.set(null)),
+    reload: vi.fn(async () => {
+      const current = user();
+      if (current === null) throw new Error('anonymous');
+      return current;
+    }),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -70,6 +75,53 @@ describe('AdminSession', () => {
     await session.signIn('mod1@example.com', 'x');
     user.set(null);
     session.track();
+    expect(session.notice()).toBe('expired');
+  });
+
+  it('re-checks GET me and resets everything when another tab signed in as someone else', async () => {
+    const { session, store, user } = setup();
+    await session.signIn('mod1@example.com', 'x');
+    await session.refreshTotp();
+    const before = session.generation();
+    store.reload.mockImplementation(async () => {
+      const next = { id: 'mod2@example.com', role: 'moderator' };
+      user.set(next);
+      return next;
+    });
+    await expect(session.recheck()).resolves.toBe(false);
+    expect(store.reload).toHaveBeenCalledTimes(1);
+    expect(session.generation()).toBeGreaterThan(before);
+    expect(session.user()?.id).toBe('mod2@example.com');
+    expect(session.totp()).toBeNull();
+  });
+
+  it('keeps the generation when the re-checked account is unchanged and shares one request', async () => {
+    const { session, store } = setup();
+    await session.signIn('mod1@example.com', 'x');
+    const before = session.generation();
+    await expect(Promise.all([session.recheck(), session.recheck()])).resolves.toEqual([
+      true,
+      true,
+    ]);
+    expect(store.reload).toHaveBeenCalledTimes(1);
+    expect(session.generation()).toBe(before);
+  });
+
+  it('does not call GET me while signed out', async () => {
+    const { session, store } = setup();
+    await session.ready();
+    await expect(session.recheck()).resolves.toBe(true);
+    expect(store.reload).not.toHaveBeenCalled();
+  });
+
+  it('treats a session ended during the re-check as an account change', async () => {
+    const { session, store, user } = setup();
+    await session.signIn('mod1@example.com', 'x');
+    store.reload.mockImplementation(async () => {
+      user.set(null);
+      throw new Error('401');
+    });
+    await expect(session.recheck()).resolves.toBe(false);
     expect(session.notice()).toBe('expired');
   });
 

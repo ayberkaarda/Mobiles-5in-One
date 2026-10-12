@@ -11,6 +11,14 @@ export class StepUpCancelled extends Error {
   }
 }
 
+/** Thrown when the signed-in account changed (another tab) before a step-up retry ran. */
+export class AccountChanged extends Error {
+  override readonly name = 'AccountChanged';
+  constructor() {
+    super('account changed');
+  }
+}
+
 const MESSAGES: Readonly<Record<string, string>> = {
   'auth.required': 'Oturumun sona erdi. Devam etmek için yeniden giriş yap.',
   'auth.token_invalid': 'Oturumun sona erdi. Devam etmek için yeniden giriş yap.',
@@ -66,6 +74,9 @@ const CONTEXT_FORBIDDEN: Partial<Record<ErrorContext, string>> = {
  */
 export function adminErrorMessage(error: unknown, context: ErrorContext = 'generic'): string {
   if (error instanceof StepUpCancelled) return 'Doğrulama iptal edildi; işlem yapılmadı.';
+  if (error instanceof AccountChanged) {
+    return 'Oturumdaki hesap başka bir sekmede değişti; işlem yapılmadı. Hesabı kontrol edip yeniden dene.';
+  }
   if (!isApiError(error)) return 'Beklenmeyen bir hata oluştu. Sayfayı yenileyip yeniden dene.';
   if (error.status === 429 || error.code === 'rate_limited') {
     const wait = error.retryAfterSeconds;

@@ -7,6 +7,7 @@ import {
   untracked,
   ViewEncapsulation,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AdminSession } from '../admin-session';
@@ -26,7 +27,12 @@ import { ROLE_LABELS } from '../admin-text';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminDialogsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  host: { class: 'iv-admin', 'data-iv-admin': 'shell' },
+  host: {
+    class: 'iv-admin',
+    'data-iv-admin': 'shell',
+    '(window:focus)': 'recheckAccount()',
+    '(document:visibilitychange)': 'recheckAccount()',
+  },
   template: `
     <header class="iv-admin-bar">
       <a class="brand" routerLink="/admin/kuyruk">İnecek Var <span>Yönetim</span></a>
@@ -298,6 +304,7 @@ export class AdminShellComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly meta = inject(Meta);
   private readonly title = inject(Title);
+  private readonly document = inject(DOCUMENT);
   private robots: HTMLMetaElement | null;
 
   constructor() {
@@ -319,6 +326,16 @@ export class AdminShellComponent implements OnDestroy {
         }
       });
     });
+  }
+
+  /**
+   * Another tab of this browser may have signed out or in as someone else on the shared cookie;
+   * re-reading `GET me` when this tab is looked at again lets `track()` reset the area before
+   * the person acts on a stale account.
+   */
+  protected recheckAccount(): void {
+    if (this.document.visibilityState !== 'visible') return;
+    void this.session.recheck();
   }
 
   protected roleLabel(role: string): string {

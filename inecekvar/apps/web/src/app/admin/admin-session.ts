@@ -17,6 +17,7 @@ export class AdminSession {
   private readonly store = inject(SessionStore);
   private started: Promise<void> | null = null;
   private lastUserId: string | null = null;
+  private checking: Promise<boolean> | null = null;
   private readonly generationSignal = signal(0);
   private readonly noticeSignal = signal<SignInNotice>(null);
   private readonly api = inject(AdminApi);
@@ -55,6 +56,32 @@ export class AdminSession {
         this.noticeSignal.set('expired');
       }
     }
+  }
+
+  /**
+   * Re-reads `GET me`, because another tab of the same browser may have signed out or signed in
+   * as someone else on the shared cookie. Concurrent calls share one request. Resolves false when
+   * the account changed; `track()` then moves the generation, which closes dialogs, cancels a
+   * pending step-up and resets the page stores. A network failure keeps the current state.
+   */
+  recheck(): Promise<boolean> {
+    this.checking ??= this.runRecheck().finally(() => {
+      this.checking = null;
+    });
+    return this.checking;
+  }
+
+  private async runRecheck(): Promise<boolean> {
+    const before = this.lastUserId;
+    if (this.store.status() === 'signed-in') {
+      try {
+        await this.store.reload();
+      } catch {
+        // A 401 has already ended the session through the auth strategy; other failures keep it.
+      }
+    }
+    this.track();
+    return this.lastUserId === before;
   }
 
   /** Reads `GET me/totp` for the current account; a failure leaves the status unknown. */
