@@ -1,5 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import helmet from 'helmet';
+import { relative, sep } from 'node:path';
 import { BypassRenderLimiter } from './bypass-limiter';
 import type { WebServerConfig } from './config';
 import { applyNonce, createNonce } from './csp-nonce';
@@ -23,6 +24,10 @@ import { createApiReader } from './api-reader';
 import { registerMachineFiles } from './machine-files';
 import { normalizeUrls } from './normalize';
 import { helmetOptions, nonceMiddleware, PERMISSIONS_POLICY } from './security-headers';
+
+/** Angular output: `chunk-`, `main-`, `polyfills-`, `styles-` plus an 8-character hash, `media/`. */
+const HASHED_OUTPUT =
+  /^(?:(?:chunk|main|polyfills|styles|worker)-[A-Za-z0-9_-]{8}\.(?:js|mjs|css)|media\/[^/]+-[A-Z0-9]{8}\.[a-z0-9]+)$/;
 
 export type PageRenderer = (request: Request) => Promise<Response | null>;
 
@@ -120,15 +125,18 @@ export function createWebApp(options: {
     }),
   });
 
-  if (options.browserDistFolder) {
-    const staticFiles = express.static(options.browserDistFolder, {
+  const browserDistFolder = options.browserDistFolder;
+  if (browserDistFolder) {
+    const staticFiles = express.static(browserDistFolder, {
       index: false,
       redirect: false,
       maxAge: '1y',
       fallthrough: true,
       setHeaders: (res, path) => {
-        // Only fingerprinted assets can remain fresh for a year.
-        if (!/[-.][a-z0-9_-]{8,}\.[a-z0-9]+$/i.test(path)) {
+        // Only the build's own fingerprinted output stays fresh for a year; copied assets such as
+        // `maplibre/maplibre-gl-worker.mjs` keep their name across upgrades and must revalidate.
+        const name = relative(browserDistFolder, path).split(sep).join('/');
+        if (!HASHED_OUTPUT.test(name)) {
           res.setHeader('Cache-Control', 'public, max-age=0');
         }
       },

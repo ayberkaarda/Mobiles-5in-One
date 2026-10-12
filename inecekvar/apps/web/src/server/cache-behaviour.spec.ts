@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createWebApp, type PageRenderer } from './app';
@@ -270,5 +270,37 @@ describe('static delivery', () => {
     expect(render).toHaveBeenCalledTimes(1);
     const plain = await httpRequest(port, { path: '/plain.js' });
     expect(plain.headers['cache-control']).toBe('public, max-age=0');
+  });
+
+  it('keeps only Angular hashed output immutable, never the copied MapLibre worker', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'iv-web-'));
+    folders.push(folder);
+    await mkdir(join(folder, 'maplibre'));
+    await mkdir(join(folder, 'media'));
+    const files: [string, string][] = [
+      ['chunk-DxPTq-Wd.js', 'public, max-age=31536000'],
+      ['main-ETCRCT77.js', 'public, max-age=31536000'],
+      ['styles-7W4JRJTZ.css', 'public, max-age=31536000'],
+      ['media/font-ABCD1234.woff2', 'public, max-age=31536000'],
+      ['maplibre/maplibre-gl-worker.mjs', 'public, max-age=0'],
+      ['maplibre/maplibre-gl-shared.mjs', 'public, max-age=0'],
+      ['maplibre/chunk-ABCDEFGH.js', 'public, max-age=0'],
+      ['service-worker.js', 'public, max-age=0'],
+      ['manifest.webmanifest', 'public, max-age=0'],
+      ['icon-maskable.png', 'public, max-age=0'],
+      ['favicon.ico', 'public, max-age=0'],
+    ];
+    for (const [name] of files) await writeFile(join(folder, name), 'x', 'utf8');
+    const port = await startApp(
+      createWebApp({
+        config: loadWebServerConfig({ INECEKVAR_ENV: 'test' }),
+        browserDistFolder: folder,
+        render: async () => htmlResponse(),
+      }),
+    );
+    for (const [name, expected] of files) {
+      const result = await httpRequest(port, { path: '/' + name });
+      expect([name, result.status, result.headers['cache-control']]).toEqual([name, 200, expected]);
+    }
   });
 });
