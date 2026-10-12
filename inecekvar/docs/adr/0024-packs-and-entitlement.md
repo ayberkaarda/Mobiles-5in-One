@@ -1,6 +1,6 @@
 # ADR-0024: Offline city packs and the first-city entitlement
 
-- Status: Accepted
+- Status: Accepted; the Plus rule in the third decision bullet is superseded by ADR-0050 item 7
 - Deciders: Project owner (decision delegated to the lead)
 - Phase: 2, package 2D
 
@@ -23,7 +23,9 @@ fake adapter until phase 5 (K2).
 - First city: the city of the earliest `pack_downloads` row of the identity that decides: the
   account for a signed-in caller (a shared network must not take away an account's free city),
   the network identity otherwise. Another city needs `has_plus` from `Services.entitlements`
-  (`SubscriptionEntitlements`: an `active` or `grace` subscription not expired); otherwise
+  (`SubscriptionEntitlements`: an `active` or `grace` subscription not expired; superseded by
+  ADR-0050 item 7, which also entitles `cancelled` rows inside their paid period, `active` rows
+  without expiry, and never `refunded` rows); otherwise
   `403 pack.entitlement_required`. No entitlement source means no Plus. One row is recorded per
   identity, city and day; signed-in rows are stored under the account only.
 - Because a download can select the free city, the route requires the header

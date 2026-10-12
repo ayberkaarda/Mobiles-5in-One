@@ -20,8 +20,9 @@ evidence.
 ## Decision
 
 1. **Webhook routes are provider-to-server and stay out of the public contract.** Both routes
-   are mounted under `/v1/webhooks` with `include_in_schema=False`; `docs/api/openapi.json` and
-   `libs/domain` do not change. They deny every human role (authorization matrix) and are
+   are mounted under `/v1/webhooks` with `include_in_schema=False`; they add nothing to
+   `docs/api/openapi.json` or `libs/domain` (the admin route of item 12, added by the review, does,
+   following the admin convention). They deny every human role (authorization matrix) and are
    classified in the route harness as credential-protected.
 2. **Order of checks.** RevenueCat: secret configured (else 503 `webhook.not_configured`) →
    `Authorization` equal to `INECEKVAR_REVENUECAT_WEBHOOK_SECRET` byte for byte through
@@ -32,11 +33,17 @@ evidence.
    `v1` signature over the raw body (401 `webhook.signature_invalid`) → JSON (415) → payload
    (400). The body limit middleware caps both routes at `INECEKVAR_MAX_WEBHOOK_BODY_BYTES`
    (64 KiB, 413) before routing; the content-type exemption for `/v1/webhooks/` from phase 1
-   stays, the routes check it themselves after authentication.
+   stays, the routes check it themselves after authentication. A POST to either route without a
+   declared `Content-Length` is refused with 411 `request.length_required` before any byte is
+   read (item 16).
 3. **App user id = account id.** The app identifies purchases with the API account id
    (`apps/mobile/src/app/plus/plus.store.ts` calls `identify(user.id)`). An event must name an
-   existing account (`users.id`); RevenueCat anonymous ids and aliases are not accounts. A
-   `TRANSFER` needs one known id among `transferred_from` and `transferred_to`. A `TEST` event
+   existing account (`users.id`) among `app_user_id`, `original_app_user_id` and `aliases`
+   (review finding 10): a purchase made under an anonymous id before sign-in reaches the account
+   it was aliased to. `app_user_id` wins when it is an account; otherwise exactly one account must
+   be named, several are ambiguous and change nothing. The row is keyed to the account id, which
+   the reconciliation fetches by. A `TRANSFER` needs one known id among `transferred_from` and
+   `transferred_to`. A `TEST` event
    (dashboard button) needs none and changes nothing. A 422 makes RevenueCat retry and show the
    failure in its dashboard, which is wanted: an unknown id is a configuration fault.
 4. **Store first, then trigger.** The route inserts one `webhook_events` row
@@ -47,8 +54,10 @@ evidence.
    response never waits for Redis (`test_answer_within_two_seconds_even_when_the_queue_hangs`).
    A duplicate id answers 200 `duplicate` without a second enqueue. The worker's pending sweep
    (every five minutes, rows older than one minute) processes events whose enqueue was lost; a
-   processing failure counts an attempt, the fifth closes the event as `failed`, and the nightly
-   reconciliation repairs the subscription from the REST view. The job locks its row with
+   processing failure counts an attempt, the fifth closes the event as `failed`; the nightly
+   reconciliation then repairs the subscription from the REST view only for an account that
+   already has a row for that product (it iterates stored rows; an event lost before its first
+   row was written stays lost until the next event for that subscriber). The job locks its row with
    `FOR UPDATE SKIP LOCKED` and clears the payload when done, so concurrent workers apply an
    event once.
 5. **Event mapping** (`app/billing/events.py`). Plus products are those whose event names the
@@ -60,12 +69,19 @@ evidence.
    `SUBSCRIPTION_PAUSED` → `cancelled`; `BILLING_ISSUE` → `grace` until
    `grace_period_expiration_at_ms` (or the expiration when the store grants no grace);
    `EXPIRATION` → `expired`; `TRANSFER` expires the source accounts' rows and loads the target
-   accounts from REST; `PRODUCT_CHANGE` and every other type are recorded as `ignored` (the store
+   accounts from REST; without a REST key the target accounts receive the moved products as
+   `expired` rows (review finding 6: leaving the event for retries would close it as `failed`
+   after five attempts and lose a lifetime purchase, whereas a stored row is fetched by the
+   nightly reconciliation as soon as a key is configured); `PRODUCT_CHANGE` and every other type are recorded as `ignored` (the store
    follows a product change with a purchase or renewal of the new product). Sandbox events are
    ignored unless `INECEKVAR_REVENUECAT_ALLOW_SANDBOX` is true.
-6. **Ordering.** Each subscription row keeps `last_event_at` (the provider event time or the
-   snapshot time of the last reconciliation). An event older than that is `stale` and changes
-   nothing; equal times apply. Rows are created with `INSERT ... ON CONFLICT DO NOTHING` and then
+6. **Ordering.** Each subscription row keeps `last_event_at` (the provider event time, or for a
+   reconciled row the provider's `request_date` minus a five-minute skew allowance, the server
+   clock when the answer has no `request_date`; review finding 7). An event older than that is
+   `stale` and changes nothing; equal times apply. The allowance lets an event the provider
+   created just before its REST answer, but delivered after it, still apply; such an event
+   carries a state at most five minutes older than the snapshot, and a later change sends its own,
+   newer event. Rows are created with `INSERT ... ON CONFLICT DO NOTHING` and then
    locked, so two jobs cannot both insert.
 7. **Entitlement rule** (`SubscriptionEntitlements.has_plus`, `entitles`). Plus while a row is
    `active`, `cancelled` (auto-renew off, the paid period still runs) or `grace` and its
@@ -79,14 +95,34 @@ evidence.
    fetched once from `GET https://api.revenuecat.com/v1/subscribers/{id}` (host fixed in code,
    no redirects, `INECEKVAR_REVENUECAT_API_KEY` as bearer, `INECEKVAR_REVENUECAT_TIMEOUT_SECONDS`).
    Any transport error, non-200 status or unusable body changes nothing for that subscriber.
-   A usable answer updates the Plus products it names and inserts the missing ones; a stored
-   product the answer does not mention is left to expire by its own date, so a wrong key or
-   project (which answers with empty subscribers) cannot wipe entitlements. Without a key the job
-   is skipped and logs that.
+   A usable answer updates every listed product that is a Plus product (named by
+   `entitlements[plus]`, configured in `INECEKVAR_REVENUECAT_PLUS_PRODUCT_IDS`, or already stored
+   for the account) and inserts the entitled ones missing locally. A listed product the Plus
+   entitlement no longer names (refund, revocation, transfer), or an entitlement whose
+   `expires_date` has passed, becomes `expired` (or `refunded` when the product carries
+   `refunded_at`) whatever the product's own dates say (review finding 1; before the review a
+   refunded product was skipped and kept Plus until its period ended). A `non_subscriptions`
+   (lifetime) purchase lasts as long as the entitlement that names it, and a local `refunded`
+   lifetime row is never re-activated from it, because that entry carries no refund marker (only
+   `REFUND_REVERSED` restores it; review finding 2). A stored product the answer does not list at
+   all is left to expire by its own date, so a wrong key or project (which answers with an empty
+   subscriber) cannot wipe entitlements; a wrong `INECEKVAR_REVENUECAT_PLUS_ENTITLEMENT` would
+   downgrade listed products, so a configuration change is checked with a dry run first. Product
+   ids longer than the 128-character column are dropped while parsing, and one subscriber that
+   cannot be applied (any exception, for example an account erased mid-run) counts as `failed`
+   while the run continues (review finding 5). A refused key (401/403) stops the run; a 429 is
+   retried after 2, 4, 8 and 16 s (the provider's `Retry-After` when longer, every pause capped at
+   60 s) and stops the run when it persists (review finding 8). The summary log carries `aborted`.
+   Without a key the job is skipped and logs that.
 9. **Subscriber deletion.** The same REST client is `Services.subscriber_deleter` when the key is
-   set: `DELETE /v1/subscribers/{id}`, where 404 counts as already gone and any other failure
-   defers the erasure (unchanged ADR-0026 behaviour). This closes the ADR-0026 open item against
-   a transport double.
+   set: `DELETE /v1/subscribers/{id}` for the account id of every erased account (the app
+   identifies every signed-in user at RevenueCat with `identify(user.id)`, paying or not) and for
+   any other app user id stored in its `subscriptions` rows; 404 counts as already gone and any
+   other failure defers the erasure (unchanged ADR-0026 behaviour). Before the review only
+   accounts with `subscriptions` rows were sent, so the provider record of a non-paying app user
+   survived erasure (review finding 3). Without a key an account with `subscriptions` rows is
+   deferred and one without is erased locally only (its provider record, if any, is not
+   reachable). This closes the ADR-0026 open item against a transport double.
 10. **Svix verification without the Svix library.** Implemented from the published scheme
     (`app/webhooks/signatures.py`): HMAC-SHA256 under the base64 key after `whsec_`, signed
     content `svix-id.svix-timestamp.body`, any of several space-separated `v1,` signatures
@@ -95,20 +131,32 @@ evidence.
     the specification, not a setting.
 11. **Resend events apply in the request.** One upsert per recipient digest is cheaper than a
     queue round trip; the `webhook_events` row (provider `resend`, `svix-id`) stores no payload,
-    so no address is kept anywhere. `email.bounced` suppresses unless `data.bounce.type` is
-    `Transient`; `email.complained` suppresses; every other type is `ignored`. Reason strength
-    is manual > complaint > bounce; a weaker reason never replaces a stronger one.
-12. **Suppression digest.** `email_hash = HMAC-SHA256(INECEKVAR_LOG_HASH_KEY,
+    so no address is kept anywhere. `email.bounced` suppresses only when `data.bounce.type` is
+    `Permanent` (`Transient`, `Undetermined` and a bounce without a type may deliver later);
+    `email.complained` suppresses; `email.delivered` removes a bounce entry of its recipients (a
+    delivery proves the mailbox accepts mail; complaints and manual entries stay); every other
+    type is `ignored`. Reason strength is manual > complaint > bounce; a weaker reason never
+    replaces a stronger one.
+12. **Suppression digest and removal.** `email_hash = HMAC-SHA256(INECEKVAR_LOG_HASH_KEY,
     "email-suppression:" + normalized address)`, 32 bytes. Rotating the log hash key therefore
-    empties the effective list; the rotation note is in `docs/ops/env.md`.
+    empties the effective list; the rotation note is in `docs/ops/env.md`. Besides a delivery
+    (item 11), an admin lifts one entry of any reason with `DELETE /v1/admin/suppressions` and the
+    address in a bounded JSON body (`{"email": ...}`, at most 320 characters, never in the URL);
+    the route needs the new policy action `manage_suppressions` (admin with a fresh TOTP step-up,
+    every other role denied), answers `{"removed": true|false}` and writes the audit row
+    `admin.suppression_removed` whose diff holds only the keyed digest (review finding 4). It is
+    part of the public contract like the other admin routes.
 13. **Security and transactional mail.** `OutgoingMail.category` is `security` for the
     magic-link and account-exists mails (asked for by the recipient a moment ago) and
     `transactional` for everything else (the deletion confirmation today). The production
-    sender (`SuppressionAwareMailSender` around SMTP) sends nothing to a `bounce` or `manual`
-    address (it cannot or must not receive mail) and, after a `complaint`, still sends `security`
-    mail so a passwordless account is not locked out; the request rate limits (5 per 15 minutes
-    per IP and per address) bound how often that can be triggered. The caller always sees the
-    same result, so suppression is no address oracle.
+    sender (`SuppressionAwareMailSender` around SMTP) sends nothing to a `manual` address and no
+    `transactional` mail to a `bounce` address (for the 365-day bounce retention). `security`
+    mail to a `bounce` address is blocked for 30 days after the bounce and then tried again, at
+    most 3 per address per 24 hours (rate rule `mail.security_after_bounce`), so one rejection
+    cannot lock a passwordless account out for a year (review finding 4). After a `complaint`
+    `security` mail is still sent. The request rate limits (5 per 15 minutes per IP and per
+    address) bound how often such mail can be triggered. The caller always sees the same result,
+    so suppression is no address oracle in the response (timing: item 17).
 14. **Nightly jobs** (`app/workers/nightly.py`, Europe/Istanbul): reconciliation 04:10, expired
     entitlement sweep 04:40 (bookkeeping, `has_plus` already denies by date), retention purge
     04:50 (processed `webhook_events` after 30 days, bounce suppressions after 365 days,
@@ -125,6 +173,18 @@ evidence.
 16. **No rate limit on the webhook routes.** The provider credential is checked first in
     constant time and the body limit bounds the work per request; provider retries and bursts
     after an outage must not be refused. Recorded as a known gap for the phase 6 cost review.
+    The review kept this decision (finding 11) and added one cheap check: a POST to either route
+    without a declared `Content-Length` answers 411 before the body is read, so an unauthenticated
+    chunked body is not buffered (a declared length above 64 KiB already answered 413 unread).
+17. **Suppressed mail costs the same work as sent mail** (review finding 9). A suppressed address
+    used to skip SMTP, so `POST /v1/auth/magic-link` answered measurably faster for it. Both paths
+    now do the same lookup, build the same message and open the same SMTP session (connect,
+    STARTTLS, login); the suppressed path quits before `MAIL FROM` (`SmtpMailSender.discard`), and
+    an unreachable SMTP server fails both paths with the same 503. Limits: the envelope and data
+    round trips (`MAIL FROM`, `RCPT TO`, `DATA`) are still skipped, so a residual difference of a
+    few round trips to the SMTP relay remains measurable with many samples; the request rate
+    limits (5 per 15 minutes per address and per IP) bound the sampling rate. Removing it fully
+    would need a queue between the request and SMTP, which was declined for this phase.
 
 ## Consequences
 
@@ -134,8 +194,11 @@ evidence.
   behaviour; a refund removes it immediately.
 - The suppression list survives account deletion as digests (no address); it is not personal
   data in readable form but is linkable by whoever holds the log hash key.
-- `docs/ops/background-jobs.md` (lead) does not list the phase 5 jobs yet; `docs/ops/env.md`
-  and this ADR carry the schedule.
+- `docs/ops/background-jobs.md` lists the phase 5 jobs (added by the review, finding 12);
+  ADR-0024's Plus rule is marked superseded by item 7.
+- The reconciliation now downgrades listed products the entitlement does not name, so a wrong
+  entitlement identifier would remove Plus from listed products at the next run; a dry run
+  (`INECEKVAR_JOBS_DRY_RUN`) shows the counts first.
 
 ## Evidence
 

@@ -83,7 +83,7 @@ Object-storage, planner, offline-pack and retention settings are also read by th
 | `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
 | `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |
 
-The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP. These limits are fixed rules, not environment keys.
+The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP; `mail.security_after_bounce` allows 3 sign-in or account-exists mails per address per 24 hours to an address that hard-bounced more than 30 days ago (ADR-0050 item 13). These limits are fixed rules, not environment keys.
 
 Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 

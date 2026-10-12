@@ -20,6 +20,7 @@ The total table in `app/security/policy.py` implements specification section 6.3
 | retire_line | deny | deny | deny | allow-if:totp_step_up | allow-if:totp_step_up |
 | manage_users | deny | deny | deny | deny | allow-if:totp_step_up |
 | export_admin | deny | deny | deny | deny | allow-if:totp_step_up |
+| manage_suppressions | deny | deny | deny | deny | allow-if:totp_step_up |
 
 Conditions (all conditions in a cell must hold):
 
@@ -42,8 +43,8 @@ Enforcement points:
 - Route-level `can_read_edit(principal, author_id)` permits moderator or admin, or an authenticated caller matching the present stored author id. Anonymous callers cannot read edits. This rule has no section 6.3 action.
 - Trace deletion remains a route-level stored-owner rule for every signed-in role; moderation read permission does not grant deletion.
 
-Tests: `api/tests/security/test_policy_matrix.py` checks all 55 cells, table completeness, every conditional cell with each required predicate broken separately, every denied cell, unknown inputs, step-up boundaries, actor replacement, error statuses, absent context, edit reads and this document. Author and non-author predicates cannot hold simultaneously; denied cells are tested with both context variants.
-`api/tests/security/test_idor.py` registers 19 real-account bearer cases against the real trace, edit and moderation routes (reads, deletion, approval, rejection, self-review and anonymous access) and 3 admin cases (a moderator or a not stepped-up admin cannot change another account's role; a stepped-up contributor cannot list users). `api/tests/security/test_admin_routes.py` enumerates every mounted `/v1/admin` route, fails when one is missing from its table, and runs each route against anonymous, user, contributor and moderator (each with a fresh step-up), and admin without TOTP, enrolled without step-up, with a step-up older than 15 minutes, with the step-up of another session and with a fresh step-up. Table-driven step-up cases in `test_policy_matrix.py` cover every `totp_step_up` cell: not enrolled answers `auth.totp_enrolment_required`, enrolled but stale `auth.step_up_required`, fresh allowed.
+Tests: `api/tests/security/test_policy_matrix.py` checks all 60 cells, table completeness, every conditional cell with each required predicate broken separately, every denied cell, unknown inputs, step-up boundaries, actor replacement, error statuses, absent context, edit reads and this document. Author and non-author predicates cannot hold simultaneously; denied cells are tested with both context variants.
+`api/tests/security/test_idor.py` registers 19 real-account bearer cases against the real trace, edit and moderation routes (reads, deletion, approval, rejection, self-review and anonymous access) and 5 admin cases (a moderator or a not stepped-up admin cannot change another account's role or lift an email suppression; a stepped-up contributor cannot list users). `api/tests/security/test_admin_routes.py` enumerates every mounted `/v1/admin` route, fails when one is missing from its table, and runs each route against anonymous, user, contributor and moderator (each with a fresh step-up), and admin without TOTP, enrolled without step-up, with a step-up older than 15 minutes, with the step-up of another session and with a fresh step-up. Table-driven step-up cases in `test_policy_matrix.py` cover every `totp_step_up` cell: not enrolled answers `auth.totp_enrolment_required`, enrolled but stale `auth.step_up_required`, fresh allowed.
 
 ## API routes
 
@@ -90,6 +91,7 @@ Phase 1 auth evidence below names existing test modules.
 | GET cities/{slug}/sitemap | allow | allow | allow | allow | allow | implemented: phase 2; api/tests/export/test_export.py |
 | GET admin/users; PATCH admin/users/{id}/role; GET admin/audit-logs (manage_users) | deny | deny | deny | deny | allow-if:totp_step_up | implemented: phase 4 (last active admin cannot be demoted, role changes audited); api/tests/security/test_admin_routes.py, api/tests/security/test_idor.py |
 | POST admin/exports/{city} (export_admin) | deny | deny | deny | deny | allow-if:totp_step_up | implemented: phase 4; api/tests/security/test_admin_routes.py |
+| DELETE admin/suppressions (manage_suppressions) | deny | deny | deny | deny | allow-if:totp_step_up | implemented: phase 5 review (address in a bounded JSON body, never in the URL; audited as `admin.suppression_removed` with the keyed digest only, ADR-0050 item 12); api/tests/security/test_admin_routes.py, api/tests/security/test_admin_suppressions.py, api/tests/security/test_idor.py |
 
 Route conditions:
 
@@ -107,7 +109,7 @@ Route conditions:
 - Public auth entry points still require valid credentials or link proofs where applicable; allow means no role restriction.
 - Reading one's edit list is scoped to stored authorship. Moderation queue access is restricted to moderator and admin.
 - Approval, rejection and publication require a pending edit by a different author. Rollback and retirement require fresh step-up for moderator or admin. Retirement and publication have no separate section 5 route.
-- User management and administrative export require admin with fresh step-up; moderators cannot manage users.
+- User management, administrative export and lifting an email suppression require admin with fresh step-up; moderators cannot manage users.
 
 Webhook routes deny all human roles. Provider authentication is separate: RevenueCat requires its configured shared secret and a known subscriber; Resend requires a valid Svix signature and timestamp. Both require idempotent event identifiers.
 
