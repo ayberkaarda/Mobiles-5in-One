@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { TEST_CERT_SHA256, TEST_TEAM_ID } from './src/support';
+import { REAL_STACK } from './stack-env.mjs';
 
 const server = path.resolve(__dirname, '../../dist/apps/web/server/server.mjs');
 const webCommand = `node "${server}"`;
@@ -14,6 +16,11 @@ const sharedEnv = {
   IV_WEB_CACHE_MAX_ENTRIES: '500',
   IV_WEB_APP_ORIGIN: 'https://app.inecekvar.app',
 };
+
+// The moderation scenario runs against the real local API (scripts/real-stack.mjs up, then
+// IV_E2E_REAL_API=1); without it the spec reports itself as skipped. ADR-0041.
+const realApi = process.env['IV_E2E_REAL_API'] === '1';
+const apiDir = path.resolve(__dirname, '../../api');
 
 export default defineConfig({
   testDir: './src',
@@ -49,6 +56,13 @@ export default defineConfig({
         '**/line-map.spec.ts',
       ],
       dependencies: ['raw'],
+    },
+    { name: 'admin', testMatch: '**/admin-shell.spec.ts', dependencies: ['browser'] },
+    {
+      name: 'moderation',
+      testMatch: '**/moderation.spec.ts',
+      dependencies: ['admin'],
+      timeout: 240_000,
     },
   ],
   webServer: [
@@ -104,5 +118,35 @@ export default defineConfig({
         IV_WEB_API_INTERNAL_URL: 'http://127.0.0.1:57995/v1',
       },
     },
+    {
+      // Caddy stand-in: /api/* to the API, the rest to the test web server (ADR-0041).
+      command: 'node admin-proxy.mjs',
+      cwd: __dirname,
+      url: `http://127.0.0.1:${REAL_STACK.proxyPort}/__proxy/ready`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        IV_E2E_ADMIN_PROXY_PORT: String(REAL_STACK.proxyPort),
+        IV_E2E_API: `http://127.0.0.1:${REAL_STACK.apiPort}`,
+        IV_E2E_WEB: 'http://127.0.0.1:57992',
+        IV_E2E_ORIGIN: 'http://localhost:4200',
+      },
+    },
+    ...(realApi
+      ? [
+          {
+            command: `uv run uvicorn app.main:app --host 127.0.0.1 --port ${REAL_STACK.apiPort}`,
+            cwd: apiDir,
+            url: `http://127.0.0.1:${REAL_STACK.apiPort}/v1/health`,
+            reuseExistingServer: false,
+            timeout: 120_000,
+            env: {
+              ...REAL_STACK.apiEnv,
+              // A throwaway key per run; enrolments only live as long as this stack.
+              INECEKVAR_TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64url') + '=',
+            },
+          },
+        ]
+      : []),
   ],
 });
