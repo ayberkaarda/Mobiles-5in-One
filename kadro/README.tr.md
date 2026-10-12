@@ -271,5 +271,4 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 
 ## Lisans
 
-Paketler `package.json` dosyalarında `UNLICENSED` olarak işaretlidir; depoda `LICENSE` dosyası
-yoktur.
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

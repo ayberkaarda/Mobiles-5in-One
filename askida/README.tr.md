@@ -117,3 +117,7 @@ flutter analyze
 flutter test
 dart format --set-exit-if-changed .
 ```
+
+## Lisans
+
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

@@ -179,5 +179,4 @@ ile denetlenir. Hook'lar `pnpm --dir kadro exec lefthook install` ile elle kurul
 
 ## Lisans
 
-Kadro paketleri `package.json` dosyalarında `UNLICENSED` olarak işaretlidir. Depoda `LICENSE`
-dosyası yoktur.
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](LICENSE).

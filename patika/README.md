@@ -57,3 +57,7 @@ This folder currently contains only a design/spec document; no source code has b
 ## Getting started
 
 There is no code to install or run yet. The product and technical specification lives in this folder as `03-patika-swift-ios.md`. This README will be updated once development starts.
+
+## License
+
+This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).

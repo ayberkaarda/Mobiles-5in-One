@@ -78,3 +78,7 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
 ```
 
 Compose runs only the data and proxy services; the API and the dev servers run on the host. Ports and environment keys are listed in `docs/ops/env.md`.
+
+## License
+
+This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).

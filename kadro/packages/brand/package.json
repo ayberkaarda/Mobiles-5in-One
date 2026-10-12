@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "description": "Kadro brand tokens for the light and dark schemes, theme CSS, typed tokens for React Native, logo SVGs and font files.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./tokens.json",
   "exports": {
