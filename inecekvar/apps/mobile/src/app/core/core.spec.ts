@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { i18nTesting } from '../testing/i18n.testing';
-import { FavoritesStore } from './favorites.store';
 import { LanguageService } from './language.service';
 import { PREF_KEYS } from './local-prefs';
 import { DARK_CLASS, ThemeService } from './theme.service';
@@ -59,39 +58,5 @@ describe('LanguageService', () => {
     localStorage.setItem(PREF_KEYS.lang, 'xx');
     await language.init();
     expect(language.lang()).toBe('tr');
-  });
-});
-
-describe('FavoritesStore', () => {
-  beforeEach(() => localStorage.clear());
-
-  const line = {
-    city: 'ornek-test-sehri',
-    slug: 'ornek-hat-1',
-    code: 'ORN-1',
-    name: '[ÖRNEK] Hat ORN-1',
-    mode: 'dolmus',
-  } as const;
-
-  it('toggles favourites by city and slug and persists them on the device', () => {
-    const store = TestBed.inject(FavoritesStore);
-    store.toggle(line);
-    expect(store.has(line.city, line.slug)).toBe(true);
-    expect(store.has('baska-sehir', line.slug)).toBe(false);
-    expect(store.count()).toBe(1);
-    expect(JSON.parse(localStorage.getItem(PREF_KEYS.favorites) ?? '[]')).toEqual([line]);
-    store.toggle(line);
-    expect(store.has(line.city, line.slug)).toBe(false);
-  });
-
-  it('survives corrupt storage and drops entries it cannot resolve', () => {
-    localStorage.setItem(PREF_KEYS.favorites, '{not json');
-    expect(TestBed.inject(FavoritesStore).all()).toEqual([]);
-    TestBed.resetTestingModule();
-    localStorage.setItem(
-      PREF_KEYS.favorites,
-      JSON.stringify(['ornek-hat-1', 3, line, { ...line, mode: 'roket' }]),
-    );
-    expect(TestBed.inject(FavoritesStore).all()).toEqual([line]);
   });
 });

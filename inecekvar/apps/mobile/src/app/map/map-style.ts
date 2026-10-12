@@ -53,6 +53,20 @@ export interface StyleInput {
   basemapUrl: string | null;
   line: readonly LngLat[];
   stops: readonly LngLat[];
+  /** Planner legs: rides drawn like a route, walks dashed. */
+  segments?: readonly MapSegment[];
+  /** Trip ends picked in the planner. */
+  markers?: readonly MapMarker[];
+}
+
+export interface MapSegment {
+  kind: 'ride' | 'walk';
+  coordinates: readonly LngLat[];
+}
+
+export interface MapMarker {
+  kind: 'from' | 'to';
+  at: LngLat;
 }
 
 const kindIn = (...kinds: string[]): FilterSpecification => [
@@ -71,7 +85,10 @@ export function buildMapStyle(input: StyleInput): StyleSpecification {
   const style: StyleSpecification = {
     version: 8,
     sources: {
-      route: { type: 'geojson', data: routeFeatures(input.line, input.stops) },
+      route: {
+        type: 'geojson',
+        data: routeFeatures(input.line, input.stops, input.segments ?? [], input.markers ?? []),
+      },
     },
     layers: [{ id: 'background', type: 'background', paint: { 'background-color': p.background } }],
   };
@@ -136,12 +153,23 @@ export function buildMapStyle(input: StyleInput): StyleSpecification {
       },
     );
   }
+  const planner = (input.segments?.length ?? 0) > 0 || (input.markers?.length ?? 0) > 0;
+  if (planner) {
+    style.layers.push({
+      id: 'walk',
+      type: 'line',
+      source: 'route',
+      filter: ['==', ['get', 'role'], 'walk'],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': p.routeCasing, 'line-width': 3, 'line-dasharray': [1, 1.6] },
+    });
+  }
   style.layers.push(
     {
       id: 'route-casing',
       type: 'line',
       source: 'route',
-      filter: ['==', ['geometry-type'], 'LineString'],
+      filter: IS_ROUTE,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': p.routeCasing, 'line-width': 9 },
     },
@@ -149,7 +177,7 @@ export function buildMapStyle(input: StyleInput): StyleSpecification {
       id: 'route',
       type: 'line',
       source: 'route',
-      filter: ['==', ['geometry-type'], 'LineString'],
+      filter: IS_ROUTE,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': p.route, 'line-width': 5 },
     },
@@ -157,22 +185,40 @@ export function buildMapStyle(input: StyleInput): StyleSpecification {
       id: 'stops',
       type: 'circle',
       source: 'route',
-      filter: ['==', ['geometry-type'], 'Point'],
+      filter: ['==', ['get', 'role'], 'stop'],
       paint: {
         // A lone stop (stop page) is drawn larger than the stops along a route.
-        'circle-radius': input.line.length >= 2 ? 6 : 9,
+        'circle-radius': input.line.length >= 2 || planner ? 6 : 9,
         'circle-color': p.stopFill,
         'circle-stroke-color': p.stopStroke,
         'circle-stroke-width': 2.5,
       },
     },
   );
+  if (planner) {
+    style.layers.push({
+      id: 'markers',
+      type: 'circle',
+      source: 'route',
+      filter: ['in', ['get', 'role'], ['literal', ['from', 'to']]],
+      paint: {
+        'circle-radius': 9,
+        'circle-color': ['match', ['get', 'role'], 'from', p.route, p.stopFill],
+        'circle-stroke-color': p.routeCasing,
+        'circle-stroke-width': 3,
+      },
+    });
+  }
   return style;
 }
 
+const IS_ROUTE: FilterSpecification = ['in', ['get', 'role'], ['literal', ['route', 'ride']]];
+
+type FeatureRole = 'route' | 'ride' | 'walk' | 'stop' | 'from' | 'to';
+
 interface RouteFeature {
   type: 'Feature';
-  properties: Record<string, never>;
+  properties: { role: FeatureRole };
   geometry:
     { type: 'LineString'; coordinates: number[][] } | { type: 'Point'; coordinates: number[] };
 }
@@ -180,22 +226,29 @@ interface RouteFeature {
 function routeFeatures(
   line: readonly LngLat[],
   stops: readonly LngLat[],
+  segments: readonly MapSegment[],
+  markers: readonly MapMarker[],
 ): { type: 'FeatureCollection'; features: RouteFeature[] } {
   const features: RouteFeature[] = [];
-  if (line.length >= 2) {
+  const addLine = (role: FeatureRole, points: readonly LngLat[]) => {
+    if (points.length < 2) return;
     features.push({
       type: 'Feature',
-      properties: {},
-      geometry: { type: 'LineString', coordinates: line.map((p) => [...p]) },
+      properties: { role },
+      geometry: { type: 'LineString', coordinates: points.map((p) => [...p]) },
     });
-  }
-  for (const stop of stops) {
+  };
+  const addPoint = (role: FeatureRole, at: LngLat) => {
     features.push({
       type: 'Feature',
-      properties: {},
-      geometry: { type: 'Point', coordinates: [...stop] },
+      properties: { role },
+      geometry: { type: 'Point', coordinates: [...at] },
     });
-  }
+  };
+  addLine('route', line);
+  for (const segment of segments) addLine(segment.kind, segment.coordinates);
+  for (const stop of stops) addPoint('stop', stop);
+  for (const marker of markers) addPoint(marker.kind, marker.at);
   return { type: 'FeatureCollection', features };
 }
 

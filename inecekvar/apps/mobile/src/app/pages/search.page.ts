@@ -51,6 +51,7 @@ export class SearchPage {
       code: line.code,
       name: line.name,
       mode: lineMode(line.mode),
+      lineId: line.id,
     }));
   });
 

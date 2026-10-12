@@ -120,12 +120,13 @@ export class LinePage {
     const line = this.data();
     const params = this.params();
     if (!line || !params) return;
-    this.favorites.toggle({
+    void this.favorites.toggle({
       city: params.city,
       slug: line.slug,
       code: line.code,
       name: line.name,
       mode: this.mode(),
+      lineId: line.id,
     });
   }
 

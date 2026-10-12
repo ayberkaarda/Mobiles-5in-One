@@ -1,10 +1,15 @@
-import { Provider } from '@angular/core';
+import { computed, Provider, signal } from '@angular/core';
 import {
+  AccountApi,
   ApiError,
   CatalogApi,
+  Favorite,
+  Me,
+  SessionStore,
   City,
   LineDetail,
   LineListItem,
+  PlanResult,
   StopDetail,
   StopSummary,
   TILES_BASE_URL,
@@ -84,6 +89,71 @@ export function sampleStopDetail(overrides: Partial<StopDetail> = {}): StopDetai
   };
 }
 
+const planStop = (row: number, col: number) => {
+  const stop = sampleStop(row, col);
+  return { slug: stop.slug, name: stop.name, location: stop.location as [number, number] };
+};
+
+/** A planner answer in the sample city: one transfer, then a direct option. */
+export function samplePlan(overrides: Partial<PlanResult> = {}): PlanResult {
+  return {
+    city: SAMPLE_CITY.slug,
+    degraded: false,
+    itineraries: [
+      {
+        legs: [
+          { kind: 'walk', metres: 84, from_stop: null, to_stop: planStop(1, 1) },
+          {
+            kind: 'ride',
+            line_id: 'line-1',
+            line_slug: 'ornek-hat-1',
+            line_code: 'ORN-1',
+            line_name: '[ÖRNEK] Hat ORN-1',
+            board_stop: planStop(1, 1),
+            alight_stop: planStop(1, 3),
+            stop_count: 2,
+          },
+          { kind: 'walk', metres: 218, from_stop: planStop(1, 3), to_stop: planStop(2, 3) },
+          {
+            kind: 'ride',
+            line_id: 'line-2',
+            line_slug: 'ornek-hat-2',
+            line_code: 'ORN-2',
+            line_name: '[ÖRNEK] Hat ORN-2',
+            board_stop: planStop(2, 3),
+            alight_stop: planStop(3, 3),
+            stop_count: 1,
+          },
+          { kind: 'walk', metres: 41, from_stop: planStop(3, 3), to_stop: null },
+        ],
+        transfers: 1,
+        walk_m: 343,
+        ride_stops: 3,
+        estimated_fare_minor: 5000,
+      },
+      {
+        legs: [
+          {
+            kind: 'ride',
+            line_id: 'line-3',
+            line_slug: 'ornek-hat-3',
+            line_code: 'ORN-3',
+            line_name: '[ÖRNEK] Hat ORN-3',
+            board_stop: planStop(1, 1),
+            alight_stop: planStop(3, 3),
+            stop_count: 6,
+          },
+        ],
+        transfers: 0,
+        walk_m: 0,
+        ride_stops: 6,
+        estimated_fare_minor: null,
+      },
+    ],
+    ...overrides,
+  };
+}
+
 export const notFound = (code = 'line.not_found') => new ApiError('problem', 404, code, 'req-test');
 export const offline = () => new ApiError('network', 0, 'network', 'req-test');
 
@@ -134,6 +204,12 @@ export function fakeCatalog() {
       return sampleStopDetail();
     }),
     stopsNear: spy(async (): Promise<StopSummary[]> => allStops),
+    // Body and signal are recorded in `calls` for the tests to inspect.
+    plan: spy(async (body: unknown, signal?: AbortSignal): Promise<PlanResult> => {
+      void body;
+      void signal;
+      return samplePlan();
+    }),
   };
 }
 
@@ -152,7 +228,70 @@ export class MemoryPreferences implements PreferenceStore {
   }
 }
 
+/** A session whose user tests set directly; the favourites store only reads `user`. */
+export class FakeSession {
+  readonly current = signal<Me | null>(null);
+  readonly user = this.current.asReadonly();
+  readonly isSignedIn = computed(() => this.current() !== null);
+
+  signIn(id = 'user-a'): void {
+    this.current.set({
+      id,
+      email: `${id}@example.test`,
+      display_name: null,
+      email_verified: true,
+      licence_accepted: false,
+      reputation: 0,
+      role: 'user',
+      created_at: '2026-10-01T00:00:00Z',
+    });
+  }
+
+  signOut(): void {
+    this.current.set(null);
+  }
+}
+
+const LINE_INDEX: Record<string, { slug: string }> = {
+  'line-1': { slug: 'ornek-hat-1' },
+  'line-2': { slug: 'ornek-hat-2' },
+  'line-3': { slug: 'ornek-hat-3' },
+};
+
+/** An AccountApi stand-in with one favourites set per signed-in account id. */
+export function fakeAccount(session: FakeSession) {
+  const server = new Map<string, Set<string>>();
+  const own = () => {
+    const id = session.user()?.id;
+    if (!id) throw new ApiError('problem', 401, 'auth.required', 'req-test');
+    let set = server.get(id);
+    if (!set) server.set(id, (set = new Set()));
+    return set;
+  };
+  return {
+    server,
+    favorites: spy(async (): Promise<Favorite[]> =>
+      [...own()].map((lineId) => ({
+        line_id: lineId,
+        slug: LINE_INDEX[lineId]?.slug ?? lineId,
+        city: SAMPLE_CITY.slug,
+      })),
+    ),
+    addFavorite: spy(async (lineId: string): Promise<void> => {
+      if (!LINE_INDEX[lineId]) throw notFound();
+      own().add(lineId);
+    }),
+    removeFavorite: spy(async (lineId: string): Promise<void> => {
+      own().delete(lineId);
+    }),
+  };
+}
+
+export type FakeAccount = ReturnType<typeof fakeAccount>;
+
 export interface CatalogTestingOptions {
+  session?: FakeSession;
+  account?: FakeAccount;
   catalog?: FakeCatalog;
   prefs?: MemoryPreferences;
   locate?: () => Promise<LocateResult>;
@@ -162,8 +301,12 @@ export interface CatalogTestingOptions {
 export function catalogTesting(options: CatalogTestingOptions = {}): Provider[] {
   const catalog = options.catalog ?? fakeCatalog();
   const prefs = options.prefs ?? new MemoryPreferences();
+  const session = options.session ?? new FakeSession();
+  const account = options.account ?? fakeAccount(session);
   return [
     { provide: CatalogApi, useValue: catalog },
+    { provide: SessionStore, useValue: session },
+    { provide: AccountApi, useValue: account },
     { provide: PREFERENCE_STORE, useValue: prefs },
     { provide: SEARCH_DEBOUNCE_MS, useValue: 0 },
     { provide: TILES_BASE_URL, useValue: 'https://tiles.test' },

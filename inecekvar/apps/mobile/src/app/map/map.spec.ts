@@ -8,12 +8,20 @@ import {
   createMapLibrary,
   CreateMapOptions,
   MAP_LIBRARY_LOADER,
+  MapEvent,
   MapHandle,
   MapLibrary,
   workerUrlFor,
 } from './map-library';
 import { BASEMAP_PROBE_MS, basemapUrlFor, MapComponent } from './map.component';
-import { boundsOf, buildMapStyle, DARK_PALETTE, LIGHT_PALETTE } from './map-style';
+import {
+  boundsOf,
+  buildMapStyle,
+  DARK_PALETTE,
+  LIGHT_PALETTE,
+  MapMarker,
+  MapSegment,
+} from './map-style';
 
 const LINE = [
   [34.01, 42.51],
@@ -22,17 +30,18 @@ const LINE = [
 ];
 
 class FakeMap implements MapHandle {
-  readonly listeners = new Map<string, ((event: { sourceId?: string }) => void)[]>();
+  readonly listeners = new Map<string, ((event: MapEvent) => void)[]>();
   readonly styles: StyleSpecification[] = [];
+  readonly fits: unknown[] = [];
   removed = false;
   constructor(readonly options: CreateMapOptions) {
     this.styles.push(options.style);
   }
-  on(type: string, listener: (event: { sourceId?: string }) => void) {
+  on(type: string, listener: (event: MapEvent) => void) {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
     return this;
   }
-  emit(type: string, event: { sourceId?: string } = {}) {
+  emit(type: string, event: MapEvent = {}) {
     for (const listener of this.listeners.get(type) ?? []) listener(event);
   }
   setStyle(style: StyleSpecification) {
@@ -40,6 +49,10 @@ class FakeMap implements MapHandle {
     return this;
   }
   resize() {
+    return this;
+  }
+  fitBounds(bounds: unknown) {
+    this.fits.push(bounds);
     return this;
   }
   remove() {
@@ -301,5 +314,103 @@ describe('map style', () => {
       [1, 0],
       [3, 2],
     ]);
+  });
+});
+
+@Component({
+  imports: [MapComponent],
+  template: `<iv-map
+    [area]="area"
+    [segments]="segments()"
+    [markers]="markers()"
+    [pickable]="pickable()"
+    label="Rota"
+    (picked)="picks.push($event)"
+  />`,
+})
+class PlannerHostComponent {
+  readonly area = [34.0, 42.5, 34.1, 42.58];
+  readonly segments = signal<MapSegment[]>([]);
+  readonly markers = signal<MapMarker[]>([]);
+  readonly pickable = signal(true);
+  readonly picks: [number, number][] = [];
+}
+
+describe('MapComponent in the planner', () => {
+  function renderPlanner() {
+    localStorage.clear();
+    const library = new FakeLibrary();
+    TestBed.configureTestingModule({
+      imports: [PlannerHostComponent, i18nTesting()],
+      providers: [
+        { provide: MAP_LIBRARY_LOADER, useValue: async () => library },
+        { provide: TILES_BASE_URL, useValue: '' },
+      ],
+    });
+    const fixture = TestBed.createComponent(PlannerHostComponent);
+    return { fixture, library };
+  }
+
+  it('frames the city area, emits taps only while picking and refits on a new itinerary', async () => {
+    const { fixture, library } = renderPlanner();
+    await settle(fixture);
+    const map = library.maps[0];
+    expect(map?.options.bounds).toEqual([
+      [34.0, 42.5],
+      [34.1, 42.58],
+    ]);
+    map?.emit('click', { lngLat: { lng: 34.02, lat: 42.52 } });
+    expect(fixture.componentInstance.picks).toEqual([[34.02, 42.52]]);
+    fixture.componentInstance.pickable.set(false);
+    await settle(fixture);
+    map?.emit('click', { lngLat: { lng: 34.03, lat: 42.53 } });
+    expect(fixture.componentInstance.picks).toHaveLength(1);
+
+    // A marker alone does not move the view.
+    fixture.componentInstance.markers.set([{ kind: 'from', at: [34.02, 42.52] }]);
+    await settle(fixture);
+    expect(map?.fits).toEqual([]);
+    expect(map?.styles.at(-1)?.layers.map((l) => l.id)).toContain('markers');
+
+    fixture.componentInstance.segments.set([
+      {
+        kind: 'walk',
+        coordinates: [
+          [34.02, 42.52],
+          [34.03, 42.52],
+        ],
+      },
+      {
+        kind: 'ride',
+        coordinates: [
+          [34.03, 42.52],
+          [34.05, 42.55],
+        ],
+      },
+    ]);
+    await settle(fixture);
+    expect(map?.fits).toEqual([
+      [
+        [34.02, 42.52],
+        [34.05, 42.55],
+      ],
+    ]);
+    const style = map?.styles.at(-1);
+    expect(style?.layers.map((l) => l.id)).toEqual([
+      'background',
+      'walk',
+      'route-casing',
+      'route',
+      'stops',
+      'markers',
+    ]);
+    const data = style?.sources['route'];
+    const roles =
+      data?.type === 'geojson' && typeof data.data === 'object'
+        ? (data.data as { features: { properties: { role: string } }[] }).features.map(
+            (f) => f.properties.role,
+          )
+        : [];
+    expect(roles).toEqual(['walk', 'ride', 'from']);
   });
 });

@@ -1,10 +1,17 @@
 import { InjectionToken } from '@angular/core';
 import type { LngLatBoundsLike, MapOptions, StyleSpecification } from 'maplibre-gl';
 
+/** What the wrapper reads from MapLibre events: the failing source, or where a tap landed. */
+export interface MapEvent {
+  sourceId?: string;
+  lngLat?: { lng: number; lat: number };
+}
+
 /** The part of a MapLibre map the wrapper uses; tests replace it with a fake. */
 export interface MapHandle {
-  on(type: 'load' | 'error', listener: (event: { sourceId?: string }) => void): unknown;
+  on(type: 'load' | 'error' | 'click', listener: (event: MapEvent) => void): unknown;
   setStyle(style: StyleSpecification): unknown;
+  fitBounds(bounds: LngLatBoundsLike, options?: { padding?: number; maxZoom?: number }): unknown;
   resize(): unknown;
   remove(): void;
 }

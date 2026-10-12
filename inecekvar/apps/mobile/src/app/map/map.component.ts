@@ -3,11 +3,13 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
   inject,
   input,
+  output,
   signal,
   untracked,
   viewChild,
@@ -18,7 +20,15 @@ import { RouteSketchComponent } from '@inecekvar/ui';
 import { ThemeService } from '../core/theme.service';
 import { TPipe } from '../i18n/i18n';
 import { MAP_LIBRARY_LOADER, MapHandle } from './map-library';
-import { boundsOf, buildMapStyle, DARK_PALETTE, LIGHT_PALETTE, LngLat } from './map-style';
+import {
+  boundsOf,
+  buildMapStyle,
+  DARK_PALETTE,
+  LIGHT_PALETTE,
+  LngLat,
+  MapMarker,
+  MapSegment,
+} from './map-style';
 
 export type MapStatus = 'loading' | 'ready' | 'no-basemap' | 'failed';
 
@@ -44,11 +54,17 @@ export function basemapUrlFor(tilesBase: string, city: string): string {
   host: { '[attr.data-status]': 'status()' },
   template: `
     <div class="iv-map-frame">
-      <iv-route-sketch class="iv-map-sketch" [line]="line()" [stops]="stops()" [label]="label()" />
+      <iv-route-sketch
+        class="iv-map-sketch"
+        [line]="sketchLine()"
+        [stops]="sketchStops()"
+        [label]="label()"
+      />
       <div
         #canvas
         class="iv-map-canvas"
         [class.iv-map-canvas--on]="status() === 'ready' || status() === 'no-basemap'"
+        [class.iv-map-canvas--pick]="pickable()"
         aria-hidden="true"
       ></div>
       @if (status() === 'ready') {
@@ -89,6 +105,9 @@ export function basemapUrlFor(tilesBase: string, city: string): string {
     }
     .iv-map-canvas--on {
       visibility: visible;
+    }
+    .iv-map-canvas--pick .maplibregl-canvas-container.maplibregl-interactive {
+      cursor: crosshair;
     }
     .iv-map-canvas.maplibregl-map {
       position: absolute;
@@ -151,6 +170,26 @@ export class MapComponent {
   readonly city = input<string | null>(null);
   /** Accessible name, translated by the caller. */
   readonly label = input.required<string>();
+  /** Planner legs drawn on top of the plain route. */
+  readonly segments = input<readonly MapSegment[]>([]);
+  /** Planner trip ends. */
+  readonly markers = input<readonly MapMarker[]>([]);
+  /** `[minLng, minLat, maxLng, maxLat]` shown when there is nothing to fit, such as a city. */
+  readonly area = input<readonly number[] | null>(null);
+  /** When true a tap on the map emits `picked` with its `[lng, lat]`. */
+  readonly pickable = input(false);
+  readonly picked = output<[number, number]>();
+
+  /** Everything drawn, for the static sketch and for fitting the view. */
+  protected readonly sketchLine = computed<readonly LngLat[]>(() => {
+    const segments = this.segments();
+    return segments.length > 0 ? segments.flatMap((s) => s.coordinates) : this.line();
+  });
+  protected readonly sketchStops = computed<readonly LngLat[]>(() => [
+    ...this.stops(),
+    ...this.markers().map((m) => m.at),
+  ]);
+  private appliedBoundsKey = '';
 
   readonly status = signal<MapStatus>('loading');
   private readonly basemapUrl = signal<string | null>(null);
@@ -170,10 +209,46 @@ export class MapComponent {
       const style = untracked(() => this.style());
       untracked(() => this.map?.setStyle(style));
     });
+    // A new itinerary (or a new area) moves the view; picking a point does not.
+    effect(() => {
+      const bounds = this.fitBounds();
+      const key = JSON.stringify(bounds);
+      if (!this.map || !bounds || key === this.appliedBoundsKey) return;
+      this.appliedBoundsKey = key;
+      untracked(() => this.map?.fitBounds(bounds, { padding: 36, maxZoom: 16 }));
+    });
   }
 
+  /** What the view frames: the planner legs, else the route and stops, else the area. */
+  private readonly fitBounds = computed(() => {
+    const segments = this.segments();
+    const points =
+      segments.length > 0
+        ? [...segments.flatMap((s) => s.coordinates), ...this.markers().map((m) => m.at)]
+        : [...this.line(), ...this.stops()];
+    const bounds = boundsOf(points);
+    if (bounds) return bounds;
+    const [minLng, minLat, maxLng, maxLat] = this.area() ?? [];
+    return minLng !== undefined &&
+      minLat !== undefined &&
+      maxLng !== undefined &&
+      maxLat !== undefined
+      ? ([
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ] as [[number, number], [number, number]])
+      : null;
+  });
+
   private styleKey(): string {
-    return JSON.stringify([this.theme.dark(), this.basemapUrl(), this.line(), this.stops()]);
+    return JSON.stringify([
+      this.theme.dark(),
+      this.basemapUrl(),
+      this.line(),
+      this.stops(),
+      this.segments(),
+      this.markers(),
+    ]);
   }
 
   private style() {
@@ -182,6 +257,8 @@ export class MapComponent {
       basemapUrl: this.basemapUrl(),
       line: this.line(),
       stops: this.stops(),
+      segments: this.segments(),
+      markers: this.markers(),
     });
   }
 
@@ -193,7 +270,7 @@ export class MapComponent {
       const basemap = url !== null && (await library.probeBasemap(url, BASEMAP_PROBE_MS));
       if (this.destroyed) return;
       this.basemapUrl.set(basemap ? url : null);
-      const bounds = boundsOf([...this.line(), ...this.stops()]);
+      const bounds = untracked(() => this.fitBounds());
       // A single stop (or a route collapsed to one point) is centred instead of fitted.
       const [sw, ne] = bounds ?? [];
       const single = sw && ne && sw[0] === ne[0] && sw[1] === ne[1] ? sw : undefined;
@@ -204,6 +281,13 @@ export class MapComponent {
       });
       this.map = map;
       this.appliedStyleKey = untracked(() => this.styleKey());
+      this.appliedBoundsKey = JSON.stringify(bounds);
+      map.on('click', (event) => {
+        const at = event.lngLat;
+        if (!this.destroyed && at && untracked(() => this.pickable())) {
+          this.picked.emit([at.lng, at.lat]);
+        }
+      });
       map.on('load', () => {
         if (!this.destroyed) this.status.set(basemap ? 'ready' : 'no-basemap');
       });

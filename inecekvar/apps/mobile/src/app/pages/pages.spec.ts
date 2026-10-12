@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideIonicAngular } from '@ionic/angular';
 import { appRoutes } from '../app.routes';
-import { CityStore } from '../city/city.store';
+import { CityStore, PREFERENCE_STORE } from '../city/city.store';
 import { DARK_CLASS } from '../core/theme.service';
 import { MAP_LIBRARY_LOADER } from '../map/map-library';
 import { LocateResult } from '../shared/location';
@@ -12,6 +12,7 @@ import {
   catalogTesting,
   fakeCatalog,
   FakeCatalog,
+  MemoryPreferences,
   offline,
   SAMPLE_CITY,
   sampleLineDetail,
@@ -83,27 +84,9 @@ describe('tab pages', () => {
     expect(text(el(fixture), 'h1')).toBe(heading);
   });
 
-  it('plan enables the button only with both ends and asks for a city on submit', async () => {
+  it('plan asks for a city before showing the form', async () => {
     const fixture = await render(PlanPage);
-    const submit = el(fixture).querySelector<HTMLButtonElement>('button[type="submit"]');
-    expect(submit?.disabled).toBe(true);
-    const [from, to] = Array.from(el(fixture).querySelectorAll<HTMLInputElement>('input'));
-    for (const [input, value] of [
-      [from, 'Durak 1'],
-      [to, 'Durak 2'],
-    ] as const) {
-      if (!input) throw new Error('missing input');
-      input.value = value;
-      input.dispatchEvent(new Event('input'));
-    }
-    await fixture.whenStable();
-    expect(submit?.disabled).toBe(false);
-    el(fixture).querySelector<HTMLButtonElement>('.swap')?.click();
-    await fixture.whenStable();
-    expect(from?.value).toBe('Durak 2');
-    expect(to?.value).toBe('Durak 1');
-    submit?.click();
-    await fixture.whenStable();
+    expect(el(fixture).querySelector('form')).toBeNull();
     expect(text(el(fixture), 'iv-state h2')).toBe('Önce şehrini seç');
   });
 
@@ -290,13 +273,15 @@ describe('line page', () => {
     root.querySelector<HTMLButtonElement>('.hero .star')?.click();
     await settle(harness.fixture);
     expect(root.querySelector('.hero .star')?.getAttribute('aria-pressed')).toBe('true');
-    expect(JSON.parse(localStorage.getItem('iv.favorites') ?? '[]')).toEqual([
+    const prefs = TestBed.inject(PREFERENCE_STORE) as MemoryPreferences;
+    expect(JSON.parse(prefs.values.get('iv.favorites') ?? '[]')).toEqual([
       {
         city: SAMPLE_CITY.slug,
         slug: 'ornek-hat-1',
         code: 'ORN-1',
         name: '[ÖRNEK] Hat ORN-1',
         mode: 'dolmus',
+        lineId: 'line-1',
       },
     ]);
     const router = TestBed.inject(Router);

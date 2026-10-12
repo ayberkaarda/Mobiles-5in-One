@@ -10,59 +10,226 @@
     <h1 class="iv-heading">{{ 'plan.heading' | t }}</h1>
     <p class="iv-lead">{{ 'plan.lead' | t }}</p>
 
-    <form class="route" (submit)="$event.preventDefault(); submit()">
-      <div class="rail" aria-hidden="true">
-        <span class="dot dot--from"></span>
-        <span class="dash"></span>
-        <span class="dot dot--to"></span>
-      </div>
-      <div class="fields">
-        <label class="field">
-          <span>{{ 'plan.from' | t }}</span>
-          <input
-            type="text"
-            name="from"
-            autocomplete="off"
-            enterkeyhint="next"
-            [value]="from()"
-            [placeholder]="'plan.placeholder' | t"
-            (input)="onInput('from', $event)"
-          />
-        </label>
-        <label class="field">
-          <span>{{ 'plan.to' | t }}</span>
-          <input
-            type="text"
-            name="to"
-            autocomplete="off"
-            enterkeyhint="search"
-            [value]="to()"
-            [placeholder]="'plan.placeholder' | t"
-            (input)="onInput('to', $event)"
-          />
-        </label>
-      </div>
-      <button type="button" class="swap" [attr.aria-label]="'plan.swap' | t" (click)="swap()">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3" />
-        </svg>
-      </button>
-      <button type="submit" class="iv-button iv-button--block submit" [disabled]="!canSubmit()">
-        {{ 'plan.submit' | t }}
-      </button>
-    </form>
+    <iv-city-picker class="city" />
 
-    <div class="iv-section">
-      @if (submitted()) {
+    @if (planner.view() === 'no-city') {
+    <section class="iv-section">
       <iv-state
         [heading]="'plan.noCityTitle' | t"
         [message]="'plan.noCityBody' | t"
         [actionLabel]="'plan.noCityAction' | t"
-        (action)="goToSearch()"
+        (action)="openPicker()"
       />
-      } @else {
-      <p class="iv-note hint">{{ 'plan.hint' | t }}</p>
+    </section>
+    } @else {
+    <form class="route" novalidate (submit)="$event.preventDefault(); planner.submit()">
+      @for (item of ends; track item.end) {
+      <div class="field" [attr.data-end]="item.end">
+        <label class="field-label" [for]="item.inputId">
+          <span class="dot" aria-hidden="true"></span>{{ item.label | t }}
+        </label>
+        <input
+          type="text"
+          autocomplete="off"
+          [id]="item.inputId"
+          [name]="item.end"
+          [class.chosen]="chosen(item.end)"
+          [attr.enterkeyhint]="item.end === 'from' ? 'next' : 'search'"
+          [value]="text(item.end)"
+          [placeholder]="'plan.placeholder' | t"
+          (input)="onInput(item.end, $event)"
+        />
+        @if (!chosen(item.end) && text(item.end).trim().length >= 2) { @if
+        (planner.suggestions(item.end); as found) { @if (found.length > 0) {
+        <ul class="suggestions" role="list" [attr.aria-label]="'planner.suggestions' | t">
+          @for (stop of found; track stop.id) {
+          <li>
+            <button type="button" (click)="planner.chooseStop(item.end, stop)">
+              {{ stop.name }}
+            </button>
+          </li>
+          }
+        </ul>
+        } } }
+        <div class="field-tools">
+          <button
+            type="button"
+            class="tool"
+            [disabled]="planner.locating() !== null"
+            (click)="planner.useMyLocation(item.end)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              <circle cx="12" cy="12" r="7.5" />
+            </svg>
+            {{ (planner.locating() === item.end ? 'planner.locating' : 'planner.useLocation') | t }}
+          </button>
+          <button
+            type="button"
+            class="tool"
+            [class.on]="planner.pickTarget() === item.end"
+            [attr.aria-pressed]="planner.pickTarget() === item.end"
+            (click)="togglePick(item.end)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s-6-5.6-6-11a6 6 0 1112 0c0 5.4-6 11-6 11z" />
+              <circle cx="12" cy="10" r="2.2" />
+            </svg>
+            {{ (planner.pickTarget() === item.end ? 'planner.picking' : 'planner.pickOnMap') | t }}
+          </button>
+        </div>
+        @if (planner.locateProblem(); as problem) { @if (problem.end === item.end) {
+        <p class="field-msg" role="alert">
+          @switch (problem.problem) { @case ('denied') { {{ 'planner.locateDenied' | t }} } @case
+          ('unavailable') { {{ 'planner.locateUnavailable' | t }} } @default { {{
+          'planner.locateOutside' | t }} } }
+        </p>
+        } }
+      </div>
+      @if ($first) {
+      <div class="swap-row">
+        <span class="dash" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="swap"
+          [attr.aria-label]="'plan.swap' | t"
+          (click)="planner.swap()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3" />
+          </svg>
+        </button>
+      </div>
+      } }
+
+      <div class="transfers" role="radiogroup" [attr.aria-label]="'planner.transfersLabel' | t">
+        <span class="transfers-label" aria-hidden="true">{{ 'planner.transfersLabel' | t }}</span>
+        <span class="transfers-options">
+          @for (choice of transferChoices; track choice.value) {
+          <button
+            type="button"
+            role="radio"
+            class="choice"
+            [attr.data-value]="choice.value"
+            [class.on]="planner.maxTransfers() === choice.value"
+            [attr.aria-checked]="planner.maxTransfers() === choice.value"
+            (click)="setTransfers(choice.value)"
+          >
+            {{ choice.label | t }}
+          </button>
+          }
+        </span>
+      </div>
+
+      @if (formError(); as error) {
+      <p class="form-error" role="alert">{{ error | t }}</p>
       }
-    </div>
+      <button
+        type="submit"
+        class="iv-button iv-button--block submit"
+        [disabled]="planner.loading() || planner.retryIn() > 0"
+      >
+        {{ 'plan.submit' | t }}
+      </button>
+    </form>
+
+    <section class="iv-section results" aria-live="polite">
+      @switch (planner.view()) { @case ('idle') {
+      <p class="iv-note hint">{{ 'plan.hint' | t }}</p>
+      } @case ('loading') {
+      <p class="loading" role="status">{{ 'planner.loading' | t }}</p>
+      } @case ('results') {
+      <h2 class="iv-section-title">
+        {{ 'planner.resultsTitle' | t }}
+        <small>{{ 'planner.resultsCount' | t: { count: summaries().length } }}</small>
+      </h2>
+      @if (planner.degraded()) {
+      <p class="banner" role="status">{{ 'planner.degradedNote' | t }}</p>
+      }
+      <ul class="iv-stack options" role="list">
+        @for (summary of summaries(); track $index) {
+        <li>
+          <iv-itinerary-card
+            [summary]="summary"
+            [selected]="planner.selected() === $index"
+            (selectedChange)="planner.select($index)"
+          />
+        </li>
+        }
+      </ul>
+      <p class="iv-note estimate">{{ 'planner.estimateNote' | t }}</p>
+      } @case ('empty') {
+      <iv-state [heading]="'planner.emptyTitle' | t" [message]="'planner.emptyBody' | t" />
+      } @case ('degraded') {
+      <iv-state
+        kind="error"
+        [heading]="'planner.degradedTitle' | t"
+        [message]="'planner.degradedBody' | t"
+        [actionLabel]="'planner.retry' | t"
+        (action)="planner.submit()"
+      />
+      } @case ('rate-limited') {
+      <iv-state
+        kind="error"
+        [heading]="'planner.rateTitle' | t"
+        [message]="
+                planner.retryIn() > 0
+                  ? ('planner.rateBody' | t: { seconds: planner.retryIn() })
+                  : ('planner.rateReady' | t)
+              "
+        [actionLabel]="planner.retryIn() > 0 ? '' : ('planner.retry' | t)"
+        (action)="planner.submit()"
+      />
+      } @case ('offline') {
+      <iv-state
+        kind="offline"
+        [heading]="'planner.offlineTitle' | t"
+        [message]="'planner.offlineBody' | t"
+        [actionLabel]="'planner.retry' | t"
+        (action)="planner.submit()"
+      />
+      } @case ('outside-city') {
+      <iv-state
+        kind="error"
+        [heading]="'planner.outsideTitle' | t"
+        [message]="'planner.outsideBody' | t"
+      />
+      } @case ('error') {
+      <iv-state
+        kind="error"
+        [heading]="'planner.errorTitle' | t"
+        [message]="'planner.errorBody' | t"
+        [actionLabel]="'planner.retry' | t"
+        (action)="planner.submit()"
+      />
+      } }
+    </section>
+
+    <section class="iv-section map-section">
+      <h2 class="iv-section-title">
+        {{ (planner.selectedItinerary() ? 'planner.mapTitleRoute' : 'planner.mapTitlePick') | t }}
+      </h2>
+      @if (pickEnd(); as end) {
+      <p class="iv-note pick-hint">
+        {{ (end === 'from' ? 'planner.mapPickFrom' : 'planner.mapPickTo') | t }}
+      </p>
+      } @defer (on immediate) {
+      <iv-map
+        [city]="cities.selectedSlug()"
+        [area]="cities.selected()?.bbox ?? null"
+        [segments]="planner.segments()"
+        [stops]="rideStops()"
+        [markers]="markers()"
+        [pickable]="pickEnd() !== null"
+        [label]="'planner.mapLabel' | t"
+        (picked)="planner.pickOnMap($event)"
+      />
+      } @if (steps().length > 0) {
+      <h2 class="iv-section-title steps-title">{{ 'planner.stepsTitle' | t }}</h2>
+      <iv-itinerary-steps [steps]="steps()" [label]="'planner.stepsTitle' | t" />
+      }
+    </section>
+    }
   </div>
 </ion-content>

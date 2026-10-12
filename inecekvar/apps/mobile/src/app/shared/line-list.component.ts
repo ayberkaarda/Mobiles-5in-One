@@ -12,6 +12,8 @@ export interface LineItem {
   code: string;
   name: string;
   mode: LineMode;
+  /** API line id when known; lets a signed-in favourite skip a lookup. */
+  lineId?: string;
   fareMinor?: number | null;
   meta?: readonly string[];
 }

@@ -32,6 +32,10 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/stop.page').then((m) => m.StopPage),
       },
       {
+        path: 'giris',
+        loadComponent: () => import('./pages/signin.page').then((m) => m.SigninPage),
+      },
+      {
         path: 'ayarlar',
         loadComponent: () => import('./pages/settings.page').then((m) => m.SettingsPage),
       },
