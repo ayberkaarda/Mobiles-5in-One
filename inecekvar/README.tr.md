@@ -53,9 +53,9 @@ Bir Nx workspace: `apps/mobile` (Ionic ve Angular, aynı zamanda PWA olarak sunu
 
 ## Durum
 
-Faz 0 (temel) hazır; henüz ürün özelliği yok. Klasörde şunlar var: `apps/mobile` (Capacitor üzerinde Ionic 9, Android projesi depoda), `apps/web` (Angular SSR) ve `libs/` altındaki ui, domain ve data-access kütüphaneleriyle Nx workspace; `/v1/health` uç noktası ve PostGIS bağlantı testi olan `api/` FastAPI projesi; yerel Docker Compose yığını (PostGIS, Redis, MinIO, Mailpit, Caddy); marka token'ları ve logo seti; `docs/` altında ADR'ler, ortam değişkenleri rehberi ve güvenlik taslakları; `inecekvar-ci.yml` iş akışı. Çözümlenen sürümler ve Faz 0 kanıtları `docs/adr/0001-stack-and-versions.md` dosyasında.
+0-2. fazlar `main`'e birleşti: temel, ardından veri modeli, kimlik doğrulama, moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarım ve hesap silme içeren API (Faz 2 kapısında 506 API testi geçti, bkz. `docs/adr/0029-phase-2-gate.md`). Uygulama arayüzü (Faz 3), web SEO, webhook ve sertleştirme henüz birleşmedi. Klasörde şunlar var: `apps/mobile` (Capacitor üzerinde Ionic 9, Android projesi depoda), `apps/web` (Angular SSR) ve `libs/` altındaki ui, domain ve data-access kütüphaneleriyle Nx workspace; `api/` FastAPI projesi; yerel Docker Compose yığını (PostGIS, Redis, MinIO, Mailpit, Caddy); marka token'ları ve logo seti; `docs/` altında ADR'ler, ortam değişkenleri rehberi ve güvenlik taslakları; `inecekvar-ci.yml` iş akışı. Çözümlenen sürümler ve Faz 0 kanıtları `docs/adr/0001-stack-and-versions.md` dosyasında.
 
-Faz 0'da denenmeyenler: iOS (macOS makine yok), GitHub Actions üzerinde CI iş akışı (dal push edilmedi), lefthook kancalarının kendisi, APK'nın emülatörde veya cihazda çalıştırılması, Caddy arkasındaki geliştirme sunucuları ve marka ikonlarının SSR favicon'una ve Android başlatıcı ikonuna bağlanması.
+Şimdiye kadar denenmeyenler: iOS (macOS makine yok), GitHub Actions üzerinde CI iş akışı (dal push edilmedi), lefthook kancalarının kendisi, APK'nın emülatörde veya cihazda çalıştırılması, Caddy arkasındaki geliştirme sunucuları ve marka ikonlarının SSR favicon'una ve Android başlatıcı ikonuna bağlanması.
 
 ## Kurulum
 
