@@ -1,0 +1,141 @@
+{
+  "lighthouseVersion": "13.5.0",
+  "fetchTime": "2026-10-12T21:39:19.960Z",
+  "requestedUrl": "https://inecekvar.app/ornek-test-sehri/durak/ornek-durak-1-1",
+  "finalDisplayedUrl": "https://inecekvar.app/ornek-test-sehri/durak/ornek-durak-1-1",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "environment": {
+    "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+    "hostUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "benchmarkIndex": 4310,
+    "credits": {
+      "axe-core": "4.14.0"
+    }
+  },
+  "configSettings": {
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "throttling": {
+      "rttMs": 150,
+      "throughputKbps": 1638.4,
+      "requestLatencyMs": 562.5,
+      "downloadThroughputKbps": 1474.5600000000002,
+      "uploadThroughputKbps": 675,
+      "cpuSlowdownMultiplier": 4
+    },
+    "screenEmulation": {
+      "mobile": true,
+      "width": 412,
+      "height": 823,
+      "deviceScaleFactor": 1.75,
+      "disabled": false
+    },
+    "onlyCategories": [
+      "seo"
+    ],
+    "skipAudits": [
+      "is-crawlable"
+    ]
+  },
+  "runWarnings": [],
+  "categories": {
+    "seo": {
+      "title": "SEO",
+      "score": 1,
+      "auditRefs": [
+        {
+          "id": "document-title",
+          "weight": 1
+        },
+        {
+          "id": "meta-description",
+          "weight": 1
+        },
+        {
+          "id": "http-status-code",
+          "weight": 1
+        },
+        {
+          "id": "link-text",
+          "weight": 1
+        },
+        {
+          "id": "crawlable-anchors",
+          "weight": 1
+        },
+        {
+          "id": "robots-txt",
+          "weight": 1
+        },
+        {
+          "id": "image-alt",
+          "weight": 0
+        },
+        {
+          "id": "hreflang",
+          "weight": 1
+        },
+        {
+          "id": "canonical",
+          "weight": 1
+        },
+        {
+          "id": "structured-data",
+          "weight": 0
+        }
+      ]
+    }
+  },
+  "audits": {
+    "document-title": {
+      "title": "Document has a `<title>` element",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "image-alt": {
+      "title": "Image elements have `[alt]` attributes",
+      "score": null,
+      "scoreDisplayMode": "notApplicable"
+    },
+    "meta-description": {
+      "title": "Document has a meta description",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "http-status-code": {
+      "title": "Page has successful HTTP status code",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "link-text": {
+      "title": "Links have descriptive text",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "crawlable-anchors": {
+      "title": "Links are crawlable",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "robots-txt": {
+      "title": "robots.txt is valid",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "hreflang": {
+      "title": "Document has a valid `hreflang`",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "canonical": {
+      "title": "Document has a valid `rel=canonical`",
+      "score": 1,
+      "scoreDisplayMode": "binary"
+    },
+    "structured-data": {
+      "title": "Structured data is valid",
+      "score": null,
+      "scoreDisplayMode": "manual"
+    }
+  }
+}
