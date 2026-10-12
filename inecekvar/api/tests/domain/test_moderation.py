@@ -12,6 +12,7 @@ from app.core.deps import Principal, Services
 from app.core.ids import uuid7
 from app.geo import line_geojson
 from app.models import AuditLog, City, Edit, Line, LineStop, LineVersion, Trace, User
+from app.models.enums import UserRole
 from tests.domain.conftest import Account, Sample
 from tests.support.app import FixedClock
 from tests.support.domain import create_account, sign_in
@@ -427,3 +428,26 @@ async def test_contributor_count_uses_distinct_authors(
         assert line.contributor_count == 1
         assert author is not None
         assert author.reputation == 10
+
+
+async def test_reciprocal_approval_needs_independent_reviewer(
+    client: httpx.AsyncClient,
+    services: Services,
+    sample: Sample,
+    moderator: Account,
+) -> None:
+    second_id, second_email = await create_account(services, UserRole.MODERATOR)
+    second = Account(second_id, await sign_in(client, second_email))
+    third_id, third_email = await create_account(services, UserRole.MODERATOR)
+    third = Account(third_id, await sign_in(client, third_email))
+    first_edit = await propose_fare(client, moderator, sample, fare=3600)
+    assert (await approve_edit(client, second, first_edit)).status_code == 200
+    second_edit = await propose_fare(client, second, sample, fare=3700, base=2)
+    response = await approve_edit(client, moderator, second_edit)
+    assert response.status_code == 409
+    assert response.json()["code"] == "moderation.reciprocal_conflict"
+    async with services.session_factory() as db:
+        edit = await db.get(Edit, second_edit)
+        assert edit is not None
+        assert edit.state == "pending"
+    assert (await approve_edit(client, third, second_edit)).status_code == 200

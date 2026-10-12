@@ -165,6 +165,31 @@ async def publish_version(
     return version
 
 
+RECIPROCAL_WINDOW = timedelta(days=30)
+
+
+async def refuse_reciprocal_approval(
+    db: AsyncSession, principal: Principal, edit: Edit, now: datetime
+) -> None:
+    """Two reviewers must not publish each other's proposals (threat model: sockpuppet
+    approval). When the author of this edit approved one of the reviewer's own edits within
+    the window, a third, independent reviewer has to decide."""
+    if edit.author_id is None:
+        return
+    reciprocal = await db.scalar(
+        select(Edit.id)
+        .where(
+            Edit.author_id == principal.user_id,
+            Edit.reviewer_id == edit.author_id,
+            Edit.state == EditState.APPROVED.value,
+            Edit.reviewed_at >= now - RECIPROCAL_WINDOW,
+        )
+        .limit(1)
+    )
+    if reciprocal is not None:
+        raise ProblemError("moderation.reciprocal_conflict", 409)
+
+
 async def approve(
     db: AsyncSession,
     edit: Edit,
@@ -178,6 +203,7 @@ async def approve(
     if isinstance(body, Retire):
         authorize(principal, Action.RETIRE_LINE, context)
     now = services.clock.now()
+    await refuse_reciprocal_approval(db, principal, edit, now)
     city = await db.scalar(select(City).where(City.id == edit.city_id).with_for_update())
     if city is None:
         raise ProblemError("city.not_found", 404)
