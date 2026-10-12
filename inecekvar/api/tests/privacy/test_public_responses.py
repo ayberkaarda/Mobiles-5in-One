@@ -27,13 +27,18 @@ class Probe:
     params: dict[str, str] = field(default_factory=dict)
     body: dict[str, object] | None = None
     status: int = 200
+    headers: dict[str, str] = field(default_factory=dict)
 
     def request(self, client: httpx.AsyncClient, method: str) -> httpx.Request:
-        return client.build_request(method, self.path, params=self.params, json=self.body)
+        return client.build_request(
+            method, self.path, params=self.params, json=self.body, headers=self.headers
+        )
 
 
 PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
-    ("GET", "/v1/cities/{slug}/pack"): Probe("/v1/cities/" + CITY + "/pack"),
+    ("GET", "/v1/cities/{slug}/pack"): Probe(
+        "/v1/cities/" + CITY + "/pack", headers={"X-Pack-Request": "1"}
+    ),
     ("GET", "/v1/cities/{slug}/tiles.pmtiles"): Probe(
         "/v1/cities/" + CITY + "/tiles.pmtiles", status=404
     ),

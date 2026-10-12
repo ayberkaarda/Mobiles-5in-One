@@ -57,6 +57,7 @@ CORS_REQUEST_HEADERS: tuple[str, ...] = (
     "Content-Type",
     "X-CSRF-Token",
     "X-Request-ID",
+    "X-Pack-Request",
 )
 CORS_EXPOSED_HEADERS: tuple[str, ...] = ("Retry-After", "X-Request-ID")
 CORS_MAX_AGE_SECONDS = 600

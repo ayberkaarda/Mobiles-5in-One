@@ -1,10 +1,11 @@
 import hashlib
 import hmac
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from fastapi.responses import RedirectResponse, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.cities.router import get_city
 from app.core.deps import (
@@ -29,6 +30,13 @@ router = APIRouter()
 MAX_EXPORT_BYTES = 50 * 1024 * 1024
 
 
+PACK_REQUEST_HEADER = "X-Pack-Request"
+
+
+def pack_lock(identity: str) -> int:
+    return int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], signed=True)
+
+
 @router.get("/cities/{slug}/pack")
 async def download_pack(
     slug: str,
@@ -39,28 +47,32 @@ async def download_pack(
     clock: ClockDep,
     limiter: RateLimiterDep,
     services: ServicesDep,
+    pack_request: Annotated[str | None, Header(alias=PACK_REQUEST_HEADER)] = None,
 ) -> dict[str, object]:
-    anon_hash = (
-        hmac.new(
-            settings.require_secret("log_hash_key"),
-            b"pack-anon:" + client_ip.encode(),
-            hashlib.sha256,
-        ).digest()
-        if principal is None
-        else None
-    )
-    identity = (
-        "user:" + str(principal.user_id)
-        if principal is not None
-        else "anon:" + (anon_hash or b"").hex()
-    )
-    await enforce_rate_limit(limiter, "pack.download", identity)
-    # A transaction lock serializes first-city selection and daily recording for this identity.
-    lock = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], signed=True)
-    await db.execute(select(func.pg_advisory_xact_lock(lock)))
+    # Downloading can select the free first city, so it must not be triggered by a
+    # cross-site navigation or image: browsers send this custom header only from code on an
+    # allowed origin (after a CORS preflight), never on a plain link.
+    if pack_request != "1":
+        raise ProblemError("pack.header_required", 400)
+    # The network identity always counts, also for a signed-in caller, so signing in or out
+    # does not grant another free city or a fresh daily quota.
+    anon_hash = hmac.new(
+        settings.require_secret("log_hash_key"),
+        b"pack-anon:" + client_ip.encode(),
+        hashlib.sha256,
+    ).digest()
+    identities = ["anon:" + anon_hash.hex()]
+    if principal is not None:
+        identities.insert(0, "user:" + str(principal.user_id))
+    for identity in identities:
+        await enforce_rate_limit(limiter, "pack.download", identity)
+    # Transaction locks serialize first-city selection and daily recording per identity
+    # (always user before network identity, so two requests cannot deadlock).
+    for identity in identities:
+        await db.execute(select(func.pg_advisory_xact_lock(pack_lock(identity))))
     city = await get_city(db, slug)
     predicate = (
-        PackDownload.user_id == principal.user_id
+        or_(PackDownload.user_id == principal.user_id, PackDownload.anon_hash == anon_hash)
         if principal is not None
         else PackDownload.anon_hash == anon_hash
     )
@@ -88,7 +100,8 @@ async def download_pack(
         db.add(
             PackDownload(
                 user_id=principal.user_id if principal is not None else None,
-                anon_hash=anon_hash,
+                # A signed-in download is recorded under the account only.
+                anon_hash=anon_hash if principal is None else None,
                 city_id=city.id,
                 day=now.date(),
                 created_at=now,

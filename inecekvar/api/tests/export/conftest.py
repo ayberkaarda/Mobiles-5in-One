@@ -16,6 +16,8 @@ from tests.domain.conftest import (
 )
 from tests.support.domain import export_app
 
+PACK_HEADERS = {"X-Pack-Request": "1"}
+
 __all__ = [
     "clock",
     "contributor",
@@ -31,5 +33,7 @@ __all__ = [
 @pytest.fixture
 async def client(services: Services) -> AsyncIterator[httpx.AsyncClient]:
     transport = httpx.ASGITransport(app=export_app(services), client=("203.0.113.10", 50000))
-    async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as connection:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="https://testserver", headers=PACK_HEADERS
+    ) as connection:
         yield connection

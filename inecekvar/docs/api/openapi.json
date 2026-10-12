@@ -1499,6 +1499,22 @@
               "type": "string",
               "title": "Slug"
             }
+          },
+          {
+            "name": "X-Pack-Request",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Pack-Request"
+            }
           }
         ],
         "responses": {

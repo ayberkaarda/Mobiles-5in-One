@@ -76,6 +76,7 @@ async def test_pack_download_rate_limit_per_anon_hash(
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=export_app(services), client=("203.0.113.11", 50000)),
         base_url="https://testserver",
+        headers={"X-Pack-Request": "1"},
     ) as other:
         assert (await other.get(PACK)).status_code == 200
 
@@ -114,3 +115,28 @@ async def test_tiles_redirect_only_when_configured(
     assert response.status_code == 302
     assert response.headers["location"] == "https://tiles.example.com/ornek-test-sehri.pmtiles"
     assert (await client.get("/v1/cities/missing/tiles.pmtiles")).status_code == 404
+
+
+async def test_pack_requires_request_header(
+    client: httpx.AsyncClient, services: Services, sample: Sample
+) -> None:
+    response = await client.get(PACK, headers={"X-Pack-Request": "0"})
+    assert response.status_code == 400
+    assert response.json()["code"] == "pack.header_required"
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=export_app(services), client=("203.0.113.12", 50000)),
+        base_url="https://testserver",
+    ) as plain:
+        assert (await plain.get(PACK)).status_code == 400
+    async with services.session_factory() as db:
+        assert await db.scalar(select(func.count()).select_from(PackDownload)) == 0
+
+
+async def test_signing_in_does_not_grant_another_free_city(
+    client: httpx.AsyncClient, services: Services, sample: Sample, user: Account
+) -> None:
+    await second_city(services)
+    assert (await client.get(PACK)).status_code == 200
+    response = await client.get("/v1/cities/ikinci-sehir/pack", headers=user.headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "pack.entitlement_required"
