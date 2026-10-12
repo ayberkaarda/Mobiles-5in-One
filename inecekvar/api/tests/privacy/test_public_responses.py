@@ -7,11 +7,13 @@ from fastapi import FastAPI
 from app.core.deps import Services
 from app.core.ids import uuid7
 from app.models import Edit, Photo
+from app.workers.export import export_city
 from tests.domain.conftest import Account, Sample
 from tests.support.app import FixedClock
 from tests.support.domain import create_account, sign_in, trace_media_app
 from tests.support.privacy import assert_no_trace_leak
 from tests.support.routes import route_signatures
+from tests.support.storage import S3Buckets
 from tests.traces.test_derive_retention import linked_edit
 from tests.traces.test_traces import RAW, upload
 
@@ -31,6 +33,12 @@ class Probe:
 
 
 PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
+    ("GET", "/v1/cities/{slug}/pack"): Probe("/v1/cities/" + CITY + "/pack"),
+    ("GET", "/v1/cities/{slug}/tiles.pmtiles"): Probe(
+        "/v1/cities/" + CITY + "/tiles.pmtiles", status=404
+    ),
+    ("GET", "/v1/export/{city}/latest.geojson"): Probe("/v1/export/" + CITY + "/latest.geojson"),
+    ("GET", "/v1/cities/{slug}/sitemap"): Probe("/v1/cities/" + CITY + "/sitemap"),
     ("POST", "/v1/plan"): Probe(
         "/v1/plan",
         body={
@@ -141,7 +149,10 @@ async def test_public_responses_have_no_trace_data(
     contributor: Account,
     moderator: Account,
     clock: FixedClock,
+    s3_buckets: S3Buckets,
 ) -> None:
+    services.settings = services.settings.model_copy(update=s3_buckets.settings_overrides())
+    services.object_store = s3_buckets.store
     _, edit_id = await linked_edit(client, contributor, clock, sample)
     async with services.session_factory() as db:
         identity = uuid7()
@@ -168,6 +179,8 @@ async def test_public_responses_have_no_trace_data(
         "/v1/moderation/edits/" + str(edit_id) + "/approve", json={}, headers=moderator.headers
     )
     assert response.status_code == 200
+    # The weekly export runs after the trace-derived version is published.
+    await export_city(services.session_factory, s3_buckets.store, services.settings, clock, CITY)
     application = public_app(services)
     assert_classified(application)
     async with httpx.AsyncClient(

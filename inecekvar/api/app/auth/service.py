@@ -20,6 +20,7 @@ from app.core.errors import (
 )
 from app.core.ids import uuid7
 from app.core.settings import Settings
+from app.me.deletion import cancel_scheduled_deletion
 from app.models.accounts import (
     DeletionRequest,
     Favorite,
@@ -128,6 +129,8 @@ async def verify_link(
     )
     user = await db.scalar(select(User).where(User.email == link.email).with_for_update())
     link.password_hash = None
+    if user is not None:
+        await cancel_scheduled_deletion(db, user, now)
     if user is None or user.deactivated_at is not None:
         await db.commit()
         raise ProblemError(AUTH_TOKEN_INVALID, 401)
@@ -143,6 +146,8 @@ async def password_login(
     user = await db.scalar(select(User).where(User.email == email).with_for_update())
     stored = user.password_hash if user is not None and user.password_hash else None
     ok, rehash = await verify_password(password, stored or await dummy_hash(settings), settings)
+    if user is not None and user.password_hash is not None and ok:
+        await cancel_scheduled_deletion(db, user, now)
     if user is None or user.password_hash is None or not ok or user.deactivated_at is not None:
         structlog.get_logger().info("auth.login.failed")
         raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)

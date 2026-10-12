@@ -95,3 +95,12 @@ def trace_media_app(services: Services) -> FastAPI:
         if not has_route(application, path):
             application.include_router(router, prefix="/v1")
     return application
+
+
+def export_app(services: Services) -> FastAPI:
+    from app.export.router import router as export_router
+
+    application = trace_media_app(services)
+    if not has_route(application, "/v1/cities/{slug}/pack"):
+        application.include_router(export_router, prefix="/v1")
+    return application

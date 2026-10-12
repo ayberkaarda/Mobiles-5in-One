@@ -24,6 +24,7 @@ dependencies = [
     "shapely>=2.2.0",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
+    "tzdata>=2026.5",
     "uvicorn[standard]>=0.54.0",
 ]
 

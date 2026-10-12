@@ -19,6 +19,7 @@ from app.auth.authenticator import TokenSessionAuthenticator
 from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
 from app.auth.router import router as auth_router
+from app.billing.entitlements import SubscriptionEntitlements
 from app.cities.router import router as cities_router
 from app.core.deps import Services, SystemClock
 from app.core.health import router as health_router
@@ -28,6 +29,7 @@ from app.core.settings import Settings, load_settings
 from app.core.setup import install_core
 from app.core.storage import S3ObjectStore
 from app.edits.router import router as edits_router
+from app.export.router import router as export_router
 from app.favorites.router import router as favorites_router
 from app.lines.router import router as lines_router
 from app.media.router import router as media_router
@@ -52,6 +54,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     traces_router,
     media_router,
     planner_router,
+    export_router,
 )
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing
@@ -121,6 +124,7 @@ def build_services(settings: Settings) -> Services:
         mail_sender=SmtpMailSender(settings),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
+        entitlements=SubscriptionEntitlements(),
         object_store=(
             S3ObjectStore.from_settings(settings) if settings.s3_endpoint_url is not None else None
         ),
