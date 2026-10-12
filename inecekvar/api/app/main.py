@@ -79,6 +79,7 @@ def with_local_defaults(settings: Settings) -> Settings:
     if settings.s3_endpoint_url is None:
         update["s3_endpoint_url"] = LOCAL_S3_URL
         update["s3_region"] = "us-east-1"
+    if settings.s3_access_key_id is None and settings.s3_secret_access_key is None:
         update["s3_access_key_id"] = SecretStr(LOCAL_S3_USER)
         update["s3_secret_access_key"] = SecretStr(LOCAL_S3_PASSWORD)
     if settings.csrf_secret is None:
