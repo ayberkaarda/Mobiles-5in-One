@@ -37,6 +37,10 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     "edits.default": RateLimitRule(limit=100, window_seconds=24 * 60 * 60),
     "traces": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
     "plan": RateLimitRule(limit=30, window_seconds=60),
+    # Spec section 6.7: photo presign quota per user; section 6.22: pack downloads per
+    # anonymous hash (or signed-in user) per day.
+    "media.presign": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
+    "pack.download": RateLimitRule(limit=10, window_seconds=24 * 60 * 60),
 }
 
 # Reputation below this value uses `edits.low_reputation` (spec section 6.5).
@@ -53,6 +57,7 @@ CORS_REQUEST_HEADERS: tuple[str, ...] = (
     "Content-Type",
     "X-CSRF-Token",
     "X-Request-ID",
+    "X-Pack-Request",
 )
 CORS_EXPOSED_HEADERS: tuple[str, ...] = ("Retry-After", "X-Request-ID")
 CORS_MAX_AGE_SECONDS = 600
@@ -128,6 +133,30 @@ class Settings(BaseSettings):
     max_body_bytes: int = Field(default=1024 * 1024, ge=1024)
     max_trace_body_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
 
+    # --- Object storage (S3 API: MinIO locally, Cloudflare R2 in production) --------------
+    # Photos and exports. Without an endpoint the media and export features answer 503.
+    s3_endpoint_url: str | None = None
+    s3_region: str = "auto"
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+    media_bucket: str = "inecekvar-media"
+    exports_bucket: str = "inecekvar-exports"
+    presign_ttl_seconds: int = Field(default=300, ge=30, le=900)
+    # Spec section 6.7: photos are image/jpeg or image/webp up to 4 MiB.
+    media_max_bytes: int = Field(default=4 * 1024 * 1024, ge=1024, le=4 * 1024 * 1024)
+
+    # --- Planner (spec section 3 story 3, section 6.22) --------------------------------------
+    planner_timeout_seconds: float = Field(default=3.0, gt=0, le=10)
+    planner_cache_ttl_seconds: int = Field(default=600, ge=1, le=3600)
+
+    # --- Offline packs and tiles (spec section 3 story 4) -------------------------------------
+    # CDN base for `cities/{slug}/tiles.pmtiles`; the route answers 404 while it is unset.
+    pmtiles_base_url: str | None = None
+
+    # --- Retention (spec section 0 item 6, section 6.21) ---------------------------------------
+    trace_retention_days: int = Field(default=30, ge=1, le=30)
+    deletion_grace_days: int = Field(default=7, ge=1, le=30)
+
     # --- Logging (spec section 6.14) ---------------------------------------------------------
     # HMAC key for the email and identifier digests written to logs.
     log_hash_key: SecretStr | None = None
@@ -139,6 +168,13 @@ class Settings(BaseSettings):
         for item in value:
             ip_network(item, strict=False)
         return value
+
+    @field_validator("pmtiles_base_url")
+    @classmethod
+    def _https_tiles(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith("https://"):
+            raise ValueError("pmtiles_base_url must be https")
+        return value.rstrip("/") if value is not None else None
 
     @field_validator("magic_link_base_url")
     @classmethod
