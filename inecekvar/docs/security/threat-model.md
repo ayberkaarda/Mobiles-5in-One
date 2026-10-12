@@ -56,7 +56,7 @@ Controls and tests below are planned requirements, not completed implementation.
 - Attack path: Deletion leaves private traces, tokens, photos, logs, subscription records or backup copies accessible.
 - Control: Reauthenticate; immediately deactivate and revoke credentials, delete private traces and favorites and withdraw pending edits. After seven days remove personal rows and photos, remove the subscriber and anonymize licensed contributions; document backup expiry. A login during the grace period cancels final deletion.
 - Planned test: Exercise immediate deletion, grace-period cancellation and final deletion; inspect storage, credentials and backups for residual personal data and retention behaviour.
-- Phase: planned: phase 2; subscription deletion in phase 5 and backup checks in phase 6.
+- Phase: planned: phase 2; subscription deletion implemented in phase 5 against a transport double (`api/tests/deletion/test_subscriber_rest.py`, ADR-0050); backup checks in phase 6.
 
 ## CSRF in cookie mode
 
@@ -77,14 +77,16 @@ Controls and tests below are planned requirements, not completed implementation.
 - Attack path: A forged or replayed RevenueCat event changes subscription access, or a forged Resend event suppresses email.
 - Control: Compare the RevenueCat Authorization secret in constant time, reject unknown subscriber IDs and deduplicate event.id. Verify Resend Svix signatures over the raw body with a five-minute timestamp tolerance and deduplicate svix-id. Queue verified events within two seconds and reconcile subscriptions nightly.
 - Planned test: Try missing/wrong secrets, tampered Resend bodies, stale timestamps, repeated IDs and unknown subscribers; verify no duplicate effects or unauthorized state changes.
-- Phase: planned: phase 5.
+- Executed: `api/tests/webhooks/test_revenuecat_webhook.py` and `test_resend_webhook.py` (missing, wrong, prefixed and truncated secrets, Svix headers missing, wrong key, tampered body, stale and future timestamps, unknown signature version, replayed and concurrently delivered ids, unknown, anonymous and missing subscribers, oversized bodies, wrong content types, credentials of the other provider, constant-time comparison spies, the published Svix example signature); the job applies each stored event once (`tests/billing/test_events.py`). Not exercised: payloads signed by the real providers.
+- Phase: implemented: phase 5 (ADR-0050).
 
 ## Pack entitlement bypass
 
 - Attack path: A caller changes a subscriber identifier or invokes pack downloads directly to obtain extra cities without Plus.
 - Control: Determine identity and first-city history on the server; verify active entitlement for additional cities; enforce quotas and reconcile subscription state. Never trust client purchase flags.
 - Planned test: Download a second city anonymously and without Plus; forge identity and purchase flags; test expired and revoked subscriptions and concurrent requests.
-- Phase: planned: phase 5.
+- Executed: `api/tests/billing/test_entitlement_matrix.py` (free tier, active, lifetime, cancelled within and after the paid period, grace within and after, expired, refunded, another account's Plus, anonymous caller on the same network), out-of-order and transfer events (`test_events.py`), reconciliation that never downgrades on provider errors (`test_reconciliation.py`). The app sends no purchase flag the API reads. Not exercised: a real store purchase.
+- Phase: implemented: phase 5 (ADR-0050).
 
 ## Refresh token reuse
 

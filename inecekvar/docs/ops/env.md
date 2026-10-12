@@ -91,6 +91,27 @@ The API does not read `.env` files: export the values in the shell before `uv ru
 
 Do not place signing keys, provider credentials, production endpoints or other secrets in the example file. Production hosting, the public domain, TLS and HSTS preload are not exercised: no domain, no host.
 
+## Read by the API and the worker (Phase 5)
+
+Webhooks, billing and nightly jobs (ADR-0050). Every secret below is unset by default and has no local default: without it the matching feature stays off and fails closed.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_REVENUECAT_WEBHOOK_SECRET` | unset | Value RevenueCat sends in the `Authorization` header of `POST /v1/webhooks/revenuecat` (set the same value in the RevenueCat dashboard); at least 32 characters, compared in constant time. Unset: the route answers 503 and stores nothing. On the rotation list of the history-purge runbook. |
+| `INECEKVAR_REVENUECAT_API_KEY` | unset | Secret REST API key (v1) for the nightly reconciliation, transfers and subscriber deletion at account erasure; at least 32 characters. Unset: reconciliation is skipped and the hard delete defers accounts that have subscription rows. Never the public SDK key of the app. |
+| `INECEKVAR_REVENUECAT_PLUS_ENTITLEMENT` | `plus` | RevenueCat entitlement id that means Plus (the app uses the same id, `apps/mobile/src/app/plus/purchases.ts`). |
+| `INECEKVAR_REVENUECAT_PLUS_PRODUCT_IDS` | `[]` | JSON list of store product ids that also count as Plus when an event or snapshot does not name the entitlement (for example expired products). |
+| `INECEKVAR_REVENUECAT_ALLOW_SANDBOX` | `false` | Apply sandbox purchases. Keep `false` in production; a staging deployment may enable it. |
+| `INECEKVAR_REVENUECAT_TIMEOUT_SECONDS` | `5.0` | Timeout of one RevenueCat REST call (0 to 30). |
+| `INECEKVAR_RESEND_WEBHOOK_SECRET` | unset | Svix signing secret of the Resend webhook endpoint (`whsec_` followed by base64 of at least 24 bytes). Unset: `POST /v1/webhooks/resend` answers 503. On the rotation list of the history-purge runbook. |
+| `INECEKVAR_MAX_WEBHOOK_BODY_BYTES` | `65536` | Body limit of the webhook routes (1 KiB to 1 MiB); larger bodies answer 413 before routing. |
+| `INECEKVAR_WEBHOOK_EVENT_RETENTION_DAYS` | `30` | Processed `webhook_events` rows (event id, type, outcome; no payload) are deleted after this many days (7 to 365). Idempotency holds for this window; the providers retry for hours, not weeks. |
+| `INECEKVAR_BOUNCE_SUPPRESSION_RETENTION_DAYS` | `365` | Bounce suppressions are lifted after this many days (30 to 3650). Complaint and manual suppressions are never purged by the job. |
+| `INECEKVAR_PACK_DOWNLOAD_RETENTION_DAYS` | `90` | Per-identity `pack_downloads` rows older than this are counted into `pack_download_stats` and deleted (30 to 730); each account keeps its earliest row (its free first city), anonymous network rows are deleted completely. |
+| `INECEKVAR_JOBS_DRY_RUN` | `false` | The nightly jobs count what they would change and write nothing. A job enqueued with `dry_run=True` or `dry_run=False` overrides it for that run. |
+
+Worker schedule (Europe/Istanbul): pending webhook sweep every five minutes; RevenueCat reconciliation 04:10; expired entitlement sweep 04:40; retention purge 04:50; pack download roll-up 05:00 (`app/workers/main.py`, ADR-0050). The suppression list stores HMAC-SHA256 digests under `INECEKVAR_LOG_HASH_KEY`; rotating that key empties the effective list.
+
 ## Read by the web SSR server (Phase 4)
 
 `apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
