@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.auth.service import locked_user
 from app.core.deps import (
     ClockDep,
     DbDep,
@@ -52,6 +53,7 @@ async def presign_photo(
     store: ObjectStoreDep,
 ) -> PresignOut:
     await enforce_rate_limit(limiter, "media.presign", "user:" + str(principal.user_id))
+    await locked_user(db, principal.user_id)
     if body.byte_size > settings.media_max_bytes:
         raise ProblemError("media.too_large", 422)
     identity = uuid7()

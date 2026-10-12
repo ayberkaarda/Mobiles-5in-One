@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from shapely.geometry import LineString
 
+from app.auth.service import locked_user
 from app.cities.router import get_city
 from app.core.deps import (
     ClockDep,
@@ -70,6 +71,7 @@ async def upload_trace(
     settings: SettingsDep,
 ) -> TraceCreated:
     await enforce_rate_limit(limiter, "traces", "user:" + str(principal.user_id))
+    await locked_user(db, principal.user_id)
     now = clock.now()
     if body.ended_at > now + timedelta(minutes=5):
         raise ProblemError("trace.future_end", 422)

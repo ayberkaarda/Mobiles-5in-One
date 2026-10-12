@@ -68,7 +68,9 @@ async def hard_delete_due(
             subscriptions = list(
                 await db.scalars(select(Subscription).where(Subscription.user_id == identity))
             )
-            photos = list(await db.scalars(select(Photo).where(Photo.owner_id == identity)))
+            photos = list(
+                await db.scalars(select(Photo).where(Photo.owner_id == identity).with_for_update())
+            )
             if (subscriptions and subscriber_deleter is None) or (photos and store is None):
                 summary["deferred"] += 1
                 continue

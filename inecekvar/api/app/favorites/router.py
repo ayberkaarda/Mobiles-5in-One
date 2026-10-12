@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
+from app.auth.service import locked_user
 from app.core.deps import DbDep, PrincipalDep
 from app.core.errors import ProblemError
 from app.models import City, Favorite, Line
@@ -59,6 +60,7 @@ async def read_favorite(line_id: uuid.UUID, db: DbDep, principal: PrincipalDep) 
 
 @router.put("/me/favorites/{line_id}", status_code=204)
 async def put_favorite(line_id: uuid.UUID, db: DbDep, principal: PrincipalDep) -> Response:
+    await locked_user(db, principal.user_id)
     line = await db.scalar(
         select(Line)
         .where(

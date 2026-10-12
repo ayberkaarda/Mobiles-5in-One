@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
+from app.auth.service import locked_user
 from app.core.deps import ClockDep, DbDep, PrincipalDep, RateLimiterDep, enforce_rate_limit
 from app.core.errors import AUTH_FORBIDDEN, ProblemError
 from app.core.ids import uuid7
@@ -10,7 +11,7 @@ from app.core.settings import EDITS_REPUTATION_THRESHOLD
 from app.edits.schemas import EditInput, EditOut
 from app.edits.service import edit_response, prepare_edit, resolve_attachments
 from app.lines.router import Limit, Offset
-from app.models import Edit, User
+from app.models import Edit
 from app.security.deps import require_permission
 from app.security.policy import Action, can_read_edit
 
@@ -29,15 +30,13 @@ async def propose_edit(
     clock: ClockDep,
     limiter: RateLimiterDep,
 ) -> EditOut:
-    trace, photo_id = await resolve_attachments(db, body, principal.user_id)
-    city, line_id, stop_id, diff = await prepare_edit(db, body)
-    user = await db.get(User, principal.user_id)
-    if user is None:
-        raise ProblemError(AUTH_FORBIDDEN, 403)
+    user = await locked_user(db, principal.user_id)
     rule = (
         "edits.low_reputation" if user.reputation < EDITS_REPUTATION_THRESHOLD else "edits.default"
     )
     await enforce_rate_limit(limiter, rule, "user:" + str(principal.user_id))
+    trace, photo_id = await resolve_attachments(db, body, principal.user_id)
+    city, line_id, stop_id, diff = await prepare_edit(db, body)
     edit = Edit(
         id=uuid7(),
         kind=body.kind,
