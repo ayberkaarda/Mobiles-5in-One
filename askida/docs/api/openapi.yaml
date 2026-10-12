@@ -31,8 +31,8 @@ info:
     - Money is integer minor units (kuruş) with currency `TRY`.
     - Timestamps are ISO 8601 with an offset (server time zone Europe/Istanbul).
   license:
-    name: Proprietary
-    identifier: LicenseRef-Proprietary
+    name: Apache 2.0
+    identifier: Apache-2.0
 servers:
   - url: http://localhost:58080/api/v1
     description: Local compose stack (default `ASKIDA_WEB_PORT`).

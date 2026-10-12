@@ -57,3 +57,7 @@ Bu klasörde şu an yalnızca tasarım/spec dokümanı var; kaynak kod henüz ya
 ## Kurulum
 
 Henüz kod yok, bu yüzden kurulacak ya da çalıştırılacak bir şey de yok. Ürün ve teknik tanım bu klasörde `03-patika-swift-ios.md` dosyasında duruyor. Geliştirme başlayınca bu README güncellenecek.
+
+## Lisans
+
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).
