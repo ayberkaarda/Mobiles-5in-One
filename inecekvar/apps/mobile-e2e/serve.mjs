@@ -25,9 +25,16 @@ const TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+// The API allows cookie sign-in only from its configured web origins (locally
+// http://localhost:4200 and :8100); IV_E2E_ORIGIN presents one of them for the browser's
+// requests, as Caddy's same-origin setup does in production.
+const presentedOrigin = process.env.IV_E2E_ORIGIN;
+
 function proxy(req, res) {
   const target = new URL(req.url.replace(/^\/api/, '') || '/', api);
   const headers = { ...req.headers, host: target.host, 'x-real-ip': '127.0.0.1' };
+  if (presentedOrigin && headers.origin) headers.origin = presentedOrigin;
+  if (presentedOrigin && headers.referer) delete headers.referer;
   const upstream = request(target, { method: req.method, headers }, (answer) => {
     res.writeHead(answer.statusCode ?? 502, answer.headers);
     answer.pipe(res);
