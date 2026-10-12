@@ -509,6 +509,7 @@ describe('map basemap from the pack', () => {
         fitBounds: () => undefined,
         resize: () => undefined,
         remove: () => undefined,
+        getCenter: () => ({ lng: 0, lat: 0 }),
       }),
     };
     return { lib, probes };

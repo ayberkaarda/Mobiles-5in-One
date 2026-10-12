@@ -74,6 +74,8 @@ export const en: Translation = {
     errorTitle: 'The stop could not be opened',
   },
   map: {
+    pickCentre: 'Pick map centre',
+    pointChosen: 'Point selected: {{lat}}, {{lng}}.',
     loading: 'Loading the map',
     basemapUnavailable: 'The base map could not be loaded; the route is still drawn.',
     unavailable: 'The interactive map cannot open on this device; showing a sketch of the route.',
@@ -224,6 +226,7 @@ export const en: Translation = {
     retry: 'Try again',
   },
   favorites: {
+    storageError: 'Favourites could not be saved on this device. Free some space and try again.',
     kicker: 'Lines in your pocket',
     heading: 'Favourites',
     lead: 'The lines you ride every day, one tap away.',

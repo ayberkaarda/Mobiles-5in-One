@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ApiError, CatalogApi, LineDetail, PlanResult } from '@inecekvar/data-access';
+import { ApiError, CatalogApi, LineDetail, PlanResult, SessionStore } from '@inecekvar/data-access';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
 import { CatalogSource } from '../packs/catalog-source';
@@ -72,6 +72,8 @@ export class PlannerStore {
   private readonly api = inject(CatalogApi);
   private readonly source = inject(CatalogSource);
   private readonly cities = inject(CityStore);
+  private readonly session = inject(SessionStore);
+  private readonly identity = computed(() => this.session.user()?.id ?? null);
   private readonly stopIndex = inject(StopIndex);
   private readonly connectivity = inject(ConnectivityService);
   private readonly location = inject(LOCATION_SOURCE);
@@ -79,6 +81,8 @@ export class PlannerStore {
   private readonly now = inject(PLANNER_NOW);
   private readonly lineCache = new Map<string, Promise<LineDetail>>();
   private run = 0;
+  private locationVersion = 0;
+  private contextVersion = 0;
   private abort: AbortController | null = null;
   private ticker: ReturnType<typeof setInterval> | undefined;
 
@@ -169,6 +173,7 @@ export class PlannerStore {
     // Ends and results belong to the city they were chosen in.
     effect(() => {
       this.cities.selectedSlug();
+      this.identity();
       untracked(() => this.reset());
     });
     // The selected itinerary is drawn along its lines' stops once they are known.
@@ -210,11 +215,12 @@ export class PlannerStore {
   }
 
   async useMyLocation(end: PlanEnd): Promise<void> {
+    const version = ++this.locationVersion;
     const city = this.cities.selected();
     this.locating.set(end);
     this.locateProblem.set(null);
     const fix = await this.location.locate();
-    if (this.locating() !== end) return;
+    if (version !== this.locationVersion || this.locating() !== end) return;
     this.locating.set(null);
     if (fix.kind !== 'ok') {
       this.locateProblem.set({ end, problem: fix.kind });
@@ -303,6 +309,8 @@ export class PlannerStore {
   }
 
   private changed(): void {
+    this.locationVersion++;
+    this.locating.set(null);
     this.formError.set(null);
     this.locateProblem.set(null);
     this.run++;
@@ -313,6 +321,11 @@ export class PlannerStore {
   }
 
   private reset(): void {
+    this.contextVersion++;
+    clearInterval(this.ticker);
+    this.retryAt.set(null);
+    this.request.set({ kind: 'idle' });
+    this.selected.set(0);
     this.from.set(null);
     this.to.set(null);
     this.fromText.set('');
@@ -334,6 +347,7 @@ export class PlannerStore {
   }
 
   private loadLineStops(itinerary: Itinerary, city: string): void {
+    const context = this.contextVersion;
     for (const leg of itinerary.legs) {
       if (leg.kind !== 'ride' || this.lineStops().has(leg.line_slug)) continue;
       const key = `${city}/${leg.line_slug}`;
@@ -343,13 +357,15 @@ export class PlannerStore {
         this.lineCache.set(key, pending);
         pending.then(
           (line) => {
-            if (this.cities.selectedSlug() !== city) return;
+            if (context !== this.contextVersion || this.cities.selectedSlug() !== city) return;
             const next = new Map(this.lineStops());
             next.set(leg.line_slug, line.stops);
             this.lineStops.set(next);
           },
           // Without the line's stops the ride is drawn as a straight segment.
-          () => this.lineCache.delete(key),
+          () => {
+            if (context === this.contextVersion) this.lineCache.delete(key);
+          },
         );
       }
     }
@@ -360,7 +376,8 @@ export class PlannerStore {
       params: () => {
         const city = this.cities.selected();
         const q = query().trim();
-        return city && q.length >= 2 && place() === null ? { city, q } : undefined;
+        const userId = this.identity();
+        return city && q.length >= 2 && place() === null ? { city, q, userId } : undefined;
       },
       loader: ({ params }) => this.stopIndex.search(params.city, params.q, SUGGESTION_LIMIT),
     });

@@ -14,6 +14,7 @@ export interface MapHandle {
   setStyle(style: StyleSpecification): unknown;
   fitBounds(bounds: LngLatBoundsLike, options?: { padding?: number; maxZoom?: number }): unknown;
   resize(): unknown;
+  getCenter(): { lng: number; lat: number };
   remove(): void;
 }
 

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiError } from '@inecekvar/data-access';
+import { ApiError, CatalogApi, FETCH, provideDataAccess } from '@inecekvar/data-access';
 import { CityStore } from '../city/city.store';
 import { ConnectivityService } from '../shared/connectivity.service';
 import { LocateResult } from '../shared/location';
@@ -7,9 +7,11 @@ import {
   catalogTesting,
   fakeCatalog,
   FakeCatalog,
+  FakeSession,
   offline,
   SAMPLE_CITY,
 } from '../testing/catalog.fixtures';
+import { deferred } from '../testing/deferred';
 import { MAX_QUERY_LENGTH, SEARCH_DEBOUNCE_MS, SearchStore } from './search.store';
 import { samplePoints, StopIndex } from './stop-index';
 
@@ -21,11 +23,19 @@ async function flush(): Promise<void> {
 }
 
 async function setup(
-  options: { catalog?: FakeCatalog; city?: boolean; locate?: () => Promise<LocateResult> } = {},
+  options: {
+    catalog?: FakeCatalog;
+    city?: boolean;
+    locate?: () => Promise<LocateResult>;
+    session?: FakeSession;
+  } = {},
 ) {
   const catalog = options.catalog ?? fakeCatalog();
   TestBed.configureTestingModule({
-    providers: [...catalogTesting({ catalog, locate: options.locate }), SearchStore],
+    providers: [
+      ...catalogTesting({ catalog, locate: options.locate, session: options.session }),
+      SearchStore,
+    ],
   });
   const cities = TestBed.inject(CityStore);
   await cities.init();
@@ -143,6 +153,64 @@ describe('SearchStore', () => {
 });
 
 describe('SearchStore nearby lines', () => {
+  it('sends nearby coordinates with three decimal places in the request URL', async () => {
+    const urls: string[] = [];
+    const fetcher = async (input: RequestInfo | URL): Promise<Response> => {
+      const url = input instanceof Request ? input.url : String(input);
+      urls.push(url);
+      const body = new URL(url).pathname.endsWith('/cities') ? [SAMPLE_CITY] : [];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideDataAccess({ apiBase: 'https://api.test/v1', tilesBase: 'https://tiles.test' }),
+        ...catalogTesting({
+          locate: async () => ({ kind: 'ok', lng: 34.01234567, lat: 42.51234567 }),
+        }),
+        { provide: CatalogApi, useClass: CatalogApi },
+        { provide: FETCH, useValue: fetcher },
+        SearchStore,
+      ],
+    });
+    await TestBed.inject(CityStore).init();
+    await TestBed.inject(CityStore).select(SAMPLE_CITY.slug);
+    const store = TestBed.inject(SearchStore);
+    await flush();
+    await store.findNearby();
+    const nearby = urls.find((url) => url.includes('/stops/near?'));
+    expect(nearby).toBeDefined();
+    const params = new URL(nearby ?? 'https://api.test').searchParams;
+    expect(params.get('lat')).toBe('42.512');
+    expect(params.get('lng')).toBe('34.012');
+  });
+
+  it('clears personal search state on sign-out and ignores a late nearby response', async () => {
+    const session = new FakeSession();
+    session.signIn('user-a');
+    const { store, catalog } = await setup({ session });
+    await store.findNearby();
+    expect(store.nearby().kind).toBe('ready');
+    store.setQuery('orn-2');
+    store.mode.set('minibus');
+    const response = deferred<Awaited<ReturnType<typeof catalog.stopsNear>>>();
+    catalog.stopsNear.impl = () => response.promise;
+    const finding = store.findNearby();
+    await flush();
+    session.signOut();
+    TestBed.tick();
+    expect(store.query()).toBe('');
+    expect(store.mode()).toBe('all');
+    expect(store.nearby()).toEqual({ kind: 'idle' });
+    response.resolve([]);
+    await finding;
+    await flush();
+    expect(store.nearby()).toEqual({ kind: 'idle' });
+    expect(store.term()).toBe('');
+  });
+
   it('turns nearby stops of the city into lines with the nearest stop and distance', async () => {
     const { store, catalog } = await setup();
     catalog.stopsNear.impl = async () => [
@@ -224,14 +292,75 @@ describe('StopIndex', () => {
     expect(found.map((s) => s.slug)).toEqual(['ornek-durak-4-4']);
   });
 
-  it('forgets a failed sampling so the next search retries', async () => {
+  it('backs off failed stop sampling before retrying', async () => {
     const catalog = fakeCatalog();
     const working = catalog.stopsNear.impl;
     catalog.stopsNear.impl = async () => Promise.reject(offline());
     TestBed.configureTestingModule({ providers: catalogTesting({ catalog }) });
     const index = TestBed.inject(StopIndex);
     await expect(index.search(SAMPLE_CITY, 'durak')).rejects.toBeInstanceOf(ApiError);
+    const calls = catalog.stopsNear.calls.length;
     catalog.stopsNear.impl = working;
-    expect((await index.search(SAMPLE_CITY, 'durak 1-1')).length).toBe(1);
+    await expect(index.search(SAMPLE_CITY, 'durak')).rejects.toBeInstanceOf(ApiError);
+    expect(catalog.stopsNear.calls).toHaveLength(calls);
+    vi.useFakeTimers();
+    try {
+      vi.advanceTimersByTime(2000);
+      expect((await index.search(SAMPLE_CITY, 'durak 1-1')).length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('honours ten seconds of Retry-After for stop sampling', async () => {
+    vi.useFakeTimers();
+    try {
+      const catalog = fakeCatalog();
+      const working = catalog.stopsNear.impl;
+      catalog.stopsNear.impl = async () => {
+        throw new ApiError('rate_limited', 429, 'rate_limited', 'r', null, 10);
+      };
+      TestBed.configureTestingModule({ providers: catalogTesting({ catalog }) });
+      const index = TestBed.inject(StopIndex);
+      await expect(index.stopsOf(SAMPLE_CITY)).rejects.toBeInstanceOf(ApiError);
+      const calls = catalog.stopsNear.calls.length;
+      catalog.stopsNear.impl = working;
+      vi.advanceTimersByTime(9999);
+      await expect(index.stopsOf(SAMPLE_CITY)).rejects.toBeInstanceOf(ApiError);
+      expect(catalog.stopsNear.calls).toHaveLength(calls);
+      vi.advanceTimersByTime(1);
+      await expect(index.stopsOf(SAMPLE_CITY)).resolves.toHaveLength(20);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('limits stop grid fetches to three and shares an in-flight city load', async () => {
+    const catalog = fakeCatalog();
+    const gates: ReturnType<typeof deferred<Awaited<ReturnType<typeof catalog.stopsNear>>>>[] = [];
+    let active = 0;
+    let peak = 0;
+    catalog.stopsNear.impl = async () => {
+      const gate = deferred<Awaited<ReturnType<typeof catalog.stopsNear>>>();
+      gates.push(gate);
+      peak = Math.max(peak, ++active);
+      try {
+        return await gate.promise;
+      } finally {
+        active--;
+      }
+    };
+    TestBed.configureTestingModule({ providers: catalogTesting({ catalog }) });
+    const index = TestBed.inject(StopIndex);
+    const first = index.stopsOf(SAMPLE_CITY);
+    expect(index.stopsOf(SAMPLE_CITY)).toBe(first);
+    expect(gates).toHaveLength(3);
+    for (let batch = 0; batch < 3; batch++) {
+      gates.slice(batch * 3, batch * 3 + 3).forEach((gate) => gate.resolve([]));
+      await flush();
+    }
+    await first;
+    expect(peak).toBe(3);
+    expect(catalog.stopsNear.calls).toHaveLength(9);
   });
 });

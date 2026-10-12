@@ -34,6 +34,9 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
         <p class="iv-kicker">{{ 'favorites.kicker' | t }}</p>
         <h1 class="iv-heading">{{ 'favorites.heading' | t }}</h1>
         <p class="iv-lead">{{ 'favorites.lead' | t }}</p>
+        @if (favorites.storageError()) {
+          <p class="note note--warn" role="alert">{{ 'favorites.storageError' | t }}</p>
+        }
 
         @if (favorites.signedIn()) {
           @switch (favorites.merge().kind) {

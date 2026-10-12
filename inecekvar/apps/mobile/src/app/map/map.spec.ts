@@ -4,6 +4,7 @@ import { TILES_BASE_URL } from '@inecekvar/data-access';
 import type { StyleSpecification } from 'maplibre-gl';
 import { ThemeService } from '../core/theme.service';
 import { i18nTesting } from '../testing/i18n.testing';
+import { deferred } from '../testing/deferred';
 import {
   createMapLibrary,
   CreateMapOptions,
@@ -50,6 +51,9 @@ class FakeMap implements MapHandle {
   }
   resize() {
     return this;
+  }
+  getCenter() {
+    return { lng: 34.05, lat: 42.54 };
   }
   fitBounds(bounds: unknown) {
     this.fits.push(bounds);
@@ -111,6 +115,39 @@ function render(library = new FakeLibrary(), loader?: () => Promise<MapLibrary>)
 }
 
 describe('MapComponent', () => {
+  it('switches the basemap source when the city input changes', async () => {
+    const { fixture, library } = render();
+    await settle(fixture);
+    library.maps[0]?.emit('load');
+    fixture.componentInstance.city.set('city-b');
+    await settle(fixture);
+    expect(library.probes.at(-1)).toBe('pmtiles://https://tiles.test/city-b.pmtiles');
+    expect(library.maps).toHaveLength(1);
+    expect(library.maps[0]?.styles.at(-1)?.sources['basemap']).toMatchObject({
+      url: 'pmtiles://https://tiles.test/city-b.pmtiles',
+    });
+  });
+
+  it('ignores a slow basemap probe from the previous city', async () => {
+    const library = new FakeLibrary();
+    const first = deferred<boolean>();
+    library.probeBasemap = async (url) => {
+      library.probes.push(url);
+      return url.includes('ornek-test-sehri') ? first.promise : true;
+    };
+    const { fixture } = render(library);
+    await settle(fixture);
+    expect(library.probes).toHaveLength(1);
+    fixture.componentInstance.city.set('city-b');
+    await settle(fixture);
+    first.resolve(true);
+    await settle(fixture);
+    expect(library.maps).toHaveLength(1);
+    expect(library.maps[0]?.styles.at(-1)?.sources['basemap']).toMatchObject({
+      url: 'pmtiles://https://tiles.test/city-b.pmtiles',
+    });
+  });
+
   it('shows the route sketch while loading, then the map with the basemap', async () => {
     const { fixture, library, el } = render();
     fixture.detectChanges();
@@ -350,6 +387,41 @@ describe('MapComponent in the planner', () => {
     const fixture = TestBed.createComponent(PlannerHostComponent);
     return { fixture, library };
   }
+
+  it('offers a named keyboard button that picks the current map centre', async () => {
+    const { fixture, library } = renderPlanner();
+    await settle(fixture);
+    library.maps[0]?.emit('load');
+    await settle(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    const button = root.querySelector<HTMLButtonElement>('.iv-map-pick-centre');
+    expect(button).not.toBeNull();
+    expect(button?.textContent?.trim()).toBe('Harita merkezini seç');
+    button?.click();
+    await settle(fixture);
+    expect(fixture.componentInstance.picks).toEqual([[34.05, 42.54]]);
+    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('42.54');
+    expect(root.querySelector('.iv-map-crosshair')).not.toBeNull();
+  });
+
+  it('picks the centre with Enter and Space on the focused map container', async () => {
+    const { fixture, library } = renderPlanner();
+    await settle(fixture);
+    library.maps[0]?.emit('load');
+    await settle(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    const canvas = root.querySelector<HTMLElement>('.iv-map-canvas');
+    expect(canvas?.getAttribute('tabindex')).toBe('0');
+    expect(canvas?.getAttribute('aria-hidden')).toBeNull();
+    canvas?.focus();
+    for (const key of ['Enter', ' ']) {
+      canvas?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    }
+    expect(fixture.componentInstance.picks).toEqual([
+      [34.05, 42.54],
+      [34.05, 42.54],
+    ]);
+  });
 
   it('frames the city area, emits taps only while picking and refits on a new itinerary', async () => {
     const { fixture, library } = renderPlanner();

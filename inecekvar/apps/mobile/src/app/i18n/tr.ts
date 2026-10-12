@@ -75,6 +75,8 @@ export const tr = {
     errorTitle: 'Durak açılamadı',
   },
   map: {
+    pickCentre: 'Harita merkezini seç',
+    pointChosen: 'Nokta seçildi: {{lat}}, {{lng}}.',
     loading: 'Harita yükleniyor',
     basemapUnavailable: 'Harita altlığı yüklenemedi; güzergâh yine de çizildi.',
     unavailable: 'Etkileşimli harita bu cihazda açılamadı; güzergâhın taslağı gösteriliyor.',
@@ -224,6 +226,7 @@ export const tr = {
     retry: 'Yeniden dene',
   },
   favorites: {
+    storageError: 'Favoriler cihaza kaydedilemedi. Cihazda yer açıp yeniden dene.',
     kicker: 'Cebindeki hatlar',
     heading: 'Favoriler',
     lead: 'Her gün bindiğin hatlar tek dokunuşla burada.',

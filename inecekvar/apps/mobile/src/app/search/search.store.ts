@@ -8,7 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ApiError, LineListItem, StopSummary } from '@inecekvar/data-access';
+import { ApiError, LineListItem, SessionStore, StopSummary } from '@inecekvar/data-access';
 import { LineMode } from '@inecekvar/domain';
 import { CityStore } from '../city/city.store';
 import { CatalogSource } from '../packs/catalog-source';
@@ -16,7 +16,7 @@ import { PackRegistry } from '../packs/pack-registry';
 import { ConnectivityService } from '../shared/connectivity.service';
 import { debounced } from '../shared/debounced';
 import { distanceMeters, inBbox } from '../shared/format';
-import { LOCATION_SOURCE } from '../shared/location';
+import { LOCATION_SOURCE, quantizeCoord } from '../shared/location';
 import { StopIndex } from './stop-index';
 
 export type ModeFilter = LineMode | 'all';
@@ -64,6 +64,8 @@ export class SearchStore {
   private readonly api = inject(CatalogSource);
   private readonly packs = inject(PackRegistry);
   private readonly cities = inject(CityStore);
+  private readonly session = inject(SessionStore);
+  private readonly identity = computed(() => this.session.user()?.id ?? null);
   private readonly stopIndex = inject(StopIndex);
   private readonly connectivity = inject(ConnectivityService);
   private readonly location = inject(LOCATION_SOURCE);
@@ -80,7 +82,12 @@ export class SearchStore {
     params: () => {
       const city = this.cities.selectedSlug();
       if (!city) return undefined;
-      return { city, q: this.term(), install: this.packs.manifest(city)?.installId ?? null };
+      return {
+        city,
+        q: this.term(),
+        userId: this.identity(),
+        install: this.packs.manifest(city)?.installId ?? null,
+      };
     },
     loader: ({ params, abortSignal }) =>
       this.api.lines({ city: params.city, q: params.q || undefined, limit: 100 }, abortSignal),
@@ -91,7 +98,12 @@ export class SearchStore {
       const city = this.cities.selected();
       const q = this.term();
       if (!city || q.length < 2) return undefined;
-      return { city, q, install: this.packs.manifest(city.slug)?.installId ?? null };
+      return {
+        city,
+        q,
+        userId: this.identity(),
+        install: this.packs.manifest(city.slug)?.installId ?? null,
+      };
     },
     loader: ({ params }) => this.stopIndex.search(params.city, params.q),
   });
@@ -122,6 +134,7 @@ export class SearchStore {
   });
 
   constructor() {
+    let contextInitialized = false;
     // Coming back online retries a search that failed for lack of a connection.
     effect(() => {
       if (this.connectivity.online() && untracked(() => this.view()) === 'offline') this.retry();
@@ -129,7 +142,10 @@ export class SearchStore {
     // A nearby result belongs to the city it was computed for.
     effect(() => {
       this.cities.selectedSlug();
+      this.identity();
       untracked(() => {
+        if (contextInitialized) this.clear();
+        contextInitialized = true;
         this.nearbyRun++;
         this.nearby.set({ kind: 'idle' });
       });
@@ -168,9 +184,10 @@ export class SearchStore {
     try {
       // With the city's pack installed this is computed on the device, without a request.
       const near = await this.api.stopsNear(
-        { lat: fix.lat, lng: fix.lng, radius: NEARBY_RADIUS_M },
+        { lat: quantizeCoord(fix.lat, 3), lng: quantizeCoord(fix.lng, 3), radius: NEARBY_RADIUS_M },
         slug,
       );
+      if (!current()) return;
       // `stops/near` is not scoped to a city; keep the selected city's stops only.
       const candidates = near
         .filter((stop) => !city || inBbox(stop.location, city.bbox))

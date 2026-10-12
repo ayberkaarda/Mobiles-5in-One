@@ -17,6 +17,10 @@ type GeolocationPlugin = Pick<
 
 const PERMISSION_DENIED = 1;
 
+export function quantizeCoord(value: number, decimals: number): number {
+  return Number(value.toFixed(decimals));
+}
+
 function isDenied(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) return false;
   const { code, message } = error as { code?: unknown; message?: unknown };

@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, signal, untracked } from '@angula
 import { AccountApi, ApiError, CatalogApi, Favorite, SessionStore } from '@inecekvar/data-access';
 import { isLineMode, LineMode } from '@inecekvar/domain';
 import { PREFERENCE_STORE } from '../city/city.store';
+import { mapPool } from '../shared/async-pool';
 import { lineMode } from '../shared/format';
 import { PREF_KEYS, readPref } from './local-prefs';
 
@@ -24,6 +25,23 @@ export const GUEST_FAVORITES_KEY = 'iv.favorites';
  * this device's own guest list only, never the account list.
  */
 export const MERGED_FAVORITES_KEY = 'iv.favorites.merged';
+export const MERGED_ACCOUNTS_KEY = 'iv.favorites.merge-accounts';
+export const mergedFavoritesKey = (userId: string) =>
+  `${MERGED_FAVORITES_KEY}.${encodeURIComponent(userId)}`;
+const MAX_GUEST_FAVORITES = 200;
+const MAX_MERGED_ACCOUNTS = 20;
+const MAX_DESCRIPTIONS = 100;
+
+function parseKeys(raw: string | null): string[] {
+  try {
+    const value: unknown = JSON.parse(raw ?? '[]');
+    return Array.isArray(value)
+      ? value.filter((key): key is string => typeof key === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 export type AccountListStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -117,11 +135,18 @@ export class FavoritesStore {
   private userId: string | null = null;
   private epoch = 0;
   private syncing: Promise<void> | null = null;
+  private readonly queues = new Map<string, Promise<void>>();
+  private storageQueue = Promise.resolve();
+  private legacyMerged: Promise<void> | null = null;
+  private readonly decisions = new Map<string, { version: number; on: boolean }>();
+  private decisionVersion = 0;
+  private journal: Map<string, { line: FavoriteLine; on: boolean }> | null = null;
 
   readonly accountStatus = signal<AccountListStatus>('idle');
   readonly merge = signal<MergeState>({ kind: 'idle' });
   /** Set when a signed-in toggle failed and was rolled back. */
   readonly toggleFailed = signal(false);
+  readonly storageError = signal(false);
 
   readonly signedIn = this.session.isSignedIn;
   /** The guest list on this device, whatever the session. */
@@ -167,52 +192,62 @@ export class FavoritesStore {
 
   private async toggleGuest(entry: FavoriteLine): Promise<void> {
     await this.guestRestored;
-    const lines = this.guest();
-    const next = lines.some((l) => sameLine(l, entry))
-      ? lines.filter((l) => !sameLine(l, entry))
-      : [...lines, entry];
-    this.guest.set(next);
-    try {
+    await this.storeSerial(async () => {
+      const lines = this.guest();
+      const next = lines.some((l) => sameLine(l, entry))
+        ? lines.filter((l) => !sameLine(l, entry))
+        : [...lines, entry].slice(-MAX_GUEST_FAVORITES);
+      this.guest.set(next);
       await this.prefs.set(GUEST_FAVORITES_KEY, JSON.stringify(next));
-    } catch {
-      // The change still holds for this session.
-    }
+    });
   }
 
   private async toggleAccount(entry: FavoriteLine): Promise<void> {
     const key = keyOf(entry);
     if (this.busyKeys().has(key)) return;
     const epoch = this.epoch;
-    const current = () => epoch === this.epoch;
+    const userId = this.userId;
+    const current = () => this.isCurrent(epoch, userId);
     this.setBusy(key, true);
     this.toggleFailed.set(false);
     const wasOn = this.has(entry.city, entry.slug);
     const existing = this.account()?.find((l) => sameLine(l, entry));
-    try {
-      const lineId = existing?.lineId ?? (await this.resolveId(entry));
+    this.decisions.set(key, { version: ++this.decisionVersion, on: !wasOn });
+    this.applyAccount(entry, !wasOn);
+    await this.enqueue(key, async () => {
       if (!current()) return;
-      const withId: FavoriteLine = { ...entry, lineId };
-      this.known.set(lineId, withId);
-      // Optimistic: the star changes before the API answers.
-      this.applyAccount(withId, !wasOn);
       try {
-        if (wasOn) await this.accountApi.removeFavorite(lineId);
-        else await this.accountApi.addFavorite(lineId);
-      } catch (error) {
+        const lineId = existing?.lineId ?? (await this.resolveId(entry));
         if (!current()) return;
-        // Removing a favourite that is already gone is the wanted end state.
-        if (wasOn && isGone(error)) return;
-        this.applyAccount(existing ?? withId, wasOn);
-        this.toggleFailed.set(true);
+        const withId: FavoriteLine = { ...entry, lineId };
+        this.known.set(lineId, withId);
+        // Optimistic: the star changes before the API answers.
+        this.applyAccount(withId, !wasOn);
+        try {
+          if (!current()) return;
+          if (wasOn) await this.accountApi.removeFavorite(lineId);
+          else await this.accountApi.addFavorite(lineId);
+          if (!current()) return;
+        } catch (error) {
+          if (!current()) return;
+          // Removing a favourite that is already gone is the wanted end state.
+          if (wasOn && isGone(error)) return;
+          this.applyAccount(existing ?? withId, wasOn);
+          this.toggleFailed.set(true);
+        }
+      } catch {
+        if (current()) {
+          this.applyAccount(existing ?? entry, wasOn);
+          this.toggleFailed.set(true);
+        }
+      } finally {
+        if (current()) this.setBusy(key, false);
       }
-    } catch {
-      if (current()) this.toggleFailed.set(true);
-    } finally {
-      if (current()) this.setBusy(key, false);
-    }
+    });
   }
 
   private applyAccount(line: FavoriteLine, on: boolean): void {
+    this.journal?.set(keyOf(line), { line, on });
     const lines = this.account() ?? [];
     const without = lines.filter((l) => !sameLine(l, line));
     this.account.set(on ? [...without, line] : without);
@@ -232,6 +267,8 @@ export class FavoritesStore {
     this.userId = id;
     this.account.set(null);
     this.known = new Map();
+    this.journal = null;
+    this.decisions.clear();
     this.syncing = null;
     this.busyKeys.set(new Set());
     this.merge.set({ kind: 'idle' });
@@ -248,60 +285,105 @@ export class FavoritesStore {
   }
 
   private async runSync(epoch: number, userId: string): Promise<void> {
-    const current = () => epoch === this.epoch;
+    const current = () => this.isCurrent(epoch, userId);
     await this.guestRestored;
     if (!current()) return;
     this.accountStatus.set('loading');
+    const journal = new Map<string, { line: FavoriteLine; on: boolean }>();
+    this.journal = journal;
     let remote: Favorite[];
     try {
       remote = await this.accountApi.favorites();
     } catch {
-      if (current()) this.accountStatus.set('error');
+      if (current()) {
+        this.journal = null;
+        this.accountStatus.set('error');
+      }
       return;
     }
     if (!current()) return;
     for (const line of this.guest()) {
       if (line.lineId) this.known.set(line.lineId, line);
     }
-    const listed = await Promise.all(remote.map((fav) => this.describe(fav)));
+    let unknown = 0;
+    const listed = await mapPool(remote, 4, (fav) => {
+      const resolve = this.known.has(fav.line_id) || unknown++ < MAX_DESCRIPTIONS;
+      return current() ? this.describe(fav, resolve, current) : Promise.resolve(this.minimal(fav));
+    });
     if (!current()) return;
     // Keep optimistic changes made while the list was loading.
-    const pending = (this.account() ?? []).filter((l) => !listed.some((r) => sameLine(r, l)));
-    this.account.set([...listed, ...pending]);
+    const reconciled = new Map(listed.map((line) => [keyOf(line), line]));
+    for (const [key, change] of journal) {
+      if (change.on) reconciled.set(key, change.line);
+      else reconciled.delete(key);
+    }
+    this.journal = null;
+    this.account.set([...reconciled.values()]);
     this.accountStatus.set('ready');
     await this.mergeGuest(epoch, userId, new Set(remote.map((f) => f.line_id)));
   }
 
   private async mergeGuest(epoch: number, userId: string, onAccount: Set<string>): Promise<void> {
-    const current = () => epoch === this.epoch;
-    const mergedAll = parseMerged(await this.readPref(MERGED_FAVORITES_KEY));
-    const done = new Set(mergedAll[userId] ?? []);
+    const current = () => this.isCurrent(epoch, userId);
+    const started = this.decisionVersion;
+    this.legacyMerged ??= this.migrateMerged();
+    await this.legacyMerged;
+    if (!current()) return;
+    const stored = await this.readPref(mergedFavoritesKey(userId));
+    if (!current()) return;
+    const done = new Set(parseKeys(stored));
     const todo = this.guest().filter((line) => !done.has(keyOf(line)));
-    if (todo.length === 0 || !current()) return;
+    if (!current()) return;
+    if (todo.length === 0) {
+      if (stored !== null) await this.writeMerged(userId, done);
+      if (!current()) return;
+      return;
+    }
     this.merge.set({ kind: 'running' });
     let added = 0;
     let failed = 0;
     for (const line of todo) {
       if (!current()) return;
-      try {
-        const lineId = line.lineId ?? (await this.resolveId(line));
-        if (!onAccount.has(lineId)) {
-          await this.accountApi.addFavorite(lineId);
-          onAccount.add(lineId);
-          added += 1;
-          if (current()) {
-            const withId = { ...line, lineId };
-            this.known.set(lineId, withId);
-            if (!this.account()?.some((l) => l.lineId === lineId)) this.applyAccount(withId, true);
-          }
+      await this.enqueue(keyOf(line), async () => {
+        if (!current()) return;
+        const decision = this.decisions.get(keyOf(line));
+        if (decision && (!decision.on || decision.version > started)) {
+          done.add(keyOf(line));
+          return;
         }
-        done.add(keyOf(line));
-      } catch (error) {
-        // A line that no longer exists cannot be merged; it is not tried again.
-        if (isGone(error)) done.add(keyOf(line));
-        else failed += 1;
-      }
+        try {
+          const lineId = line.lineId ?? (await this.resolveId(line));
+          if (!current()) return;
+          const latest = this.decisions.get(keyOf(line));
+          if (latest && (!latest.on || latest.version > started)) {
+            done.add(keyOf(line));
+            return;
+          }
+          if (!onAccount.has(lineId)) {
+            if (!current()) return;
+            await this.accountApi.addFavorite(lineId);
+            if (!current()) return;
+            onAccount.add(lineId);
+            added += 1;
+            if (current()) {
+              const withId = { ...line, lineId };
+              this.known.set(lineId, withId);
+              if (!this.account()?.some((l) => l.lineId === lineId)) {
+                this.applyAccount(withId, true);
+              }
+            }
+          }
+          done.add(keyOf(line));
+        } catch (error) {
+          if (!current()) return;
+          // A line that no longer exists cannot be merged; it is not tried again.
+          if (isGone(error)) done.add(keyOf(line));
+          else failed += 1;
+        }
+      });
+      if (!current()) return;
       await this.writeMerged(userId, done);
+      if (!current()) return;
     }
     if (current()) {
       this.merge.set(failed > 0 ? { kind: 'partial', added, failed } : { kind: 'done', added });
@@ -309,13 +391,56 @@ export class FavoritesStore {
   }
 
   private async writeMerged(userId: string, done: Set<string>): Promise<void> {
-    const all = parseMerged(await this.readPref(MERGED_FAVORITES_KEY));
-    all[userId] = [...done];
-    try {
-      await this.prefs.set(MERGED_FAVORITES_KEY, JSON.stringify(all));
-    } catch {
-      // Without storage the merge is simply replayed; PUT is idempotent.
-    }
+    const keys = [...done].slice(-MAX_GUEST_FAVORITES);
+    await this.storeSerial(async () => {
+      await this.prefs.set(mergedFavoritesKey(userId), JSON.stringify(keys));
+      const accounts = parseKeys(await this.readPref(MERGED_ACCOUNTS_KEY));
+      const next = [...accounts.filter((id) => id !== userId), userId];
+      await this.prefs.set(MERGED_ACCOUNTS_KEY, JSON.stringify(next.slice(-MAX_MERGED_ACCOUNTS)));
+      for (const id of next.slice(0, Math.max(0, next.length - MAX_MERGED_ACCOUNTS))) {
+        await this.prefs.remove(mergedFavoritesKey(id));
+      }
+    });
+  }
+
+  private async migrateMerged(): Promise<void> {
+    await this.storeSerial(async () => {
+      const legacy = parseMerged(await this.readPref(MERGED_FAVORITES_KEY));
+      const accounts = parseKeys(await this.readPref(MERGED_ACCOUNTS_KEY));
+      const next = [...new Set([...Object.keys(legacy), ...accounts])];
+      const retained = next.slice(-MAX_MERGED_ACCOUNTS);
+      for (const id of retained) {
+        const key = mergedFavoritesKey(id);
+        if (legacy[id] && (await this.readPref(key)) === null) {
+          await this.prefs.set(key, JSON.stringify(legacy[id].slice(-MAX_GUEST_FAVORITES)));
+        }
+      }
+      if (Object.keys(legacy).length > 0) {
+        await this.prefs.set(MERGED_ACCOUNTS_KEY, JSON.stringify(retained));
+        await this.prefs.remove(MERGED_FAVORITES_KEY);
+      }
+    });
+  }
+
+  private isCurrent(epoch: number, userId: string | null): boolean {
+    return (
+      epoch === this.epoch && userId === this.userId && userId === (this.session.user()?.id ?? null)
+    );
+  }
+
+  private enqueue(key: string, work: () => Promise<void>): Promise<void> {
+    const pending = (this.queues.get(key) ?? Promise.resolve()).then(work);
+    this.queues.set(key, pending);
+    void pending.finally(() => {
+      if (this.queues.get(key) === pending) this.queues.delete(key);
+    });
+    return pending;
+  }
+
+  private storeSerial(work: () => Promise<void>): Promise<void> {
+    const pending = this.storageQueue.then(work).catch(() => this.storageError.set(true));
+    this.storageQueue = pending;
+    return pending;
   }
 
   /** The line id of a saved entry; entries from before sync carry only city and slug. */
@@ -328,9 +453,14 @@ export class FavoritesStore {
   }
 
   /** Code, name and mode of an account favourite, from what is known or from the line page. */
-  private async describe(fav: Favorite): Promise<FavoriteLine> {
+  private async describe(
+    fav: Favorite,
+    resolve: boolean,
+    current: () => boolean,
+  ): Promise<FavoriteLine> {
     const known = this.known.get(fav.line_id);
     if (known) return { ...known, city: fav.city, slug: fav.slug, lineId: fav.line_id };
+    if (!resolve) return this.minimal(fav);
     try {
       const line = await this.catalog.line(fav.slug, fav.city);
       const entry: FavoriteLine = {
@@ -341,18 +471,22 @@ export class FavoritesStore {
         mode: lineMode(line.mode),
         lineId: fav.line_id,
       };
-      this.known.set(fav.line_id, entry);
+      if (current()) this.known.set(fav.line_id, entry);
       return entry;
     } catch {
-      return {
-        city: fav.city,
-        slug: fav.slug,
-        code: fav.slug,
-        name: fav.slug,
-        mode: 'dolmus',
-        lineId: fav.line_id,
-      };
+      return this.minimal(fav);
     }
+  }
+
+  private minimal(fav: Favorite): FavoriteLine {
+    return {
+      city: fav.city,
+      slug: fav.slug,
+      code: fav.slug,
+      name: fav.slug,
+      mode: 'dolmus',
+      lineId: fav.line_id,
+    };
   }
 
   private async readPref(key: string): Promise<string | null> {
@@ -368,15 +502,19 @@ export class FavoritesStore {
     if (lines === null) {
       // Package 3C kept guest favourites in localStorage; they move to Preferences once.
       const legacy = parseLines(readPref(PREF_KEYS.favorites));
-      lines = legacy ?? [];
+      lines = (legacy ?? []).slice(-MAX_GUEST_FAVORITES);
       if (legacy !== null) {
         try {
           await this.prefs.set(GUEST_FAVORITES_KEY, JSON.stringify(lines));
         } catch {
-          // Read again from localStorage next time.
+          this.storageError.set(true);
         }
       }
     }
-    this.guest.set(lines);
+    const trimmed = lines.slice(-MAX_GUEST_FAVORITES);
+    this.guest.set(trimmed);
+    if (trimmed.length !== lines.length) {
+      await this.storeSerial(() => this.prefs.set(GUEST_FAVORITES_KEY, JSON.stringify(trimmed)));
+    }
   }
 }

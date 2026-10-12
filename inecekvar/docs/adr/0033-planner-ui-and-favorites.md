@@ -136,9 +136,30 @@ Not exercised:
 - Favourites of other accounts that signed in on the same device are never shown, but their
   merge records (account id and guest keys) stay in Preferences until the app data is cleared;
   they hold no account data.
-- A guest favourite removed from the account while its merge was still running can be added
-  back by that same run; the next sign-in does not repeat it.
+- Per-line queues serialize merges and toggles; a newer user decision prevents a merge PUT.
 - Proposals for the API owner: a `GET stops?city=&q=` route (ADR-0032) and line code, name and
   mode in `GET me/favorites`, which would remove one line read per unknown favourite.
 - The `planla-light`, `planla-dark` and `planla-submitted-*` screenshots of packages 3A and 3C
   show the earlier planner placeholder.
+
+## Review round
+
+| # | Finding | Fix | Test(s) |
+| - | ------- | --- | ------- |
+| C1 | A merge could send a PUT after its account changed. | Check the captured epoch and user id after awaits and before account mutations. | `core/favorites.spec.ts`: `aborts a merge identity lookup when the account switches` |
+| C2 | Stale lists restored removals and retained obsolete entries. | Reconcile the response with a per-load add/remove journal; drop other absent entries. | `core/favorites.spec.ts`: `keeps a removal made while a stale account list is loading`; `keeps new additions during loading and drops entries absent from the server` |
+| C3 | Merge PUTs raced user DELETEs. | Both operations use the same city/slug queue; merging respects newer user decisions. | `core/favorites.spec.ts`: `queues a merge behind a user delete and never puts the removed line back` |
+| C4 | Shared merge-record writes lost another account's records. | Separate encoded account keys; serialize storage writes and migrate the legacy shared key once. | `core/favorites.spec.ts`: `preserves both account merge records when preference writes interleave`; `migrates legacy merge records once without reimporting removed favorites` |
+| C5 | Unknown favorites caused unbounded line requests. | Four-worker pool, at most 100 unknown-line resolutions per load; other entries retain minimal descriptions. | `core/favorites.spec.ts`: `resolves at most four unknown favorites concurrently`; `caps unknown favorite lookups at one hundred per load` |
+| C6 | Local records grew without bounds and storage errors were hidden. | Keep the newest 200 guest favorites and 200 keys per account, retain 20 accounts in use order, and show storage failures. | `core/favorites.spec.ts`: `trims the oldest guest favorite beyond two hundred entries`; `trims the least recently merged account beyond twenty records`; `signals a rejected favorites preference write`; `pages/plan-favorites.spec.ts`: `shows a storage failure message for guest favorites` |
+| C7 | Personal planner/search state survived identity changes; late details could enter the next account's cache. | Reset planner state and request generations on identity changes; guard late favorite descriptions. Search is covered in ADR-0032. | `planner/planner.spec.ts`: `clears planner on account switch and ignores late route and location`; `core/favorites.spec.ts`: `clears account state on a switch and ignores its late list`; `drops a previous account late line description before the next account reloads` |
+| C8 | Late location replies replaced manual or swapped endpoints. | A location version changes on requests and form edits; only the current version may apply a fix. | `planner/planner.spec.ts`: `keeps a manual stop chosen while location is pending`; `keeps swapped endpoints when an earlier location reply arrives` |
+
+The partial-merge and gone-line tests now inspect the per-account key instead of the legacy shared
+object. Their merge expectations are unchanged. Visible account-state clearing already existed;
+the additional late-description test covers the cache leak across accounts.
+
+Storage limits replace unlimited retention. An evicted account may import current guest favorites
+again on a later sign-in. The legacy shared record is removed after successful migration.
+Revert check: removing the two `current()` checks after the identity lookup and before the PUT
+turns `aborts a merge identity lookup when the account switches` red.

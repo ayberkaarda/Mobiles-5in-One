@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular';
 import { ApiError } from '@inecekvar/data-access';
 import { CityStore, PREFERENCE_STORE } from '../city/city.store';
-import { GUEST_FAVORITES_KEY } from '../core/favorites.store';
+import { FavoritesStore, GUEST_FAVORITES_KEY } from '../core/favorites.store';
 import { MAP_LIBRARY_LOADER } from '../map/map-library';
 import { PLANNER_NOW } from '../planner/planner.store';
 import {
@@ -197,6 +197,25 @@ describe('plan page', () => {
 
 describe('favourites page', () => {
   beforeEach(() => localStorage.clear());
+
+  it('shows a storage failure message for guest favorites', async () => {
+    const prefs = new MemoryPreferences();
+    prefs.set = async () => {
+      throw new Error('quota');
+    };
+    configure({ prefs });
+    const fixture = TestBed.createComponent(FavoritesPage);
+    await settle(fixture);
+    await TestBed.inject(FavoritesStore).toggle({
+      city: SAMPLE_CITY.slug,
+      slug: 'line',
+      code: '1',
+      name: 'Line',
+      mode: 'dolmus',
+    });
+    await settle(fixture);
+    expect(text(el(fixture), '[role="alert"]')).toContain('Favoriler cihaza kaydedilemedi');
+  });
 
   const guestLine = {
     city: SAMPLE_CITY.slug,

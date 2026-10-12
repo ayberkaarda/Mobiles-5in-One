@@ -21,7 +21,7 @@ import { ThemeService } from '../core/theme.service';
 import { TPipe } from '../i18n/i18n';
 import { PackRegistry } from '../packs/pack-registry';
 import { ConnectivityService } from '../shared/connectivity.service';
-import { MAP_LIBRARY_LOADER, MapHandle } from './map-library';
+import { MAP_LIBRARY_LOADER, MapHandle, MapLibrary } from './map-library';
 import {
   boundsOf,
   buildMapStyle,
@@ -68,12 +68,31 @@ export function basemapUrlFor(tilesBase: string, city: string): string {
         class="iv-map-canvas"
         [class.iv-map-canvas--on]="status() === 'ready' || status() === 'no-basemap'"
         [class.iv-map-canvas--pick]="pickable()"
-        aria-hidden="true"
+        [attr.tabindex]="pickable() ? 0 : null"
+        role="group"
+        [attr.aria-label]="label()"
+        (keydown)="onMapKey($event)"
       ></div>
+      @if (pickable()) {
+        <span class="iv-map-crosshair" aria-hidden="true">+</span>
+        <button
+          type="button"
+          class="iv-map-pick-centre"
+          [disabled]="status() !== 'ready' && status() !== 'no-basemap'"
+          (click)="pickCentre()"
+        >
+          {{ 'map.pickCentre' | t }}
+        </button>
+      }
       @if (status() === 'ready') {
         <span class="iv-map-attribution">{{ 'map.attribution' | t }}</span>
       }
     </div>
+    <p class="iv-map-announcement" aria-live="polite" aria-atomic="true">
+      @if (chosenPoint(); as point) {
+        {{ 'map.pointChosen' | t: { lng: point[0], lat: point[1] } }}
+      }
+    </p>
     @switch (status()) {
       @case ('loading') {
         <p class="iv-map-note" role="status">{{ 'map.loading' | t }}</p>
@@ -97,6 +116,44 @@ export function basemapUrlFor(tilesBase: string, city: string): string {
       border: 1px solid var(--iv-line);
       border-radius: var(--iv-radius-m);
       background: var(--iv-surface-sunk);
+    }
+    .iv-map-crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      color: var(--iv-ink);
+      background: var(--iv-surface);
+      font-size: 28px;
+      line-height: 1;
+    }
+    .iv-map-announcement {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .iv-map-pick-centre {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 1px solid var(--iv-line-strong);
+      border-radius: var(--iv-radius-s);
+      background: var(--iv-surface);
+      color: var(--iv-ink);
+      font: inherit;
+      cursor: pointer;
+    }
+    .iv-map-pick-centre:focus-visible,
+    .iv-map-canvas:focus-visible {
+      outline: 2px solid var(--iv-ink);
+      outline-offset: -3px;
     }
     .iv-map-sketch,
     .iv-map-canvas {
@@ -167,6 +224,9 @@ export class MapComponent {
   private map: MapHandle | null = null;
   private appliedStyleKey = '';
   private destroyed = false;
+  private probeGeneration = 0;
+  private readonly library = signal<MapLibrary | null>(null);
+  protected readonly chosenPoint = signal<[number, number] | null>(null);
 
   /** Route as `[lng, lat]` points; empty for a single stop. */
   readonly line = input<readonly LngLat[]>([]);
@@ -201,6 +261,19 @@ export class MapComponent {
 
   constructor() {
     afterNextRender(() => void this.start());
+    effect(() => {
+      const city = this.city();
+      const library = this.library();
+      const generation = ++this.probeGeneration;
+      if (library) {
+        untracked(() => {
+          this.chosenPoint.set(null);
+          this.basemapUrl.set(null);
+          this.status.set('loading');
+          void this.refreshBasemap(library, city, generation);
+        });
+      }
+    });
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       this.map?.remove();
@@ -270,8 +343,40 @@ export class MapComponent {
   private async start(): Promise<void> {
     try {
       const library = await this.loadLibrary(this.baseUri);
-      const city = this.city();
       await this.packs.ready();
+      if (!this.destroyed) this.library.set(library);
+    } catch {
+      if (!this.destroyed) this.status.set('failed');
+    }
+  }
+
+  protected pickCentre(): void {
+    if (!this.map || !this.pickable()) return;
+    const centre = this.map.getCenter();
+    this.emitPoint([centre.lng, centre.lat]);
+  }
+
+  protected onMapKey(event: KeyboardEvent): void {
+    if (event.target !== event.currentTarget || !this.pickable()) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.pickCentre();
+    }
+  }
+
+  private emitPoint(point: [number, number]): void {
+    this.chosenPoint.set(point);
+    this.picked.emit(point);
+  }
+
+  private async refreshBasemap(
+    library: MapLibrary,
+    city: string | null,
+    generation: number,
+  ): Promise<void> {
+    const current = () =>
+      !this.destroyed && generation === this.probeGeneration && city === this.city();
+    try {
       // An installed pack's basemap first (read from the device); otherwise the tiles host,
       // which is not tried without a connection so the offline map draws at once.
       const source = city ? this.packs.basemapSource(city) : null;
@@ -282,8 +387,12 @@ export class MapComponent {
           : null;
       const basemap =
         url !== null && (await library.probeBasemap(url, BASEMAP_PROBE_MS, source ?? undefined));
-      if (this.destroyed) return;
+      if (!current()) return;
       this.basemapUrl.set(basemap ? url : null);
+      if (this.map) {
+        this.status.set(basemap ? 'ready' : 'no-basemap');
+        return;
+      }
       const bounds = untracked(() => this.fitBounds());
       // A single stop (or a route collapsed to one point) is centred instead of fitted.
       const [sw, ne] = bounds ?? [];
@@ -299,17 +408,17 @@ export class MapComponent {
       map.on('click', (event) => {
         const at = event.lngLat;
         if (!this.destroyed && at && untracked(() => this.pickable())) {
-          this.picked.emit([at.lng, at.lat]);
+          this.emitPoint([at.lng, at.lat]);
         }
       });
       map.on('load', () => {
-        if (!this.destroyed) this.status.set(basemap ? 'ready' : 'no-basemap');
+        if (!this.destroyed) this.status.set(this.basemapUrl() ? 'ready' : 'no-basemap');
       });
       map.on('error', (event) => {
         if (event.sourceId === 'basemap' && !this.destroyed) this.status.set('no-basemap');
       });
     } catch {
-      if (!this.destroyed) this.status.set('failed');
+      if (current()) this.status.set('failed');
     }
   }
 }

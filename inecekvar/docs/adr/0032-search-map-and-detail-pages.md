@@ -136,3 +136,18 @@ Not exercised:
   worker files, decided with the offline packs (3E).
 - Contribution (3F) receives `hat` and `city` query parameters from the report button; signed-in
   favourite sync (3D) must migrate the `{ city, slug, code, name, mode }` entries.
+
+## Review round
+
+| # | Finding | Fix | Test(s) |
+| - | ------- | --- | ------- |
+| C7 | Search retained personal state across accounts. | User identity resets query, filters and nearby state and invalidates pending results. | `search/search.store.spec.ts`: `clears personal search state on sign-out and ignores a late nearby response` |
+| C9 | Failed stop sampling caused request storms. | Shared city loads, three concurrent grid fetches, exponential backoff from 2 to 60 seconds and longer Retry-After waits. Pending cells settle before a failed load is released. | `search/search.store.spec.ts`: `backs off failed stop sampling before retrying`; `honours ten seconds of Retry-After for stop sampling`; `limits stop grid fetches to three and shares an in-flight city load` |
+| C10 | Basemaps retained the old city and accepted late probes. | Re-probe on city changes; city and generation must match before applying a source. | `map/map.spec.ts`: `switches the basemap source when the city input changes`; `ignores a slow basemap probe from the previous city` |
+| C11 | Arbitrary map points could only be picked by clicking. | A labelled centre-pick button, fixed crosshair, Enter/Space support and a live announcement accompany click selection. | `map/map.spec.ts`: `offers a named keyboard button that picks the current map centre`; `picks the centre with Enter and Space on the focused map container` |
+| C12 | Requests sent device coordinates at full precision. | Quantize nearby coordinates to 3 decimals and planner endpoints to 4; retain the existing coarse location default. | `search/search.store.spec.ts`: `sends nearby coordinates with three decimal places in the request URL`; `planner/planner.spec.ts`: `quantizes planner payload endpoints to four decimal places`; `shared/shared.spec.ts`: `defaults browser location to coarse accuracy and quantizes coordinates` |
+
+The immediate stop-sampling retry test encoded the old failure behaviour and now checks backoff.
+Revert check: sending unquantized nearby coordinates turns
+`sends nearby coordinates with three decimal places in the request URL` red. The centre-pick
+button and crosshair are shown in `docs/screenshots/phase3/planla-map-pick-{light,dark}.png`.

@@ -8,11 +8,13 @@ import {
   catalogTesting,
   fakeCatalog,
   FakeCatalog,
+  FakeSession,
   SAMPLE_CITY,
   samplePlan,
   sampleStop,
   settle,
 } from '../testing/catalog.fixtures';
+import { deferred } from '../testing/deferred';
 import { i18nTesting } from '../testing/i18n.testing';
 import {
   estimateMinutes,
@@ -173,6 +175,7 @@ describe('itinerary view', () => {
 
 interface StoreOptions {
   catalog?: FakeCatalog;
+  session?: FakeSession;
   locate?: () => Promise<LocateResult>;
 }
 
@@ -182,7 +185,7 @@ async function plannerStore(options: StoreOptions = {}) {
   TestBed.configureTestingModule({
     imports: [i18nTesting()],
     providers: [
-      ...catalogTesting({ catalog, locate: options.locate }),
+      ...catalogTesting({ catalog, locate: options.locate, session: options.session }),
       { provide: PLANNER_NOW, useValue: () => now },
       PlannerStore,
     ],
@@ -210,6 +213,68 @@ async function plan(store: PlannerStore) {
 
 describe('PlannerStore', () => {
   beforeEach(() => localStorage.clear());
+
+  it('clears planner on account switch and ignores late route and location', async () => {
+    const session = new FakeSession();
+    session.signIn('user-a');
+    const route = deferred<ReturnType<typeof samplePlan>>();
+    const location = deferred<LocateResult>();
+    const { store, catalog } = await plannerStore({ session, locate: () => location.promise });
+    store.choose('from', { ...A, source: 'gps' });
+    store.choose('to', B);
+    catalog.plan.impl = () => route.promise;
+    const planning = store.submit();
+    const locating = store.useMyLocation('from');
+    session.signIn('user-b');
+    TestBed.tick();
+    expect(store.from()).toBeNull();
+    expect(store.to()).toBeNull();
+    expect(store.fromText()).toBe('');
+    expect(store.locating()).toBeNull();
+    expect(store.result()).toBeNull();
+    route.resolve(samplePlan());
+    location.resolve({ kind: 'ok', lng: A.lng, lat: A.lat });
+    await planning;
+    await locating;
+    expect(store.from()).toBeNull();
+    expect(store.result()).toBeNull();
+    expect(store.segments()).toEqual([]);
+  });
+
+  it('keeps a manual stop chosen while location is pending', async () => {
+    const location = deferred<LocateResult>();
+    const { store } = await plannerStore({ locate: () => location.promise });
+    const locating = store.useMyLocation('from');
+    store.chooseStop('from', { name: A.label, location: [A.lng, A.lat] });
+    location.resolve({ kind: 'ok', lng: B.lng, lat: B.lat });
+    await locating;
+    expect(store.from()).toEqual(A);
+    expect(store.locating()).toBeNull();
+  });
+
+  it('keeps swapped endpoints when an earlier location reply arrives', async () => {
+    const location = deferred<LocateResult>();
+    const { store } = await plannerStore({ locate: () => location.promise });
+    store.choose('from', A);
+    store.choose('to', B);
+    const locating = store.useMyLocation('from');
+    store.swap();
+    location.resolve({ kind: 'ok', lng: 34.09, lat: 42.51 });
+    await locating;
+    expect(store.from()).toEqual(B);
+    expect(store.to()).toEqual(A);
+  });
+
+  it('quantizes planner payload endpoints to four decimal places', async () => {
+    const { store, catalog } = await plannerStore();
+    store.choose('from', at(34.01234567, 42.51234567));
+    store.choose('to', at(34.05678912, 42.55678912));
+    await store.submit();
+    expect(catalog.plan.calls[0]?.[0]).toMatchObject({
+      from: { lng: 34.0123, lat: 42.5123 },
+      to: { lng: 34.0568, lat: 42.5568 },
+    });
+  });
 
   it('sends the plan, lists the itineraries and draws the selected one along its line', async () => {
     const { store, catalog } = await plannerStore();

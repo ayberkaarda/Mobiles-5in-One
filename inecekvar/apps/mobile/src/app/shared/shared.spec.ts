@@ -4,7 +4,7 @@ import { FakeNetwork } from '../testing/catalog.fixtures';
 import { ConnectivityService, NETWORK_SOURCE } from './connectivity.service';
 import { debounced } from './debounced';
 import { distanceMeters, fold, formatBytes, formatDate, inBbox, lineMode } from './format';
-import { CapacitorLocationSource } from './location';
+import { CapacitorLocationSource, quantizeCoord } from './location';
 
 describe('format helpers', () => {
   it('folds Turkish text for matching', () => {
@@ -83,6 +83,17 @@ describe('CapacitorLocationSource', () => {
       ...overrides,
     };
   }
+
+  it('defaults browser location to coarse accuracy and quantizes coordinates', async () => {
+    const p = plugin();
+    await new CapacitorLocationSource(false, p as never).locate();
+    expect(p.getCurrentPosition).toHaveBeenCalledWith(
+      expect.objectContaining({ enableHighAccuracy: false }),
+    );
+    expect(p.requestPermissions).not.toHaveBeenCalled();
+    expect(quantizeCoord(34.01234567, 3)).toBe(34.012);
+    expect(quantizeCoord(-42.55678912, 4)).toBe(-42.5568);
+  });
 
   it('asks for coarse location on native and returns one fix', async () => {
     const p = plugin();

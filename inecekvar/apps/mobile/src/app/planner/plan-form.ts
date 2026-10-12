@@ -1,4 +1,5 @@
 import { distanceMeters, inBbox } from '../shared/format';
+import { quantizeCoord } from '../shared/location';
 
 /** How a place was chosen: a stop from the city data, a tap on the map or the device position. */
 export type PlaceSource = 'stop' | 'map' | 'gps';
@@ -76,8 +77,8 @@ export function toPlanRequest(input: PlanFormInput): PlanRequestBody | null {
   }>;
   return {
     city: city.slug,
-    from: { lat: from.lat, lng: from.lng },
-    to: { lat: to.lat, lng: to.lng },
+    from: { lat: quantizeCoord(from.lat, 4), lng: quantizeCoord(from.lng, 4) },
+    to: { lat: quantizeCoord(to.lat, 4), lng: quantizeCoord(to.lng, 4) },
     max_transfers: input.maxTransfers as MaxTransfers,
   };
 }
