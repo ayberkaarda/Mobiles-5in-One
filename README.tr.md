@@ -12,7 +12,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 | [`kadro`](kadro/)         | Halı saha maç organizasyonu: kadro kur, eksik oyuncuyu bul, saha ücretini böl                                                                             | Expo (React Native), Next.js, PostgreSQL + PostGIS, pg-boss                    | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
 | [`askida`](askida/)       | "Askıda ekmek" geleneğine dayalı dayanışma ağı: bağışçılar doğrulanmış yerel esnaftan ürünleri önceden öder, ihtiyaç sahipleri tek kullanımlık kodla alır | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | Planlanan tüm fazlar birleşti (gerçek dünya kanıtları kısmen açık) | %100     |
 | [`cetele`](cetele/)       | Küçük esnaf için çevrimdışı çalışan dijital veresiye defteri                                                                                              | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | 7 fazın tamamı birleşti (sunucu, Android uygulaması, faturalama, herkese açık web, sertleştirme; gerçek dünya doğrulamaları açık) | %100     |
-| [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
+| [`inecekvar`](inecekvar/) | Türkiye şehirleri için kitle kaynaklı dolmuş / minibüs hat haritası; A noktasından B noktasına planlama ve çevrimdışı şehir paketleri                     | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | Faz 0-2 birleşti (API, veri modeli, paketler, dışa aktarım)       | %50      |
 | [`patika`](patika/)       | Sokak hayvanları için topluluk platformu: besleme noktası haritası, "beslendi" bildirimleri, sahiplendirme ilanları, veteriner rehberi                    | .NET MAUI (C#), ASP.NET Core, PostgreSQL + PostGIS                             | Yalnızca tasarım dokümanı, kod yok                                 | %0       |
 
 ## Galeri
@@ -90,22 +90,28 @@ derlenmedi. Bkz. [`askida/README.tr.md`](askida/README.tr.md) ve
 
 Cetele'nin sunucusu (Spring Boot: kimlik doğrulama, senkronizasyon, defter, hatırlatma, medya, faturalama,
 webhook, yönetim konsolu) ve Android uygulaması (Kotlin, Jetpack Compose, yerel işlem kutusuyla
-çevrimdışı çalışır, Play Billing) birleşti; 7 fazın 0-4'ü tamam. Herkese açık web (SEO ve GEO) ile
-yayın sertleştirmesi henüz birleşmedi.
+çevrimdışı çalışır, Play Billing) ile birlikte herkese açık web (SEO ve GEO) ve yayın sertleştirmesi
+de birleşti: 7 fazın 7'si tamam, gerçek dünya kanıtları açık kalıyor. Ardından sertleştirme grubu
+(PR #115), Android uygulaması ve webin tasarım yenilemesi (PR #116) ve güvenlik grubu 2. tur (PR #117:
+yeniden kimlik doğrulama kapsamı, cihaz oturumları, dükkân ve SMS üst sınırları, yönetim ve faturalama
+düzeltmeleri) birleşti.
 
-Inecek Var ve Patika için şimdilik yalnızca birer tasarım dokümanı var. Henüz
-uygulama kodu yok.
+Inecek Var'ın 0-2. fazları `main`'e birleşti (PR #118, #119, #120 ve #121): Ionic/Angular mobil PWA ve
+Capacitor Android kabuğu ile Angular SSR webi olan bir Nx workspace; veri modeli, kimlik doğrulama,
+moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarım ve hesap silme içeren bir FastAPI api.
+Uygulama arayüzü (Faz 3, bir dalda sürüyor), web SEO, webhook ve sertleştirme henüz birleşmedi.
+Patika hâlâ yalnızca tek bir spesifikasyon dokümanı; uygulama kodu yok.
 
 ### İlerleme
 
-Son güncelleme: 2026-10-11 (Cetele Phase 4 birleştirmesi için yazıldı). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
+Son güncelleme: 2026-10-12 (Cetele sertleştirme, tasarım ve güvenlik gruplarının ve Inecek Var 0-2. fazlarının birleşmesinden sonra yazıldı). Rakamlar tahmindir; bir iş grubu birleştirildikçe güncellenir.
 
 | Proje       | İlerleme | Dayanak                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kadro`     | %100     | Phase 0 ile 2 tamam; Phase 3 ile 5: 34 iş paketinin 34'ü birleşti; Phase 6: 11 çıktının 11'i birleşti. Yedi faz eşit ağırlıklı: (3 + 3 x 34/34 + 11/11) / 7 = %100. Phase 6 portfolyo kapsamında tamamdır (11 çıktının 11'i birleşti); henüz var olmayan sistemlere bağlı kanıtlar kısmi olarak kayıtlı kalır (23 güvenlik maddesinin 10'u, barındırılan origin, EAS derlemeleri, sağlayıcı hesapları, iOS). Yani %100, planlanan işin birleştiği anlamına gelir; her kontrolün üretimde kanıtlandığı anlamına gelmez.                                                                                                  |
 | `askida`    | %100     | Phase 0-6 birleşti: yedi fazın 7'si, eşit ağırlıklı (temel; veri katmanı, kimlik doğrulama ve güvenlik tabanı; dükkânlar, hesaplar ve askı; ödeme akışı, webhook'lar, esnaf ödemeleri ve yönetim paneli; Flutter uygulaması; herkese açık web, SEO ve GEO; sertleştirme ve yayına hazırlık): 7/7 = %100. %100 planlanan işin birleştiği anlamına gelir, her kontrolün üretimde kanıtlandığı anlamına gelmez: 23 güvenlik maddesinin 9'u kısmi kalır ([doğrulama matrisi](askida/docs/security/verification-matrix.md)); gerçek ödeme, gerçek cihaz doğrulaması, mağaza hesapları, barındırılan origin ve iOS denenmedi. |
-| `cetele`    | %100     | 7 fazın tamamı birleşti, fazlar eşit ağırlıklı (temel; sunucu çekirdeği, kimlik doğrulama ve güvenlik tabanı; senkronizasyon, defter, hatırlatma ve medya; Android uygulaması; faturalama, webhook ve yönetim; herkese açık web SEO ve GEO; sertleştirme ve yayın hazırlığı): planlanan fazların 7/7'si = %100. Doğrulama matrisinde 9 satır tamam, 14 satır kısmi: kısmi satırlar bu depodan kapatılamayan dış kapılara (Play hesabı, fiziksel cihaz, alan adı, hukuki inceleme) bağlı. JVM ve CI'da doğrulandı; debug uygulama yalnızca README ekran görüntüleri için yerel sunucuya karşı Android emülatöründe çalıştırıldı (giriş, örnek verinin senkronu, üç ekran), fiziksel cihaz ve uçtan uca akış denemesi yok, gerçek Play hesabı yok (Play Developer API, RTDN ve Play Integrity sahte adaptörler ve kayıtlı örneklerle çalıştı), gerçek PDF çıktısı, biyometri ve kamera denenmedi. |
-| `inecekvar` | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `cetele`    | %100     | 7 fazın tamamı birleşti, fazlar eşit ağırlıklı (temel; sunucu çekirdeği, kimlik doğrulama ve güvenlik tabanı; senkronizasyon, defter, hatırlatma ve medya; Android uygulaması; faturalama, webhook ve yönetim; herkese açık web SEO ve GEO; sertleştirme ve yayın hazırlığı): planlanan fazların 7/7'si = %100. Doğrulama matrisinde 12 satır tamam, 11 satır kısmi, 0 satır başlanmadı: kısmi satırlar bu depodan kapatılamayan dış kapılara (Play hesabı, fiziksel cihaz, alan adı, hukuki inceleme) bağlı. JVM ve CI'da doğrulandı; debug uygulama yalnızca README ekran görüntüleri için yerel sunucuya karşı Android emülatöründe çalıştırıldı (giriş, örnek verinin senkronu, üç ekran), fiziksel cihaz ve uçtan uca akış denemesi yok, gerçek Play hesabı yok (Play Developer API, RTDN ve Play Integrity sahte adaptörler ve kayıtlı örneklerle çalıştı), gerçek PDF çıktısı, biyometri ve kamera denenmedi. |
+| `inecekvar` | %50      | Plan fazları 0-5, altı faz eşit ağırlıklı. 0-2. fazlar `main`'e birleşti (temel; veri modeli, kimlik doğrulama, moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarım ve hesap silme): 3/6 = %50. Birleşmedi ve sayılmadı: Faz 3 (Ionic uygulama arayüzü, bir dalda sürüyor), web SEO, webhook ve sertleştirme. API test takımıyla (Faz 2 kapısında 506 test geçti, Testcontainers PostGIS, Redis ve MinIO) ve statik denetimlerle doğrulandı; denenmeyenler: iOS, GitHub'da CI, canlı barındırma, R2 ve PMTiles CDN, gerçek hesapla RevenueCat, güvenlik taramaları ve saldırı takımı. |
 | `patika`    | %0       | Yalnızca spesifikasyon; kod yok.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 İlerleme `main`'e birleştirilmiş işi ifade eder; yalnızca dalda duran ya da açık bir pull request'teki
@@ -121,7 +127,7 @@ lefthook.yml         git hook yapılandırması
 kadro/               Kadro monorepo (pnpm workspaces + Turborepo)
 askida/              Askıda: Laravel sunucusu (Docker), Flutter uygulaması, marka paketi, ADR'ler, spec
 cetele/              Cetele: Spring Boot sunucusu, Android uygulaması, marka paketi, ADR'ler, spec
-inecekvar/           tasarım dokümanı
+inecekvar/           Inecek Var: Nx workspace (Ionic/Angular uygulama, Angular SSR web), FastAPI api, ADR'ler, spec
 patika/              tasarım dokümanı
 ```
 
@@ -136,7 +142,7 @@ patika/              tasarım dokümanı
 
 ## Geliştirme
 
-Kadro, Askıda ve Cetele derlenebilir; Inecek Var ve Patika’da kod yok. Cetele için kök dizinde komut yok: Android ve sunucu derlemeleri `cetele/android` ve `cetele/server` içinden çalışır ([`cetele/README.tr.md`](cetele/README.tr.md)). Kadro için komutları `kadro/` içinden çalıştırın:
+Kadro, Askıda, Cetele ve Inecek Var derlenebilir; Patika’da kod yok. Cetele için kök dizinde komut yok: Android ve sunucu derlemeleri `cetele/android` ve `cetele/server` içinden çalışır ([`cetele/README.tr.md`](cetele/README.tr.md)). Kadro için komutları `kadro/` içinden çalıştırın:
 
 ```sh
 cd kadro
