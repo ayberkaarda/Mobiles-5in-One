@@ -72,3 +72,7 @@ Sunucu (JDK 21; entegrasyon testleri konteyner başlatır, Docker çalışıyor 
 ```
 ./gradlew check
 ```
+
+## Lisans
+
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

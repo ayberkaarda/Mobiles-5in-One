@@ -78,3 +78,7 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
 ```
 
 Compose yalnızca veri ve proxy servislerini çalıştırır; API ve geliştirme sunucuları makinede çalışır. Portlar ve ortam değişkenleri `docs/ops/env.md` dosyasında.
+
+## Lisans
+
+Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

@@ -178,5 +178,4 @@ The repository uses Conventional Commits, checked by commitlint through the hook
 
 ## License
 
-Kadro's packages are marked `UNLICENSED` in their `package.json` files. The repository has no
-`LICENSE` file.
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE).

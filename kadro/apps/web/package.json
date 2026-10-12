@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Kadro marketing site, SEO pages and REST API (/api/v1).",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "imports": {
     "#auth-warm-up": {

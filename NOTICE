@@ -1,0 +1,9 @@
+Copyright 2026 Ayberk Arda
+
+This repository (kadro, askida, cetele, inecekvar, patika) is licensed under the
+Apache License, Version 2.0. See the LICENSE file.
+
+Inecek Var open dataset export: licensed separately from the source code. The
+project proposes CC BY 4.0 for the dataset, but that decision needs legal
+approval, which is still pending, so no dataset licence has been granted yet.
+See inecekvar/docs/adr/0003-open-data-licence.md.

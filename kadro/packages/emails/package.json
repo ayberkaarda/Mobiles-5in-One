@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Transactional email templates and delivery transports (Resend REST, local log).",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "sideEffects": false,
   "exports": {

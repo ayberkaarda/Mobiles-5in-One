@@ -72,3 +72,7 @@ Server (JDK 21; the integration tests start containers, so Docker must be runnin
 ```
 ./gradlew check
 ```
+
+## License
+
+This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).
