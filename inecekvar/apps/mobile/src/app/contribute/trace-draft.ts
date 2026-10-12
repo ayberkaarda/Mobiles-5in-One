@@ -1,9 +1,10 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { PREFERENCE_STORE } from '../city/city.store';
 import { LngLat } from './simplify';
 
 /** Preferences key of the one local ride draft. */
 export const TRACE_DRAFT_KEY = 'iv.trace-draft';
+export const TRACE_CLEANUP_KEY = 'iv.trace-cleanup';
 /**
  * Raw points kept on the device. A longer ride is compacted in place (Douglas-Peucker at a
  * couple of metres) so the stored draft stays well under a megabyte.
@@ -28,6 +29,8 @@ export interface MarkedStop {
  */
 export interface TraceDraft {
   v: 1;
+  id: string;
+  ownerId: string;
   city: string;
   startedAt: string;
   endedAt: string | null;
@@ -70,6 +73,8 @@ export function parseDraft(raw: string | null): TraceDraft | null {
   if (typeof value !== 'object' || value === null) return null;
   const d = value as Record<string, unknown>;
   if (d['v'] !== 1) return null;
+  if (typeof d['ownerId'] !== 'string' || d['ownerId'] === '') return null;
+  if (typeof d['id'] !== 'string' || d['id'] === '') return null;
   if (typeof d['city'] !== 'string' || !SLUG.test(d['city']) || d['city'].length > 80) return null;
   if (!isIso(d['startedAt'])) return null;
   if (d['endedAt'] !== null && !isIso(d['endedAt'])) return null;
@@ -91,6 +96,8 @@ export function parseDraft(raw: string | null): TraceDraft | null {
   }
   return {
     v: 1,
+    id: d['id'],
+    ownerId: d['ownerId'],
     city: d['city'],
     startedAt: d['startedAt'],
     endedAt: d['endedAt'],
@@ -108,34 +115,76 @@ export function parseDraft(raw: string | null): TraceDraft | null {
 @Injectable({ providedIn: 'root' })
 export class TraceDraftStore {
   private readonly prefs = inject(PREFERENCE_STORE);
+  private queue: Promise<unknown> = Promise.resolve();
+  readonly cleanupPending = signal(false);
 
-  async load(): Promise<TraceDraft | null> {
-    let raw: string | null;
-    try {
-      raw = await this.prefs.get(TRACE_DRAFT_KEY);
-    } catch {
-      return null;
-    }
-    const draft = parseDraft(raw);
-    if (raw !== null && draft === null) await this.clear();
-    return draft;
+  retryCleanup(): Promise<void> {
+    return this.enqueue(async () => {
+      if (this.cleanupPending() || (await this.prefs.get(TRACE_CLEANUP_KEY)) !== null) {
+        await this.remove();
+      }
+    });
+  }
+
+  load(ownerId: string | null): Promise<TraceDraft | null> {
+    return this.enqueue(async () => {
+      if (this.cleanupPending() || (await this.prefs.get(TRACE_CLEANUP_KEY)) !== null) {
+        await this.remove();
+      }
+      let raw: string | null;
+      try {
+        raw = await this.prefs.get(TRACE_DRAFT_KEY);
+      } catch {
+        return null;
+      }
+      const draft = parseDraft(raw);
+      if (raw !== null && (!draft || draft.ownerId !== ownerId)) {
+        await this.remove();
+        return null;
+      }
+      return draft;
+    });
   }
 
   /** False when the device refused the write (storage full or blocked). */
-  async save(draft: TraceDraft): Promise<boolean> {
-    try {
-      await this.prefs.set(TRACE_DRAFT_KEY, JSON.stringify(draft));
-      return true;
-    } catch {
-      return false;
+  save(draft: TraceDraft): Promise<boolean> {
+    const raw = JSON.stringify(draft);
+    return this.enqueue(async () => {
+      if (this.cleanupPending()) return false;
+      try {
+        await this.prefs.set(TRACE_DRAFT_KEY, raw);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  clear(): Promise<void> {
+    return this.enqueue(() => this.remove());
+  }
+
+  private async remove(): Promise<void> {
+    await this.prefs.set(TRACE_CLEANUP_KEY, '1').catch(() => undefined);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await this.prefs.remove(TRACE_DRAFT_KEY);
+        await this.prefs.remove(TRACE_CLEANUP_KEY);
+        this.cleanupPending.set(false);
+        return;
+      } catch (error) {
+        if (attempt === 2) {
+          this.cleanupPending.set(true);
+          throw error;
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      }
     }
   }
 
-  async clear(): Promise<void> {
-    try {
-      await this.prefs.remove(TRACE_DRAFT_KEY);
-    } catch {
-      // Nothing more can be done; the next load refuses nothing it cannot read.
-    }
+  private enqueue<T>(action: () => Promise<T>): Promise<T> {
+    const pending = this.queue.then(action);
+    this.queue = pending.catch(() => undefined);
+    return pending;
   }
 }

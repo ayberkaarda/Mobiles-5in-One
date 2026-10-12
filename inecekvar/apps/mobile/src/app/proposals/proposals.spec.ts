@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApiError, ContributionApi, SessionStore } from '@inecekvar/data-access';
 import { LicenceGate } from '../auth/licence-gate';
+import { deferred } from '../testing/deferred';
 import {
   fakeContributions,
   FakeSession,
@@ -62,6 +63,21 @@ describe('fare input', () => {
 
 describe('proposal builders', () => {
   const line = sampleLineDetail();
+
+  it('requires a trace for a new line without a geometry input', () => {
+    const fields = {
+      ...emptyFields(),
+      code: 'ORN-9',
+      name: 'New line',
+      mode: 'minibus' as const,
+      stopIds: ['a', 'b'],
+    };
+    expect(buildNewLine(SAMPLE_CITY.slug, fields)).toEqual({
+      ok: false,
+      errors: { traceId: 'proposal.traceRequired' },
+    });
+    expect(buildNewLine(SAMPLE_CITY.slug, { ...fields, traceId: 'trace-1' }).ok).toBe(true);
+  });
 
   it('validates a new line against the contract bounds', () => {
     const result = buildNewLine(SAMPLE_CITY.slug, {
@@ -245,6 +261,71 @@ describe('PhotoUploader', () => {
     const uploader = TestBed.runInInjectionContext(() => new PhotoUploader());
     return { uploader, contributions, gate: TestBed.inject(LicenceGate) };
   }
+
+  it('only uploads the latest photo after an earlier licence wait resolves', async () => {
+    const { uploader, contributions, gate } = setup();
+    const licence = deferred<boolean>();
+    vi.spyOn(gate, 'ensure').mockReturnValueOnce(licence.promise).mockResolvedValue(true);
+    const first = uploader.choose(file(JPEG, 'image/jpeg'), 'fare_table');
+    await settle();
+    const secondPhoto = file(WEBP, 'image/webp', 100);
+    await uploader.choose(secondPhoto, 'stop_sign');
+    licence.resolve(true);
+    await first;
+    expect(contributions.presignPhoto.calls).toHaveLength(1);
+    expect(contributions.uploadPhoto.calls).toHaveLength(1);
+    expect(contributions.uploadPhoto.calls[0]?.[1]).toBe(secondPhoto);
+    expect(uploader.state()).toMatchObject({ status: 'done', bytes: 100 });
+  });
+
+  it('clear during photo validation prevents a later upload', async () => {
+    const { uploader, contributions } = setup();
+    const bytes = deferred<ArrayBuffer>();
+    const head = new Blob();
+    Object.defineProperty(head, 'arrayBuffer', { value: () => bytes.promise });
+    const photo = file(JPEG, 'image/jpeg');
+    vi.spyOn(photo, 'slice').mockReturnValue(head);
+    const choosing = uploader.choose(photo, 'fare_table');
+    uploader.clear();
+    bytes.resolve(new Uint8Array(JPEG).buffer);
+    await choosing;
+    expect(contributions.presignPhoto.calls).toHaveLength(0);
+    expect(contributions.uploadPhoto.calls).toHaveLength(0);
+    expect(uploader.state()).toEqual({ status: 'idle' });
+  });
+
+  it('rechecks the licence and retries photo presign once after a 403', async () => {
+    const { uploader, contributions, gate } = setup();
+    const accepted = deferred<boolean>();
+    const recheck = vi.spyOn(gate, 'recheck').mockReturnValue(accepted.promise);
+    const success = fakeContributions().presignPhoto.impl;
+    let attempts = 0;
+    contributions.presignPhoto.impl = async (body) => {
+      if (++attempts === 1) throw new ApiError('problem', 403, 'auth.forbidden', 'req');
+      return success(body);
+    };
+    const choosing = uploader.choose(file(JPEG, 'image/jpeg'), 'fare_table');
+    await settle();
+    expect(recheck).toHaveBeenCalledTimes(1);
+    accepted.resolve(true);
+    await choosing;
+    expect(attempts).toBe(2);
+    expect(uploader.state().status).toBe('done');
+    expect(contributions.uploadPhoto.calls).toHaveLength(1);
+  });
+
+  it('a second photo presign 403 fails without a third call or another recheck', async () => {
+    const { uploader, contributions, gate } = setup();
+    const recheck = vi.spyOn(gate, 'recheck').mockResolvedValue(true);
+    contributions.presignPhoto.impl = async () => {
+      throw new ApiError('problem', 403, 'auth.forbidden', 'req');
+    };
+    await uploader.choose(file(JPEG, 'image/jpeg'), 'fare_table');
+    expect(contributions.presignPhoto.calls).toHaveLength(2);
+    expect(recheck).toHaveBeenCalledTimes(1);
+    expect(uploader.state()).toEqual({ status: 'failed', key: 'proposal.photo.licence' });
+    expect(contributions.uploadPhoto.calls).toHaveLength(0);
+  });
 
   it('presigns with the checked type and exact size, then PUTs the file', async () => {
     const { uploader, contributions } = setup();

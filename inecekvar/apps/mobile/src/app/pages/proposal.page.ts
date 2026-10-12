@@ -2,13 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import {
   CatalogApi,
@@ -17,6 +18,7 @@ import {
   isApiError,
   LineDetail,
   LineListItem,
+  SessionStore,
   StopDetail,
   StopSummary,
 } from '@inecekvar/data-access';
@@ -121,6 +123,7 @@ export function proposalFailure(error: unknown): TranslationKey {
     IonTitle,
     IonContent,
     BackButtonComponent,
+    RouterLink,
     CityPickerComponent,
     MapComponent,
     FarePipe,
@@ -135,6 +138,12 @@ export class ProposalPage {
   private readonly catalog = inject(CatalogApi);
   private readonly contributions = inject(ContributionApi);
   private readonly licence = inject(LicenceGate);
+  private readonly session = inject(SessionStore);
+  private readonly identity = computed(() => this.session.user()?.id ?? null);
+  private formOwner = this.identity();
+  private formGeneration = 0;
+  private targetController: AbortController | null = null;
+  private submitController: AbortController | null = null;
   private readonly stopIndex = inject(StopIndex);
   private readonly locator = inject(LOCATION_SOURCE);
   private readonly recorder = inject(RecorderStore);
@@ -218,7 +227,13 @@ export class ProposalPage {
       const kind = this.kind();
       const query = this.query();
       const city = this.city();
+      this.identity();
       untracked(() => void this.prepare(kind, city, query));
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.formGeneration += 1;
+      this.targetController?.abort();
+      this.submitController?.abort();
     });
   }
 
@@ -333,9 +348,12 @@ export class ProposalPage {
   }
 
   protected async useMyLocation(): Promise<void> {
+    const run = this.formGeneration;
+    const ownerId = this.identity();
     this.locating.set(true);
     this.locateError.set(null);
     const result = await this.locator.locate();
+    if (run !== this.formGeneration || ownerId !== this.identity()) return;
     this.locating.set(false);
     if (result.kind === 'ok') this.setField('location', [result.lng, result.lat]);
     else
@@ -362,6 +380,7 @@ export class ProposalPage {
 
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
+    if (this.formOwner !== this.identity()) return;
     if (this.busy() || this.photoBusy()) return;
     this.submitError.set(null);
     const built = this.build();
@@ -371,29 +390,44 @@ export class ProposalPage {
       return;
     }
     this.errors.set({});
-    if (!(await this.licence.ensure())) return;
+    const run = this.formGeneration;
+    const ownerId = this.identity();
+    if (!ownerId) return;
+    const controller = new AbortController();
+    this.submitController = controller;
+    const current = () => run === this.formGeneration && ownerId === this.identity();
     this.busy.set(true);
     try {
-      await this.send(built.proposal);
+      const accepted = await this.licence.ensure();
+      if (!accepted || !current()) return;
+      await this.send(built.proposal, controller.signal, current);
+      if (!current()) return;
       await this.router.navigate(['/katki/onerilerim'], {
         queryParams: { yeni: 1 },
         replaceUrl: true,
       });
     } catch (error) {
+      if (!current()) return;
       this.submitError.set(proposalFailure(error));
       if (isApiError(error) && error.status === 429) this.countdown.start(error.retryAfterSeconds);
     } finally {
-      this.busy.set(false);
+      if (this.submitController === controller) this.submitController = null;
+      if (current()) this.busy.set(false);
     }
   }
 
-  private async send(proposal: EditProposal): Promise<void> {
+  private async send(
+    proposal: EditProposal,
+    signal: AbortSignal,
+    current: () => boolean,
+  ): Promise<void> {
     try {
-      await this.contributions.proposeEdit(proposal);
+      await this.contributions.proposeEdit(proposal, signal);
     } catch (error) {
-      if (!isApiError(error) || error.status !== 403 || !(await this.licence.recheck()))
-        throw error;
-      await this.contributions.proposeEdit(proposal);
+      if (!current() || !isApiError(error) || error.status !== 403) throw error;
+      const accepted = await this.licence.recheck();
+      if (!current() || !accepted) throw error;
+      await this.contributions.proposeEdit(proposal, signal);
     }
   }
 
@@ -431,6 +465,32 @@ export class ProposalPage {
     city: string | null,
     query: ReturnType<typeof this.query>,
   ): Promise<void> {
+    this.formGeneration += 1;
+    const ownerId = this.identity();
+    const ownerChanged = ownerId !== this.formOwner;
+    this.formOwner = ownerId;
+    this.targetController?.abort();
+    this.submitController?.abort();
+    const controller = new AbortController();
+    this.targetController = controller;
+    const current = () =>
+      this.targetController === controller &&
+      !controller.signal.aborted &&
+      ownerId === this.identity() &&
+      kind === this.kind() &&
+      city === this.city() &&
+      query === this.query();
+    this.photo.clear();
+    this.busy.set(false);
+    this.countdown.stop();
+    this.searchRun += 1;
+    this.lineSearch.set('');
+    this.stopSearch.set('');
+    this.lineResults.set([]);
+    this.stopResults.set([]);
+    this.stopNames.set({});
+    this.locating.set(false);
+    this.locateError.set(null);
     this.errors.set({});
     this.submitError.set(null);
     this.line.set(null);
@@ -439,7 +499,7 @@ export class ProposalPage {
     const trace = query?.get('iz');
     const base: ProposalFields = {
       ...emptyFields(),
-      traceId: trace && UUID.test(trace) ? trace : null,
+      traceId: !ownerChanged && trace && UUID.test(trace) ? trace : null,
     };
     this.fields.set(base);
     if (!kind || !city) return;
@@ -449,29 +509,36 @@ export class ProposalPage {
       this.target.set('loading');
       try {
         // Always the API: the update must be based on the current published version.
-        const line = await this.catalog.line(lineSlug, city);
-        if (this.kind() !== kind) return;
+        const line = await this.catalog.line(lineSlug, city, controller.signal);
+        if (!current()) return;
         this.line.set(line);
         this.fields.set({ ...fieldsFromLine(line), traceId: base.traceId });
         if (kind === 'fare_update') this.fields.update((f) => ({ ...f, fare: '' }));
         this.target.set('idle');
       } catch {
-        this.target.set('error');
+        if (current()) this.target.set('error');
       }
     } else if (kind === 'update_stop' && stopSlug && SLUG.test(stopSlug)) {
       this.target.set('loading');
       try {
-        const stop = await this.catalog.stop(stopSlug, city);
-        if (this.kind() !== kind) return;
+        const stop = await this.catalog.stop(stopSlug, city, controller.signal);
+        if (!current()) return;
         this.stop.set(stop);
         this.fields.set(fieldsFromStop(stop));
         this.target.set('idle');
       } catch {
-        this.target.set('error');
+        if (current()) this.target.set('error');
       }
     } else if (kind === 'new_stop') {
-      const index = Number(query?.get('isaret'));
-      const marked = Number.isInteger(index) ? this.recorder.uploadedStops()[index] : undefined;
+      const rawIndex = query?.get('isaret');
+      const index = rawIndex && /^(0|[1-9]\d*)$/.test(rawIndex) ? Number(rawIndex) : null;
+      const marked =
+        index !== null &&
+        Number.isSafeInteger(index) &&
+        this.recorder.uploadedOwnerId() === ownerId &&
+        this.recorder.uploadedCity() === city
+          ? this.recorder.uploadedStops()[index]
+          : undefined;
       if (marked) {
         const at: LngLat = [marked.at[0], marked.at[1]];
         this.fields.set({ ...base, location: at, stopName: marked.name ?? '' });

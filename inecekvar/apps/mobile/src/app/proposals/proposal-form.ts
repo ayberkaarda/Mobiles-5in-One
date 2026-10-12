@@ -184,6 +184,7 @@ function done(errors: FieldErrors, proposal: () => EditProposal): Built {
 
 export function buildNewLine(city: string, f: ProposalFields): Built {
   const errors: FieldErrors = {};
+  if (!f.traceId) errors.traceId = 'proposal.traceRequired';
   const code = f.code.trim();
   if (code === '') errors.code = 'proposal.errors.required';
   else if (tooLong(code, BOUNDS.code)) errors.code = 'proposal.errors.tooLong';

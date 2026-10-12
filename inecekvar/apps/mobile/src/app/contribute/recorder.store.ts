@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { ContributionApi, isApiError, TraceCreated } from '@inecekvar/data-access';
+import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { ContributionApi, isApiError, SessionStore, TraceCreated } from '@inecekvar/data-access';
 import { LicenceGate } from '../auth/licence-gate';
 import { CityStore } from '../city/city.store';
 import { TranslationKey } from '../i18n/translation';
@@ -32,7 +32,15 @@ export const MAX_TRACE_HOURS = 12;
 export const MAX_TRACE_METRES = 150_000;
 
 export type RecorderView =
-  'idle' | 'starting' | 'recording' | 'paused' | 'review' | 'uploading' | 'uploaded';
+  | 'idle'
+  | 'starting'
+  | 'recording'
+  | 'paused'
+  | 'review'
+  | 'uploading'
+  | 'uploaded'
+  | 'discarding'
+  | 'cleanup';
 
 export type RecorderProblem = 'denied' | 'unavailable' | 'storage';
 
@@ -74,6 +82,12 @@ export class RecorderStore {
   private readonly cities = inject(CityStore);
   private readonly now = inject(APP_NOW);
   private readonly document = inject(DOCUMENT);
+  private readonly session = inject(SessionStore);
+  private readonly identity = computed(() => this.session.user()?.id ?? null);
+  private owner = this.identity();
+  private generation = 0;
+  private restoreGeneration = 0;
+  private uploadController: AbortController | null = null;
 
   private draft: TraceDraft | null = null;
   private watch: PositionWatch | null = null;
@@ -100,6 +114,8 @@ export class RecorderStore {
   /** Stops marked on the uploaded ride, kept in memory to propose them after the upload. */
   readonly uploadedStops = signal<readonly MarkedStop[]>([]);
   readonly uploadedCity = signal<string | null>(null);
+  readonly uploadedOwnerId = signal<string | null>(null);
+  readonly cleanupPending = this.drafts.cleanupPending.asReadonly();
 
   readonly city = computed(() => {
     this.rev();
@@ -156,13 +172,29 @@ export class RecorderStore {
   });
 
   constructor() {
-    this.document.addEventListener('visibilitychange', () => {
+    effect(() => {
+      const owner = this.identity();
+      if (owner === this.owner) return;
+      this.owner = owner;
+      untracked(() => {
+        this.initOnce = null;
+        void this.discard();
+      });
+    });
+    const onVisibilityChange = () => {
       if (this.document.visibilityState === 'hidden') {
-        // The app may be killed in the background: write what we have now.
         if (this.draft) void this.persist();
       } else if (this.view() === 'recording' && !this.releaseWakeLock) {
         void this.holdWakeLock();
       }
+    };
+    this.document.addEventListener('visibilitychange', onVisibilityChange);
+    inject(DestroyRef).onDestroy(() => {
+      this.generation += 1;
+      this.restoreGeneration += 1;
+      this.uploadController?.abort();
+      void this.endWatch();
+      this.document.removeEventListener('visibilitychange', onVisibilityChange);
     });
   }
 
@@ -173,19 +205,26 @@ export class RecorderStore {
   }
 
   async start(city: string): Promise<void> {
+    if (this.view() !== 'idle' || !this.identity()) return;
+    const run = ++this.generation;
+    const ownerId = this.identity();
+    this.view.set('starting');
     await this.init();
-    if (this.view() !== 'idle') return;
+    if (run !== this.generation || this.view() !== 'starting' || !ownerId) return;
     this.problem.set(null);
     this.submitError.set(null);
     this.uploaded.set(null);
-    this.view.set('starting');
-    if ((await this.positions.ensurePermission()) === 'denied') {
+    const permission = await this.positions.ensurePermission();
+    if (run !== this.generation || ownerId !== this.identity()) return;
+    if (permission === 'denied') {
       this.problem.set('denied');
       this.view.set('idle');
       return;
     }
     this.draft = {
       v: 1,
+      id: crypto.getRandomValues(new Uint32Array(4)).join('-'),
+      ownerId,
       city,
       startedAt: isoSeconds(this.now()),
       endedAt: null,
@@ -198,48 +237,58 @@ export class RecorderStore {
     this.interrupted.set(false);
     this.changed();
     await this.persist();
-    await this.beginWatch();
+    if (run === this.generation) await this.beginWatch(run);
   }
 
   async pause(): Promise<void> {
     if (this.view() !== 'recording' || !this.draft) return;
-    await this.endWatch();
+    const run = ++this.generation;
     this.draft.phase = 'paused';
     this.view.set('paused');
     this.changed();
-    await this.persist();
+    await this.endWatch();
+    if (run === this.generation) await this.persist();
   }
 
   async resume(): Promise<void> {
     if (this.view() !== 'paused' || !this.draft) return;
+    if (this.draft.ownerId !== this.identity()) return;
+    const run = ++this.generation;
+    const ownerId = this.identity();
+    this.view.set('starting');
     this.problem.set(null);
-    if ((await this.positions.ensurePermission()) === 'denied') {
+    const permission = await this.positions.ensurePermission();
+    if (run !== this.generation || ownerId !== this.identity() || !this.draft) return;
+    if (permission === 'denied') {
       this.problem.set('denied');
+      this.view.set('paused');
       return;
     }
     this.interrupted.set(false);
     this.draft.phase = 'recording';
     this.changed();
     await this.persist();
-    await this.beginWatch();
+    if (run === this.generation) await this.beginWatch(run);
   }
 
   /** Ends the ride and opens the review; nothing is sent yet. */
   async finish(): Promise<void> {
     const view = this.view();
     if ((view !== 'recording' && view !== 'paused') || !this.draft) return;
-    await this.endWatch();
+    const run = ++this.generation;
     this.draft.phase = 'review';
     this.draft.endedAt = isoSeconds(this.now());
     this.interrupted.set(false);
     this.view.set('review');
     this.changed();
-    await this.persist();
+    await this.endWatch();
+    if (run === this.generation) await this.persist();
   }
 
   /** Back from the review to a paused ride (the end time is set again on the next finish). */
   async backToRide(): Promise<void> {
     if (this.view() !== 'review' || !this.draft) return;
+    this.generation += 1;
     this.draft.phase = 'paused';
     this.draft.endedAt = null;
     this.submitError.set(null);
@@ -277,16 +326,35 @@ export class RecorderStore {
 
   /** Throws the ride away: stops recording and deletes the local draft. */
   async discard(): Promise<void> {
-    await this.endWatch();
+    const run = ++this.generation;
+    this.restoreGeneration += 1;
+    this.uploadController?.abort();
+    this.uploadController = null;
+    this.view.set('discarding');
+    const stopped = this.endWatch();
     this.draft = null;
     this.distance = 0;
     this.lastFix = null;
     this.problem.set(null);
     this.submitError.set(null);
     this.interrupted.set(false);
-    this.view.set('idle');
+    this.uploaded.set(null);
+    this.uploadedStops.set([]);
+    this.uploadedCity.set(null);
+    this.uploadedOwnerId.set(null);
+    this.lastSave = 0;
+    this.clock.set(0);
     this.changed();
-    await this.drafts.clear();
+    try {
+      await this.drafts.clear();
+      await stopped;
+      if (run === this.generation) this.view.set('idle');
+    } catch {
+      await stopped;
+      if (run !== this.generation) return;
+      this.submitError.set('recorder.errors.cleanup');
+      this.view.set('cleanup');
+    }
   }
 
   /**
@@ -295,44 +363,77 @@ export class RecorderStore {
    */
   async submit(): Promise<SubmitResult> {
     const draft = this.draft;
-    if (this.view() !== 'review' || !draft || !draft.endedAt) return { ok: false };
+    const endedAt = draft?.endedAt;
+    if (this.view() !== 'review' || !draft || !endedAt) return { ok: false };
+    const ownerId = this.identity();
+    if (!ownerId || draft.ownerId !== ownerId) return { ok: false };
     if (this.issues().length > 0) return { ok: false };
-    this.submitError.set(null);
-    if (!(await this.licence.ensure())) return { ok: false };
-    const points = this.simplified().points;
-    if (points.length > MAX_TRACE_POINTS) return { ok: false };
+    const run = ++this.generation;
+    const controller = new AbortController();
+    this.uploadController = controller;
+    const current = () =>
+      run === this.generation &&
+      this.identity() === ownerId &&
+      this.draft?.id === draft.id &&
+      this.draft?.ownerId === ownerId;
     this.view.set('uploading');
-    const body = {
-      city: draft.city,
-      started_at: draft.startedAt,
-      ended_at: draft.endedAt,
-      points,
-    };
+    this.submitError.set(null);
     try {
+      const accepted = await this.licence.ensure();
+      if (!current()) return { ok: false };
+      if (!accepted) {
+        this.view.set('review');
+        return { ok: false };
+      }
+      const points = simplifyToCap(draft.points).points;
+      if (points.length > MAX_TRACE_POINTS) {
+        this.view.set('review');
+        return { ok: false };
+      }
+      const body = {
+        city: draft.city,
+        started_at: draft.startedAt,
+        ended_at: endedAt,
+        points,
+      };
       let created: TraceCreated;
       try {
-        created = await this.api.uploadTrace(body);
+        created = await this.api.uploadTrace(body, controller.signal);
       } catch (error) {
         // A stale account view: the licence may still be missing on the server.
-        if (!isApiError(error) || error.status !== 403 || !(await this.licence.recheck())) {
+        if (!current() || !isApiError(error) || error.status !== 403) {
           throw error;
         }
-        created = await this.api.uploadTrace(body);
+        const accepted = await this.licence.recheck();
+        if (!current() || !accepted) return { ok: false };
+        created = await this.api.uploadTrace(body, controller.signal);
       }
+      if (!current()) return { ok: false };
+      await this.drafts.clear();
+      if (!current()) return { ok: false };
       this.uploadedStops.set([...draft.stops]);
       this.uploadedCity.set(draft.city);
+      this.uploadedOwnerId.set(ownerId);
       this.uploaded.set(created);
       this.draft = null;
       this.distance = 0;
       this.changed();
-      await this.drafts.clear();
       this.view.set('uploaded');
       return { ok: true };
     } catch (error) {
+      if (!current()) return { ok: false };
       this.view.set('review');
+      if (this.cleanupPending()) {
+        this.submitError.set('recorder.errors.cleanup');
+        this.view.set('cleanup');
+        return { ok: false };
+      }
       const { key, retryAfter } = traceFailure(error);
       this.submitError.set(key);
       return { ok: false, retryAfter };
+    } finally {
+      if (this.uploadController === controller) this.uploadController = null;
+      if (current() && this.view() === 'uploading') this.view.set('review');
     }
   }
 
@@ -355,6 +456,8 @@ export class RecorderStore {
 
   /** Leaves the upload confirmation. */
   reset(): void {
+    this.generation += 1;
+    this.uploadedOwnerId.set(null);
     this.uploaded.set(null);
     this.uploadedStops.set([]);
     this.uploadedCity.set(null);
@@ -363,7 +466,19 @@ export class RecorderStore {
   }
 
   private async restore(): Promise<void> {
-    const draft = await this.drafts.load();
+    const run = this.restoreGeneration;
+    const ownerId = this.identity();
+    let draft: TraceDraft | null;
+    try {
+      draft = await this.drafts.load(ownerId);
+    } catch {
+      if (run === this.restoreGeneration) {
+        this.submitError.set('recorder.errors.cleanup');
+        this.view.set('cleanup');
+      }
+      return;
+    }
+    if (run !== this.restoreGeneration || ownerId !== this.identity()) return;
     if (!draft) return;
     if (draft.phase === 'recording') {
       draft.phase = 'paused';
@@ -378,13 +493,23 @@ export class RecorderStore {
     if (this.interrupted()) await this.persist();
   }
 
-  private async beginWatch(): Promise<void> {
+  private async beginWatch(run: number): Promise<void> {
     try {
-      this.watch = await this.positions.watch(
-        (fix) => this.onFix(fix),
-        (failure) => void this.onFailure(failure),
+      const watch = await this.positions.watch(
+        (fix) => {
+          if (run === this.generation) this.onFix(fix);
+        },
+        (failure) => {
+          if (run === this.generation) void this.onFailure(failure);
+        },
       );
+      if (run !== this.generation || this.draft?.ownerId !== this.identity()) {
+        await watch.stop();
+        return;
+      }
+      this.watch = watch;
     } catch {
+      if (run !== this.generation) return;
       this.problem.set('unavailable');
       if (this.draft) this.draft.phase = 'paused';
       this.view.set('paused');
@@ -400,18 +525,19 @@ export class RecorderStore {
   private async endWatch(): Promise<void> {
     const watch = this.watch;
     this.watch = null;
-    this.stopTicker();
-    this.weakSignal.set(false);
-    if (watch) await watch.stop().catch(() => undefined);
     const release = this.releaseWakeLock;
     this.releaseWakeLock = null;
     this.wakeLockOn.set(false);
-    if (release) await release();
+    this.stopTicker();
+    this.weakSignal.set(false);
+    if (watch) await watch.stop().catch(() => undefined);
+    if (release) await release().catch(() => undefined);
   }
 
   private async holdWakeLock(): Promise<void> {
+    const run = this.generation;
     const release = await this.wakeLock.acquire();
-    if (this.view() !== 'recording') {
+    if (run !== this.generation || this.view() !== 'recording') {
       if (release) await release();
       return;
     }
@@ -468,8 +594,10 @@ export class RecorderStore {
 
   private async persist(): Promise<void> {
     if (!this.draft) return;
+    const run = this.generation;
     this.lastSave = this.now();
     const ok = await this.drafts.save(this.draft);
+    if (run !== this.generation) return;
     if (!ok) this.problem.set('storage');
     else if (this.problem() === 'storage') this.problem.set(null);
   }

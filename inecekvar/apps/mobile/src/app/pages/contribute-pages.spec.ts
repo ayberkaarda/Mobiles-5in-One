@@ -6,15 +6,20 @@ import { provideIonicAngular } from '@ionic/angular';
 import { ApiError, Edit } from '@inecekvar/data-access';
 import { LicenceGate } from '../auth/licence-gate';
 import { CityStore } from '../city/city.store';
+import { RecorderStore } from '../contribute/recorder.store';
 import { MAP_LIBRARY_LOADER } from '../map/map-library';
 import { PhotoUploader } from '../proposals/photo-upload';
+import { emptyFields, ProposalFields } from '../proposals/proposal-form';
 import {
   catalogTesting,
+  fakeCatalog,
   fakeContributions,
+  FakeCatalog,
   FakeContributions,
   FakeSession,
   MemoryPreferences,
   SAMPLE_CITY,
+  sampleLineDetail,
   settle,
 } from '../testing/catalog.fixtures';
 import {
@@ -25,6 +30,7 @@ import {
   walk,
 } from '../testing/contribute.fixtures';
 import { i18nTesting } from '../testing/i18n.testing';
+import { deferred } from '../testing/deferred';
 import { ContributePage } from './contribute.page';
 import { ProposalPage } from './proposal.page';
 import { ProposalsPage } from './proposals.page';
@@ -37,6 +43,9 @@ interface Options {
   licence?: boolean;
   signedIn?: boolean;
   contributions?: FakeContributions;
+  catalog?: FakeCatalog;
+  seedRecorder?: (recorder: RecorderStore) => void;
+  waitForStable?: boolean;
 }
 
 async function open(url: string, options: Options = {}) {
@@ -57,15 +66,21 @@ async function open(url: string, options: Options = {}) {
         { path: 'giris', component: Landing },
         { path: 'giris/kayit', component: Landing },
       ]),
-      ...catalogTesting({ session, contributions, prefs: new MemoryPreferences() }),
+      ...catalogTesting({
+        session,
+        contributions,
+        catalog: options.catalog,
+        prefs: new MemoryPreferences(),
+      }),
       ...contributeTesting(positions, new FakeWakeLock(), clock),
       { provide: MAP_LIBRARY_LOADER, useValue: () => Promise.reject(new Error('no WebGL')) },
     ],
   });
   await TestBed.inject(CityStore).select(SAMPLE_CITY.slug);
+  options.seedRecorder?.(TestBed.inject(RecorderStore));
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
-  await settle(harness.fixture);
+  await settle(options.waitForStable === false ? undefined : harness.fixture);
   const root = harness.routeNativeElement as HTMLElement;
   return {
     harness,
@@ -122,6 +137,141 @@ describe('Katkı hub', () => {
 });
 
 describe('proposal page', () => {
+  it('does not prefill an uploaded stop when isaret is absent', async () => {
+    const { root } = await open('/katki/oneri?tur=new_stop', {
+      seedRecorder: (recorder) => {
+        recorder.uploadedStops.set([{ at: [34.01, 42.53], name: 'Account A stop' }]);
+        recorder.uploadedCity.set(SAMPLE_CITY.slug);
+        recorder.uploadedOwnerId.set('user-a');
+      },
+    });
+    expect(root.querySelector<HTMLInputElement>('#iv-stop-name')?.value).toBe('');
+  });
+
+  it('does not prefill uploaded marks belonging to another user', async () => {
+    const { root } = await open('/katki/oneri?tur=new_stop&isaret=0', {
+      seedRecorder: (recorder) => {
+        recorder.uploadedStops.set([{ at: [34.01, 42.53], name: 'Account B stop' }]);
+        recorder.uploadedCity.set(SAMPLE_CITY.slug);
+        recorder.uploadedOwnerId.set('user-b');
+      },
+    });
+    expect(root.querySelector<HTMLInputElement>('#iv-stop-name')?.value).toBe('');
+  });
+
+  it('rejects non-integer and negative mark indexes', async () => {
+    const { harness, root } = await open('/katki/oneri?tur=new_stop', {
+      seedRecorder: (recorder) => {
+        recorder.uploadedStops.set([
+          { at: [34.01, 42.53], name: 'First' },
+          { at: [34.02, 42.53], name: 'Second' },
+        ]);
+        recorder.uploadedCity.set(SAMPLE_CITY.slug);
+        recorder.uploadedOwnerId.set('user-a');
+      },
+    });
+    for (const index of ['', '-1', '1.0', ' 0', '1e0', 'NaN']) {
+      await harness.navigateByUrl(`/katki/oneri?tur=new_stop&isaret=${encodeURIComponent(index)}`);
+      await settle(harness.fixture);
+      expect(root.querySelector<HTMLInputElement>('#iv-stop-name')?.value).toBe('');
+    }
+  });
+
+  it('clears a selected photo when the proposal target changes', async () => {
+    const { harness } = await open('/katki/oneri?tur=new_stop');
+    const page = harness.routeDebugElement?.componentInstance as { photo: PhotoUploader };
+    await page.photo.choose(
+      new File([new Uint8Array([0xff, 0xd8, 0xff, 1])], 'stop.jpg', { type: 'image/jpeg' }),
+      'stop_sign',
+    );
+    expect(page.photo.photoId()).not.toBeNull();
+    await harness.navigateByUrl('/katki/oneri?tur=update_stop&durak=ornek-durak-1-5');
+    await settle(harness.fixture);
+    expect(page.photo.state()).toEqual({ status: 'idle' });
+    expect(page.photo.photoId()).toBeNull();
+  });
+
+  it('resets the cached proposal form and photo when the user changes', async () => {
+    const { harness, root, session } = await open('/katki/oneri?tur=new_stop');
+    await type(harness, root.querySelector<HTMLInputElement>('#iv-stop-name'), 'Account A stop');
+    const page = harness.routeDebugElement?.componentInstance as { photo: PhotoUploader };
+    await page.photo.choose(
+      new File([new Uint8Array([0xff, 0xd8, 0xff, 1])], 'stop.jpg', { type: 'image/jpeg' }),
+      'stop_sign',
+    );
+    session.signIn('user-b', true);
+    await settle(harness.fixture);
+    expect(root.querySelector<HTMLInputElement>('#iv-stop-name')?.value).toBe('');
+    expect(page.photo.state()).toEqual({ status: 'idle' });
+  });
+
+  it('submits a proposal only once during a deferred licence check', async () => {
+    const { harness, root, contributions } = await open(
+      `/katki/oneri?tur=retire&hat=ornek-hat-1&city=${SAMPLE_CITY.slug}`,
+    );
+    await type(harness, root.querySelector<HTMLTextAreaElement>('#iv-reason'), 'Line closed');
+    const licence = deferred<boolean>();
+    vi.spyOn(TestBed.inject(LicenceGate), 'ensure').mockReturnValue(licence.promise);
+    const page = harness.routeDebugElement?.componentInstance as {
+      submit(event: Event): Promise<void>;
+    };
+    const first = page.submit(new Event('submit'));
+    const second = page.submit(new Event('submit'));
+    licence.resolve(true);
+    await Promise.all([first, second]);
+    expect(contributions.proposeEdit.calls).toHaveLength(1);
+  });
+
+  it('drops an earlier line target response when the next line resolves first', async () => {
+    const catalog = fakeCatalog();
+    const first = deferred<ReturnType<typeof sampleLineDetail>>();
+    catalog.line.impl = (slug) =>
+      slug === 'ornek-hat-1'
+        ? first.promise
+        : Promise.resolve(
+            sampleLineDetail({ id: 'line-2', slug, code: 'ORN-2', name: '[ÖRNEK] Hat ORN-2' }),
+          );
+    const { harness, root } = await open(
+      `/katki/oneri?tur=update_line&hat=ornek-hat-1&city=${SAMPLE_CITY.slug}`,
+      { catalog },
+    );
+    await harness.navigateByUrl(
+      `/katki/oneri?tur=update_line&hat=ornek-hat-2&city=${SAMPLE_CITY.slug}`,
+    );
+    await settle(harness.fixture);
+    expect(text(root.querySelector('[data-target="line"]'))).toContain('ORN-2');
+    first.resolve(sampleLineDetail());
+    await settle(harness.fixture);
+    expect(text(root.querySelector('[data-target="line"]'))).toContain('ORN-2');
+    expect(text(root.querySelector('[data-target="line"]'))).not.toContain('ORN-1');
+  });
+
+  it('offers the recorder and blocks a complete new line without a trace', async () => {
+    const { harness, root, contributions } = await open('/katki/oneri?tur=new_line');
+    const page = harness.routeDebugElement?.componentInstance as {
+      fields: { set(fields: ProposalFields): void };
+      submit(event: Event): Promise<void>;
+    };
+    page.fields.set({
+      ...emptyFields(),
+      code: 'ORN-9',
+      name: 'New line',
+      mode: 'minibus',
+      stopIds: ['stop-1-1', 'stop-1-2'],
+    });
+    await page.submit(new Event('submit'));
+    await settle(harness.fixture);
+    expect(contributions.proposeEdit.calls).toHaveLength(0);
+    expect(root.querySelector('[data-trace-required] a')?.getAttribute('href')).toBe(
+      '/katki/kayit',
+    );
+    expect(root.querySelector('[data-trace-required]')?.textContent).toContain(
+      'Yeni hat için önce bir yolculuk kaydı ekle.',
+    );
+    await click(harness, root.querySelector('[data-trace-required] a'));
+    expect(TestBed.inject(Router).url).toBe('/katki/kayit');
+  });
+
   it('shows field errors and sends nothing when a new line is incomplete', async () => {
     const { harness, root, contributions } = await open('/katki/oneri?tur=new_line');
     await click(harness, root.querySelector('button[type="submit"]'));
@@ -130,7 +280,9 @@ describe('proposal page', () => {
   });
 
   it('builds a new line with ordered stops and sends it', async () => {
-    const { harness, root, contributions, router } = await open('/katki/oneri?tur=new_line');
+    const { harness, root, contributions, router } = await open(
+      '/katki/oneri?tur=new_line&iz=01920000-0000-7000-8000-00000000c0de',
+    );
     await type(harness, root.querySelector<HTMLInputElement>('#iv-code'), 'ORN-9');
     await type(harness, root.querySelector<HTMLInputElement>('#iv-name'), 'Yeni hat');
     await click(harness, buttonByText(root, 'Minibüs'));
@@ -275,6 +427,54 @@ describe('my proposals', () => {
     reviewed_at: null,
     city: SAMPLE_CITY.slug,
     ...overrides,
+  });
+
+  it('clears account A proposals immediately when the user changes', async () => {
+    const contributions = fakeContributions();
+    contributions.myEdits.impl = async () => [edit({ id: 'account-a' })];
+    const { harness, session } = await open('/katki/onerilerim', { contributions });
+    const page = harness.routeDebugElement?.componentInstance as { rows: () => { id: string }[] };
+    expect(page.rows()).toHaveLength(1);
+    session.signIn('user-b', true);
+    expect(page.rows()).toEqual([]);
+    contributions.myEdits.impl = async () => [];
+    await settle(harness.fixture);
+  });
+
+  it('reloads proposals on every Ionic page entry for the same user', async () => {
+    const contributions = fakeContributions();
+    contributions.myEdits.impl = async () => [edit({ id: 'first' })];
+    const { harness, root } = await open('/katki/onerilerim', { contributions });
+    const before = contributions.myEdits.calls.length;
+    contributions.myEdits.impl = async () => [edit({ payload: { name: 'Updated on entry' } })];
+    const page = harness.routeDebugElement?.componentInstance as ProposalsPage;
+    page.ionViewWillEnter();
+    await settle(harness.fixture);
+    expect(contributions.myEdits.calls.length).toBe(before + 1);
+    expect(root.textContent).toContain('Updated on entry');
+  });
+
+  it('drops a late account A proposal list after switching to account B', async () => {
+    const contributions = fakeContributions();
+    const first = deferred<Edit[]>();
+    contributions.myEdits.impl = () => first.promise;
+    const { harness, root, session } = await open('/katki/onerilerim', {
+      contributions,
+      waitForStable: false,
+    });
+    const before = contributions.myEdits.calls.length;
+    expect(before).toBeGreaterThan(0);
+    contributions.myEdits.impl = async () => [edit({ payload: { name: 'Account B proposal' } })];
+    session.signIn('user-b', true);
+    TestBed.tick();
+    expect(contributions.myEdits.calls.length).toBe(before + 1);
+    await settle(harness.fixture);
+    expect(root.textContent).toContain('Account B proposal');
+    expect(root.textContent).not.toContain('Account A proposal');
+    first.resolve([edit({ payload: { name: 'Account A proposal' } })]);
+    await settle(harness.fixture);
+    expect(root.textContent).toContain('Account B proposal');
+    expect(root.textContent).not.toContain('Account A proposal');
   });
 
   it('lists each state and shows a rejection reason as plain text', async () => {

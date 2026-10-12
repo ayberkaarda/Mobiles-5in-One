@@ -92,7 +92,9 @@
           <h3>{{ 'settings.guestTitle' | t }}</h3>
           <p>{{ 'settings.guestBody' | t }}</p>
           <a class="iv-button" routerLink="/giris">{{ 'settings.signIn' | t }}</a>
-          } @if (signOutNote(); as note) {
+          } @if (recorder.cleanupPending()) {
+          <p class="iv-error" role="alert">{{ 'recorder.errors.cleanup' | t }}</p>
+          } @else if (signOutNote(); as note) {
           <p class="iv-hint" role="status">{{ note | t }}</p>
           }
         </div>

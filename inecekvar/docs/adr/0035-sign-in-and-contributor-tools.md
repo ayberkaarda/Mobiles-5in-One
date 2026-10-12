@@ -201,3 +201,37 @@ Not exercised:
   the recorder's privacy note says so before recording starts.
 - The e2e scenario changes data (approval publishes a line version), so it runs after the pack
   scenario and expects a freshly seeded database for a rerun of both.
+
+## Review round
+
+Draft coordinates, uploaded marks and proposal state belong to one account. Pending work is
+invalidated when its account or form changes. Cleanup failures remain visible and are retried
+at startup, on account changes and on the next draft load.
+
+Test files below are in `apps/mobile/src/app`: C = `contribute/contribute.spec.ts`,
+P = `pages/contribute-pages.spec.ts`, U = `proposals/proposals.spec.ts`,
+B = `core/session-bootstrap.spec.ts`.
+
+| # | Finding | Fix | Test(s) |
+| --- | --- | --- | --- |
+| F1 | Local coordinates cross accounts. | Store owner and draft ids; delete legacy or foreign drafts, reset on identity changes and check ownership before upload. | C: `deletes account A draft instead of loading it for account B`; `deletes a legacy draft without an owner`; `refuses to upload a draft owned by another account`; `clears the in-memory ride when the signed-in user changes` |
+| F2 | Uploaded stop marks survive discard and prefill unrelated forms. | Reset all recorder state; require an integer mark parameter and matching owner and city. | C: `discard resets uploaded marks and every recorder readout`; P: `does not prefill an uploaded stop when isaret is absent`; `does not prefill uploaded marks belonging to another user`; `rejects non-integer and negative mark indexes` |
+| F3 | Cached proposal lists show another account or stale results. | Key requests and visible rows by user id, reload on Ionic entry and drop stale responses. | P: `clears account A proposals immediately when the user changes`; `reloads proposals on every Ionic page entry for the same user`; `drops a late account A proposal list after switching to account B` |
+| F4 | Form data and photos survive account or target changes. | Reset fields, searches, errors and photo work on account, kind or target changes. | P: `clears a selected photo when the proposal target changes`; `resets the cached proposal form and photo when the user changes` |
+| F5 | Concurrent transitions leak watches or restart discarded rides. | Lock transitions before awaiting, invalidate operations and close late watch handles. | C: `concurrent resumes open only one live position watch`; `discard invalidates a start waiting for location permission`; `closes a late watch handle after discard` |
+| F6 | Submissions duplicate during the licence wait. | Set submission locks synchronously and check account and draft or form generation after awaits. | C: `submits a trace only once while the licence check is pending`; P: `submits a proposal only once during a deferred licence check` |
+| F7 | An old upload erases a replacement draft. | Abort on discard and account changes; apply results only to the captured generation, draft and owner. Serialize local writes and deletes. | C: `a late trace upload cannot erase the replacement recording` |
+| F8 | Obsolete photo selections upload after clear or replacement. | Create a controller and generation before validation; invalidate and abort on selection, clear and destruction. | U: `only uploads the latest photo after an earlier licence wait resolves`; `clear during photo validation prevents a later upload` |
+| F9 | An earlier target response overwrites a newer target of the same kind. | Abort previous target requests and match the full current target and request before applying success or failure. | P: `drops an earlier line target response when the next line resolves first` |
+| F10 | New lines without geometry always fail on the server. | The contract field is `geometry`; this form has no manual geometry input, so require a trace and offer the recorder route. | U: `requires a trace for a new line without a geometry input`; P: `offers the recorder and blocks a complete new line without a trace` |
+| F11 | Failed local deletion is silently reported as success. | Retry deletion three times, retain a cleanup marker and flag, block successful completion and show translated recovery copy. Retry pending deletion at startup and on load. | C: `retries a refused draft deletion before reporting discard success`; `surfaces failed cleanup and retries it on the next draft load`; B: `retries pending coordinate cleanup during app startup` |
+| F12 | Photo presign retries trust stale licence state. | Recheck the licence after the first presign 403 and retry exactly once; a second 403 fails. | U: `rechecks the licence and retries photo presign once after a 403`; `a second photo presign 403 fails without a third call or another recheck` |
+
+The existing `builds a new line with ordered stops and sends it` page test now supplies a trace;
+its previous setup accepted a line with neither trace nor geometry. The draft fixture includes
+owner and draft ids, and its storage test passes the current owner to `load`. The e2e scenario
+submits fares, hours and stops, so it needs no change. Revert checks: loading a draft whatever
+its owner turns `deletes account A draft instead of loading it for account B` red; leaving the
+uploaded marks in place on discard turns `discard resets uploaded marks and every recorder
+readout` red; deriving the mark index with `Number(rawIndex)` turns `does not prefill an
+uploaded stop when isaret is absent` and `rejects non-integer and negative mark indexes` red.

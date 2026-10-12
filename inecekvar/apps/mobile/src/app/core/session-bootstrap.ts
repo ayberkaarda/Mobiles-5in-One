@@ -13,9 +13,12 @@ type UrlOpenSource = Pick<typeof App, 'addListener'>;
  */
 export function bootstrapSession(appPlugin: UrlOpenSource = App): void {
   const session = inject(SessionStore);
+  const injector = inject(Injector);
+  void import('../contribute/trace-draft')
+    .then(({ TraceDraftStore }) => injector.get(TraceDraftStore).retryCleanup())
+    .catch(() => undefined);
   void session.init();
   if (inject(IS_NATIVE_PLATFORM)) {
-    const injector = inject(Injector);
     void appPlugin.addListener('appUrlOpen', ({ url }) => {
       if (session.consumeMagicLinkUrl(url)) {
         void injector

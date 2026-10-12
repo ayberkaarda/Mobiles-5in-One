@@ -397,11 +397,14 @@ export function fakeContributions() {
       reviewed_at: null,
       city: SAMPLE_CITY.slug,
     })),
-    uploadTrace: spy(async (trace: TraceUpload): Promise<TraceCreated> => ({
-      id: '01920000-0000-7000-8000-00000000c0de',
-      point_count: trace.points.length,
-      delete_after: '2026-11-11T10:00:00Z',
-    })),
+    uploadTrace: spy(async (trace: TraceUpload, signal?: AbortSignal): Promise<TraceCreated> => {
+      void signal;
+      return {
+        id: '01920000-0000-7000-8000-00000000c0de',
+        point_count: trace.points.length,
+        delete_after: '2026-11-11T10:00:00Z',
+      };
+    }),
     deleteTrace: spy(async (id: string): Promise<void> => void id),
     presignPhoto: spy(async (input: PresignRequest): Promise<PresignedUpload> => ({
       photo_id: '01920000-0000-7000-8000-0000000000aa',

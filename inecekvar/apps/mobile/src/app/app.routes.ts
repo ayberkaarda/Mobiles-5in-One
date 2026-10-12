@@ -66,6 +66,7 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'ayarlar',
+        canActivate: [contributorCopy],
         loadComponent: () => import('./pages/settings.page').then((m) => m.SettingsPage),
       },
       {

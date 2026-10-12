@@ -167,7 +167,12 @@
         <p class="iv-error">{{ e | t }}</p>
         }
       </div>
-      @if (fields().traceId) {
+      @if (!fields().traceId) {
+      <div class="iv-panel iv-panel--sunk note" data-trace-required>
+        <p>{{ 'proposal.traceRequired' | t }}</p>
+        <a class="iv-button" routerLink="/katki/kayit">{{ 'proposal.recordTrace' | t }}</a>
+      </div>
+      } @if (fields().traceId) {
       <p class="iv-panel iv-panel--sunk note">{{ 'proposal.traceAttached' | t }}</p>
       } } @if (current === 'new_line' || (current === 'update_line' && line())) {
       <div class="iv-field">

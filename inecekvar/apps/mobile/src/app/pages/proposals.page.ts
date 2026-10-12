@@ -1,8 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import { ContributionApi, Edit, isApiError } from '@inecekvar/data-access';
+import { ContributionApi, Edit, isApiError, SessionStore } from '@inecekvar/data-access';
 import { formatFareMinor } from '@inecekvar/domain';
 import { NoticeComponent, StateComponent, StatusBadgeComponent, StatusTone } from '@inecekvar/ui';
 import { LanguageService } from '../core/language.service';
@@ -178,11 +185,32 @@ export function subjectOf(edit: Edit): string | null {
 })
 export class ProposalsPage {
   private readonly api = inject(ContributionApi);
+  private readonly session = inject(SessionStore);
+  private readonly identity = computed(() => this.session.user()?.id ?? null);
+  private readonly entry = signal(0);
   private readonly i18n = inject(LanguageService);
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap, { initialValue: null });
 
   protected readonly justSent = computed(() => this.query()?.get('yeni') === '1');
-  protected readonly edits = resource({ loader: () => this.api.myEdits({ limit: 100 }) });
+  protected readonly edits = resource({
+    params: () => {
+      const ownerId = this.identity();
+      return ownerId ? { ownerId, entry: this.entry() } : undefined;
+    },
+    loader: async ({ params, abortSignal }) => {
+      const edits = await this.api.myEdits({ limit: 100 }, abortSignal);
+      return {
+        ownerId: params.ownerId,
+        edits:
+          !abortSignal.aborted &&
+          params.ownerId === this.identity() &&
+          params.entry === this.entry()
+            ? edits
+            : [],
+      };
+    },
+  });
+
   protected readonly errorKey = computed<TranslationKey>(() => {
     const error = this.edits.error();
     return isApiError(error) && (error.kind === 'network' || error.kind === 'timeout')
@@ -192,7 +220,8 @@ export class ProposalsPage {
 
   protected readonly rows = computed<ProposalRow[]>(() => {
     const lang = this.i18n.lang();
-    const edits = this.edits.hasValue() ? this.edits.value() : [];
+    const value = this.edits.hasValue() ? this.edits.value() : null;
+    const edits = value && value.ownerId === this.identity() ? value.edits : [];
     return edits.map((edit) => ({
       id: edit.id,
       kind: isProposalKind(edit.kind) ? KIND_LABELS[edit.kind] : 'proposals.otherKind',
@@ -202,4 +231,8 @@ export class ProposalsPage {
       reason: edit.state === 'rejected' ? text(edit.reason, 1000) : null,
     }));
   });
+
+  ionViewWillEnter(): void {
+    this.entry.update((entry) => entry + 1);
+  }
 }

@@ -1,5 +1,5 @@
 import { DestroyRef, inject, signal } from '@angular/core';
-import { ContributionApi, isApiError } from '@inecekvar/data-access';
+import { ContributionApi, isApiError, PresignedUpload, SessionStore } from '@inecekvar/data-access';
 import { LicenceGate } from '../auth/licence-gate';
 import { TranslationKey } from '../i18n/translation';
 import { Countdown } from '../shared/countdown';
@@ -67,6 +67,8 @@ export async function checkPhoto(
 export class PhotoUploader {
   private readonly api = inject(ContributionApi);
   private readonly licence = inject(LicenceGate);
+  private readonly session = inject(SessionStore);
+  private generation = 0;
   private controller: AbortController | null = null;
   private file: Blob | null = null;
   private kind: PhotoKind = 'fare_table';
@@ -80,7 +82,7 @@ export class PhotoUploader {
   readonly processing = new Countdown();
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.controller?.abort());
+    inject(DestroyRef).onDestroy(() => this.clear());
   }
 
   photoId(): string | null {
@@ -89,61 +91,66 @@ export class PhotoUploader {
   }
 
   async choose(file: Blob, kind: PhotoKind): Promise<void> {
-    this.controller?.abort();
-    this.file = null;
-    const check = await checkPhoto(file);
-    if (!check.ok) {
-      this.state.set({ status: 'rejected', reason: check.reason });
-      return;
+    this.clear();
+    const run = this.generation;
+    const controller = new AbortController();
+    this.controller = controller;
+    const ownerId = this.session.user()?.id;
+    const current = () =>
+      run === this.generation && !controller.signal.aborted && ownerId === this.session.user()?.id;
+    this.state.set({ status: 'uploading', step: 'presign' });
+    try {
+      const check = await checkPhoto(file);
+      if (!current()) return;
+      if (!check.ok) {
+        this.state.set({ status: 'rejected', reason: check.reason });
+        return;
+      }
+      this.file = file;
+      this.kind = kind;
+      const accepted = await this.licence.ensure();
+      if (!current()) return;
+      if (!accepted) {
+        this.state.set({ status: 'failed', key: 'proposal.photo.licence' });
+        return;
+      }
+      const body = { kind, content_type: check.type, byte_size: file.size };
+      let presigned: PresignedUpload;
+      try {
+        presigned = await this.api.presignPhoto(body);
+      } catch (error) {
+        if (!current() || !isApiError(error) || error.status !== 403) throw error;
+        const accepted = await this.licence.recheck();
+        if (!current()) return;
+        if (!accepted) throw error;
+        presigned = await this.api.presignPhoto(body);
+      }
+      if (!current()) return;
+      this.state.set({ status: 'uploading', step: 'upload' });
+      await this.api.uploadPhoto(presigned, file, controller.signal);
+      if (!current()) return;
+      this.processing.start(presigned.expires_in + WORKER_SLACK_SECONDS);
+      this.state.set({ status: 'done', photoId: presigned.photo_id, bytes: file.size });
+    } catch (error) {
+      if (current()) this.state.set({ status: 'failed', key: this.failureKey(error) });
+    } finally {
+      if (this.controller === controller) this.controller = null;
     }
-    this.file = file;
-    this.kind = kind;
-    await this.send(check.type);
   }
 
   async retry(): Promise<void> {
     if (!this.file || this.countdown.active()) return;
-    const check = await checkPhoto(this.file);
-    if (check.ok) await this.send(check.type);
+    await this.choose(this.file, this.kind);
   }
 
   clear(): void {
+    this.generation += 1;
     this.controller?.abort();
     this.controller = null;
     this.file = null;
     this.processing.stop();
+    this.countdown.stop();
     this.state.set({ status: 'idle' });
-  }
-
-  private async send(type: PhotoType): Promise<void> {
-    const file = this.file;
-    if (!file) return;
-    // Presigning needs the licence, like every contribution.
-    if (!(await this.licence.ensure())) {
-      this.state.set({ status: 'failed', key: 'proposal.photo.licence' });
-      return;
-    }
-    const controller = new AbortController();
-    this.controller = controller;
-    try {
-      this.state.set({ status: 'uploading', step: 'presign' });
-      const presigned = await this.api.presignPhoto({
-        kind: this.kind,
-        content_type: type,
-        byte_size: file.size,
-      });
-      if (controller.signal.aborted) return;
-      this.state.set({ status: 'uploading', step: 'upload' });
-      await this.api.uploadPhoto(presigned, file, controller.signal);
-      if (controller.signal.aborted) return;
-      this.processing.start(presigned.expires_in + WORKER_SLACK_SECONDS);
-      this.state.set({ status: 'done', photoId: presigned.photo_id, bytes: file.size });
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      this.state.set({ status: 'failed', key: this.failureKey(error) });
-    } finally {
-      if (this.controller === controller) this.controller = null;
-    }
   }
 
   private failureKey(error: unknown): TranslationKey {

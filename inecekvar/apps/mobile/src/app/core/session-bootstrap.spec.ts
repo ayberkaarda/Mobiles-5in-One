@@ -8,6 +8,9 @@ import {
 } from '@inecekvar/data-access';
 import { apiBaseFor, environment } from '../../environments/environment';
 import { appConfig } from '../app.config';
+import { PREFERENCE_STORE } from '../city/city.store';
+import { TRACE_CLEANUP_KEY, TRACE_DRAFT_KEY } from '../contribute/trace-draft';
+import { MemoryPreferences, settle } from '../testing/catalog.fixtures';
 import { bootstrapSession } from './session-bootstrap';
 
 function fakeSession() {
@@ -26,6 +29,23 @@ function fakeApp() {
 }
 
 describe('bootstrapSession', () => {
+  it('retries pending coordinate cleanup during app startup', async () => {
+    const prefs = new MemoryPreferences();
+    prefs.values.set(TRACE_CLEANUP_KEY, '1');
+    prefs.values.set(TRACE_DRAFT_KEY, 'coordinates awaiting deletion');
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: SessionStore, useValue: fakeSession() },
+        { provide: IS_NATIVE_PLATFORM, useValue: false },
+        { provide: PREFERENCE_STORE, useValue: prefs },
+      ],
+    });
+    TestBed.runInInjectionContext(() => bootstrapSession());
+    await settle();
+    expect(prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+    expect(prefs.values.has(TRACE_CLEANUP_KEY)).toBe(false);
+  });
+
   it('starts the session check on the web without a deep-link listener', () => {
     const session = fakeSession();
     const app = fakeApp();

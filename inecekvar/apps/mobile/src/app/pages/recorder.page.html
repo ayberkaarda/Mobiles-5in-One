@@ -9,7 +9,13 @@
 
 <ion-content>
   <div class="iv-page" [attr.data-view]="rec.view()">
-    @switch (rec.view()) { @case ('idle') {
+    @if (rec.cleanupPending() || rec.view() === 'cleanup') {
+    <p class="iv-error" role="alert">{{ 'recorder.errors.cleanup' | t }}</p>
+    } @if (rec.view() === 'cleanup') {
+    <button type="button" class="iv-button" (click)="rec.discard()">
+      {{ 'recorder.retryCleanup' | t }}
+    </button>
+    } @switch (rec.view()) { @case ('idle') {
     <p class="iv-kicker">{{ 'recorder.kicker' | t }}</p>
     <h1 class="iv-heading">{{ 'recorder.heading' | t }}</h1>
     <p class="iv-lead">{{ 'recorder.lead' | t }}</p>

@@ -34,7 +34,7 @@ const LANG_OPTIONS: readonly { value: AppLang; label: TranslationKey }[] = [
 export class SettingsPage {
   protected readonly theme = inject(ThemeService);
   protected readonly session = inject(SessionStore);
-  private readonly recorder = inject(RecorderStore);
+  protected readonly recorder = inject(RecorderStore);
   protected readonly signingOut = signal(false);
   protected readonly signOutNote = signal<TranslationKey | null>(null);
   protected readonly language = inject(LanguageService);
@@ -71,9 +71,13 @@ export class SettingsPage {
     try {
       await this.recorder.discard();
       await this.session.logout();
-      this.signOutNote.set('settings.signedOut');
+      this.signOutNote.set(
+        this.recorder.cleanupPending() ? 'recorder.errors.cleanup' : 'settings.signedOut',
+      );
     } catch {
-      this.signOutNote.set('settings.signOutPending');
+      this.signOutNote.set(
+        this.recorder.cleanupPending() ? 'recorder.errors.cleanup' : 'settings.signOutPending',
+      );
     } finally {
       this.signingOut.set(false);
     }

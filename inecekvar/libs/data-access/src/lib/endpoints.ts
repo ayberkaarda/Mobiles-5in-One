@@ -226,20 +226,20 @@ export class ContributionApi {
   private readonly api = inject(ApiClient);
   private readonly fetchFn = inject(FETCH);
 
-  myEdits(page: PageQuery = {}): Promise<Edit[]> {
-    return this.api.request({ method: 'GET', path: '/edits', query: page });
+  myEdits(page: PageQuery = {}, signal?: AbortSignal): Promise<Edit[]> {
+    return this.api.request({ method: 'GET', path: '/edits', query: page, signal });
   }
 
   edit(id: string): Promise<Edit> {
     return this.api.request({ method: 'GET', path: '/edits/{identity}', params: { identity: id } });
   }
 
-  proposeEdit(proposal: EditProposal): Promise<Edit> {
-    return this.api.request({ method: 'POST', path: '/edits', body: proposal });
+  proposeEdit(proposal: EditProposal, signal?: AbortSignal): Promise<Edit> {
+    return this.api.request({ method: 'POST', path: '/edits', body: proposal, signal });
   }
 
-  uploadTrace(trace: TraceUpload): Promise<TraceCreated> {
-    return this.api.request({ method: 'POST', path: '/traces', body: trace });
+  uploadTrace(trace: TraceUpload, signal?: AbortSignal): Promise<TraceCreated> {
+    return this.api.request({ method: 'POST', path: '/traces', body: trace, signal });
   }
 
   trace(id: string): Promise<Trace> {
@@ -259,8 +259,8 @@ export class ContributionApi {
   }
 
   /** A presigned PUT for one photo; the upload itself goes straight to object storage. */
-  presignPhoto(input: PresignRequest): Promise<PresignedUpload> {
-    return this.api.request({ method: 'POST', path: '/media/presign', body: input });
+  presignPhoto(input: PresignRequest, signal?: AbortSignal): Promise<PresignedUpload> {
+    return this.api.request({ method: 'POST', path: '/media/presign', body: input, signal });
   }
 
   /**

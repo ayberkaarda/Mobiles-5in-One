@@ -18,6 +18,7 @@ import {
   walk,
 } from '../testing/contribute.fixtures';
 import { RecorderStore } from './recorder.store';
+import { deferred } from '../testing/deferred';
 import {
   BASE_TOLERANCE_M,
   dedupe,
@@ -140,6 +141,8 @@ describe('on-device simplification', () => {
 function draft(overrides: Partial<TraceDraft> = {}): TraceDraft {
   return {
     v: 1,
+    id: 'draft-a',
+    ownerId: 'user-a',
     city: 'ornek-test-sehri',
     startedAt: '2026-10-12T08:00:00Z',
     endedAt: null,
@@ -174,7 +177,7 @@ describe('trace draft', () => {
     TestBed.configureTestingModule({ providers: [{ provide: PREFERENCE_STORE, useValue: prefs }] });
     const store = TestBed.inject(TraceDraftStore);
     prefs.values.set(TRACE_DRAFT_KEY, '{broken');
-    expect(await store.load()).toBeNull();
+    expect(await store.load('user-a')).toBeNull();
     expect(prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
     prefs.set = async () => {
       throw new Error('quota');
@@ -230,6 +233,210 @@ function storedDraft(prefs: MemoryPreferences): TraceDraft | null {
 }
 
 describe('RecorderStore', () => {
+  it('deletes account A draft instead of loading it for account B', async () => {
+    const prefs = new MemoryPreferences();
+    TestBed.configureTestingModule({ providers: [{ provide: PREFERENCE_STORE, useValue: prefs }] });
+    const store = TestBed.inject(TraceDraftStore);
+    expect(await store.save(draft({ ownerId: 'user-a' }))).toBe(true);
+    expect(await store.load('user-b')).toBeNull();
+    expect(prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+  });
+
+  it('deletes a legacy draft without an owner', async () => {
+    const prefs = new MemoryPreferences();
+    const legacy: Record<string, unknown> = { ...draft() };
+    delete legacy['ownerId'];
+    prefs.values.set(TRACE_DRAFT_KEY, JSON.stringify(legacy));
+    TestBed.configureTestingModule({ providers: [{ provide: PREFERENCE_STORE, useValue: prefs }] });
+    expect(await TestBed.inject(TraceDraftStore).load('user-a')).toBeNull();
+    expect(prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+  });
+
+  it('refuses to upload a draft owned by another account', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(3));
+    await r.rec.finish();
+    r.session.signIn('user-b', true);
+    expect((await r.rec.submit()).ok).toBe(false);
+    expect(r.contributions.uploadTrace.calls).toHaveLength(0);
+  });
+
+  it('clears the in-memory ride when the signed-in user changes', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(3));
+    r.session.signIn('user-b', true);
+    TestBed.tick();
+    expect(r.rec.points()).toEqual([]);
+    expect(r.rec.stops()).toEqual([]);
+    await flush();
+    expect(r.positions.watching).toBe(false);
+  });
+
+  it('discard resets uploaded marks and every recorder readout', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(3));
+    await r.rec.markStop('A stop');
+    await r.rec.finish();
+    await r.rec.submit();
+    expect(r.rec.uploadedStops()).toHaveLength(1);
+    r.rec.problem.set('storage');
+    r.rec.submitError.set('recorder.errors.generic');
+    r.rec.interrupted.set(true);
+    r.rec.weakSignal.set(true);
+    await r.rec.discard();
+    expect(r.rec.view()).toBe('idle');
+    expect(r.rec.uploaded()).toBeNull();
+    expect(r.rec.uploadedStops()).toEqual([]);
+    expect(r.rec.uploadedCity()).toBeNull();
+    expect(r.rec.points()).toEqual([]);
+    expect(r.rec.stops()).toEqual([]);
+    expect(r.rec.city()).toBeNull();
+    expect(r.rec.distanceMetres()).toBe(0);
+    expect(r.rec.elapsedSeconds()).toBe(0);
+    expect(r.rec.hasFix()).toBe(false);
+    expect(r.rec.problem()).toBeNull();
+    expect(r.rec.submitError()).toBeNull();
+    expect(r.rec.interrupted()).toBe(false);
+    expect(r.rec.weakSignal()).toBe(false);
+    expect(r.rec.wakeLockOn()).toBe(false);
+  });
+
+  it('concurrent resumes open only one live position watch', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await r.rec.pause();
+    const permission = deferred<'granted' | 'denied'>();
+    const ensure = vi.spyOn(r.positions, 'ensurePermission').mockReturnValue(permission.promise);
+    const first = r.rec.resume();
+    const second = r.rec.resume();
+    permission.resolve('granted');
+    await Promise.all([first, second]);
+    expect(ensure).toHaveBeenCalledTimes(1);
+    expect(r.positions.watchCount).toBe(2);
+    expect(r.positions.watching).toBe(true);
+    await r.rec.finish();
+    expect(r.positions.watching).toBe(false);
+  });
+
+  it('discard invalidates a start waiting for location permission', async () => {
+    const r = await rig();
+    const permission = deferred<'granted' | 'denied'>();
+    vi.spyOn(r.positions, 'ensurePermission').mockReturnValue(permission.promise);
+    const starting = r.rec.start('ornek-test-sehri');
+    await flush();
+    await r.rec.discard();
+    permission.resolve('granted');
+    await starting;
+    expect(r.rec.view()).toBe('idle');
+    expect(r.positions.watchCount).toBe(0);
+    expect(r.prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+  });
+
+  it('closes a late watch handle after discard', async () => {
+    const r = await rig();
+    const handle = deferred<{ stop: () => Promise<void> }>();
+    const stop = vi.fn(async () => undefined);
+    vi.spyOn(r.positions, 'watch').mockReturnValue(handle.promise);
+    const starting = r.rec.start('ornek-test-sehri');
+    await flush();
+    await r.rec.discard();
+    handle.resolve({ stop });
+    await starting;
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(r.rec.view()).toBe('idle');
+  });
+
+  it('submits a trace only once while the licence check is pending', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(3));
+    await r.rec.finish();
+    const licence = deferred<boolean>();
+    const ensure = vi.spyOn(TestBed.inject(LicenceGate), 'ensure').mockReturnValue(licence.promise);
+    const first = r.rec.submit();
+    const second = r.rec.submit();
+    expect(ensure).toHaveBeenCalledTimes(1);
+    licence.resolve(true);
+    const results = await Promise.all([first, second]);
+    expect(results.map((result) => result.ok)).toEqual([true, false]);
+    expect(r.contributions.uploadTrace.calls).toHaveLength(1);
+  });
+
+  it('a late trace upload cannot erase the replacement recording', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(3));
+    await r.rec.markStop('Old stop');
+    await r.rec.finish();
+    const response = await fakeContributions().uploadTrace({
+      city: 'ornek-test-sehri',
+      started_at: '2026-10-12T08:00:00Z',
+      ended_at: '2026-10-12T08:00:03Z',
+      points: walk(3),
+    });
+    const upload = deferred<typeof response>();
+    r.contributions.uploadTrace.impl = () => upload.promise;
+    const submitting = r.rec.submit();
+    await flush();
+    const signal = r.contributions.uploadTrace.calls[0]?.[1];
+    expect(signal?.aborted).toBe(false);
+    await r.rec.discard();
+    expect(signal?.aborted).toBe(true);
+    await r.rec.start('ornek-test-sehri');
+    await ride(r, walk(4));
+    await r.rec.pause();
+    const replacement = storedDraft(r.prefs);
+    upload.resolve(response);
+    expect((await submitting).ok).toBe(false);
+    expect(r.rec.pointCount()).toBe(4);
+    expect(storedDraft(r.prefs)).toEqual(replacement);
+    expect(r.rec.uploadedStops()).toEqual([]);
+    expect(r.rec.uploaded()).toBeNull();
+  });
+
+  it('retries a refused draft deletion before reporting discard success', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    let attempts = 0;
+    r.prefs.remove = async (key) => {
+      if (key === TRACE_DRAFT_KEY && ++attempts === 1) throw new Error('blocked');
+      r.prefs.values.delete(key);
+    };
+    await r.rec.discard();
+    expect(attempts).toBe(2);
+    expect(r.rec.view()).toBe('idle');
+    expect(r.prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+  });
+
+  it('surfaces failed cleanup and retries it on the next draft load', async () => {
+    const r = await rig();
+    await r.rec.start('ornek-test-sehri');
+    let attempts = 0;
+    r.prefs.remove = async () => {
+      attempts += 1;
+      throw new Error('blocked');
+    };
+    await r.rec.discard();
+    expect(attempts).toBe(3);
+    expect(r.rec.view()).toBe('cleanup');
+    expect(r.rec.submitError()).toBe('recorder.errors.cleanup');
+    expect(r.rec.cleanupPending()).toBe(true);
+    expect(r.prefs.values.has(TRACE_DRAFT_KEY)).toBe(true);
+    r.prefs.remove = async (key) => {
+      attempts += 1;
+      r.prefs.values.delete(key);
+    };
+    TestBed.resetTestingModule();
+    const next = await rig({ prefs: r.prefs });
+    expect(attempts).toBeGreaterThan(3);
+    expect(next.rec.pointCount()).toBe(0);
+    expect(next.rec.view()).toBe('idle');
+    expect(r.prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
+  });
+
   it('stays idle and explains when location permission is denied', async () => {
     const r = await rig();
     r.positions.permission = 'denied';
