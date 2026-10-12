@@ -23,14 +23,18 @@ its session and auth parts, which public SSR pages must not carry.
    unknown means `production`, the strict default), `IV_WEB_CANONICAL_ORIGIN`,
    `IV_WEB_ALLOWED_HOSTS`, `IV_WEB_API_PUBLIC_ORIGIN`, `IV_WEB_TILES_ORIGIN`,
    `IV_WEB_API_INTERNAL_URL`, `IV_WEB_CACHE_TTL_SECONDS` (600), `IV_WEB_CACHE_MAX_ENTRIES`,
-   `IV_WEB_CACHE_QUERY_ALLOWLIST` (`sayfa`), `IV_WEB_IOS_APP_ID`. All values are public. Origins must
+   `IV_WEB_CACHE_QUERY_ALLOWLIST` (`sayfa`), `IV_WEB_IOS_APP_ID`, and since the phase 4 review
+   `IV_WEB_BYPASS_RENDER_BURST` and `IV_WEB_BYPASS_RENDER_PER_MINUTE` (both 60, item 6). All values
+   are public. Origins must
    be bare origins and https in production; `localhost`, loopback and `*` are dropped from the
    allowed hosts in production and added outside it. Invalid values stop the start-up with the
    variable name, never the value.
 2. Middleware order: `GET /healthz` (plain `ok`, before the host guard so container probes on
    127.0.0.1 work), removal of `Forwarded`, `X-Forwarded-*`, `X-Original-URL`, `X-Rewrite-URL` and
    `X-HTTP-Method-Override`, GET and HEAD only (405), no request bodies (413), URLs up to 2048
-   characters (414), the host guard (400 for any Host outside the allowlist, 301 from `www.` to the
+   characters (414), network-path (`//host`) and backslash targets, raw or after one decoding
+   (400, added after the phase 4 review: `//evil.com/x` used to reach the renderer, throw and log a
+   stack trace per request), the host guard (400 for any Host outside the allowlist, 301 from `www.` to the
    canonical origin in production), the nonce, `helmet`, Permissions-Policy, `robots.txt`, hashed
    static files (never `.html`, which must pass the nonce substitution), the SSR handler and a
    generic Turkish 500 page without stack or input echo. Node limits: 16 KiB headers, 15 s header
@@ -65,9 +69,15 @@ its session and auth parts, which public SSR pages must not carry.
    32 MiB byte bound, per-entry TTL), `RedisPageCache` behind a two-method client interface (hashed
    keys, validated JSON, client errors are misses) and `LayeredPageCache`. The key is
    `v1|host|path|sorted allowlisted params`. The cache is bypassed (neither read nor written) for
-   methods other than GET and HEAD, any `Cookie` or `Authorization` header, `/admin` in any case or
-   encoding, paths that are not already normalized (`//`, dot segments, trailing slash, encoded
-   separators), repeated parameters and allowlisted values over 64 characters. Only 200
+   methods other than GET and HEAD, any `Cookie` or `Authorization` header, `/admin` (first path
+   segment after decoding, any case, also `/admin;x`), paths that are not already normalized
+   (`//`, dot segments, trailing slash, encoded separators), repeated parameters and allowlisted
+   values over 64 characters. Since the phase 4 review a non-canonical path never gets this far:
+   URL normalization (ADR-0039 item 11) redirects or refuses it before rendering. Every remaining
+   bypass render except the client-only admin shell takes a token from a bucket keyed on the TCP
+   peer address (`server/bypass-limiter.ts`, burst and refill from item 1); an empty bucket answers
+   429 with `Retry-After` and `no-store`. Behind a reverse proxy that address is the proxy's, so
+   the bucket is shared (`docs/ops/env.md`). Only 200
    `text/html` responses without `Set-Cookie` and up to 1 MB are stored, with the placeholder in
    place. HTML is sent with `Cache-Control: private, no-cache` so no shared cache keeps a nonce.
    `X-Cache` is sent outside production only. Every route, home included, renders per request; no
@@ -128,10 +138,14 @@ its session and auth parts, which public SSR pages must not carry.
 | 3 | Web e2e against the production build | `pnpm nx run web-e2e:e2e` (fake API 57991, web instances 57992 test, 57993 production, 57994 with an unreachable API) | 10 passed: headers, nonces per response, host/method/robots/health guards, cache keys, 404 and 503 not stored, hydration without CSP reports or page errors, SSR without JavaScript (content, canonical, hreflang, one JSON-LD block), 404 page, `/durum` 200 and 503 |
 | 4 | Bundle boundary | `pnpm nx run web:bundle-check`; control `node apps/web/scripts/check-public-bundle.mjs dist/apps/mobile` | "Public web bundle clean: 24 files, 4 markers"; the mobile bundle fails with all 4 markers |
 | 5 | Manual probe | production build on 127.0.0.1, `curl` twice | MISS then HIT with different nonces in the CSP and in every nonce attribute; `Host: evil.example` 400 |
-| 6 | Mutation: nonce frozen on cache hits | the hit path reuses the first nonce | `cache-behaviour.spec.ts` red (1 test), restored |
-| 7 | Mutation: JSON-LD `<` not escaped | the `<` replacement removed | `json-ld.spec.ts` red (1 test), restored |
-| 8 | Mutation: cookie requests cached | `cookie` removed from the bypass headers | 4 tests red (`page-cache.spec.ts`, `cache-behaviour.spec.ts`), restored |
+| 6 | Mutation: nonce frozen on cache hits | the hit path reuses the first nonce (re-run after the phase 4 review as "the hit path skips the substitution") | red: `cache-behaviour.spec.ts` "gives two cache hits distinct nonces matching all response attributes"; restored |
+| 7 | Mutation: JSON-LD `<` not escaped | the `<` replacement removed | red: `json-ld.spec.ts` "escapes HTML delimiters and line separators without changing data" (with the 4C page builders also the six `page-builders.spec.ts` "keeps bounded SEO and preserved JSON text …" cases); restored |
+| 8 | Mutation: cookie requests cached | `cookie` removed from the bypass headers | red: `page-cache.spec.ts` "bypasses requests with private headers" (`cookie: ''`, `cookie: 'session=x'`), `cache-behaviour.spec.ts` "neither reads nor writes the cache for private requests" (`Cookie: 'session=one'`, `Cookie: ''`) and, since the review, `normalize.spec.ts` "limits bypass renders per client and answers 429 without rendering"; restored |
 | 9 | Formatting and words | `pnpm exec prettier --check apps/web apps/web-e2e libs/ui`; the CI banned-word grep over the new files | clean |
+| 10 | Review fix: nonce only in start tags | `csp-nonce.spec.ts` "never puts the live nonce into text nodes, whose quotes the server renderer leaves raw" | mutation "the old unanchored expression": red (that test); restored |
+| 11 | Review fix: network-path and backslash targets | `request-guards.spec.ts` "rejects the authority-form or backslash path %s with 400 and no error log" (8 cases), e2e `routing.spec.ts` (non-canonical test) | mutation "guard disabled": all 8 red; restored |
+| 12 | Review fix: bypass render bucket | `normalize.spec.ts` "limits bypass renders per client and answers 429 without rendering", "never limits cacheable requests" | mutation "bucket always grants": red (first test); restored |
+| 13 | Review fix: static cache headers | `cache-behaviour.spec.ts` "keeps only Angular hashed output immutable, never the copied MapLibre worker" (`maplibre/maplibre-gl-worker.mjs` and `-shared.mjs`, an un-hashed `service-worker.js`, `icon-maskable.png`, `favicon.ico` revalidate; `chunk-`, `main-`, `styles-`, `media/` hashed names stay immutable) | mutation "the old `[-.][a-z0-9_-]{8,}` expression": red; restored |
 
 ## Not exercised
 

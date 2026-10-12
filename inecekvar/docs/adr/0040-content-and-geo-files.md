@@ -43,8 +43,12 @@ of use draft.
 6. **Machine files.** `registerContentFiles` (`content/llms-route.ts`, called once from
    `server/app.ts` after `robots.txt`) serves `/llms.txt` and `/llms-full.txt` as
    `text/plain; charset=utf-8` and `/sitemap-pages.xml` (static pages without the noindex ones,
-   `lastmod` = content date). They are built from the same facts and need no API.
-7. **Honesty rules, enforced by tests.**
+   `lastmod` = content date). They are built from the same facts and need no API. Since the phase
+   4 review `/sitemap.xml` lists `/sitemap-pages.xml` first, with the same content date
+   (`server/machine-files.ts`).
+7. **Honesty rules, enforced by tests** (`content.spec.ts`, "legal and honesty rules"; each rule
+   names its assertion in Evidence; the contact-data and licence checks also have negative tests
+   that inject a violation and expect the check to fail).
    - Licence: "CC BY 4.0 önerilmiştir; hukuki onay bekleniyor, henüz verilmiş bir lisans yok",
      one string, shown on `/veri`, `/veri-lisansi`, `llms.txt` and the FAQ.
    - `/kvkk-aydinlatma` is marked "Taslak" at the top and in the heading and is `noindex`; it
@@ -60,7 +64,9 @@ of use draft.
      `docs/seo/checklist.md`.
    - Cities: the target list is described as a target; coverage is the published line count on
      the city page.
-8. **No contact or social links, no analytics, no storage**: the pages add no script, cookie or
+8. **No contact or social links, no analytics, no storage** (public pages only; the staff area
+   under `/admin` sets the session and CSRF cookies and a logout marker in web storage, and
+   `/gizlilik` and the FAQ say so since the phase 4 review): the pages add no script, cookie or
    request beyond the existing SSR bundle (lazy chunk `content-page`, about 7 kB).
 
 ## Consequences
@@ -69,8 +75,12 @@ of use draft.
   there is no CMS. A word-count test keeps every guide at 600 words or more.
 - Correctness of guide statements about the app depends on ADR-0021, ADR-0022, ADR-0024,
   ADR-0026 and ADR-0034; a change of those behaviours needs the matching guide edit.
-- `/sitemap-pages.xml` is not yet listed by `/sitemap.xml` (the index is built from the API city
-  list in `server/machine-files.ts`, not touched here).
+- `/sitemap-pages.xml` is listed by `/sitemap.xml` since the phase 4 review (it was missing in
+  the first version of this package).
+- Store title: the specification fixes `İnecek Var: Dolmuş & Minibüs Hatları` (36 characters,
+  `FACTS.storeTitle`), above the 30 character cap of both stores. `docs/seo/aso.md` records the
+  options; choosing between them is the owner's decision, not this package's, and nothing is
+  submitted before it.
 
 ## Evidence
 
@@ -85,6 +95,10 @@ of use draft.
 | 7 | llms | `llms-route.spec.ts`, e2e `llms files are served as UTF-8 plain text` | 200, `text/plain; charset=utf-8`, same name, tagline, description, licence line |
 | 8 | Web e2e on the production build | `pnpm nx run web-e2e:e2e` | 50 passed (39 earlier + 11 content tests: five guides without JavaScript, FAQ mirror, Dataset, noindex and no form, link crawl, 404, llms) |
 | 9 | Formatting and words | `prettier --check` on the changed files; the CI banned-word grep | clean |
+| 10 | Honesty assertions per rule (`content.spec.ts`, "legal and honesty rules") | licence: "states the licence is proposed and approval is pending", "states the licence as pending wherever the proposed licence is named"; KVKK draft: "marks the KVKK text as a draft and keeps it out of the index"; contact data: "invents no registration numbers, addresses or contact addresses"; deletion: "says the web deletion flow does not exist and shows no form"; contact: "says the contact channel is being set up"; terms: "lists the terms of use as open work because no draft exists"; numbers: "keeps the trim, retention and grace numbers aligned with the ADRs"; storage: "scopes the no-cookie promise to public pages and names the staff area cookies" | all green |
+| 11 | Negative test: invented contact data | "fails the honesty check when a page gains %s" (e-mail, two phone forms, MERSİS, tax number, street address, social handle injected into a page text) | each case flags its kind; the local phone, address and social patterns were added for this test. Mutation "a page gains `Telefon: 0 (212) 555 01 01`": red "invents no registration numbers, addresses or contact addresses"; restored |
+| 12 | Negative test: licence presented as granted | "fails the licence check for the granted-licence claim %s" (4 sentences) | each flagged. Mutation "`FACTS.licence.statusLine` = `Veriler CC BY 4.0 lisansı altında yayımlanır.`": red "states the licence as pending wherever …" and "states the licence is proposed …"; restored |
+| 13 | Review fix: cookie sentences (`/gizlilik`, FAQ) | "scopes the no-cookie promise to public pages and names the staff area cookies" | mutation "old unscoped sentence on `/gizlilik`": red; restored |
 
 ## Not exercised
 
@@ -96,4 +110,4 @@ of use draft.
 - `not exercised: real search or answer-engine crawlers fetching llms.txt`.
 - `not exercised: Firefox and Safari`, and the pages in a real mobile browser (Chromium only).
 - Open: `/kullanim-kosullari`, a real contact channel, English pages, an OG image for content
-  pages, a per-city export link list on `/veri`, listing `/sitemap-pages.xml` in the index.
+  pages, a per-city export link list on `/veri`, the store title decision (owner).

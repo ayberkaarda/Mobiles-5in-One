@@ -90,3 +90,20 @@ Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have 
 The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
 
 Do not place signing keys, provider credentials, production endpoints or other secrets in the example file. Production hosting, the public domain, TLS and HSTS preload are not exercised: no domain, no host.
+
+## Read by the web SSR server (Phase 4)
+
+`apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `IV_WEB_BYPASS_RENDER_BURST` | `60` | Token bucket size for renders that cannot use the page cache (requests with `Cookie` or `Authorization`, repeated or oversized allowlisted parameters). Cacheable requests and the client-only `/admin` shell never consume it. Over the limit the server answers 429 with `Retry-After`. |
+| `IV_WEB_BYPASS_RENDER_PER_MINUTE` | `60` | Refill rate of that bucket. |
+
+The bucket is keyed on the TCP peer address (`trust proxy` stays off and forwarded headers are stripped). Behind a reverse proxy every request has the proxy's address, so the limit becomes one shared bucket for all cache-bypass renders: it caps the load such requests put on the API, and under abuse it can also delay public page views of signed-in staff (never the `/admin` shell).
+
+## Admin origin and the staff session cookie
+
+The staff session cookie is `__Host-iv_session` with `Path=/` (the `__Host-` prefix forbids a narrower path), plus a CSRF cookie. While the admin UI lives under `inecekvar.app/admin`, every public page request of a signed-in moderator carries these cookies to the public SSR Node process (which never reads them, never forwards them to rendering and bypasses the page cache for them). A compromise of the SSR tier would therefore expose staff sessions.
+
+Production should serve the admin UI on a separate origin (for example `yonetim.inecekvar.app`, its own Caddy site that proxies `/api/*` to the API and everything else to a static build of the admin shell) or behind a path whose cookie never reaches the public SSR node. Current state, recorded honestly: the repository has only the local `ops/Caddyfile` (`:8080` web, `:8081` PWA, both proxying `/api/*`); no production Caddy configuration exists, no admin origin is configured, and the API cookie settings have not been checked for such an origin. This is a deployment decision for the hosting work (ADR-0002); no code changed for it in phase 4 (ADR-0041 item 15).

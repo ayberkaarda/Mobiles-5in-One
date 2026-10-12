@@ -25,7 +25,8 @@ exposes the inputs (ADR-0025, ADR-0037): `GET cities`, `cities/{slug}` (hub data
    `durum` stays ahead of `:sehir`. Later fixed pages (`/veri`, `/sss`, `/rehber/...`) must be
    declared before `:sehir` as well.
 2. Resolvers validate every parameter (slug rule shared with the mobile deep-link parser, `sayfa`
-   `^[1-9][0-9]{0,3}$`) before any API call. API 404/410 and invalid parameters give a real 404
+   `^[1-9][0-9]{0,3}$`) before any API call (a path that is not canonical never gets here: it is
+   refused with a plain 404, item 11). API 404/410 and invalid parameters give a real 404
    status page; other failures a 503 with `Retry-After: 120`; neither is cached. A page past the end
    of the list is a 404. The list fetches 51 rows to know whether a next page exists, because the
    API returns no total.
@@ -79,10 +80,17 @@ exposes the inputs (ADR-0025, ADR-0037): `GET cities`, `cities/{slug}` (hub data
 11. URL normalization (`normalize.ts`), after static files and before the cache: trailing slashes
     removed, ASCII upper case lowered (paths of letters, digits, `-`, `/` only), `?sayfa=1` on a
     list dropped; one 301 with a relative `Location`, only allowlisted query parameters kept, never
-    built from `Host`. Paths with a dot (files) are left alone.
+    built from `Host`. After the phase 4 review a target is served only in its canonical form
+    (`classifyTarget`): the path is percent-decoded once; if the result, lowered and without
+    trailing slashes, is a path of slug segments it is served (unchanged) or redirected (any other
+    spelling, e.g. `/%69stanbul`); everything else is a plain 404 with `no-store`, before rendering
+    and before the cache: matrix parameters (`/istanbul;x=1`), `~`, dots (missing files),
+    encoded separators that do not decode to a slug path, `//` inside the path, non-ASCII and
+    undecodable escapes. The earlier version left such paths to the renderer, which made each
+    `;x=N` an uncached render and each encoded spelling a separate cache entry.
 12. Machine files (`machine-files.ts`, `api-reader.ts`), registered after `robots.txt`, behind the
-    host guard and helmet: `/sitemap.xml` (index of `/sitemaps/{city}.xml` for non-sample cities
-    from `GET sitemap`), `/sitemaps/{city}.xml` (hub, list, every line and stop from
+    host guard and helmet: `/sitemap.xml` (index of `/sitemap-pages.xml`, dated with the content
+    date, and of `/sitemaps/{city}.xml` for non-sample cities from `GET sitemap`), `/sitemaps/{city}.xml` (hub, list, every line and stop from
     `GET cities/{slug}/sitemap`; route pages are not listed), `/.well-known/assetlinks.json`,
     `/.well-known/apple-app-site-association` (components `/*/hat/*`, `/*/durak/*`) and
     `/og/{city}/hat/{slug}.svg`. `lastmod` is the API value (current-version `published_at`)
@@ -96,7 +104,8 @@ exposes the inputs (ADR-0025, ADR-0037): `GET cities`, `cities/{slug}` (hub data
 14. OG images: `sharp` is not in the workspace, so no package was added. Each line gets a
     server-side SVG (1200×630, krem background, lacivert frame, the projected line, escaped name,
     city and mode) through `svgDocument` (extended additively with an optional background and label
-    size/weight; old output byte-identical). Many social crawlers do not render SVG `og:image`;
+    size/weight; old output byte-identical). Like the line resolver, the route serves an image only
+    for a line whose `status` is `published`; any other status is a `no-store` 404. Many social crawlers do not render SVG `og:image`;
     a PNG step (`sharp` or a worker) is deferred and recorded below.
 
 ### Work split
@@ -116,10 +125,14 @@ e2e part (fake API, specs, Playwright config).
 | 4 | Interactive map in headless Chromium | `line-map.spec.ts` annotation | "map canvas rendered"; worker file loaded; no CSP violation, so no `worker-src` change |
 | 5 | Bundle boundary | `pnpm nx run web:bundle-check` | "Public web bundle clean: 50 files, 4 markers" |
 | 6 | Real local API, sample city | postgis 16-3.5 on 58432 and redis on 58379 (containers removed afterwards), `alembic upgrade head`, `python -m app.seed`, `uvicorn` on 58800, production web build on 58010; `curl` | `/`, hub, list, line, stop and route of `ornek-test-sehri` 200 and `noindex`; unknown line and city 404; line summary 49 words; sitemap index empty (sample only); sample city sitemap and OG 404 |
-| 7 | Mutation: `<` not escaped in JSON-LD | the `<` replacement removed from `serializeJsonLd` | 7 tests red (6 page builders, 1 serializer), restored |
-| 8 | Mutation: route pages indexable under 50 lines | threshold check `>= 0` | 2 unit tests and the e2e route test red, restored |
-| 9 | Mutation: summary not clamped | the drop steps and the final clip removed | 2 summary tests red, restored |
+| 7 | Mutation: `<` not escaped in JSON-LD | the `<` replacement removed from `serializeJsonLd` | red: `page-builders.spec.ts` "keeps bounded SEO and preserved JSON text for `</script>…`" in each of the 6 page-type blocks, `json-ld.spec.ts` "escapes HTML delimiters and line separators without changing data"; restored (re-run after the phase 4 review) |
+| 8 | Mutation: route pages indexable under 50 lines | threshold check `>= 0` | red: `route-pair.spec.ts` "uses the publication threshold for 49 lines", `page-builders.spec.ts` "indexes 49 lines, sample false, canonical true as false"; the e2e "route pages are noindex below 50 published lines …" was red in the original run (not re-run); restored |
+| 9 | Mutation: summary not clamped | the drop steps and the final clip removed | red: `line-summary.spec.ts` "keeps long names deterministic and within the word budget", "drops payment before shortening hours and preserves the opening"; restored |
 | 10 | Formatting and words | `prettier --write` on the changed files only; the CI banned-word grep | clean |
+| 11 | Review fix: non-canonical paths | `normalize.spec.ts`, e2e `routing.spec.ts` "non-canonical paths are refused or redirected before rendering and never cached" | mutation "rejected paths fall through to rendering": red `normalize.spec.ts` "neither renders nor caches matrix parameters and encoded variants", `machine-files.spec.ts` "falls through for an invalid file without fetching or rendering" (9 cases), `cache-behaviour.spec.ts` "never serves the HTML template as a file …"; mutation "no decoding": red "redirects %s once to the decoded canonical slug path" (5 cases) and the matrix test; restored |
+| 12 | Review fix: empty city line list | `page-builders.spec.ts` "indexes the line list only for a real city with lines", e2e `pages-no-js.spec.ts` "an empty city and a sample city are rendered but not indexed" (now also `/bos-sehir/hatlar`) | mutation `index: !city.is_sample`: red "… (sample false, 0 lines)"; restored |
+| 13 | Review fix: OG image for unpublished lines | `machine-files.spec.ts` "returns 404 without caching for a %s line, like the line page" | mutation "status check removed": red for `retired`, `draft`, `pending_review`; restored |
+| 14 | Lead item: pages sitemap in the index | `machine-files.spec.ts` "lists only public cities using the exact API timestamps and caches the index", e2e `machine-files.spec.ts` "sitemap index is well-formed …" | red before the change (index lacked `/sitemap-pages.xml`), green after |
 
 ## Not exercised
 
