@@ -62,6 +62,8 @@
     "@capacitor/android": "8.5.3",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
+    "@capacitor/geolocation": "8.2.2",
+    "@capacitor/preferences": "8.0.1",
     "@fontsource/dm-sans": "5.3.0",
     "@fontsource/inter": "5.3.0",
     "@ionic/angular": "9.0.7",
@@ -69,6 +71,8 @@
     "capacitor-secure-storage-plugin": "0.13.0",
     "express": "5.3.0",
     "ionicons": "8.1.0",
+    "maplibre-gl": "6.11.2",
+    "pmtiles": "4.5.0",
     "rxjs": "7.8.2"
   }
 }

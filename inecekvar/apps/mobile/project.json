@@ -19,6 +19,11 @@
           {
             "glob": "**/*",
             "input": "apps/mobile/public"
+          },
+          {
+            "glob": "maplibre-gl-{worker,shared}.mjs",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "maplibre"
           }
         ],
         "styles": ["apps/mobile/src/styles.scss"],
