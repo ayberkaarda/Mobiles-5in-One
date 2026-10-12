@@ -1,3 +1,4 @@
+import json
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -5,16 +6,13 @@ from typing import Literal
 
 import httpx
 import pytest
-from fastapi import APIRouter, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import ClockDep, DbDep, OptionalPrincipalDep, Services
-from app.core.errors import AUTH_FORBIDDEN, AUTH_REQUIRED, NOT_FOUND, ProblemError
+from app.core.deps import Services
 from app.core.ids import uuid7
 from app.models.contributions import Edit, Trace
-from app.models.enums import EditState, UserRole
-from app.security.policy import Action, ResourceContext, authorize, can_read_edit
+from app.models.enums import UserRole
 from tests.security.conftest import create_account, sign_in
 from tests.support.app import build_test_app
 
@@ -70,7 +68,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "user-other-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.USER,
         UserRole.USER,
@@ -79,7 +77,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "contributor-other-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.CONTRIBUTOR,
         UserRole.CONTRIBUTOR,
@@ -88,7 +86,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "owner-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.CONTRIBUTOR,
         UserRole.USER,
@@ -98,7 +96,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "moderator-other-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.USER,
         UserRole.MODERATOR,
@@ -107,7 +105,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "anonymous-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.USER,
         None,
@@ -116,7 +114,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "unknown-trace",
         "GET",
-        "/v1/_probe/traces/{id}",
+        "/v1/traces/{id}",
         "trace",
         UserRole.USER,
         UserRole.USER,
@@ -126,7 +124,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "contributor-other-edit",
         "GET",
-        "/v1/_probe/edits/{id}",
+        "/v1/edits/{id}",
         "edit",
         UserRole.CONTRIBUTOR,
         UserRole.CONTRIBUTOR,
@@ -135,7 +133,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "author-edit",
         "GET",
-        "/v1/_probe/edits/{id}",
+        "/v1/edits/{id}",
         "edit",
         UserRole.CONTRIBUTOR,
         UserRole.USER,
@@ -145,7 +143,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "contributor-approve",
         "POST",
-        "/v1/_probe/edits/{id}/approve",
+        "/v1/moderation/edits/{id}/approve",
         "edit",
         UserRole.CONTRIBUTOR,
         UserRole.CONTRIBUTOR,
@@ -154,7 +152,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "moderator-self-approve",
         "POST",
-        "/v1/_probe/edits/{id}/approve",
+        "/v1/moderation/edits/{id}/approve",
         "edit",
         UserRole.MODERATOR,
         UserRole.MODERATOR,
@@ -164,16 +162,16 @@ CASES: list[IdorCase] = [
     IdorCase(
         "moderator-approve-pending",
         "POST",
-        "/v1/_probe/edits/{id}/approve",
+        "/v1/moderation/edits/{id}/approve",
         "edit",
         UserRole.CONTRIBUTOR,
         UserRole.MODERATOR,
-        204,
+        200,
     ),
     IdorCase(
         "moderator-approve-approved",
         "POST",
-        "/v1/_probe/edits/{id}/approve",
+        "/v1/moderation/edits/{id}/approve",
         "edit",
         UserRole.CONTRIBUTOR,
         UserRole.MODERATOR,
@@ -183,7 +181,7 @@ CASES: list[IdorCase] = [
     IdorCase(
         "admin-self-approve",
         "POST",
-        "/v1/_probe/edits/{id}/approve",
+        "/v1/moderation/edits/{id}/approve",
         "edit",
         UserRole.ADMIN,
         UserRole.ADMIN,
@@ -191,55 +189,6 @@ CASES: list[IdorCase] = [
         make_author,
     ),
 ]
-
-probe = APIRouter(prefix="/v1/_probe")
-
-
-@probe.get("/traces/{id}")
-async def read_trace(
-    id: uuid.UUID, db: DbDep, principal: OptionalPrincipalDep, clock: ClockDep
-) -> dict[str, str]:
-    trace = await db.get(Trace, id)
-    if trace is None:
-        raise ProblemError(NOT_FOUND, 404)
-    authorize(
-        principal,
-        Action.VIEW_TRACE,
-        ResourceContext(actor_id=None, trace_owner_id=trace.author_id, now=clock.now()),
-    )
-    return {"id": str(trace.id)}
-
-
-@probe.get("/edits/{id}")
-async def read_edit(id: uuid.UUID, db: DbDep, principal: OptionalPrincipalDep) -> dict[str, str]:
-    edit = await db.get(Edit, id)
-    if edit is None:
-        raise ProblemError(NOT_FOUND, 404)
-    if not can_read_edit(principal, edit.author_id):
-        if principal is None:
-            raise ProblemError(AUTH_REQUIRED, 401)
-        raise ProblemError(AUTH_FORBIDDEN, 403)
-    return {"id": str(edit.id)}
-
-
-@probe.post("/edits/{id}/approve", status_code=204)
-async def approve_edit(
-    id: uuid.UUID, db: DbDep, principal: OptionalPrincipalDep, clock: ClockDep
-) -> Response:
-    edit = await db.get(Edit, id)
-    if edit is None:
-        raise ProblemError(NOT_FOUND, 404)
-    authorize(
-        principal,
-        Action.APPROVE_EDIT,
-        ResourceContext(
-            actor_id=None,
-            edit_author_id=edit.author_id,
-            edit_state=EditState(edit.state),
-            now=clock.now(),
-        ),
-    )
-    return Response(status_code=204)
 
 
 async def create_resource(
@@ -257,15 +206,27 @@ async def create_resource(
     )
     if resource == "trace":
         statement = (
-            "INSERT INTO traces (id, city_id, author_id, points, started_at, ended_at) "
-            "VALUES (:id, :city, :owner, '[[34.01,42.51],[34.02,42.52]]'::jsonb, now(), now())"
+            "INSERT INTO traces (id, city_id, author_id, points, started_at, ended_at, "
+            "delete_after) VALUES (:id, :city, :owner, '[[34.01,42.51],[34.02,42.52]]'::jsonb, "
+            "now(), now(), now() + interval '30 days')"
         )
     else:
         statement = (
             "INSERT INTO edits (id, kind, city_id, payload, author_id) "
-            "VALUES (:id, 'new_line', :city, '{\"name\":\"Private proposal\"}'::jsonb, :owner)"
+            "VALUES (:id, 'new_stop', :city, CAST(:payload AS jsonb), :owner)"
         )
-    await db.execute(text(statement), {"id": identity, "city": city_id, "owner": owner})
+    payload = json.dumps(
+        {
+            "kind": "new_stop",
+            "city": "city-" + city_id.hex,
+            "name": "Private proposal",
+            "location": [34.05, 42.54],
+            "stop_kind": "formal",
+        }
+    )
+    await db.execute(
+        text(statement), {"id": identity, "city": city_id, "owner": owner, "payload": payload}
+    )
     return identity
 
 
@@ -296,18 +257,24 @@ async def test_idor_case(case: IdorCase, services: Services) -> None:
             column.name for column in model.__table__.columns if column.name != "id"
         )
     application = build_test_app(services)
-    application.include_router(probe)
     transport = httpx.ASGITransport(app=application, client=("203.0.113.10", 50000))
     async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
         headers = await sign_in(client, actor_email) if actor_email is not None else {}
-        response = await client.request(case.method, case.path.format(id=identity), headers=headers)
-    assert response.status_code == case.expected_status
-    assert str(owner) not in response.text
+        body = {"reason": "Kanıt yok"} if case.path.endswith("/reject") else None
+        response = await client.request(
+            case.method, case.path.format(id=identity), headers=headers, json=body
+        )
+    assert response.status_code == case.expected_status, response.text
     assert owner_email not in response.text
-    assert "Private proposal" not in response.text
-    assert "34.01" not in response.text
-    if response.content:
-        assert_private_body(response.json(), private)
     if case.expected_status >= 400:
+        # A refused caller learns nothing about the resource or its owner.
+        assert str(owner) not in response.text
+        assert "Private proposal" not in response.text
+        assert "34.01" not in response.text
+        assert_private_body(response.json(), private)
         assert str(identity) not in response.text
         assert set(response.json()) == {"type", "title", "status", "code", "request_id"}
+    elif response.content:
+        # An allowed caller gets this resource and no other identity's account data.
+        assert response.json()["id"] == str(identity)
+        assert "author_id" not in response.json()
