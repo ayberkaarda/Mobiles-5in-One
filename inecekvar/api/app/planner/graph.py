@@ -106,6 +106,27 @@ def build_network(
     for identity, found in nearest.items():
         for distance, neighbour in sorted(found)[:WALK_NEIGHBOURS]:
             linked[min(identity, neighbour), max(identity, neighbour)] = distance
+    # The cap must not split walkable areas: a shortest spanning forest over every walkable
+    # pair (Kruskal) is added, so two stops connected on foot stay connected on foot.
+    parent = {identity: identity for identity in nodes}
+
+    def root(identity: str) -> str:
+        while parent[identity] != identity:
+            parent[identity] = parent[parent[identity]]
+            identity = parent[identity]
+        return identity
+
+    for first, second in linked:
+        parent[root(first)] = root(second)
+    pairs = sorted(
+        (distance, min(identity, other), max(identity, other))
+        for identity, found in nearest.items()
+        for distance, other in found
+    )
+    for distance, first, second in pairs:
+        if root(first) != root(second):
+            parent[root(first)] = root(second)
+            linked[first, second] = distance
     for (first, second), distance in sorted(linked.items()):
         connect(first, second, None, distance)
     return Network(graph, nodes, routes, {key: tuple(value) for key, value in adjacent.items()})

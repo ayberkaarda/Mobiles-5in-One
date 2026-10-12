@@ -1,5 +1,6 @@
 import math
 
+import networkx as nx
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -170,3 +171,15 @@ def test_walking_links_are_capped_per_stop() -> None:
     assert max(len(edges) for edges in network.adjacent.values()) <= 2 * WALK_NEIGHBOURS
     assert network.graph.number_of_edges() <= 2 * WALK_NEIGHBOURS * len(stops)
     assert all(network.adjacent[stop.id] for stop in stops)
+
+
+def test_walking_cap_keeps_walkable_clusters_connected() -> None:
+    # Two clusters of 13 stops, each packed within a few metres, 200 m apart: the 12 nearest
+    # neighbours of every stop lie inside its own cluster.
+    first = [StopNode("a" + str(index), 34.05 + index * 1e-6, 42.54) for index in range(13)]
+    offset = 200 / (EARTH_M * math.radians(1) * math.cos(math.radians(42.54)))
+    second = [
+        StopNode("b" + str(index), 34.05 + offset + index * 1e-6, 42.54) for index in range(13)
+    ]
+    network = build_network([*first, *second], [])
+    assert nx.has_path(network.graph, "a0", "b12")
