@@ -1,0 +1,231 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <iv-back-button fallback="/katki" />
+    </ion-buttons>
+    <ion-title>{{ 'recorder.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page" [attr.data-view]="rec.view()">
+    @switch (rec.view()) { @case ('idle') {
+    <p class="iv-kicker">{{ 'recorder.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'recorder.heading' | t }}</h1>
+    <p class="iv-lead">{{ 'recorder.lead' | t }}</p>
+    <iv-city-picker class="city" />
+    <section class="privacy" aria-labelledby="iv-rec-privacy">
+      <h2 id="iv-rec-privacy">{{ 'recorder.privacyTitle' | t }}</h2>
+      <ul>
+        <li>{{ 'recorder.privacyForeground' | t }}</li>
+        <li>{{ 'recorder.privacyDevice' | t }}</li>
+        <li>{{ 'recorder.privacyTrim' | t }}</li>
+        <li>{{ 'recorder.privacyRetention' | t }}</li>
+      </ul>
+    </section>
+    @if (rec.problem() === 'denied') {
+    <p class="iv-error" role="alert">{{ 'recorder.denied' | t }}</p>
+    }
+    <button
+      type="button"
+      class="iv-button iv-button--block start"
+      [disabled]="!cities.selectedSlug()"
+      (click)="start()"
+    >
+      {{ 'recorder.start' | t }}
+    </button>
+    @if (!cities.selectedSlug()) {
+    <p class="iv-hint center">{{ 'recorder.pickCity' | t }}</p>
+    } } @case ('starting') {
+    <p class="iv-panel center" role="status">{{ 'recorder.starting' | t }}</p>
+    } @case ('uploading') {
+    <p class="iv-panel center" role="status">{{ 'recorder.uploading' | t }}</p>
+    } @case ('uploaded') {
+    <section class="iv-panel done" role="status">
+      <h1>{{ 'recorder.uploadedTitle' | t }}</h1>
+      <p>
+        {{ 'recorder.uploadedBody' | t: { count: rec.uploaded()?.point_count ?? 0, date:
+        deleteAfter() } }}
+      </p>
+      <button type="button" class="iv-button iv-button--block" (click)="proposeLine()">
+        {{ 'recorder.proposeLine' | t }}
+      </button>
+    </section>
+    @if (rec.uploadedStops().length > 0) {
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'recorder.markedTitle' | t }}</h2>
+      <ul class="stops" role="list">
+        @for (stop of rec.uploadedStops(); track $index) {
+        <li>
+          <span class="stop-name"
+            >{{ stop.name ?? ('recorder.unnamedStop' | t: { n: $index + 1 }) }}</span
+          >
+          <button type="button" class="iv-link-button" (click)="proposeStop($index)">
+            {{ 'recorder.proposeStop' | t }}
+          </button>
+        </li>
+        }
+      </ul>
+    </section>
+    } @if (rec.submitError(); as error) {
+    <p class="iv-error" role="alert">{{ error | t }}</p>
+    }
+    <div class="row">
+      <button type="button" class="iv-button iv-button--ghost" (click)="finished()">
+        {{ 'recorder.done' | t }}
+      </button>
+      <button type="button" class="iv-link-button danger" (click)="deleteTrace()">
+        {{ (confirmDelete() ? 'recorder.deleteConfirm' : 'recorder.deleteTrace') | t }}
+      </button>
+    </div>
+    } @case ('review') {
+    <h1 class="iv-heading">{{ 'recorder.reviewHeading' | t }}</h1>
+    <iv-map
+      class="map"
+      [line]="line()"
+      [stops]="stopPoints()"
+      [markers]="markers()"
+      [city]="rec.city()"
+      [label]="'recorder.mapLabel' | t"
+    />
+    <dl class="stats stats--small">
+      <div>
+        <dt>{{ 'recorder.sentPoints' | t }}</dt>
+        <dd>{{ line().length }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'recorder.distance' | t }}</dt>
+        <dd>{{ distance() }} km</dd>
+      </div>
+      <div>
+        <dt>{{ 'recorder.duration' | t }}</dt>
+        <dd>{{ elapsed() }}</dd>
+      </div>
+    </dl>
+    <p class="iv-hint">
+      {{ 'recorder.reviewNote' | t: { raw: rec.pointCount(), sent: line().length } }}
+    </p>
+    @if (rec.stops().length > 0) {
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'recorder.markedTitle' | t }}</h2>
+      <ul class="stops" role="list">
+        @for (stop of rec.stops(); track $index) {
+        <li>
+          <label class="iv-visually-hidden" [attr.for]="'iv-rec-stop-' + $index"
+            >{{ 'recorder.stopName' | t }}</label
+          >
+          <input
+            class="iv-input"
+            type="text"
+            [id]="'iv-rec-stop-' + $index"
+            [attr.maxlength]="nameMax"
+            [value]="stop.name ?? ''"
+            [placeholder]="'recorder.unnamedStop' | t: { n: $index + 1 }"
+            (change)="rename($index, $event)"
+          />
+          <button type="button" class="iv-link-button" (click)="rec.removeStop($index)">
+            {{ 'recorder.removeStop' | t }}
+          </button>
+        </li>
+        }
+      </ul>
+    </section>
+    } @for (issue of issues(); track issue) {
+    <p class="iv-error" role="alert">{{ issue | t }}</p>
+    } @if (rec.submitError(); as error) {
+    <p class="iv-error" role="alert">
+      @if (countdown.active()) { {{ error | t: { seconds: countdown.seconds() } }} } @else { {{
+      (error === 'recorder.errors.rateLimited' ? 'recorder.errors.rateReady' : error) | t }} }
+    </p>
+    }
+    <p class="iv-hint">{{ 'recorder.sendNote' | t }}</p>
+    <button
+      type="button"
+      class="iv-button iv-button--block"
+      [disabled]="!canSubmit()"
+      (click)="submit()"
+    >
+      {{ 'recorder.send' | t }}
+    </button>
+    <div class="row">
+      <button type="button" class="iv-button iv-button--ghost" (click)="rec.backToRide()">
+        {{ 'recorder.backToRide' | t }}
+      </button>
+      <button type="button" class="iv-link-button danger" (click)="discard()">
+        {{ (confirmDiscard() ? 'recorder.discardConfirm' : 'recorder.discard') | t }}
+      </button>
+    </div>
+    } @default {
+    <section class="live" [class.live--paused]="rec.view() === 'paused'">
+      <p class="status" role="status">
+        <span class="pulse" aria-hidden="true"></span>
+        {{ (rec.view() === 'recording' ? 'recorder.recording' : 'recorder.paused') | t }}
+      </p>
+      <dl class="stats">
+        <div>
+          <dt>{{ 'recorder.points' | t }}</dt>
+          <dd data-stat="points">{{ rec.pointCount() }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'recorder.distance' | t }}</dt>
+          <dd data-stat="distance">{{ distance() }}<small> km</small></dd>
+        </div>
+        <div>
+          <dt>{{ 'recorder.duration' | t }}</dt>
+          <dd>{{ elapsed() }}</dd>
+        </div>
+      </dl>
+      <p class="meta">
+        {{ 'recorder.stopsMarked' | t: { count: rec.stops().length } }} · {{ (rec.wakeLockOn() ?
+        'recorder.screenOn' : rec.wakeLockSupported ? 'recorder.screenOff' :
+        'recorder.screenUnsupported') | t }}
+      </p>
+    </section>
+    @if (rec.interrupted()) {
+    <iv-notice tone="warn" [message]="'recorder.interrupted' | t" />
+    } @if (rec.weakSignal()) {
+    <iv-notice tone="warn" [message]="'recorder.weakSignal' | t" />
+    } @if (problemKey(); as problem) {
+    <iv-notice tone="warn" [message]="problem | t" />
+    }
+    <button type="button" class="mark" [disabled]="!rec.hasFix()" (click)="mark()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 21v-9m0 0a4 4 0 100-8 4 4 0 000 8z" />
+      </svg>
+      {{ 'recorder.markStop' | t }}
+    </button>
+    @if (!rec.hasFix()) {
+    <p class="iv-hint center">{{ 'recorder.waitingFix' | t }}</p>
+    } @if (justMarked() !== null) {
+    <form class="iv-panel name-form" (submit)="nameMarked($event)">
+      <label class="iv-label" for="iv-rec-name">{{ 'recorder.stopNameOptional' | t }}</label>
+      <div class="row">
+        <input
+          id="iv-rec-name"
+          class="iv-input"
+          type="text"
+          [attr.maxlength]="nameMax"
+          [value]="stopName()"
+          (input)="stopName.set(value($event))"
+        />
+        <button type="submit" class="iv-button">{{ 'recorder.saveName' | t }}</button>
+      </div>
+    </form>
+    }
+    <div class="controls">
+      @if (rec.view() === 'recording') {
+      <button type="button" class="iv-button iv-button--ghost" (click)="rec.pause()">
+        {{ 'recorder.pause' | t }}
+      </button>
+      } @else {
+      <button type="button" class="iv-button iv-button--ghost" (click)="rec.resume()">
+        {{ 'recorder.resume' | t }}
+      </button>
+      }
+      <button type="button" class="iv-button" (click)="rec.finish()">
+        {{ 'recorder.finish' | t }}
+      </button>
+    </div>
+    } }
+  </div>
+</ion-content>

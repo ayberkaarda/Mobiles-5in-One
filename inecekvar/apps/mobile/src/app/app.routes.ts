@@ -1,4 +1,6 @@
 import { Route } from '@angular/router';
+import { signedInGuard } from './auth/auth.guard';
+import { contributorCopy } from './i18n/contrib-copy';
 
 /** Tab routes use Turkish slugs (the product language); every page is a lazy chunk. */
 export const appRoutes: Route[] = [
@@ -24,6 +26,21 @@ export const appRoutes: Route[] = [
         loadComponent: () => import('./pages/contribute.page').then((m) => m.ContributePage),
       },
       {
+        path: 'katki/kayit',
+        canActivate: [contributorCopy, signedInGuard],
+        loadComponent: () => import('./pages/recorder.page').then((m) => m.RecorderPage),
+      },
+      {
+        path: 'katki/oneri',
+        canActivate: [contributorCopy, signedInGuard],
+        loadComponent: () => import('./pages/proposal.page').then((m) => m.ProposalPage),
+      },
+      {
+        path: 'katki/onerilerim',
+        canActivate: [contributorCopy, signedInGuard],
+        loadComponent: () => import('./pages/proposals.page').then((m) => m.ProposalsPage),
+      },
+      {
         path: 'hat/:slug',
         loadComponent: () => import('./pages/line.page').then((m) => m.LinePage),
       },
@@ -33,7 +50,19 @@ export const appRoutes: Route[] = [
       },
       {
         path: 'giris',
+        canActivate: [contributorCopy],
         loadComponent: () => import('./pages/signin.page').then((m) => m.SigninPage),
+      },
+      {
+        path: 'giris/kayit',
+        canActivate: [contributorCopy],
+        loadComponent: () => import('./pages/register.page').then((m) => m.RegisterPage),
+      },
+      {
+        // The page a magic link opens; the token was already taken from the fragment.
+        path: 'giris/baglanti',
+        canActivate: [contributorCopy],
+        loadComponent: () => import('./pages/magic-link.page').then((m) => m.MagicLinkPage),
       },
       {
         path: 'ayarlar',

@@ -5,6 +5,9 @@ import {
   BytesOptions,
   ApiError,
   CatalogApi,
+  ContributionApi,
+  Edit,
+  EditProposal,
   Favorite,
   Me,
   SessionStore,
@@ -12,9 +15,13 @@ import {
   LineDetail,
   LineListItem,
   PlanResult,
+  PresignedUpload,
+  PresignRequest,
   StopDetail,
   StopSummary,
   TILES_BASE_URL,
+  TraceCreated,
+  TraceUpload,
 } from '@inecekvar/data-access';
 import { PREFERENCE_STORE, PreferenceStore } from '../city/city.store';
 import { CityPackData } from '../packs/pack-data';
@@ -303,14 +310,29 @@ export class FakeSession {
   readonly current = signal<Me | null>(null);
   readonly user = this.current.asReadonly();
   readonly isSignedIn = computed(() => this.current() !== null);
+  readonly status = computed(() => (this.current() ? 'signed-in' : 'anonymous'));
+  readonly licenceAccepted = computed(() => this.current()?.licence_accepted ?? false);
+  readonly logout = spy(async (): Promise<void> => this.signOut());
+  readonly acceptLicence = spy(async (): Promise<Me> => {
+    const user = this.current();
+    if (!user) throw new ApiError('problem', 401, 'auth.required', 'req-test');
+    const next = { ...user, licence_accepted: true };
+    this.current.set(next);
+    return next;
+  });
+  readonly reload = spy(async (): Promise<Me> => {
+    const user = this.current();
+    if (!user) throw new ApiError('problem', 401, 'auth.required', 'req-test');
+    return user;
+  });
 
-  signIn(id = 'user-a'): void {
+  signIn(id = 'user-a', licenceAccepted = false): void {
     this.current.set({
       id,
       email: `${id}@example.test`,
       display_name: null,
       email_verified: true,
-      licence_accepted: false,
+      licence_accepted: licenceAccepted,
       reputation: 0,
       role: 'user',
       created_at: '2026-10-01T00:00:00Z',
@@ -359,6 +381,43 @@ export function fakeAccount(session: FakeSession) {
 
 export type FakeAccount = ReturnType<typeof fakeAccount>;
 
+/** A ContributionApi stand-in: every call is a spy; tests swap its impl for failures. */
+export function fakeContributions() {
+  return {
+    myEdits: spy(async (): Promise<Edit[]> => []),
+    proposeEdit: spy(async (proposal: EditProposal): Promise<Edit> => ({
+      id: 'edit-1',
+      kind: proposal.kind,
+      state: 'pending',
+      payload: { ...proposal },
+      diff: null,
+      reason: null,
+      created_at: '2026-10-12T10:00:00Z',
+      reviewed_at: null,
+      city: SAMPLE_CITY.slug,
+    })),
+    uploadTrace: spy(async (trace: TraceUpload): Promise<TraceCreated> => ({
+      id: '01920000-0000-7000-8000-00000000c0de',
+      point_count: trace.points.length,
+      delete_after: '2026-11-11T10:00:00Z',
+    })),
+    deleteTrace: spy(async (id: string): Promise<void> => void id),
+    presignPhoto: spy(async (input: PresignRequest): Promise<PresignedUpload> => ({
+      photo_id: '01920000-0000-7000-8000-0000000000aa',
+      upload_url: 'https://storage.test/incoming/aa?sig=1',
+      method: 'PUT',
+      headers: { 'Content-Type': input.content_type, 'Content-Length': String(input.byte_size) },
+      expires_in: 300,
+    })),
+    uploadPhoto: spy(
+      async (upload: PresignedUpload, body: Blob, signal?: AbortSignal): Promise<void> =>
+        void [upload, body, signal],
+    ),
+  };
+}
+
+export type FakeContributions = ReturnType<typeof fakeContributions>;
+
 /** A Capacitor Network stand-in; `set` fires the status listeners. */
 export class FakeNetwork implements NetworkSource {
   connected = true;
@@ -388,6 +447,7 @@ export interface CatalogTestingOptions {
   catalog?: FakeCatalog;
   prefs?: MemoryPreferences;
   locate?: () => Promise<LocateResult>;
+  contributions?: FakeContributions;
 }
 
 /** Providers for pages and stores: fake API, in-memory preferences, no debounce, fake location. */
@@ -403,6 +463,7 @@ export function catalogTesting(options: CatalogTestingOptions = {}): Provider[] 
     { provide: MAP_WARMUP, useValue: options.warmup ?? (async () => undefined) },
     { provide: SessionStore, useValue: session },
     { provide: AccountApi, useValue: account },
+    { provide: ContributionApi, useValue: options.contributions ?? fakeContributions() },
     { provide: PREFERENCE_STORE, useValue: prefs },
     { provide: SEARCH_DEBOUNCE_MS, useValue: 0 },
     { provide: TILES_BASE_URL, useValue: 'https://tiles.test' },

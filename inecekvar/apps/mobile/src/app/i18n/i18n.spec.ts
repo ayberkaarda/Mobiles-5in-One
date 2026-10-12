@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { i18nTesting } from '../testing/i18n.testing';
+import { contribEn } from './contrib.en';
+import { contribTr } from './contrib.tr';
 import { en } from './en';
 import { AppTranslationLoader, TPipe } from './i18n';
 import { tr } from './tr';
@@ -16,8 +18,12 @@ function flatten(value: object, prefix = ''): Record<string, string> {
 }
 
 describe('translations', () => {
-  const trFlat = flatten(tr);
-  const enFlat = flatten(en);
+  const trFlat = flatten({ ...tr, ...contribTr });
+  const enFlat = flatten({ ...en, ...contribEn });
+
+  it('keeps the lazily loaded contributor copy apart from the main keys', () => {
+    for (const key of Object.keys(contribTr)) expect(Object.keys(tr)).not.toContain(key);
+  });
 
   it('has the same keys in Turkish and English', () => {
     expect(Object.keys(enFlat).sort()).toEqual(Object.keys(trFlat).sort());
@@ -41,10 +47,10 @@ describe('translations', () => {
 });
 
 describe('AppTranslationLoader', () => {
-  it('serves Turkish from the bundle and English from the lazy chunk', async () => {
+  it('serves Turkish from the bundle and English with its contributor copy from lazy chunks', async () => {
     const loader = new AppTranslationLoader();
     expect(await firstValueFrom(loader.getTranslation('tr'))).toBe(tr);
-    expect(await firstValueFrom(loader.getTranslation('en'))).toBe(en);
+    expect(await firstValueFrom(loader.getTranslation('en'))).toEqual({ ...en, ...contribEn });
   });
 });
 

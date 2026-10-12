@@ -104,6 +104,13 @@ import { detailFailure, detailRouteParams } from './detail-route';
                   <p class="iv-note">{{ 'stop.linesEmpty' | t }}</p>
                 }
               </section>
+              <button
+                type="button"
+                class="iv-button iv-button--block report"
+                (click)="reportChange()"
+              >
+                {{ 'stop.report' | t }}
+              </button>
             }
           }
         }
@@ -122,6 +129,9 @@ import { detailFailure, detailRouteParams } from './detail-route';
     }
     .iv-heading {
       overflow-wrap: anywhere;
+    }
+    .report {
+      margin-top: var(--iv-space-5);
     }
   `,
 })
@@ -166,5 +176,14 @@ export class StopPage {
 
   protected toSearch(): void {
     void this.router.navigateByUrl('/ara');
+  }
+
+  /** Opens the stop update proposal (package 3F) for this stop. */
+  protected reportChange(): void {
+    const params = this.params();
+    if (!params) return;
+    void this.router.navigate(['/katki/oneri'], {
+      queryParams: { tur: 'update_stop', durak: params.slug, city: params.city },
+    });
   }
 }

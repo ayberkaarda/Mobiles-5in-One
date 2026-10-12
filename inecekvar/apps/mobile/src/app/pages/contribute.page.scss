@@ -19,24 +19,67 @@
 .sign-kicker {
   margin: 0 0 var(--iv-space-2);
   font-size: 12px;
-  font-weight: var(--iv-font-body-weight-600);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .sign h1 {
   margin: 0;
-  font-family: var(--iv-font-display);
-  font-weight: var(--iv-font-display-weight);
   font-size: 28px;
   line-height: 1.1;
-  letter-spacing: -0.01em;
 }
 
 .sign-lead {
   margin: var(--iv-space-3) 0 0;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: var(--iv-space-4) 0 0;
+  font-weight: 600;
+}
+
+.join,
+.draft {
+  margin-top: var(--iv-space-4);
+}
+
+.join h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.join p {
+  margin: 6px 0 12px;
+  line-height: 1.45;
+  color: var(--iv-ink-muted);
+}
+
+.join-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.draft-action,
+.mine {
+  margin-top: var(--iv-space-3);
+}
+
+.line-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.line-actions a {
+  text-decoration: none;
 }
 
 .actions {
@@ -55,6 +98,13 @@
   border: 1px solid var(--iv-line);
   border-radius: var(--iv-radius-m);
   box-shadow: var(--iv-shadow-hard);
+  color: inherit;
+  text-decoration: none;
+}
+
+.action:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
 }
 
 .action-icon {
@@ -72,18 +122,15 @@
 }
 
 .action-text {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
   min-width: 0;
-}
-
-.action h3 {
-  margin: 0;
   font-size: 16px;
-  font-weight: var(--iv-font-body-weight-600);
   color: var(--iv-ink);
 }
 
-.action p {
-  margin: 4px 0 8px;
+.action-body {
   font-size: 14px;
   line-height: 1.45;
   color: var(--iv-ink-muted);
@@ -92,14 +139,18 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   height: 22px;
   padding: 0 8px;
   border-radius: var(--iv-radius-pill);
   background: var(--iv-surface-sunk);
   color: var(--iv-ink-muted);
   font-size: 12px;
-  font-weight: var(--iv-font-body-weight-600);
+  font-weight: 600;
+}
+
+.badge--ok {
+  background: var(--iv-mode-minibus-bg);
+  color: var(--iv-ink);
 }
 
 .privacy {
@@ -113,7 +164,7 @@
   margin: 0;
   font-size: 16px;
   font-family: var(--iv-font-body);
-  font-weight: var(--iv-font-body-weight-600);
+  font-weight: 600;
 }
 
 .privacy p {

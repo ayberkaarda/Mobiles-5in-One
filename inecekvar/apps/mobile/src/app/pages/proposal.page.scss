@@ -1,0 +1,160 @@
+.block,
+.iv-form {
+  display: grid;
+  margin-top: var(--iv-space-4);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.target-name {
+  font-weight: 600;
+}
+
+.plate {
+  padding: 2px 8px;
+  border-radius: var(--iv-radius-s);
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
+  font-family: var(--iv-font-display);
+  font-weight: 700;
+}
+
+.results {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--iv-line-strong);
+  border-radius: var(--iv-radius-s);
+  background: var(--iv-surface-sunk);
+}
+
+.results button {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--iv-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.results button:focus-visible,
+.mini:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.chosen {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.chosen li > span {
+  display: inline-block;
+  min-width: 50%;
+}
+
+.mini {
+  min-width: 36px;
+  min-height: 36px;
+  margin-left: 4px;
+  border: 1.5px solid var(--iv-line-strong);
+  border-radius: var(--iv-radius-s);
+  background: transparent;
+  color: var(--iv-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mini:disabled {
+  opacity: 0.4;
+}
+
+.note {
+  margin: 0;
+  font-size: 14px;
+}
+
+.money {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.current-fare {
+  font-variant-numeric: tabular-nums;
+}
+
+.photo {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.photo legend {
+  padding: 0 4px;
+}
+
+.photo p {
+  margin: 0;
+}
+
+.photo-ok {
+  font-weight: 600;
+  color: var(--iv-success);
+}
+
+.pick {
+  position: relative;
+  justify-self: start;
+}
+
+.bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--iv-surface-sunk);
+}
+
+.bar span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--iv-stripe);
+  animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar span {
+    width: 100%;
+    animation: none;
+  }
+}

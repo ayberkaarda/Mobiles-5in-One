@@ -50,6 +50,11 @@
   color: var(--iv-ink-muted);
 }
 
+.account .iv-button {
+  margin-top: var(--iv-space-3);
+  min-height: 40px;
+}
+
 .avatar {
   flex: none;
   display: grid;

@@ -67,15 +67,34 @@
 
     <section class="iv-section">
       <h2 class="iv-section-title">{{ 'settings.account' | t }}</h2>
-      <div class="iv-panel guest">
+      <div
+        class="iv-panel guest"
+        [attr.data-account]="session.isSignedIn() ? 'signed-in' : 'guest'"
+      >
         <span class="avatar" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0" />
           </svg>
         </span>
-        <div>
+        <div class="account">
+          @if (session.user(); as user) {
+          <h3>{{ user.display_name ?? user.email }}</h3>
+          <p>{{ 'settings.signedInBody' | t: { email: user.email } }}</p>
+          <button
+            type="button"
+            class="iv-button iv-button--ghost"
+            [disabled]="signingOut()"
+            (click)="signOut()"
+          >
+            {{ (signingOut() ? 'settings.signingOut' : 'settings.signOut') | t }}
+          </button>
+          } @else {
           <h3>{{ 'settings.guestTitle' | t }}</h3>
           <p>{{ 'settings.guestBody' | t }}</p>
+          <a class="iv-button" routerLink="/giris">{{ 'settings.signIn' | t }}</a>
+          } @if (signOutNote(); as note) {
+          <p class="iv-hint" role="status">{{ note | t }}</p>
+          }
         </div>
       </div>
     </section>

@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { SessionStore } from '@inecekvar/data-access';
+import { RecorderStore } from '../contribute/recorder.store';
 import { CityStore } from '../city/city.store';
 import { PackManager } from '../packs/pack-manager';
 import { PackRegistry } from '../packs/pack-registry';
@@ -31,6 +33,10 @@ const LANG_OPTIONS: readonly { value: AppLang; label: TranslationKey }[] = [
 })
 export class SettingsPage {
   protected readonly theme = inject(ThemeService);
+  protected readonly session = inject(SessionStore);
+  private readonly recorder = inject(RecorderStore);
+  protected readonly signingOut = signal(false);
+  protected readonly signOutNote = signal<TranslationKey | null>(null);
   protected readonly language = inject(LanguageService);
   protected readonly themeOptions = THEME_OPTIONS;
   protected readonly langOptions = LANG_OPTIONS;
@@ -51,6 +57,26 @@ export class SettingsPage {
   constructor() {
     void this.registry.ready();
     void inject(CityStore).init();
+  }
+
+  /**
+   * Signs out here and deletes the unsent ride draft: positions recorded on a shared device
+   * should not wait for the next person. The local sign-out is immediate; when the server
+   * cannot be reached the revocation is retried later (ADR-0031).
+   */
+  protected async signOut(): Promise<void> {
+    if (this.signingOut()) return;
+    this.signingOut.set(true);
+    this.signOutNote.set(null);
+    try {
+      await this.recorder.discard();
+      await this.session.logout();
+      this.signOutNote.set('settings.signedOut');
+    } catch {
+      this.signOutNote.set('settings.signOutPending');
+    } finally {
+      this.signingOut.set(false);
+    }
   }
 
   protected setLang(lang: AppLang): void {

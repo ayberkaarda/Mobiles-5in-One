@@ -1,0 +1,412 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <iv-back-button fallback="/katki" />
+    </ion-buttons>
+    <ion-title>{{ 'proposal.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page" [attr.data-kind]="kind()">
+    <section class="iv-field">
+      <span class="iv-label" id="iv-kind-label">{{ 'proposal.kindLabel' | t }}</span>
+      <div class="chips" role="group" aria-labelledby="iv-kind-label">
+        @for (option of kinds; track option.kind) {
+        <button
+          type="button"
+          class="iv-chip-toggle"
+          [attr.aria-pressed]="kind() === option.kind"
+          (click)="chooseKind(option.kind)"
+        >
+          {{ option.label | t }}
+        </button>
+        }
+      </div>
+    </section>
+
+    @if (kind(); as current) { @if (current === 'new_line' || current === 'new_stop' || !city()) {
+    <iv-city-picker class="block" />
+    }
+
+    <form class="iv-form block" novalidate (submit)="submit($event)">
+      @if (aboutLine()) { @if (line(); as l) {
+      <div class="target iv-panel iv-panel--sunk" data-target="line">
+        <span class="plate">{{ l.code }}</span>
+        <span class="target-name">{{ l.name }}</span>
+        <span class="iv-hint">{{ 'proposal.version' | t: { version: l.version_no } }}</span>
+      </div>
+      } @else if (target() === 'loading') {
+      <p class="iv-hint" role="status">{{ 'proposal.loadingLine' | t }}</p>
+      } @else { @if (target() === 'error') {
+      <p class="iv-error" role="alert">{{ 'proposal.lineLoadError' | t }}</p>
+      }
+      <div class="iv-field">
+        <label class="iv-label" for="iv-line-search">{{ 'proposal.findLine' | t }}</label>
+        <input
+          id="iv-line-search"
+          class="iv-input"
+          type="search"
+          autocomplete="off"
+          [value]="lineSearch()"
+          (input)="searchLines(value($event))"
+        />
+        @if (lineResults().length > 0) {
+        <ul class="results" role="list">
+          @for (result of lineResults(); track result.slug) {
+          <li>
+            <button type="button" (click)="chooseLine(result.slug)">
+              <b>{{ result.code }}</b> {{ result.name }}
+            </button>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+      } } @if (current === 'update_stop') { @if (stop(); as s) {
+      <div class="target iv-panel iv-panel--sunk" data-target="stop">
+        <span class="target-name">{{ s.name }}</span>
+      </div>
+      } @else if (target() === 'loading') {
+      <p class="iv-hint" role="status">{{ 'proposal.loadingStop' | t }}</p>
+      } } @if ((current === 'new_line') || (current === 'update_stop' && !stop())) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-stop-search"
+          >{{ (current === 'new_line' ? 'proposal.addStop' : 'proposal.findStop') | t }}</label
+        >
+        <input
+          id="iv-stop-search"
+          class="iv-input"
+          type="search"
+          autocomplete="off"
+          [value]="stopSearch()"
+          (input)="searchStops(value($event))"
+        />
+        @if (stopResults().length > 0) {
+        <ul class="results" role="list">
+          @for (result of stopResults(); track result.id) {
+          <li><button type="button" (click)="addStop(result)">{{ result.name }}</button></li>
+          }
+        </ul>
+        }
+      </div>
+      } @if (current === 'new_line') {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-code">{{ 'proposal.code' | t }}</label>
+        <input
+          id="iv-code"
+          class="iv-input"
+          type="text"
+          autocapitalize="characters"
+          [attr.maxlength]="bounds.code"
+          [value]="fields().code"
+          [attr.aria-invalid]="errors().code ? 'true' : null"
+          (input)="setField('code', value($event))"
+        />
+        @if (errors().code; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      <div class="iv-field">
+        <span class="iv-label" id="iv-mode-label">{{ 'proposal.mode' | t }}</span>
+        <div class="chips" role="group" aria-labelledby="iv-mode-label">
+          @for (option of modeOptions; track option.mode) {
+          <button
+            type="button"
+            class="iv-chip-toggle"
+            [attr.aria-pressed]="fields().mode === option.mode"
+            (click)="setField('mode', option.mode)"
+          >
+            {{ option.label | t }}
+          </button>
+          }
+        </div>
+        @if (errors().mode; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      <div class="iv-field">
+        <span class="iv-label">{{ 'proposal.stops' | t: { count: chosenStops().length } }}</span>
+        @if (chosenStops().length === 0) {
+        <p class="iv-hint">{{ 'proposal.stopsHint' | t }}</p>
+        }
+        <ol class="chosen">
+          @for (stop of chosenStops(); track stop.id; let i = $index, last = $last) {
+          <li>
+            <span>{{ stop.name }}</span>
+            <button
+              type="button"
+              class="mini"
+              [disabled]="i === 0"
+              (click)="moveStop(i, -1)"
+              [attr.aria-label]="'proposal.moveUp' | t"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="mini"
+              [disabled]="last"
+              (click)="moveStop(i, 1)"
+              [attr.aria-label]="'proposal.moveDown' | t"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              class="mini"
+              (click)="removeStop(i)"
+              [attr.aria-label]="'proposal.remove' | t"
+            >
+              ×
+            </button>
+          </li>
+          }
+        </ol>
+        @if (errors().stopIds; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      @if (fields().traceId) {
+      <p class="iv-panel iv-panel--sunk note">{{ 'proposal.traceAttached' | t }}</p>
+      } } @if (current === 'new_line' || (current === 'update_line' && line())) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-name">{{ 'proposal.lineName' | t }}</label>
+        <input
+          id="iv-name"
+          class="iv-input"
+          type="text"
+          [attr.maxlength]="bounds.name"
+          [value]="fields().name"
+          [attr.aria-invalid]="errors().name ? 'true' : null"
+          (input)="setField('name', value($event))"
+        />
+        @if (errors().name; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      } @if (current === 'new_line' || ((current === 'update_line' || current === 'fare_update') &&
+      line())) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-fare"
+          >{{ (current === 'fare_update' ? 'proposal.newFare' : 'proposal.fare') | t }}</label
+        >
+        @if (current === 'fare_update' && line(); as l) {
+        <p class="iv-hint current-fare">
+          @if (l.fare_minor !== null) { {{ 'proposal.currentFare' | t: { fare: (l.fare_minor |
+          ivFare), date: fareDate() ?? '—' } }} } @else { {{ 'proposal.noFare' | t }} }
+        </p>
+        }
+        <div class="money">
+          <span aria-hidden="true">₺</span>
+          <input
+            id="iv-fare"
+            class="iv-input"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="25,00"
+            [value]="fields().fare"
+            [attr.aria-invalid]="errors().fare ? 'true' : null"
+            (input)="setField('fare', value($event))"
+          />
+        </div>
+        @if (current === 'fare_update') {
+        <p class="iv-hint">{{ 'proposal.fareDate' | t: { date: today() } }}</p>
+        } @if (errors().fare; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      } @if (current === 'new_line' || (current === 'update_line' && line())) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-hours">{{ 'proposal.hours' | t }}</label>
+        <input
+          id="iv-hours"
+          class="iv-input"
+          type="text"
+          [attr.maxlength]="bounds.hours"
+          [value]="fields().hours"
+          (input)="setField('hours', value($event))"
+        />
+        @if (errors().hours; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      <div class="iv-field">
+        <span class="iv-label" id="iv-pay-label">{{ 'proposal.payments' | t }}</span>
+        <div class="chips" role="group" aria-labelledby="iv-pay-label">
+          @for (option of paymentOptions; track option.method) {
+          <button
+            type="button"
+            class="iv-chip-toggle"
+            [attr.aria-pressed]="fields().payments.includes(option.method)"
+            (click)="togglePayment(option.method)"
+          >
+            {{ option.label | t }}
+          </button>
+          }
+        </div>
+      </div>
+      <div class="iv-field">
+        <label class="iv-label" for="iv-hail">{{ 'proposal.hail' | t }}</label>
+        <textarea
+          id="iv-hail"
+          class="iv-input"
+          [attr.maxlength]="bounds.hail"
+          [value]="fields().hail"
+          (input)="setField('hail', value($event))"
+        ></textarea>
+        @if (errors().hail; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      @if (current === 'update_line') {
+      <p class="iv-hint">{{ 'proposal.diffNote' | t }}</p>
+      } } @if (current === 'retire' && line()) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-reason">{{ 'proposal.reason' | t }}</label>
+        <textarea
+          id="iv-reason"
+          class="iv-input"
+          [attr.maxlength]="bounds.reason"
+          [value]="fields().reason"
+          [attr.aria-invalid]="errors().reason ? 'true' : null"
+          (input)="setField('reason', value($event))"
+        ></textarea>
+        @if (errors().reason; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      } @if (current === 'new_stop' || (current === 'update_stop' && stop())) {
+      <div class="iv-field">
+        <label class="iv-label" for="iv-stop-name">{{ 'proposal.stopName' | t }}</label>
+        <input
+          id="iv-stop-name"
+          class="iv-input"
+          type="text"
+          [attr.maxlength]="bounds.name"
+          [value]="fields().stopName"
+          [attr.aria-invalid]="errors().stopName ? 'true' : null"
+          (input)="setField('stopName', value($event))"
+        />
+        @if (errors().stopName; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      <div class="iv-field">
+        <span class="iv-label" id="iv-stopkind-label">{{ 'proposal.stopKind' | t }}</span>
+        <div class="chips" role="group" aria-labelledby="iv-stopkind-label">
+          <button
+            type="button"
+            class="iv-chip-toggle"
+            [attr.aria-pressed]="fields().stopKind === 'formal'"
+            (click)="setField('stopKind', 'formal')"
+          >
+            {{ 'proposal.formal' | t }}
+          </button>
+          <button
+            type="button"
+            class="iv-chip-toggle"
+            [attr.aria-pressed]="fields().stopKind === 'informal'"
+            (click)="setField('stopKind', 'informal')"
+          >
+            {{ 'proposal.informal' | t }}
+          </button>
+        </div>
+      </div>
+      <div class="iv-field">
+        <span class="iv-label">{{ 'proposal.location' | t }}</span>
+        <iv-map
+          [stops]="[]"
+          [markers]="locationMarker()"
+          [city]="city()"
+          [area]="cityInfo()?.bbox ?? null"
+          [pickable]="true"
+          [label]="'proposal.mapLabel' | t"
+          (picked)="picked($event)"
+        />
+        <p class="iv-hint">{{ 'proposal.locationHint' | t }}</p>
+        <button
+          type="button"
+          class="iv-button iv-button--ghost"
+          [disabled]="locating()"
+          (click)="useMyLocation()"
+        >
+          {{ 'proposal.useLocation' | t }}
+        </button>
+        @if (locateError(); as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        } @if (errors().location; as e) {
+        <p class="iv-error">{{ e | t }}</p>
+        }
+      </div>
+      } @if (current !== 'update_stop' || stop()) { @if (!aboutLine() || line()) {
+      <fieldset class="photo iv-panel" [attr.data-photo]="photo.state().status">
+        <legend class="iv-label">
+          {{ (photoKind() === 'stop_sign' ? 'proposal.photo.stopSign' : 'proposal.photo.fareTable')
+          | t }}
+        </legend>
+        @switch (photo.state().status) { @case ('done') {
+        <p class="photo-ok">{{ 'proposal.photo.done' | t }}</p>
+        <p class="iv-hint">{{ 'proposal.photo.privacy' | t }}</p>
+        <button type="button" class="iv-link-button" (click)="removePhoto()">
+          {{ 'proposal.photo.remove' | t }}
+        </button>
+        } @case ('uploading') {
+        <p role="status">
+          {{ (photoStep() === 'presign' ? 'proposal.photo.preparing' : 'proposal.photo.uploading') |
+          t }}
+        </p>
+        <div class="bar" aria-hidden="true"><span></span></div>
+        } @default {
+        <p class="iv-hint">{{ 'proposal.photo.hint' | t }}</p>
+        <label class="iv-button iv-button--ghost pick">
+          {{ 'proposal.photo.choose' | t }}
+          <input
+            class="iv-visually-hidden"
+            type="file"
+            accept="image/jpeg,image/webp"
+            (change)="choosePhoto($event)"
+          />
+        </label>
+        @if (photo.state(); as state) { @if (state.status === 'rejected') {
+        <p class="iv-error" role="alert">
+          {{ (state.reason === 'size' ? 'proposal.photo.size' : state.reason === 'empty' ?
+          'proposal.photo.empty' : 'proposal.photo.type') | t }}
+        </p>
+        } @if (state.status === 'failed') {
+        <p class="iv-error" role="alert">
+          {{ state.key | t: { seconds: photo.countdown.seconds() } }}
+        </p>
+        <button
+          type="button"
+          class="iv-link-button"
+          [disabled]="photo.countdown.active()"
+          (click)="photo.retry()"
+        >
+          {{ 'proposal.photo.retry' | t }}
+        </button>
+        } } } }
+      </fieldset>
+      } } @if (errors().form; as e) {
+      <p class="iv-error" role="alert">{{ e | t }}</p>
+      } @if (submitError(); as e) {
+      <p class="iv-error" role="alert">
+        @if (countdown.active()) { {{ e | t: { seconds: countdown.seconds() } }} } @else { {{ (e ===
+        'proposal.errors.rateLimited' ? 'proposal.errors.rateReady' : e) | t }} }
+      </p>
+      }
+      <p class="iv-hint">{{ 'proposal.reviewNote' | t }}</p>
+      <button
+        type="submit"
+        class="iv-button iv-button--block"
+        [disabled]="busy() || photoBusy() || countdown.active()"
+      >
+        {{ (busy() ? 'proposal.sending' : 'proposal.send') | t }}
+      </button>
+    </form>
+    } @else {
+    <p class="iv-hint block">{{ 'proposal.chooseKind' | t }}</p>
+    }
+  </div>
+</ion-content>

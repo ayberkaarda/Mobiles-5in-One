@@ -8,6 +8,7 @@ import {
   settingsOutline,
   starOutline,
 } from 'ionicons/icons';
+import { LicenceDialogComponent } from '../auth/licence-dialog.component';
 import { TPipe } from '../i18n/i18n';
 import { TranslationKey } from '../i18n/translation';
 
@@ -29,7 +30,7 @@ export const TABS: readonly TabDef[] = [
 @Component({
   selector: 'iv-tabs',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, TPipe],
+  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, LicenceDialogComponent, TPipe],
   template: `
     <ion-tabs>
       <ion-tab-bar slot="bottom" [attr.aria-label]="'tabs.label' | t">
@@ -41,6 +42,7 @@ export const TABS: readonly TabDef[] = [
         }
       </ion-tab-bar>
     </ion-tabs>
+    <iv-licence-dialog />
   `,
 })
 export class TabsPage {

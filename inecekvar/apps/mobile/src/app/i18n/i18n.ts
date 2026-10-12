@@ -15,12 +15,19 @@ import {
   TranslationParams,
 } from './translation';
 
-/** Turkish ships in the main bundle; English is a lazy chunk fetched on first use. */
+/**
+ * Turkish ships in the main bundle; English is a lazy chunk fetched on first use, together with
+ * its contributor copy. The Turkish contributor copy is merged in by `contributorCopy`.
+ */
 @Injectable({ providedIn: 'root' })
 export class AppTranslationLoader implements TranslocoLoader {
   getTranslation(lang: string): Observable<TranslocoTranslation> {
     if ((lang as AppLang) === 'en') {
-      return from(import('./en').then((m) => m.en as TranslocoTranslation));
+      return from(
+        Promise.all([import('./en'), import('./contrib.en')]).then(
+          ([main, contrib]) => ({ ...main.en, ...contrib.contribEn }) as TranslocoTranslation,
+        ),
+      );
     }
     return of(tr as TranslocoTranslation);
   }
