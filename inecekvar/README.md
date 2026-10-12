@@ -53,9 +53,9 @@ An Nx workspace with `apps/mobile` (Ionic and Angular, also served as a PWA), `a
 
 ## Status
 
-Phase 0 (foundation) is in place; no product feature exists yet. The folder holds the Nx workspace with `apps/mobile` (Ionic 9 on Capacitor, Android project committed), `apps/web` (Angular SSR) and the `libs/` ui, domain and data-access libraries; the FastAPI project in `api/` with a `/v1/health` endpoint and a PostGIS connectivity test; the local Docker Compose stack (PostGIS, Redis, MinIO, Mailpit, Caddy); the brand tokens and logo set; the ADRs, the env reference and the security drafts in `docs/`; and the `inecekvar-ci.yml` workflow. Resolved versions and the Phase 0 evidence are in `docs/adr/0001-stack-and-versions.md`.
+Phases 0 to 2 are merged into `main`: the foundation, then the API with the data model, authentication, moderation, traces, planner, city packs, export and account deletion (506 API tests passed in the Phase 2 gate, see `docs/adr/0029-phase-2-gate.md`). The app UI (Phase 3), web SEO, webhooks and hardening are not merged yet. The folder holds the Nx workspace with `apps/mobile` (Ionic 9 on Capacitor, Android project committed), `apps/web` (Angular SSR) and the `libs/` ui, domain and data-access libraries; the FastAPI project in `api/`; the local Docker Compose stack (PostGIS, Redis, MinIO, Mailpit, Caddy); the brand tokens and logo set; the ADRs, the env reference and the security drafts in `docs/`; and the `inecekvar-ci.yml` workflow. Resolved versions and the Phase 0 evidence are in `docs/adr/0001-stack-and-versions.md`.
 
-Not exercised in Phase 0: iOS (no macOS host), the CI workflow on GitHub Actions (the branch is not pushed), the lefthook hooks themselves, the APK on an emulator or device, the dev servers behind Caddy, and wiring the brand icons into the SSR favicon and the Android launcher.
+Not exercised so far: iOS (no macOS host), the CI workflow on GitHub Actions (the branch is not pushed), the lefthook hooks themselves, the APK on an emulator or device, the dev servers behind Caddy, and wiring the brand icons into the SSR favicon and the Android launcher.
 
 ## Getting started
 
