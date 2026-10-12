@@ -31,6 +31,15 @@ class Probe:
 
 
 PUBLIC_PROBES: dict[tuple[str, str], Probe] = {
+    ("POST", "/v1/plan"): Probe(
+        "/v1/plan",
+        body={
+            "city": CITY,
+            "from": {"lng": 34.01, "lat": 42.51},
+            "to": {"lng": 34.09, "lat": 42.57},
+            "max_transfers": 2,
+        },
+    ),
     ("GET", "/v1/health"): Probe("/v1/health"),
     ("GET", "/v1/cities"): Probe("/v1/cities"),
     ("GET", "/v1/cities/{slug}"): Probe("/v1/cities/" + CITY),

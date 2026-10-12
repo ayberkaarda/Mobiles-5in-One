@@ -33,6 +33,7 @@ from app.lines.router import router as lines_router
 from app.media.router import router as media_router
 from app.models.session import create_engine, create_session_factory
 from app.moderation.router import router as moderation_router
+from app.planner.router import router as planner_router
 from app.stops.router import router as stops_router
 from app.traces.router import router as traces_router
 
@@ -50,6 +51,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     favorites_router,
     traces_router,
     media_router,
+    planner_router,
 )
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing
