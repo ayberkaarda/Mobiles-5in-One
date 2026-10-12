@@ -354,9 +354,9 @@ export class FavoritesStore {
     const stored = await this.readPref(mergedFavoritesKey(userId));
     if (!current()) return;
     const done = new Set(parseKeys(stored));
-    const todo = this.guest().filter((line) => !done.has(keyOf(line)));
+    const remaining = this.guest().filter((line) => !done.has(keyOf(line)));
     if (!current()) return;
-    if (todo.length === 0) {
+    if (remaining.length === 0) {
       if (stored !== null) await this.writeMerged(userId, done);
       if (!current()) return;
       return;
@@ -364,7 +364,7 @@ export class FavoritesStore {
     this.merge.set({ kind: 'running' });
     let added = 0;
     let failed = 0;
-    for (const line of todo) {
+    for (const line of remaining) {
       if (!current()) return;
       await this.enqueue(keyOf(line), async () => {
         if (!current()) return;

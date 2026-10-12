@@ -1,5 +1,5 @@
 /*
- * Semantic theme on top of tokens.css (generated from brand/tokens.json).
+ * Semantic theme on top of tokens.css (derived from brand/tokens.json).
  * Light: krem paper, white cards, lacivert chrome. Dark: night lacivert, the same yellow signs.
  * Dark mode is the `ion-palette-dark` class on <html>, set by the app from the user's choice or
  * the system preference. Load order: tokens.css, Ionic dark.class.css, then this file.

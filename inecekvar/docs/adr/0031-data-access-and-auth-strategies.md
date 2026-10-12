@@ -22,7 +22,7 @@ sign-in and deletion.
    fills `{params}` with `encodeURIComponent`, drops empty query values and sends
    `Accept: application/json` and a fresh `X-Request-ID` (kept across its own retries). Bodies
    and responses use the `libs/domain` schemas through aliases in `api-types.ts`; the domain
-   file stays generated (`--check` still passes, the contract did not change in this package).
+   file stays derived (`--check` still passes, the contract did not change in this package).
    The endpoint services are `CatalogApi`, `AccountApi`, `ContributionApi` and `AuthApi`.
    Line, version and stop reads always send `?city=`; pack downloads send `X-Pack-Request: 1`
    and get a 60 s timeout instead of 15 s.

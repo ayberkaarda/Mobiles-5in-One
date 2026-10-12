@@ -21,7 +21,7 @@ exercised.
    Yellow is used only as a surface (placards, primary button, active tab), never as text on
    krem. The empty, error and offline states share one illustration: a stop sign on a pole
    (upright yellow, knocked over in red, greyed out offline).
-2. **Tokens.** `libs/ui/src/styles/tokens.css` stays generated from `brand/tokens.json`.
+2. **Tokens.** `libs/ui/src/styles/tokens.css` stays derived from `brand/tokens.json`.
    `theme.css` adds semantic tokens (`--iv-bg`, `--iv-surface`, `--iv-ink`, `--iv-ink-muted`,
    `--iv-line`, `--iv-chrome`, `--iv-accent`, `--iv-stripe`, radii, spacing) and the Ionic
    component variables. Muted text uses `#4F5866`, a darker Yol Grisi, because `#6C757D` on krem
