@@ -1,9 +1,11 @@
 // Serves the production build of the PWA like Caddy does locally: static files with an SPA
 // fallback, and /api/* proxied to the API with the prefix stripped (ops/Caddyfile api_proxy).
-// Binds to 127.0.0.1 only. Environment: IV_E2E_PORT, IV_E2E_API, IV_E2E_ROOT.
+// Binds to 127.0.0.1 only. Environment: IV_E2E_PORT, IV_E2E_API, IV_E2E_ROOT, IV_E2E_GZIP (1 =
+// gzip text responses as Caddy's `encode` does, used for Lighthouse runs).
 import { createReadStream, statSync } from 'node:fs';
 import { createServer, request } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
+import { createGzip } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -74,12 +76,19 @@ function serveStatic(req, res) {
     path = join(root, 'index.html');
     stat = file(path);
   }
+  const type = TYPES[extname(path)] ?? 'application/octet-stream';
+  const gzip =
+    process.env.IV_E2E_GZIP === '1' &&
+    /^(text\/|application\/(json|manifest\+json)|image\/svg)/.test(type) &&
+    /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
   res.writeHead(200, {
-    'content-type': TYPES[extname(path)] ?? 'application/octet-stream',
-    'content-length': stat.size,
+    'content-type': type,
     'cache-control': 'no-cache',
+    vary: 'accept-encoding',
+    ...(gzip ? { 'content-encoding': 'gzip' } : { 'content-length': stat.size }),
   });
   if (req.method === 'HEAD') res.end();
+  else if (gzip) createReadStream(path).pipe(createGzip()).pipe(res);
   else createReadStream(path).pipe(res);
 }
 
