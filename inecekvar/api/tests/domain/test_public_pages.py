@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -6,15 +7,17 @@ import httpx
 import pytest
 from geoalchemy2.shape import from_shape
 from shapely.geometry import LineString, Point, Polygon
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cities import router as cities_router
 from app.cities.router import CityDetailOut, CityOut, StopPairsOut
 from app.core.deps import Services
 from app.export.router import SitemapIndexOut
 from app.models import City, Line, LineStop, LineVersion, Stop
 from app.models.accounts import Favorite
 from tests.domain.conftest import Sample
+from tests.support.app import build_test_app
 from tests.support.domain import create_account
 from tests.support.privacy import assert_no_trace_leak
 
@@ -399,3 +402,80 @@ async def test_sitemap_index_without_published_lines(
     response = await client.get("/v1/sitemap")
     assert response.status_code == 200
     assert response.json() == {"cities": []}
+
+
+async def test_stop_pairs_are_cached_until_publish(
+    client: httpx.AsyncClient, services: Services, sample: Sample
+) -> None:
+    first = await client.get(PAIRS_PATH)
+    assert first.status_code == 200
+    assert first.json()["pairs"]
+    async with services.session_factory() as db:
+        await db.execute(
+            update(Stop).where(Stop.city_id == sample.city_id).values(status="retired")
+        )
+        await db.commit()
+    assert (await client.get(PAIRS_PATH)).json() == first.json()
+    async with services.session_factory() as db:
+        await db.execute(
+            update(City).where(City.id == sample.city_id).values(pack_version=City.pack_version + 1)
+        )
+        await db.commit()
+    changed = await client.get(PAIRS_PATH)
+    assert changed.status_code == 200
+    assert changed.json()["pairs"] == []
+
+
+async def test_stop_pairs_concurrent_cold_cache_computes_once(
+    client: httpx.AsyncClient, sample: Sample, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = cities_router.compute_stop_pairs
+    count = 0
+
+    async def counted(db: AsyncSession, city_id: uuid.UUID, slug: str) -> StopPairsOut:
+        nonlocal count
+        count += 1
+        await asyncio.sleep(0.1)
+        return await original(db, city_id, slug)
+
+    monkeypatch.setattr(cities_router, "compute_stop_pairs", counted)
+    responses = await asyncio.gather(*(client.get(PAIRS_PATH) for _ in range(8)))
+    assert all(response.status_code == 200 for response in responses)
+    assert all(response.json() == responses[0].json() for response in responses)
+    assert count == 1
+
+
+async def test_stop_pairs_ip_quota(
+    client: httpx.AsyncClient, services: Services, sample: Sample
+) -> None:
+    for _ in range(60):
+        assert (await client.get(PAIRS_PATH)).status_code == 200
+    response = await client.get(PAIRS_PATH)
+    assert response.status_code == 429
+    assert response.json()["code"] == "rate_limited"
+    assert int(response.headers["Retry-After"]) > 0
+    transport = httpx.ASGITransport(app=build_test_app(services), client=("203.0.113.11", 50000))
+    async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as other:
+        assert (await other.get(PAIRS_PATH)).status_code == 200
+
+
+async def test_stop_pairs_timeout_answers_503(
+    client: httpx.AsyncClient,
+    services: Services,
+    sample: Sample,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    services.settings = services.settings.model_copy(update={"stop_pairs_timeout_ms": 100})
+    original = cities_router.compute_stop_pairs
+
+    async def slow(db: AsyncSession, city_id: uuid.UUID, slug: str) -> StopPairsOut:
+        await db.execute(text("SELECT pg_sleep(1)"))
+        return await original(db, city_id, slug)
+
+    monkeypatch.setattr(cities_router, "compute_stop_pairs", slow)
+    response = await client.get(PAIRS_PATH)
+    assert response.status_code == 503
+    assert response.json()["code"] == "public.busy"
+    assert response.headers["Retry-After"] == "30"
+    monkeypatch.setattr(cities_router, "compute_stop_pairs", original)
+    assert (await client.get(PAIRS_PATH)).status_code == 200

@@ -40,6 +40,8 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     "edits.default": RateLimitRule(limit=100, window_seconds=24 * 60 * 60),
     "traces": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
     "plan": RateLimitRule(limit=30, window_seconds=60),
+    "public.stop_pairs": RateLimitRule(limit=60, window_seconds=60),
+    "admin.export": RateLimitRule(limit=10, window_seconds=3600),
     # Spec section 6.7: photo presign quota per user; section 6.22: pack downloads per
     # anonymous hash (or signed-in user) per day.
     "media.presign": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
@@ -103,6 +105,7 @@ class Settings(BaseSettings):
     # HMAC key that binds a CSRF token to one session; at least 32 bytes of entropy.
     csrf_secret: SecretStr | None = None
     totp_encryption_key: SecretStr | None = None
+    totp_previous_encryption_key: SecretStr | None = None
 
     # --- Magic links (spec section 3 story 5, section 6.11) --------------------------------
     magic_link_ttl_minutes: int = Field(default=15, ge=1, le=15)
@@ -145,6 +148,8 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr | None = None
     media_bucket: str = "inecekvar-media"
     exports_bucket: str = "inecekvar-exports"
+    export_max_features: int = Field(default=50_000, ge=1)
+    export_max_bytes: int = Field(default=50 * 1024 * 1024, ge=1)
     presign_ttl_seconds: int = Field(default=300, ge=30, le=900)
     # Spec section 6.7: photos are image/jpeg or image/webp up to 4 MiB.
     media_max_bytes: int = Field(default=4 * 1024 * 1024, ge=1024, le=4 * 1024 * 1024)
@@ -152,6 +157,8 @@ class Settings(BaseSettings):
     # --- Planner (spec section 3 story 3, section 6.22) --------------------------------------
     planner_timeout_seconds: float = Field(default=3.0, gt=0, le=10)
     planner_cache_ttl_seconds: int = Field(default=600, ge=1, le=3600)
+    stop_pairs_cache_ttl_seconds: int = Field(default=3600, ge=60, le=86400)
+    stop_pairs_timeout_ms: int = Field(default=2000, ge=100, le=10000)
 
     # --- Offline packs and tiles (spec section 3 story 4) -------------------------------------
     # CDN base for `cities/{slug}/tiles.pmtiles`; the route answers 404 while it is unset.
@@ -166,7 +173,7 @@ class Settings(BaseSettings):
     log_hash_key: SecretStr | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    @field_validator("totp_encryption_key")
+    @field_validator("totp_encryption_key", "totp_previous_encryption_key")
     @classmethod
     def _valid_totp_key(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None:
@@ -260,6 +267,11 @@ class Settings(BaseSettings):
     def jwt_public_key(self) -> bytes:
         public = SecretStr(self.jwt_public_key_pem) if self.jwt_public_key_pem else None
         return _pem(public, self.jwt_public_key_path, "public")
+
+    def totp_previous_key(self) -> bytes | None:
+        if self.totp_previous_encryption_key is None:
+            return None
+        return _decode_totp_key(self.totp_previous_encryption_key)
 
     def require_secret(self, name: Literal["csrf_secret", "log_hash_key"]) -> bytes:
         value: SecretStr | None = getattr(self, name)

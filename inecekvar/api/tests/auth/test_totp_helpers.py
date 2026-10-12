@@ -11,6 +11,7 @@ from app.auth.totp import (
     VALID_WINDOW,
     decrypt_secret,
     encrypt_secret,
+    key_id,
     matching_counter,
     new_secret,
 )
@@ -25,18 +26,19 @@ def test_secret_encryption_is_randomized_authenticated_and_versioned() -> None:
     first = encrypt_secret(key, identity, secret)
     second = encrypt_secret(key, identity, secret)
     assert len(secret) == 32
-    assert first[:1] == b"\x01"
+    assert first[:1] == b"\x02"
+    assert first[1:9] == key_id(key)
     assert first != second
     assert secret.encode() not in first
     assert decrypt_secret(key, identity, first) == secret
     with pytest.raises(InvalidTag):
         decrypt_secret(key, uuid.uuid4(), first)
-    with pytest.raises(InvalidTag):
+    with pytest.raises(ValueError, match="unknown TOTP key"):
         decrypt_secret(secrets.token_bytes(32), identity, first)
     with pytest.raises(InvalidTag):
         decrypt_secret(key, identity, first[:-1] + bytes([first[-1] ^ 1]))
     with pytest.raises(ValueError, match="format"):
-        decrypt_secret(key, identity, b"\x02" + first[1:])
+        decrypt_secret(key, identity, b"\x03" + first[1:])
     with pytest.raises(ValueError, match="format"):
         decrypt_secret(key, identity, b"\x01")
 

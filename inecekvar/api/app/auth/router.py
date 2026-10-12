@@ -271,8 +271,7 @@ async def delete_me(
     # Re-authentication uses the login rule (5 per 15 minutes) keyed by account, before
     # any hashing.
     await enforce_rate_limit(limiter, "auth.login", "reauth:" + str(principal.user_id))
-    user = await locked_user(db, principal.user_id)
-    await request_deletion(db, settings, principal, user, body.password, clock.now())
+    await request_deletion(db, settings, principal, body.password, clock.now())
     if principal.auth_mode == "cookie":
         clear_session_cookie(response, settings)
     return StatusOut(status="deletion_scheduled")

@@ -5,15 +5,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.router import AuthRoute
 from app.auth.step_up import revoke_user_step_ups
-from app.core.deps import DbDep, ObjectStoreDep, Principal, ServicesDep
+from app.core.deps import DbDep, ObjectStoreDep, Principal, ServicesDep, enforce_rate_limit
 from app.core.errors import VALIDATION_FAILED, ProblemError
 from app.lines.router import Limit, Offset
 from app.models.accounts import User
 from app.models.enums import UserRole
-from app.models.ops import AuditLog
+from app.models.ops import AuditLog, Export
+from app.security.admins import ensure_admin_remains, lock_admins, revalidate_admin_actor
 from app.security.audit import audit
 from app.security.deps import require_step_up
 from app.security.policy import Action
@@ -100,6 +102,7 @@ def user_response(user: User) -> AdminUserOut:
 async def list_users(
     principal: ManageUsersDep,
     db: DbDep,
+    services: ServicesDep,
     limit: Limit = 50,
     offset: Offset = 0,
     role: UserRole | None = None,
@@ -109,8 +112,26 @@ async def list_users(
         query = query.where(User.role == role.value)
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
     rows = await db.scalars(query.order_by(User.created_at, User.id).limit(limit).offset(offset))
+    items = [user_response(user) for user in rows]
+    audit(
+        db,
+        principal,
+        "admin.users_read",
+        "user",
+        None,
+        {
+            "filters": {
+                "role": role.value if role is not None else None,
+                "limit": limit,
+                "offset": offset,
+            },
+            "result_count": len(items),
+        },
+        services.clock.now(),
+    )
+    await db.commit()
     return AdminUserPage(
-        items=[user_response(user) for user in rows],
+        items=items,
         total=total or 0,
         limit=limit,
         offset=offset,
@@ -125,15 +146,9 @@ async def change_role(
     db: DbDep,
     services: ServicesDep,
 ) -> AdminUserOut:
-    active_admins = list(
-        await db.scalars(
-            select(User)
-            .where(User.role == UserRole.ADMIN.value, User.deactivated_at.is_(None))
-            .order_by(User.id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-    )
+    active_admins = await lock_admins(db)
+    now = services.clock.now()
+    await revalidate_admin_actor(db, principal, now)
     user = await db.scalar(
         select(User)
         .where(User.id == identity)
@@ -147,9 +162,8 @@ async def change_role(
     old_role = UserRole(user.role)
     if old_role == body.role:
         return user_response(user)
-    if old_role == UserRole.ADMIN and body.role != UserRole.ADMIN and len(active_admins) == 1:
-        raise ProblemError("admin.last_admin", 409)
-    now = services.clock.now()
+    if old_role == UserRole.ADMIN and body.role != UserRole.ADMIN:
+        ensure_admin_remains(active_admins, user.id)
     user.role = body.role.value
     user.updated_at = now
     privileged = {UserRole.MODERATOR, UserRole.ADMIN}
@@ -176,19 +190,29 @@ async def create_export(
     services: ServicesDep,
     store: ObjectStoreDep,
 ) -> AdminExportOut:
+    await enforce_rate_limit(
+        services.rate_limiter, "admin.export", "user:" + str(principal.user_id)
+    )
+
+    def before_commit(session: AsyncSession, exported: Export) -> None:
+        audit(
+            session,
+            principal,
+            "admin.export",
+            "city",
+            exported.city_id,
+            {"version": exported.version},
+            services.clock.now(),
+        )
+
     exported = await export_city(
-        services.session_factory, store, services.settings, services.clock, city
+        services.session_factory,
+        store,
+        services.settings,
+        services.clock,
+        city,
+        before_commit=before_commit,
     )
-    audit(
-        db,
-        principal,
-        "admin.export",
-        "city",
-        exported.city_id,
-        {"version": exported.version},
-        services.clock.now(),
-    )
-    await db.commit()
     return AdminExportOut(
         city=city,
         version=exported.version,
@@ -201,6 +225,7 @@ async def create_export(
 async def list_audit_logs(
     principal: ManageUsersDep,
     db: DbDep,
+    services: ServicesDep,
     limit: Limit = 50,
     offset: Offset = 0,
     actor_id: uuid.UUID | None = None,
@@ -210,10 +235,11 @@ async def list_audit_logs(
     since: AwareDatetime | None = None,
     until: AwareDatetime | None = None,
 ) -> AuditLogPage:
-    if since is not None and until is not None:
-        span = until - since
-        if span < timedelta(0) or span > timedelta(days=366):
-            raise ProblemError(VALIDATION_FAILED, 422)
+    until = until if until is not None else services.clock.now()
+    since = since if since is not None else until - timedelta(days=30)
+    span = until - since
+    if span < timedelta(0) or span > timedelta(days=366):
+        raise ProblemError(VALIDATION_FAILED, 422)
     query = select(AuditLog)
     if actor_id is not None:
         query = query.where(AuditLog.actor_id == actor_id)
@@ -231,7 +257,7 @@ async def list_audit_logs(
     rows = await db.scalars(
         query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(limit).offset(offset)
     )
-    return AuditLogPage(
+    page = AuditLogPage(
         items=[
             AuditLogOut(
                 id=row.id,
@@ -248,3 +274,26 @@ async def list_audit_logs(
         limit=limit,
         offset=offset,
     )
+    audit(
+        db,
+        principal,
+        "admin.audit_read",
+        "audit_log",
+        None,
+        {
+            "filters": {
+                "actor_id": str(actor_id) if actor_id is not None else None,
+                "action": action,
+                "target_type": target_type,
+                "target_id": str(target_id) if target_id is not None else None,
+                "since": since.isoformat(),
+                "until": until.isoformat(),
+                "limit": limit,
+                "offset": offset,
+            },
+            "result_count": len(page.items),
+        },
+        services.clock.now(),
+    )
+    await db.commit()
+    return page

@@ -1,3 +1,4 @@
+import hashlib
 import hmac
 import secrets
 import uuid
@@ -13,6 +14,11 @@ from app.core.settings import Settings
 STEP_INTERVAL = 30
 VALID_WINDOW = 1
 _AAD_PREFIX = b"inecekvar:totp:v1:"
+_AAD_V2_PREFIX = b"inecekvar:totp:v2:"
+
+
+def key_id(key: bytes) -> bytes:
+    return hashlib.sha256(b"inecekvar:totp-key-id:" + key).digest()[:8]
 
 
 def new_secret() -> str:
@@ -23,16 +29,37 @@ def encrypt_secret(key: bytes, user_id: uuid.UUID, secret: str) -> bytes:
     if len(key) != 32:
         raise ValueError("TOTP encryption key must be 32 bytes")
     nonce = secrets.token_bytes(12)
-    ciphertext = AESGCM(key).encrypt(nonce, secret.encode("ascii"), _AAD_PREFIX + user_id.bytes)
-    return b"\x01" + nonce + ciphertext
+    identity = key_id(key)
+    aad = _AAD_V2_PREFIX + identity + user_id.bytes
+    ciphertext = AESGCM(key).encrypt(nonce, secret.encode("ascii"), aad)
+    return b"\x02" + identity + nonce + ciphertext
 
 
-def decrypt_secret(key: bytes, user_id: uuid.UUID, blob: bytes) -> str:
-    if len(key) != 32:
+def decrypt_secret(
+    key: bytes, user_id: uuid.UUID, blob: bytes, previous_key: bytes | None = None
+) -> str:
+    keys = (key,) if previous_key is None else (key, previous_key)
+    if any(len(candidate) != 32 for candidate in keys):
         raise ValueError("TOTP encryption key must be 32 bytes")
-    if len(blob) < 29 or blob[:1] != b"\x01":
-        raise ValueError("invalid TOTP secret format")
-    return AESGCM(key).decrypt(blob[1:13], blob[13:], _AAD_PREFIX + user_id.bytes).decode("ascii")
+    if blob[:1] == b"\x02" and len(blob) >= 37:
+        identity = blob[1:9]
+        for candidate in keys:
+            if hmac.compare_digest(key_id(candidate), identity):
+                aad = _AAD_V2_PREFIX + identity + user_id.bytes
+                return AESGCM(candidate).decrypt(blob[9:21], blob[21:], aad).decode("ascii")
+        raise ValueError("unknown TOTP key")
+    if blob[:1] == b"\x01" and len(blob) >= 29:
+        for candidate in keys:
+            try:
+                return (
+                    AESGCM(candidate)
+                    .decrypt(blob[1:13], blob[13:], _AAD_PREFIX + user_id.bytes)
+                    .decode("ascii")
+                )
+            except InvalidTag:
+                continue
+        raise InvalidTag
+    raise ValueError("invalid TOTP secret format")
 
 
 def provisioning_uri(secret: str, email: str) -> str:
@@ -63,6 +90,6 @@ def encryption_key(settings: Settings) -> bytes:
 def stored_secret(settings: Settings, user_id: uuid.UUID, blob: bytes) -> str:
     key = encryption_key(settings)
     try:
-        return decrypt_secret(key, user_id, blob)
+        return decrypt_secret(key, user_id, blob, settings.totp_previous_key())
     except (InvalidTag, ValueError):
         raise ProblemError(TOTP_UNAVAILABLE, 503) from None

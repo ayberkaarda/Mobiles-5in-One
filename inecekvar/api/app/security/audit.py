@@ -15,7 +15,7 @@ def audit(
     actor_id: Principal | uuid.UUID | None,
     action: str,
     target_type: str,
-    target_id: uuid.UUID,
+    target_id: uuid.UUID | None,
     diff: object,
     now: datetime,
 ) -> None:

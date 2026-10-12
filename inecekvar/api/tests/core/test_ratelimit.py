@@ -119,4 +119,6 @@ def test_rules_match_spec() -> None:
         "plan": (30, 60),
         "media.presign": (20, 86400),
         "pack.download": (10, 86400),
+        "public.stop_pairs": (60, 60),
+        "admin.export": (10, 3600),
     }

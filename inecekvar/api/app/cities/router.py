@@ -1,14 +1,18 @@
+import asyncio
+import time
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.core.deps import DbDep
+from app.core.deps import DbDep, ServicesDep, rate_limit
 from app.core.errors import ProblemError
 from app.geo import bbox_bounds, point_coordinates
 from app.lines.schemas import LineSummary, summary
@@ -16,6 +20,7 @@ from app.models import City, Line, LineStop, LineVersion, Stop
 from app.models.accounts import Favorite
 
 router = APIRouter()
+_PAIRS_SEMAPHORE = asyncio.Semaphore(2)
 
 
 class CityOut(BaseModel):
@@ -141,11 +146,67 @@ async def read_city(slug: str, db: DbDep) -> CityDetailOut:
     )
 
 
-@router.get("/cities/{slug}/stop-pairs")
+@router.get("/cities/{slug}/stop-pairs", dependencies=[Depends(rate_limit("public.stop_pairs"))])
 async def stop_pairs(
-    slug: str, db: DbDep, limit: Annotated[int, Query(ge=1, le=200)] = 200
+    slug: str,
+    db: DbDep,
+    services: ServicesDep,
+    limit: Annotated[int, Query(ge=1, le=200)] = 200,
 ) -> StopPairsOut:
     city = await get_city(db, slug)
+    city_id, version = city.id, city.pack_version
+    await db.rollback()
+    cache_key = f"stop-pairs:v1:{slug}:{version}"
+    lock_key = f"stop-pairs:lock:{slug}:{version}"
+    cached = await services.redis.get(cache_key)
+    if cached is None:
+        owner = uuid.uuid4().hex
+        acquired = await services.redis.set(lock_key, owner, nx=True, ex=30)
+        if not acquired:
+            deadline = time.monotonic() + 2.0
+            while cached is None and time.monotonic() < deadline:
+                await asyncio.sleep(0.05)
+                cached = await services.redis.get(cache_key)
+            if cached is None:
+                raise pairs_busy()
+        else:
+            try:
+                async with asyncio.timeout(12), _PAIRS_SEMAPHORE:
+                    cached = await services.redis.get(cache_key)
+                    if cached is None:
+                        async with db.begin():
+                            await db.execute(
+                                text("SELECT set_config('statement_timeout', :timeout, true)"),
+                                {"timeout": str(services.settings.stop_pairs_timeout_ms)},
+                            )
+                            output = await compute_stop_pairs(db, city_id, slug)
+                        cached = output.model_dump_json()
+                        await services.redis.set(
+                            cache_key, cached, ex=services.settings.stop_pairs_cache_ttl_seconds
+                        )
+            except DBAPIError as exc:
+                if getattr(exc.orig, "sqlstate", None) == "57014":
+                    raise pairs_busy() from None
+                raise
+            except TimeoutError:
+                raise pairs_busy() from None
+            finally:
+                await services.redis.eval(
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then "
+                    "return redis.call('del', KEYS[1]) end return 0",
+                    1,
+                    lock_key,
+                    owner,
+                )
+    output = StopPairsOut.model_validate_json(cached)
+    return output.model_copy(update={"pairs": output.pairs[:limit]})
+
+
+def pairs_busy() -> ProblemError:
+    return ProblemError("public.busy", 503, headers={"Retry-After": "30"})
+
+
+async def compute_stop_pairs(db: AsyncSession, city_id: uuid.UUID, slug: str) -> StopPairsOut:
     from_membership = aliased(LineStop)
     to_membership = aliased(LineStop)
     from_stop = aliased(Stop)
@@ -165,10 +226,10 @@ async def stop_pairs(
         .join(from_stop, from_stop.id == from_membership.stop_id)
         .join(to_stop, to_stop.id == to_membership.stop_id)
         .where(
-            Line.city_id == city.id,
+            Line.city_id == city_id,
             Line.status == "published",
-            from_stop.city_id == city.id,
-            to_stop.city_id == city.id,
+            from_stop.city_id == city_id,
+            to_stop.city_id == city_id,
             from_stop.status == "active",
             to_stop.status == "active",
             from_stop.slug < to_stop.slug,
@@ -204,10 +265,10 @@ async def stop_pairs(
             shared_lines.c.from_slug,
             shared_lines.c.to_slug,
         )
-        .limit(limit)
+        .limit(200)
     )
     return StopPairsOut(
-        city=city.slug,
+        city=slug,
         basis="shared_published_lines",
         pairs=[
             StopPairOut(

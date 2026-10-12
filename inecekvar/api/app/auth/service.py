@@ -10,6 +10,7 @@ from app.auth.mail import account_exists_mail, magic_link_mail
 from app.auth.passwords import dummy_hash, hash_password, verify_password
 from app.auth.schemas import RefreshOut
 from app.auth.sessions import new_refresh, refresh_output, revoke_family, revoke_user
+from app.auth.step_up import revoke_session_step_up
 from app.auth.tokens import opaque_token, token_hash
 from app.core.deps import MailSender, Principal, RateLimiter, enforce_rate_limit
 from app.core.errors import (
@@ -39,6 +40,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.ops import AuditLog
+from app.security.admins import ensure_admin_remains, lock_admins
 
 
 async def locked_user(db: AsyncSession, user_id: uuid.UUID) -> User:
@@ -180,6 +182,7 @@ async def rotate_refresh(
     # revokes the family that descends from it.
     if token.used_at is not None or token.revoked_at is not None:
         await revoke_family(db, token.family_id, now, RefreshRevokeReason.REUSE_DETECTED)
+        await revoke_session_step_up(db, token.family_id)
         token.revoked_at = now
         token.revoked_reason = RefreshRevokeReason.REUSE_DETECTED.value
         token.updated_at = now
@@ -248,10 +251,12 @@ async def request_deletion(
     db: AsyncSession,
     settings: Settings,
     principal: Principal,
-    user: User,
     password: str | None,
     now: datetime,
 ) -> None:
+    active_admins = await lock_admins(db)
+    user = await locked_user(db, principal.user_id)
+    ensure_admin_remains(active_admins, user.id)
     if user.password_hash is not None:
         ok, _ = await verify_password(password or "", user.password_hash, settings)
         if password is None or not ok:

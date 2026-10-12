@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import uuid
@@ -8,13 +9,14 @@ from typing import Literal, cast
 
 import httpx
 import pytest
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, text, update
 
 from app.auth.step_up import SessionStepUpSource
 from app.core.deps import Services
 from app.core.ids import uuid7
 from app.models import AuditLog, City, Export, SessionStepUp, User
 from app.models.enums import UserRole
+from app.security.admins import lock_admins
 from app.security.audit import audit
 from app.security.policy import ROLES, Action, cell
 from tests.security.conftest import create_account, sign_in
@@ -576,3 +578,117 @@ async def test_audit_query_bounds(
         422,
         "validation.failed",
     )
+
+
+async def test_demoted_admin_cannot_repromote_self_during_race(
+    client: httpx.AsyncClient, services: Services, clock: FixedClock
+) -> None:
+    await actor_account(client, services, clock, UserRole.ADMIN)
+    target, headers = await actor_account(client, services, clock, UserRole.ADMIN)
+    async with services.session_factory() as held:
+        await lock_admins(held)
+        backend = await held.scalar(text("SELECT pg_backend_pid()"))
+        await held.execute(update(User).where(User.id == target).values(role="user"))
+        await held.execute(delete(SessionStepUp).where(SessionStepUp.user_id == target))
+        pending = asyncio.create_task(
+            client.patch(f"/v1/admin/users/{target}/role", headers=headers, json={"role": "admin"})
+        )
+        try:
+            blocked = False
+            async with services.session_factory() as observer:
+                for _ in range(100):
+                    blocked = bool(
+                        await observer.scalar(
+                            text(
+                                "SELECT EXISTS (SELECT 1 FROM pg_stat_activity "
+                                "WHERE pid <> :backend AND datname = current_database() "
+                                "AND wait_event_type = 'Lock' "
+                                "AND query LIKE '%pg_advisory_xact_lock%')"
+                            ),
+                            {"backend": backend},
+                        )
+                    )
+                    await observer.rollback()
+                    if blocked:
+                        break
+                    await asyncio.sleep(0.05)
+            assert blocked, "request never blocked on the admin lock"
+            await held.commit()
+            problem(await asyncio.wait_for(pending, timeout=5), 403, "auth.forbidden")
+        finally:
+            await held.rollback()
+            if not pending.done():
+                pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
+    async with services.session_factory() as db:
+        assert await db.scalar(select(User.role).where(User.id == target)) == "user"
+        assert (
+            await db.scalar(
+                select(AuditLog.id).where(
+                    AuditLog.action == "admin.user_role", AuditLog.target_id == target
+                )
+            )
+            is None
+        )
+
+
+async def test_export_busy_city_answers_409(
+    client: httpx.AsyncClient, services: Services, clock: FixedClock, s3_buckets: S3Buckets
+) -> None:
+    await seed_city(services)
+    services.object_store = s3_buckets.store
+    services.settings = services.settings.model_copy(update=s3_buckets.settings_overrides())
+    _, headers = await actor_account(client, services, clock, UserRole.ADMIN)
+    path = f"/v1/admin/exports/{CITY}"
+    async with services.session_factory() as held:
+        await held.scalar(select(City).where(City.slug == CITY).with_for_update())
+        responses = await asyncio.gather(
+            client.post(path, headers=headers), client.post(path, headers=headers)
+        )
+        for response in responses:
+            problem(response, 409, "export.in_progress")
+        await held.rollback()
+    assert (await client.post(path, headers=headers)).status_code == 201
+
+
+async def test_export_quota_answers_429(
+    client: httpx.AsyncClient, services: Services, clock: FixedClock, s3_buckets: S3Buckets
+) -> None:
+    await seed_city(services)
+    services.object_store = s3_buckets.store
+    services.settings = services.settings.model_copy(update=s3_buckets.settings_overrides())
+    _, headers = await actor_account(client, services, clock, UserRole.ADMIN)
+    path = f"/v1/admin/exports/{CITY}"
+    for _ in range(10):
+        assert (await client.post(path, headers=headers)).status_code == 201
+    response = await client.post(path, headers=headers)
+    problem(response, 429, "rate_limited")
+    assert int(response.headers["Retry-After"]) > 0
+    _, other_headers = await actor_account(client, services, clock, UserRole.ADMIN)
+    assert (await client.post(path, headers=other_headers)).status_code == 201
+
+
+@pytest.mark.parametrize("setting", ["export_max_bytes", "export_max_features"])
+async def test_export_size_cap_answers_422(
+    client: httpx.AsyncClient,
+    services: Services,
+    clock: FixedClock,
+    s3_buckets: S3Buckets,
+    setting: str,
+) -> None:
+    await seed_city(services)
+    services.object_store = s3_buckets.store
+    services.settings = services.settings.model_copy(
+        update=s3_buckets.settings_overrides() | {setting: 1}
+    )
+    _, headers = await actor_account(client, services, clock, UserRole.ADMIN)
+    problem(
+        await client.post(f"/v1/admin/exports/{CITY}", headers=headers), 422, "export.too_large"
+    )
+    async with services.session_factory() as db:
+        assert await db.scalar(select(func.count()).select_from(Export)) == 0
+        assert await db.scalar(select(AuditLog.id).where(AuditLog.action == "admin.export")) is None
+    objects = await asyncio.to_thread(
+        s3_buckets.store.client.list_objects_v2, Bucket=s3_buckets.exports_bucket
+    )
+    assert objects.get("KeyCount", 0) == 0

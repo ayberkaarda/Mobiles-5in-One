@@ -1,7 +1,11 @@
+import inspect
 import json
+from collections.abc import Awaitable, Callable
 from typing import cast
 
+import structlog
 from sqlalchemy import func, select
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.deps import Clock
@@ -9,7 +13,7 @@ from app.core.errors import ProblemError
 from app.core.settings import Settings
 from app.core.storage import ObjectStore
 from app.export.dataset import city_dataset
-from app.models.geo import City
+from app.models.geo import City, Line, LineVersion, Stop
 from app.models.ops import Export
 
 LICENCE = "CC BY 4.0 proposed; legal approval pending; no licence granted yet."
@@ -21,11 +25,32 @@ async def export_city(
     settings: Settings,
     clock: Clock,
     city_slug: str,
+    before_commit: Callable[[AsyncSession, Export], Awaitable[None] | None] | None = None,
 ) -> Export:
     async with session_factory() as db:
-        city = await db.scalar(select(City).where(City.slug == city_slug).with_for_update())
+        try:
+            city = await db.scalar(
+                select(City).where(City.slug == city_slug).with_for_update(nowait=True)
+            )
+        except DBAPIError as exc:
+            if getattr(exc.orig, "sqlstate", None) == "55P03":
+                raise ProblemError("export.in_progress", 409) from None
+            raise
         if city is None:
             raise ProblemError("city.not_found", 404)
+        line_count = await db.scalar(
+            select(func.count())
+            .select_from(Line)
+            .join(LineVersion, Line.current_version_id == LineVersion.id)
+            .where(Line.city_id == city.id, Line.status == "published")
+        )
+        stop_count = await db.scalar(
+            select(func.count())
+            .select_from(Stop)
+            .where(Stop.city_id == city.id, Stop.status == "active")
+        )
+        if (line_count or 0) + (stop_count or 0) > settings.export_max_features:
+            raise ProblemError("export.too_large", 422)
         previous = await db.scalar(
             select(func.max(Export.version)).where(Export.city_id == city.id)
         )
@@ -57,10 +82,13 @@ async def export_city(
             "version": version,
         }
         path = "exports/" + city.slug + "/" + str(version) + ".geojson"
+        encoded = json.dumps(body, ensure_ascii=False, allow_nan=False).encode()
+        if len(encoded) > settings.export_max_bytes:
+            raise ProblemError("export.too_large", 422)
         await store.put(
             settings.exports_bucket,
             path,
-            json.dumps(body, ensure_ascii=False, allow_nan=False).encode(),
+            encoded,
             "application/geo+json",
         )
         export = Export(
@@ -72,6 +100,10 @@ async def export_city(
             updated_at=now,
         )
         db.add(export)
+        if before_commit is not None:
+            result = before_commit(db, export)
+            if inspect.isawaitable(result):
+                await result
         await db.commit()
         await db.refresh(export)
         db.expunge(export)
@@ -86,4 +118,12 @@ async def export_all_cities(
 ) -> list[Export]:
     async with session_factory() as db:
         slugs = list(await db.scalars(select(City.slug).order_by(City.slug)))
-    return [await export_city(session_factory, store, settings, clock, slug) for slug in slugs]
+    exports: list[Export] = []
+    for slug in slugs:
+        try:
+            exports.append(await export_city(session_factory, store, settings, clock, slug))
+        except ProblemError as exc:
+            if exc.code not in {"export.in_progress", "export.too_large"}:
+                raise
+            structlog.get_logger().info("export.skipped", city=slug, code=exc.code)
+    return exports
