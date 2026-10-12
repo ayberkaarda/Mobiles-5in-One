@@ -1,0 +1,128 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <iv-back-button />
+    </ion-buttons>
+    <ion-title>{{ 'packs.title' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'packs.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'packs.heading' | t }}</h1>
+    <p class="iv-lead">{{ 'packs.lead' | t }}</p>
+    <p class="free">{{ 'packs.freeNote' | t }}</p>
+
+    <section class="iv-section" aria-labelledby="storage-title">
+      <h2 class="iv-section-title" id="storage-title">{{ 'packs.storageTitle' | t }}</h2>
+      <div class="storage">
+        <p class="used">{{ 'packs.storageUsed' | t: { size: storageUsed() } }}</p>
+        @if (storageFree(); as free) {
+        <p class="iv-note">{{ 'packs.storageFree' | t: { size: free } }}</p>
+        }
+        <p class="iv-note">{{ storageWhere() | t }}</p>
+      </div>
+    </section>
+
+    <section class="iv-section" aria-labelledby="cities-title">
+      <h2 class="iv-section-title" id="cities-title">{{ 'packs.citiesTitle' | t }}</h2>
+      @if (cityStore.fromPacks()) {
+      <iv-notice class="offline" tone="offline" [message]="'packs.citiesOffline' | t" />
+      } @if (cityStore.status() === 'error') {
+      <iv-state
+        kind="offline"
+        [heading]="'packs.loadError' | t"
+        [actionLabel]="'packs.retry' | t"
+        (action)="retryList()"
+      />
+      } @else if (cities().length === 0 && cityStore.status() === 'ready') {
+      <p class="iv-note">{{ 'packs.empty' | t }}</p>
+      }
+
+      <ul class="cities" role="list">
+        @for (city of cities(); track city.slug) {
+        <li class="city" [attr.data-city]="city.slug" [attr.data-state]="manager.state(city)">
+          <div class="head">
+            <div class="title">
+              <h3>{{ city.name }}</h3>
+              <p class="meta">
+                <span>{{ 'packs.lineCount' | tp: city.published_line_count }}</span>
+                @if (city.is_sample) {
+                <span class="badge">{{ 'packs.sample' | t }}</span>
+                }
+              </p>
+            </div>
+            <span class="pin" [class.on]="registry.has(city.slug)" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                @if (registry.has(city.slug)) {
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+                } @else {
+                <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" />
+                }
+              </svg>
+            </span>
+          </div>
+
+          @if (installedText(city); as installed) {
+          <p class="status">{{ installed }}</p>
+          <p class="iv-note basemap">
+            {{ (hasBasemap(city) ? 'packs.withBasemap' : 'packs.noBasemap') | t }}
+          </p>
+          } @else {
+          <p class="status muted">{{ 'packs.notInstalled' | t }}</p>
+          } @if (manager.state(city) === 'update') {
+          <p class="update">{{ updateText(city) }}</p>
+          } @if (registry.corrupt().has(city.slug)) {
+          <p class="warn" role="alert">{{ 'packs.corrupt' | t }}</p>
+          } @if (job(city); as job) {
+          <div class="job" aria-live="polite">
+            <p class="phase">{{ phaseKey(job) | t }}</p>
+            <iv-progress-bar
+              [value]="job.phase === 'saving' ? null : fraction(job)"
+              [label]="'packs.progressLabel' | t: { city: city.name }"
+            />
+            <p class="iv-note progress">{{ progressText(job) }}</p>
+          </div>
+          } @if (failure(city); as failed) { @if (failed === 'entitlement') {
+          <div class="entitlement" role="alert">
+            <strong>{{ 'packs.failEntitlementTitle' | t }}</strong>
+            <p>{{ 'packs.failEntitlementBody' | t }}</p>
+            <a class="plus" routerLink="/plus" [queryParams]="{ sehir: city.slug }">
+              {{ 'packs.plusAction' | t }}
+            </a>
+          </div>
+          } @else {
+          <p class="warn" role="alert">{{ failureKey(failed) | t }}</p>
+          } }
+
+          <div class="actions">
+            @switch (manager.state(city)) { @case ('working') {
+            <button type="button" class="ghost" (click)="cancel(city)">
+              {{ 'packs.cancel' | t }}
+            </button>
+            } @case ('none') {
+            <button type="button" class="iv-button" (click)="download(city)">
+              {{ 'packs.download' | t }}
+            </button>
+            } @case ('update') {
+            <button type="button" class="iv-button" (click)="download(city)">
+              {{ 'packs.update' | t }}
+            </button>
+            } } @if (registry.has(city.slug) && manager.state(city) !== 'working') {
+            <button
+              type="button"
+              class="ghost danger"
+              [class.confirm]="confirming() === city.slug"
+              (click)="remove(city)"
+            >
+              {{ (confirming() === city.slug ? 'packs.removeConfirm' : 'packs.remove') | t }}
+            </button>
+            }
+          </div>
+        </li>
+        }
+      </ul>
+    </section>
+  </div>
+</ion-content>

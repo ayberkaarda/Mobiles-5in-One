@@ -1,0 +1,96 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'tabs.contribute' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <section class="sign">
+      <p class="sign-kicker">{{ 'contribute.kicker' | t }}</p>
+      <h1>{{ 'contribute.heading' | t }}</h1>
+      <p class="sign-lead">{{ 'contribute.lead' | t }}</p>
+    </section>
+
+    @if (session.isSignedIn()) {
+    <p class="who" data-state="signed-in">
+      {{ 'contribute.signedInAs' | t: { name: name() } }}
+      <span class="badge" [class.badge--ok]="session.licenceAccepted()">
+        {{ (session.licenceAccepted() ? 'contribute.licenceAccepted' : 'contribute.licenceLater') |
+        t }}
+      </span>
+    </p>
+    } @else {
+    <section class="iv-panel join" data-state="guest">
+      <h2>{{ 'contribute.joinTitle' | t }}</h2>
+      <p>{{ 'contribute.joinBody' | t }}</p>
+      <div class="join-actions">
+        <a class="iv-button" routerLink="/giris" [queryParams]="signinParams"
+          >{{ 'contribute.signIn' | t }}</a
+        >
+        <a class="iv-button iv-button--ghost" routerLink="/giris/kayit" [queryParams]="signinParams"
+          >{{ 'contribute.register' | t }}</a
+        >
+      </div>
+    </section>
+    } @if (hasDraft()) {
+    <iv-notice
+      class="draft"
+      tone="warn"
+      [heading]="'contribute.draftTitle' | t"
+      [message]="'contribute.draftBody' | tp: recorder.pointCount()"
+    />
+    <a class="iv-button iv-button--block draft-action" routerLink="/katki/kayit"
+      >{{ 'contribute.draftAction' | t }}</a
+    >
+    } @if (line()) {
+    <section class="iv-section this-line">
+      <h2 class="iv-section-title">{{ 'contribute.lineTitle' | t }}</h2>
+      <div class="line-actions">
+        @for (action of lineActions; track action.kind) {
+        <a class="iv-chip-toggle" routerLink="/katki/oneri" [queryParams]="lineQuery(action.kind)"
+          >{{ action.label | t }}</a
+        >
+        }
+      </div>
+    </section>
+    }
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'contribute.actionsTitle' | t }}</h2>
+      <ul class="actions" role="list">
+        @for (action of actions; track action.id) {
+        <li>
+          <a
+            class="action"
+            [routerLink]="action.link"
+            [queryParams]="action.query"
+            [attr.data-action]="action.id"
+          >
+            <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path [attr.d]="action.icon" />
+            </svg>
+            <span class="action-text">
+              <strong>{{ action.title | t }}</strong>
+              <span class="action-body">{{ action.body | t }}</span>
+              @if (!session.isSignedIn()) {
+              <span class="badge">{{ 'contribute.signInRequired' | t }}</span>
+              }
+            </span>
+          </a>
+        </li>
+        }
+      </ul>
+      @if (session.isSignedIn()) {
+      <a class="iv-button iv-button--ghost iv-button--block mine" routerLink="/katki/onerilerim"
+        >{{ 'contribute.myProposals' | t }}</a
+      >
+      }
+    </section>
+
+    <section class="iv-section privacy">
+      <h2>{{ 'contribute.privacyTitle' | t }}</h2>
+      <p>{{ 'contribute.privacyBody' | t }}</p>
+    </section>
+  </div>
+</ion-content>

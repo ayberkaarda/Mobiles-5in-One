@@ -1,0 +1,143 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <iv-back-button />
+    </ion-buttons>
+    <ion-title>{{ data()?.code ?? '' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    @switch (view()) { @case ('loading') {
+    <p class="loading" role="status">
+      <span class="spinner" aria-hidden="true"></span>{{ 'line.loading' | t }}
+    </p>
+    } @case ('not-found') {
+    <iv-state
+      kind="error"
+      [heading]="'line.notFoundTitle' | t"
+      [message]="'line.notFoundBody' | t"
+      [actionLabel]="'line.toSearch' | t"
+      (action)="toSearch()"
+    />
+    } @case ('offline') {
+    <iv-state
+      kind="offline"
+      [heading]="'search.offlineTitle' | t"
+      [message]="'search.offlineBody' | t"
+      [actionLabel]="'line.retry' | t"
+      (action)="retry()"
+    />
+    } @case ('error') {
+    <iv-state
+      kind="error"
+      [heading]="'line.errorTitle' | t"
+      [message]="'line.errorBody' | t"
+      [actionLabel]="'line.retry' | t"
+      (action)="retry()"
+    />
+    } @case ('ready') { @if (data(); as line) {
+    <header class="hero">
+      <span class="plate" aria-hidden="true">{{ line.code }}</span>
+      <div class="hero-body">
+        <h1 class="name">
+          <span class="iv-visually-hidden">{{ line.code }} </span>{{ line.name }}
+        </h1>
+        <iv-mode-chip [mode]="mode()" [label]="modeLabel()" />
+      </div>
+      <button
+        type="button"
+        class="star"
+        [class.on]="favorite()"
+        [attr.aria-pressed]="favorite()"
+        [attr.aria-label]="(favorite() ? 'line.favoriteRemove' : 'line.favoriteAdd') | t"
+        (click)="toggleFavorite()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="map">
+      @defer (on immediate) {
+      <iv-map
+        [line]="coordinates()"
+        [stops]="stopPoints()"
+        [city]="params()?.city ?? null"
+        [label]="'line.mapLabel' | t: { code: line.code }"
+      />
+      } @placeholder {
+      <iv-route-sketch
+        class="sketch"
+        [line]="coordinates()"
+        [stops]="stopPoints()"
+        [label]="'line.mapLabel' | t: { code: line.code }"
+      />
+      }
+    </div>
+
+    <section class="facts">
+      <div class="fact">
+        <h2>{{ 'line.fareTitle' | t }}</h2>
+        <p class="fare-tag iv-fare">{{ fare() }}</p>
+        <p class="sub">{{ fareNote() }}</p>
+      </div>
+      <div class="fact">
+        <h2>{{ 'line.hoursTitle' | t }}</h2>
+        <p class="value">{{ line.hours_text || ('line.hoursUnknown' | t) }}</p>
+      </div>
+      <div class="fact">
+        <h2>{{ 'line.paymentTitle' | t }}</h2>
+        @if (payments().length > 0) {
+        <ul class="pay" role="list">
+          @for (method of payments(); track $index) {
+          <li>{{ method }}</li>
+          }
+        </ul>
+        } @else {
+        <p class="value muted">{{ 'line.paymentUnknown' | t }}</p>
+        }
+      </div>
+      @if (line.hail_notes) {
+      <div class="fact">
+        <h2>{{ 'line.hailTitle' | t }}</h2>
+        <p class="value notes">{{ line.hail_notes }}</p>
+      </div>
+      }
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">
+        {{ 'line.stopsTitle' | t }}
+        <small>{{ 'line.stops' | tp: line.stops.length }}</small>
+      </h2>
+      @if (stopItems().length > 0) {
+      <iv-stop-sequence [stops]="stopItems()" (selected)="openStop($event)" />
+      } @else {
+      <p class="iv-note">{{ 'line.stopsEmpty' | t }}</p>
+      }
+    </section>
+
+    <section class="iv-section trust">
+      <h2 class="iv-section-title">{{ 'line.trustTitle' | t }}</h2>
+      <ul class="trust-list" role="list">
+        <li>{{ verifiedNote() }}</li>
+        <li>{{ 'line.contributors' | tp: line.contributor_count }}</li>
+        <li>{{ 'line.version' | t: { version: line.version_no } }}</li>
+        @if (packVersion(); as pack) {
+        <li class="from-pack">{{ 'line.fromPack' | t: { version: pack.version } }}</li>
+        }
+      </ul>
+    </section>
+
+    <section class="iv-section report">
+      <p>{{ 'line.reportHint' | t }}</p>
+      <button type="button" class="iv-button iv-button--block" (click)="reportChange()">
+        {{ 'line.report' | t }}
+      </button>
+    </section>
+    } } }
+  </div>
+</ion-content>

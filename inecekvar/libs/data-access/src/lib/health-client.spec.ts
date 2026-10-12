@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { API_BASE_URL, FETCH, HealthClient } from './health-client';
+import { API_BASE_URL, FETCH } from './config';
+import { HealthClient } from './health-client';
 
 function setup(response: Response): { client: HealthClient; calls: string[] } {
   const calls: string[] = [];

@@ -26,4 +26,31 @@ describe('FarePipe', () => {
   it('formats kuruş through the domain formatter', () => {
     expect(new FarePipe().transform(1500).replace(/\s/g, '')).toBe('₺15,00');
   });
+
+  it('formats the same lira amount in the English locale and keeps the range check', () => {
+    expect(new FarePipe().transform(125050, 'en-GB')).toBe('₺1,250.50');
+    expect(new FarePipe().transform(125050).replace(/\s/g, '')).toBe('₺1.250,50');
+    expect(() => new FarePipe().transform(-1, 'en-GB')).toThrow(RangeError);
+  });
+});
+
+describe('theme.css and fonts', () => {
+  const styles = join(workspaceRoot, 'libs', 'ui', 'src', 'styles');
+  const theme = readFileSync(join(styles, 'theme.css'), 'utf8');
+  const fonts = readFileSync(join(styles, '_fonts.scss'), 'utf8');
+
+  it('keeps the brand primary in dark mode', () => {
+    const dark = theme.slice(theme.indexOf(':root.ion-palette-dark'));
+    expect(dark.toLowerCase()).toContain(
+      `--ion-color-primary: ${tokens.color.palette['dolmusSarisi']?.value.toLowerCase()};`,
+    );
+  });
+
+  it('self-hosts every brand weight with the Turkish (latin-ext) subset', () => {
+    expect(fonts).toContain("@use '@fontsource/dm-sans/latin-ext-700.css';");
+    for (const weight of [400, 500, 600]) {
+      expect(fonts).toContain(`@use '@fontsource/inter/latin-ext-${weight}.css';`);
+    }
+    expect(fonts).not.toMatch(/https?:\/\//);
+  });
 });

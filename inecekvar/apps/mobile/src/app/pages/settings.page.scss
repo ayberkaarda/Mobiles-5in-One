@@ -1,0 +1,247 @@
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--iv-radius-m);
+  background: var(--iv-surface-sunk);
+  border: 1px solid var(--iv-line);
+}
+
+.segmented button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--iv-ink-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--iv-font-body-weight-500);
+  cursor: pointer;
+}
+
+.segmented button[aria-checked='true'] {
+  background: var(--iv-accent);
+  color: var(--iv-accent-ink);
+  font-weight: var(--iv-font-body-weight-600);
+  box-shadow: var(--iv-shadow-hard);
+}
+
+.segmented button:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.guest {
+  display: flex;
+  gap: var(--iv-space-3);
+}
+
+.guest h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.guest p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--iv-ink-muted);
+}
+
+.account .iv-button {
+  margin-top: var(--iv-space-3);
+  min-height: 40px;
+}
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--iv-mode-dolmus-bg);
+}
+
+.avatar svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--iv-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.offline-link {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-3);
+  color: var(--iv-ink);
+  text-decoration: none;
+}
+
+.offline-link:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.offline-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--iv-ink-muted);
+}
+
+.offline-text strong {
+  font-size: 16px;
+  color: var(--iv-ink);
+}
+
+.offline-update {
+  color: var(--iv-ink);
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.chevron {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--iv-ink-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.facts {
+  display: grid;
+  gap: var(--iv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--iv-ink-muted);
+}
+
+.facts li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2.5px solid var(--iv-stripe);
+}
+
+.about img {
+  display: block;
+  height: 48px;
+  width: auto;
+}
+
+.tagline {
+  margin: var(--iv-space-3) 0 0;
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 17px;
+}
+
+.avatar.plus {
+  background: var(--iv-accent);
+}
+
+.facts-grid {
+  display: flex;
+  gap: var(--iv-space-4);
+  margin: var(--iv-space-2) 0 0;
+  font-size: 14px;
+}
+
+.facts-grid dt {
+  color: var(--iv-ink-muted);
+}
+
+.facts-grid dd {
+  margin: 0;
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.plus-link,
+.delete,
+.delete-done {
+  margin-top: var(--iv-space-3);
+}
+
+.delete-open {
+  min-height: 44px;
+  margin-top: var(--iv-space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--iv-danger);
+  font: inherit;
+  font-weight: var(--iv-font-body-weight-600);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.delete {
+  display: grid;
+  gap: var(--iv-space-2);
+  border-top: 6px solid var(--iv-danger);
+}
+
+.delete h3,
+.delete-done h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.delete h4 {
+  margin: var(--iv-space-2) 0 0;
+  font-size: 14px;
+}
+
+.delete .lead,
+.delete-done p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.confirm {
+  display: flex;
+  gap: var(--iv-space-2);
+  align-items: flex-start;
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.confirm input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--iv-danger);
+}
+
+.delete-actions {
+  display: grid;
+  gap: var(--iv-space-2);
+}
+
+.web-delete a,
+.iv-note a {
+  color: var(--iv-ink);
+  font-weight: var(--iv-font-body-weight-600);
+}

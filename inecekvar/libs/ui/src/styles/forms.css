@@ -1,0 +1,157 @@
+/* Form controls shared by the sign-in and contribution screens. Plain inputs styled to the
+   design tokens; pages lay them out with .iv-form and .iv-field. */
+.iv-form {
+  display: grid;
+  gap: var(--iv-space-4);
+}
+
+.iv-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.iv-label {
+  font-size: 12px;
+  font-weight: var(--iv-font-body-weight-600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--iv-ink-muted);
+}
+
+.iv-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--iv-line-strong);
+  border-radius: var(--iv-radius-s);
+  background: var(--iv-bg);
+  color: var(--iv-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+textarea.iv-input {
+  min-height: 88px;
+  padding: 10px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+select.iv-input {
+  appearance: auto;
+}
+
+.iv-input::placeholder {
+  color: var(--iv-ink-muted);
+  opacity: 1;
+}
+
+.iv-input:focus {
+  outline: none;
+  border-color: var(--iv-ink);
+  box-shadow: var(--iv-focus);
+}
+
+.iv-input[aria-invalid='true'] {
+  border-color: var(--iv-danger);
+}
+
+.iv-hint,
+.iv-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.iv-hint {
+  color: var(--iv-ink-muted);
+}
+
+.iv-error {
+  color: var(--iv-danger);
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.iv-button--ghost {
+  background: transparent;
+  color: var(--iv-ink);
+  box-shadow: inset 0 0 0 1.5px var(--iv-ink);
+}
+
+.iv-button--ghost:active {
+  box-shadow: inset 0 0 0 1.5px var(--iv-ink);
+}
+
+.iv-button--danger {
+  background: var(--iv-danger);
+  color: #fff;
+}
+
+.iv-link-button {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--iv-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--iv-font-body-weight-600);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.iv-link-button:focus-visible,
+.iv-segmented button:focus-visible,
+.iv-chip-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.iv-segmented {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-surface-sunk);
+}
+
+.iv-segmented button {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--iv-radius-pill);
+  background: transparent;
+  color: var(--iv-ink-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--iv-font-body-weight-600);
+  cursor: pointer;
+}
+
+.iv-segmented button[aria-pressed='true'] {
+  background: var(--iv-ink);
+  color: var(--iv-bg);
+}
+
+.iv-chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1.5px solid var(--iv-line-strong);
+  border-radius: var(--iv-radius-pill);
+  background: transparent;
+  color: var(--iv-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--iv-font-body-weight-500);
+  cursor: pointer;
+}
+
+.iv-chip-toggle[aria-pressed='true'] {
+  border-color: var(--iv-ink);
+  background: var(--iv-ink);
+  color: var(--iv-bg);
+}

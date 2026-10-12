@@ -1,0 +1,259 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'tabs.settings' | t }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'settings.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'settings.heading' | t }}</h1>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title" id="appearance-title">{{ 'settings.appearance' | t }}</h2>
+      <div class="segmented" role="radiogroup" aria-labelledby="appearance-title">
+        @for (option of themeOptions; track option.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="theme.pref() === option.value"
+          [attr.data-value]="option.value"
+          (click)="theme.set(option.value)"
+        >
+          {{ option.label | t }}
+        </button>
+        }
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title" id="language-title">{{ 'settings.language' | t }}</h2>
+      <div class="segmented" role="radiogroup" aria-labelledby="language-title">
+        @for (option of langOptions; track option.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.lang]="option.value"
+          [attr.aria-checked]="language.lang() === option.value"
+          [attr.data-value]="option.value"
+          (click)="setLang(option.value)"
+        >
+          {{ option.label | t }}
+        </button>
+        }
+      </div>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'settings.offline' | t }}</h2>
+      <a class="iv-panel offline-link" routerLink="/ayarlar/cevrimdisi">
+        <span class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" />
+          </svg>
+        </span>
+        <span class="offline-text">
+          <strong>{{ 'settings.offline' | t }}</strong>
+          <span>{{ offlineSummary() }}</span>
+          @if (updates() > 0) {
+          <span class="offline-update">{{ 'settings.offlineUpdates' | tp: updates() }}</span>
+          }
+        </span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+      </a>
+      <a class="iv-panel offline-link plus-link" routerLink="/plus" data-link="plus">
+        <span class="avatar plus" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </span>
+        <span class="offline-text">
+          <strong>{{ 'account.plusTitle' | t }}</strong>
+          <span>{{ (plusInApp ? 'account.plusBody' : 'account.plusWebBody') | t }}</span>
+        </span>
+        <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+      </a>
+    </section>
+
+    <section class="iv-section" aria-labelledby="account-title">
+      <h2 class="iv-section-title" id="account-title">{{ 'settings.account' | t }}</h2>
+      <div
+        class="iv-panel guest"
+        [attr.data-account]="session.isSignedIn() ? 'signed-in' : 'guest'"
+      >
+        <span class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0" />
+          </svg>
+        </span>
+        <div class="account">
+          @if (session.user(); as user) {
+          <h3>{{ user.display_name ?? user.email }}</h3>
+          <p>{{ 'settings.signedInBody' | t: { email: user.email } }}</p>
+          <dl class="facts-grid">
+            @if (roleLabel(); as role) {
+            <div>
+              <dt>{{ 'account.role' | t }}</dt>
+              <dd data-fact="role">{{ role | t }}</dd>
+            </div>
+            }
+            <div>
+              <dt>{{ 'account.reputation' | t }}</dt>
+              <dd data-fact="reputation">{{ reputation() }}</dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            class="iv-button iv-button--ghost"
+            [disabled]="signingOut() || deletion.busy()"
+            (click)="signOut()"
+          >
+            {{ (signingOut() ? 'settings.signingOut' : 'settings.signOut') | t }}
+          </button>
+          } @else {
+          <h3>{{ 'settings.guestTitle' | t }}</h3>
+          <p>{{ 'settings.guestBody' | t }}</p>
+          <a class="iv-button" routerLink="/giris">{{ 'settings.signIn' | t }}</a>
+          } @if (recorder.cleanupPending()) {
+          <p class="iv-error" role="alert">{{ 'recorder.errors.cleanup' | t }}</p>
+          } @else if (signOutNote(); as note) {
+          <p class="iv-hint" role="status">{{ note | t }}</p>
+          }
+        </div>
+      </div>
+
+      @if (deleteView() === 'done') {
+      <div class="iv-panel delete-done" role="status" data-view="deleted">
+        <h3>{{ 'account.deletedTitle' | t }}</h3>
+        <p>{{ 'account.deletedBody' | t }}</p>
+        @if (deleteCleanupFailed()) {
+        <p class="iv-error" role="alert">{{ 'account.deletedCleanupFailed' | t }}</p>
+        }
+      </div>
+      } @else if (session.isSignedIn()) { @if (deleteView() === 'closed') {
+      <button type="button" class="delete-open" (click)="openDeletion()">
+        {{ 'account.deleteOpen' | t }}
+      </button>
+      } @else {
+      <form
+        class="iv-panel delete"
+        data-view="delete"
+        aria-labelledby="delete-title"
+        (submit)="confirmDeletion($event)"
+        novalidate
+      >
+        <h3 id="delete-title">{{ 'account.deleteTitle' | t }}</h3>
+        <p class="lead">{{ 'account.deleteLead' | t }}</p>
+        <h4>{{ 'account.deleteNowTitle' | t }}</h4>
+        <ul class="facts" role="list">
+          <li>{{ 'account.deleteNowSessions' | t }}</li>
+          <li>{{ 'account.deleteNowPrivate' | t }}</li>
+          <li>{{ 'account.deleteNowPending' | t }}</li>
+        </ul>
+        <h4>{{ 'account.deleteLaterTitle' | t }}</h4>
+        <ul class="facts" role="list">
+          <li>{{ 'account.deleteLaterGrace' | t }}</li>
+          <li>{{ 'account.deleteLaterPersonal' | t }}</li>
+        </ul>
+        <h4>{{ 'account.deleteStaysTitle' | t }}</h4>
+        <ul class="facts" role="list">
+          <li>{{ 'account.deleteStaysLicence' | t }}</li>
+        </ul>
+        <h4>{{ 'account.deleteDeviceTitle' | t }}</h4>
+        <ul class="facts" role="list">
+          <li>{{ 'account.deleteDeviceGone' | t }}</li>
+          <li>{{ 'account.deleteDeviceKept' | t }}</li>
+        </ul>
+
+        @if (!connectivity.online()) {
+        <p class="iv-error" role="alert" data-state="offline">{{ 'account.deleteOffline' | t }}</p>
+        }
+
+        <label class="iv-label" for="iv-delete-password">{{ 'account.deletePassword' | t }}</label>
+        <input
+          id="iv-delete-password"
+          class="iv-input"
+          type="password"
+          autocomplete="current-password"
+          maxlength="1024"
+          [value]="deletePassword()"
+          (input)="onPassword($event)"
+          aria-describedby="iv-delete-password-hint"
+        />
+        <p class="iv-hint" id="iv-delete-password-hint">{{ 'account.deletePasswordHint' | t }}</p>
+
+        <label class="confirm">
+          <input
+            type="checkbox"
+            [checked]="deleteConfirmed()"
+            (change)="onConfirm($event)"
+            data-field="confirm"
+          />
+          <span>{{ 'account.deleteConfirm' | t }}</span>
+        </label>
+
+        @if (deleteError(); as error) {
+        <p class="iv-error" role="alert" data-state="error">
+          @if (deleteCountdown.active()) { {{ 'account.deleteRateLimited' | t: { seconds:
+          deleteCountdown.seconds() } }} } @else { {{ error | t }} }
+        </p>
+        }
+
+        <div class="delete-actions">
+          <button type="submit" class="iv-button iv-button--danger" [disabled]="!canDelete()">
+            {{ (deletion.busy() ? 'account.deleteBusy' : 'account.deleteSubmit') | t }}
+          </button>
+          <button
+            type="button"
+            class="iv-button iv-button--ghost"
+            [disabled]="deletion.busy()"
+            (click)="closeDeletion()"
+          >
+            {{ 'account.deleteCancel' | t }}
+          </button>
+        </div>
+      </form>
+      } }
+
+      <p class="iv-note web-delete">
+        {{ 'account.webDeletion' | t }}
+        <a [href]="webDeletionUrl" target="_blank" rel="noopener noreferrer"
+          >inecekvar.app/hesap-silme</a
+        >
+      </p>
+    </section>
+
+    <section class="iv-section">
+      <h2 class="iv-section-title">{{ 'settings.privacy' | t }}</h2>
+      <ul class="facts" role="list">
+        <li>{{ 'settings.privacyLocation' | t }}</li>
+        <li>{{ 'settings.privacyData' | t }}</li>
+        <li>{{ 'account.privacyTraces' | t }}</li>
+        <li>{{ 'account.privacyDevice' | t }}</li>
+        <li>{{ 'account.privacyNoTracking' | t }}</li>
+      </ul>
+    </section>
+
+    <section class="iv-section" aria-labelledby="licence-title" data-section="licence">
+      <h2 class="iv-section-title" id="licence-title">{{ 'account.licenceTitle' | t }}</h2>
+      <ul class="facts" role="list">
+        <li>{{ 'licence.pointLicence' | t }}</li>
+        <li>{{ 'licence.pointAttribution' | t }}</li>
+        <li>{{ 'licence.pointDeletion' | t }}</li>
+        <li>{{ 'licence.pointTraces' | t }}</li>
+      </ul>
+      <p class="iv-note">{{ 'licence.pending' | t }}</p>
+      <p class="iv-note">
+        {{ (session.licenceAccepted() ? 'account.licenceAccepted' : 'account.licenceNotYet') | t }}
+        <a [href]="webLicenceUrl" target="_blank" rel="noopener noreferrer"
+          >{{ 'account.licenceWeb' | t }}</a
+        >
+      </p>
+    </section>
+
+    <section class="iv-section about">
+      <h2 class="iv-section-title">{{ 'settings.about' | t }}</h2>
+      <img src="brand/inecekvar-wordmark.svg" width="126" height="48" [attr.alt]="'app.name' | t" />
+      <p class="tagline">{{ 'app.tagline' | t }}</p>
+      <p class="iv-note">{{ 'settings.version' | t: { version } }}</p>
+    </section>
+  </div>
+</ion-content>

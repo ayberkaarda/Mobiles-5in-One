@@ -1,0 +1,166 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="brand">
+      <img src="brand/inecekvar-wordmark.svg" width="105" height="40" [attr.alt]="'app.name' | t" />
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="iv-page">
+    <p class="iv-kicker">{{ 'search.kicker' | t }}</p>
+    <h1 class="iv-heading">{{ 'search.heading' | t }}</h1>
+    <p class="iv-lead">{{ 'search.lead' | t }}</p>
+
+    <iv-city-picker class="city" />
+    @if (cities.selected()?.is_sample) {
+    <p class="iv-note sample">{{ 'city.sampleNote' | t }}</p>
+    } @if (search.view() === 'no-city') {
+    <section class="iv-section">
+      <iv-state
+        [heading]="'city.noneTitle' | t"
+        [message]="'city.noneBody' | t"
+        [actionLabel]="'city.choose' | t"
+        (action)="openPicker()"
+      />
+    </section>
+    } @else {
+    <ion-searchbar
+      class="search"
+      mode="md"
+      [value]="search.query()"
+      [placeholder]="'search.placeholder' | t"
+      [debounce]="0"
+      (ionInput)="search.setQuery($event.detail.value)"
+    />
+
+    <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
+      @for (filter of filters; track filter.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.on]="search.mode() === filter.value"
+        [attr.aria-pressed]="search.mode() === filter.value"
+        (click)="search.mode.set(filter.value)"
+      >
+        {{ filter.label | t }}
+      </button>
+      }
+    </div>
+
+    <section class="nearby" [attr.aria-label]="'nearby.title' | t">
+      <div class="nearby-head">
+        <div>
+          <h2>{{ 'nearby.title' | t }}</h2>
+          <p>{{ 'nearby.body' | t }}</p>
+        </div>
+        <button
+          type="button"
+          class="locate"
+          [disabled]="search.nearby().kind === 'locating' || search.nearby().kind === 'loading'"
+          (click)="search.findNearby()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            <circle cx="12" cy="12" r="7.5" />
+          </svg>
+          {{ 'nearby.action' | t }}
+        </button>
+      </div>
+      @switch (search.nearby().kind) { @case ('locating') {
+      <p class="nearby-msg" role="status">{{ 'nearby.locating' | t }}</p>
+      } @case ('loading') {
+      <p class="nearby-msg" role="status">{{ 'nearby.loading' | t }}</p>
+      } @case ('denied') {
+      <p class="nearby-msg warn" role="alert">{{ 'nearby.denied' | t }}</p>
+      } @case ('unavailable') {
+      <p class="nearby-msg warn" role="alert">{{ 'nearby.unavailable' | t }}</p>
+      } @case ('error') {
+      <p class="nearby-msg warn" role="alert">{{ 'nearby.error' | t }}</p>
+      } @case ('ready') { @if (nearbyItems().length > 0) {
+      <iv-line-list class="nearby-list" [lines]="nearbyItems()" />
+      } @else {
+      <p class="nearby-msg">{{ 'nearby.empty' | t }}</p>
+      } } }
+    </section>
+
+    @if (offlineWithPack()) {
+    <iv-notice class="offline-note" tone="offline" [message]="'search.offlinePackNote' | t" />
+    }
+    <section class="iv-section results" aria-live="polite">
+      @switch (search.view()) { @case ('loading') {
+      <p class="loading" role="status">
+        <span class="spinner" aria-hidden="true"></span>{{ 'search.loading' | t }}
+      </p>
+      } @case ('offline') {
+      <iv-state
+        kind="offline"
+        [heading]="'search.offlineTitle' | t"
+        [message]="'search.offlineBody' | t"
+        [actionLabel]="'search.retry' | t"
+        (action)="search.retry()"
+      />
+      } @case ('error') {
+      <iv-state
+        kind="error"
+        [heading]="'search.errorTitle' | t"
+        [message]="(search.rateLimited() ? 'search.rateLimited' : 'search.errorBody') | t"
+        [actionLabel]="'search.retry' | t"
+        (action)="search.retry()"
+      />
+      } @case ('empty') {
+      <iv-state
+        [heading]="'search.emptyTitle' | t"
+        [message]="'search.emptyBody' | t"
+        [actionLabel]="'search.emptyAction' | t"
+        (action)="search.clear()"
+      />
+      } @case ('results') { @if (lineItems().length > 0) {
+      <h2 class="iv-section-title">
+        {{ (search.term() ? 'search.linesHeading' : 'search.allLinesHeading') | t }}
+        <small>{{ 'search.lineCount' | tp: lineItems().length }}</small>
+      </h2>
+      <iv-line-list [lines]="lineItems()" />
+      } @if (search.stops().length > 0) {
+      <h2 class="iv-section-title stops-title">
+        {{ 'search.stopsHeading' | t }}
+        <small>{{ 'search.stopCount' | tp: search.stops().length }}</small>
+      </h2>
+      <ul class="stops" role="list">
+        @for (stop of search.stops(); track stop.id) {
+        <li>
+          <a
+            class="stop"
+            [routerLink]="['/durak', stop.slug]"
+            [queryParams]="{ city: cities.selectedSlug() }"
+          >
+            <span class="stop-pin" aria-hidden="true"></span>
+            <span class="stop-name">{{ stop.name }}</span>
+            <span class="stop-kind">
+              {{ (stop.kind === 'informal' ? 'stop.kindInformal' : 'stop.kindFormal') | t }}
+            </span>
+          </a>
+        </li>
+        }
+      </ul>
+      } } }
+    </section>
+    } @if (pack(); as pack) {
+    <section class="iv-section pack" [attr.data-pack]="pack.state">
+      <svg class="pack-icon" viewBox="0 0 24 24" aria-hidden="true">
+        @if (pack.state === 'installed') {
+        <path d="M5 12.5l4.5 4.5L19 7.5" />
+        } @else {
+        <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+        }
+      </svg>
+      <div>
+        <h2>{{ pack.title | t }}</h2>
+        <p>{{ pack.body | t }}</p>
+        <a class="pack-action" routerLink="/ayarlar/cevrimdisi">{{ pack.action | t }}</a>
+      </div>
+    </section>
+    }
+  </div>
+</ion-content>

@@ -1,0 +1,12 @@
+// Self-hosted brand fonts (spec section 2): DM Sans 700 for display, Inter 400/500/600 for UI.
+// Only the latin and latin-ext subsets are loaded; latin-ext carries the Turkish letters
+// (ç ğ ı İ ö ş ü). The build copies the woff2/woff files next to the bundle, so no font is
+// fetched from a third-party host.
+@use '@fontsource/dm-sans/latin-700.css';
+@use '@fontsource/dm-sans/latin-ext-700.css';
+@use '@fontsource/inter/latin-400.css';
+@use '@fontsource/inter/latin-ext-400.css';
+@use '@fontsource/inter/latin-500.css';
+@use '@fontsource/inter/latin-ext-500.css';
+@use '@fontsource/inter/latin-600.css';
+@use '@fontsource/inter/latin-ext-600.css';

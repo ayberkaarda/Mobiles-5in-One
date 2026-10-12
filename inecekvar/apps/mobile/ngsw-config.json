@@ -5,8 +5,35 @@
     {
       "name": "app-shell",
       "installMode": "prefetch",
+      "updateMode": "prefetch",
       "resources": {
-        "files": ["/favicon.ico", "/index.html", "/manifest.webmanifest", "/*.css", "/*.js"]
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/brand/*.svg",
+          "/*.css",
+          "/*.js",
+          "!/maplibre-gl-*.js",
+          "!/map.component-*.js",
+          "!/revenuecat-purchases-*.js"
+        ]
+      }
+    },
+    {
+      "name": "fonts",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/media/*.woff2"]
+      }
+    },
+    {
+      "name": "map",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": ["/maplibre-gl-*.js", "/map.component-*.js", "/maplibre/*.mjs"]
       }
     },
     {
@@ -15,6 +42,25 @@
       "updateMode": "prefetch",
       "resources": {
         "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "catalog-reads",
+      "version": 2,
+      "urls": [
+        "^https{0,1}://[^/?#]{1,}/api/v1/cities($|[?])",
+        "^https{0,1}://[^/?#]{1,}/api/v1/cities/[^/?#]{1,}($|[?])",
+        "^https{0,1}://[^/?#]{1,}/api/v1/lines($|[?]|/)",
+        "^https{0,1}://[^/?#]{1,}/api/v1/stops/"
+      ],
+      "cacheQueryOptions": { "ignoreVary": true },
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "4s",
+        "maxAge": "3d",
+        "maxSize": 200
       }
     }
   ]
