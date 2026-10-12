@@ -208,6 +208,15 @@ export function renderPath(
   return path + (search ? `?${search}` : '');
 }
 
+/** `/admin` and below in any case or percent-encoding; an undecodable path counts as admin. */
+export function isAdminPath(path: string): boolean {
+  try {
+    return /^\/admin(?:\/|$)/i.test(decodeURIComponent(path));
+  } catch {
+    return true;
+  }
+}
+
 export function pageCacheKey(
   input: {
     method: string;
@@ -237,11 +246,7 @@ export function pageCacheKey(
   ) {
     return undefined;
   }
-  try {
-    if (/^\/admin(?:\/|$)/i.test(decodeURIComponent(path))) {
-      return undefined;
-    }
-  } catch {
+  if (isAdminPath(path)) {
     return undefined;
   }
   const names = new Set<string>();

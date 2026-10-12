@@ -26,6 +26,40 @@ const jsonLdOnly = [
     message: 'JSON-LD enters the document only through JsonLdService.',
   },
 ];
+// The admin area (src/app/admin/**) is reachable only through the browser entry (ADR-0041).
+const noAdminReach = [
+  {
+    // esquery regexes cannot contain a slash; `[^\w-]` stands for the path separator.
+    selector: 'ImportExpression[source.value=/(^|[^\\w-])admin([^\\w-]|$)/]',
+    message: 'Public code must not load the admin area; only src/main.ts provides its loader.',
+  },
+];
+const sessionStoreBan = {
+  group: ['@inecekvar/data-access', '@inecekvar/data-access/*', '**/libs/data-access/**'],
+  message: 'Public SSR code must not load the browser session store.',
+};
+const adminImportBan = {
+  regex: '(^|/)admin(/|$)',
+  message: 'Public code must not import the admin area (ADR-0041).',
+};
+const storageBans = {
+  'no-restricted-globals': [
+    'error',
+    { name: 'localStorage', message: 'Public SSR pages keep no browser storage.' },
+    { name: 'sessionStorage', message: 'Public SSR pages keep no browser storage.' },
+    { name: 'indexedDB', message: 'Public SSR pages keep no browser storage.' },
+  ],
+  'no-restricted-properties': [
+    'error',
+    ...['globalThis', 'window'].flatMap((object) =>
+      ['localStorage', 'sessionStorage'].map((property) => ({
+        object,
+        property,
+        message: 'Public SSR pages keep no browser storage.',
+      })),
+    ),
+  ],
+};
 const noHtmlSinksTemplate = [
   {
     selector: 'BoundAttribute[name=/^(innerHTML|outerHTML|srcdoc)$/i]',
@@ -37,6 +71,17 @@ const noHtmlSinksTemplate = [
   },
 ];
 
+const selectors = {
+  '@angular-eslint/directive-selector': [
+    'error',
+    { type: 'attribute', prefix: 'iv', style: 'camelCase' },
+  ],
+  '@angular-eslint/component-selector': [
+    'error',
+    { type: 'element', prefix: 'iv', style: 'kebab-case' },
+  ],
+};
+
 export default [
   ...nx.configs['flat/angular'],
   ...nx.configs['flat/angular-template'],
@@ -44,60 +89,33 @@ export default [
   {
     files: ['**/*.ts'],
     rules: {
-      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly],
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                '@inecekvar/data-access',
-                '@inecekvar/data-access/*',
-                '**/libs/data-access/**',
-              ],
-              message: 'Public SSR code must not load the browser session store.',
-            },
-          ],
-        },
-      ],
-      'no-restricted-globals': [
-        'error',
-        { name: 'localStorage', message: 'Public SSR pages keep no browser storage.' },
-        { name: 'sessionStorage', message: 'Public SSR pages keep no browser storage.' },
-        { name: 'indexedDB', message: 'Public SSR pages keep no browser storage.' },
-      ],
-      'no-restricted-properties': [
-        'error',
-        ...['globalThis', 'window'].flatMap((object) =>
-          ['localStorage', 'sessionStorage'].map((property) => ({
-            object,
-            property,
-            message: 'Public SSR pages keep no browser storage.',
-          })),
-        ),
-      ],
-      '@angular-eslint/directive-selector': [
-        'error',
-        {
-          type: 'attribute',
-          prefix: 'iv',
-          style: 'camelCase',
-        },
-      ],
-      '@angular-eslint/component-selector': [
-        'error',
-        {
-          type: 'element',
-          prefix: 'iv',
-          style: 'kebab-case',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly, ...noAdminReach],
+      'no-restricted-imports': ['error', { patterns: [sessionStoreBan, adminImportBan] }],
+      ...storageBans,
+      ...selectors,
     },
   },
   {
     files: ['src/app/seo/json-ld.service.ts', '**/src/app/seo/json-ld.service.ts'],
     rules: {
-      'no-restricted-syntax': ['error', ...noHtmlSinksTs],
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...noAdminReach],
+    },
+  },
+  // The browser entry is the one place that names the admin chunk (a dynamic import).
+  {
+    files: ['src/main.ts', '**/apps/web/src/main.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly],
+    },
+  },
+  // The client-only admin area may use the session store (cookie strategy, CSRF); HTML sinks,
+  // sanitizer bypasses and browser storage stay banned there too.
+  {
+    files: ['src/app/admin/**/*.ts', '**/apps/web/src/app/admin/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly],
+      'no-restricted-imports': 'off',
+      ...storageBans,
     },
   },
   {

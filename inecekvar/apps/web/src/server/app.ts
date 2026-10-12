@@ -2,7 +2,13 @@ import express, { type ErrorRequestHandler } from 'express';
 import helmet from 'helmet';
 import type { WebServerConfig } from './config';
 import { applyNonce, createNonce } from './csp-nonce';
-import { MemoryLruPageCache, pageCacheKey, renderPath, type PageCacheStore } from './page-cache';
+import {
+  isAdminPath,
+  MemoryLruPageCache,
+  pageCacheKey,
+  renderPath,
+  type PageCacheStore,
+} from './page-cache';
 import {
   bodyGuard,
   hostGuard,
@@ -84,8 +90,13 @@ export function createWebApp(options: {
   app.use(hostGuard(config));
   app.use(nonceMiddleware());
   app.use(security);
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.set('Permissions-Policy', PERMISSIONS_POLICY);
+    // The client-only admin area is never indexed and never stored (ADR-0041).
+    if (isAdminPath(req.path)) {
+      res.locals['admin'] = true;
+      res.set('X-Robots-Tag', 'noindex, nofollow');
+    }
     next();
   });
   app.get('/robots.txt', (_req, res) => {
@@ -220,7 +231,7 @@ export function createWebApp(options: {
     }
     res.status(response.status).set('Content-Type', contentType);
     if (isHtml) {
-      res.set('Cache-Control', 'private, no-cache');
+      res.set('Cache-Control', res.locals['admin'] ? 'no-store' : 'private, no-cache');
     }
     const output = typeof body === 'string' ? applyNonce(body, res.locals['cspNonce']) : body;
     if (req.method === 'HEAD') {
