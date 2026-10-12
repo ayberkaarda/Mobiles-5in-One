@@ -26,6 +26,12 @@ describe('FarePipe', () => {
   it('formats kuruş through the domain formatter', () => {
     expect(new FarePipe().transform(1500).replace(/\s/g, '')).toBe('₺15,00');
   });
+
+  it('formats the same lira amount in the English locale and keeps the range check', () => {
+    expect(new FarePipe().transform(125050, 'en-GB')).toBe('₺1,250.50');
+    expect(new FarePipe().transform(125050).replace(/\s/g, '')).toBe('₺1.250,50');
+    expect(() => new FarePipe().transform(-1, 'en-GB')).toThrow(RangeError);
+  });
 });
 
 describe('theme.css and fonts', () => {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { formatFareMinor } from '@inecekvar/domain';
+import { formatFare } from './fare.pipe';
 
 export type FareChipState = 'paid' | 'free' | 'unknown';
 
@@ -55,6 +55,8 @@ export class FareChipComponent {
   readonly unknownLabel = input.required<string>();
   /** Optional screen-reader prefix such as "Ücret". */
   readonly srLabel = input<string>('');
+  /** Locale of the price format; the currency stays TRY. */
+  readonly locale = input<string>('tr-TR');
 
   readonly state = computed<FareChipState>(() => {
     const fare = this.fareMinor();
@@ -69,7 +71,7 @@ export class FareChipComponent {
       case 'free':
         return this.freeLabel();
       default:
-        return formatFareMinor(this.fareMinor() ?? 0);
+        return formatFare(this.fareMinor() ?? 0, this.locale());
     }
   });
 }

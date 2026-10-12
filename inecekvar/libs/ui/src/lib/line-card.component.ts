@@ -37,6 +37,7 @@ export interface LineCardLabels {
                 [srLabel]="labels().fare"
                 [freeLabel]="labels().fareFree"
                 [unknownLabel]="labels().fareUnknown"
+                [locale]="locale()"
               />
             }
           </span>
@@ -174,6 +175,8 @@ export class LineCardComponent {
   readonly labels = input.required<LineCardLabels>();
   /** Fare in kuruş, `null` when unknown, `undefined` to leave the fare chip out. */
   readonly fareMinor = input<number | null | undefined>(null);
+  /** Locale of the fare format. */
+  readonly locale = input<string>('tr-TR');
   /** Secondary facts such as stop count and hours; each part wraps as a whole. */
   readonly meta = input<readonly string[]>([]);
   /** `null` hides the star; `true`/`false` shows it pressed or not. */
