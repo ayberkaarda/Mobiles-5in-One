@@ -199,7 +199,10 @@ const privacyPage: StaticPage = {
     ),
     h2('Herkese açık site'),
     p(
-      `${FACTS.domain} üzerindeki sayfalar çerez bırakmaz, tarayıcı depolamasına bir şey yazmaz ve bir analiz ya da reklam aracı yüklemez. Sayfaları açtığında sunucu, her web sunucusu gibi, isteğin adresini ve zamanını işler.`,
+      `${FACTS.domain} üzerindeki herkese açık sayfalar (şehir, hat, durak, rehber ve bilgi sayfaları) çerez bırakmaz, tarayıcı depolamasına bir şey yazmaz ve bir analiz ya da reklam aracı yüklemez. Sayfaları açtığında sunucu, her web sunucusu gibi, isteğin adresini ve zamanını işler.`,
+    ),
+    p(
+      'Tek istisna, yalnızca moderatör ve yöneticilerin kullandığı yönetim paneli (/admin): giriş yapıldığında oturum ve CSRF çerezleri koyar ve yarım kalan bir çıkışı tamamlayabilmek için tarayıcı depolamasına bir çıkış işareti yazar. Bu çerezler yalnızca girişi ve güvenliği sağlar; izleme ya da reklam için kullanılmaz.',
     ),
     h2('Konum'),
     ul(

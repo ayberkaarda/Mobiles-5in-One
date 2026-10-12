@@ -261,6 +261,20 @@ describe('legal and honesty rules', () => {
     expect(blocksText(page?.blocks ?? [])).toMatch(/uygulanmamıştır/);
   });
 
+  it('scopes the no-cookie promise to public pages and names the staff area cookies', () => {
+    const privacy = blocksText(find('/gizlilik')?.blocks ?? []);
+    const faq = FAQ.map((pair) => pair.answer).join('\n');
+    for (const text of [privacy, faq]) {
+      expect(text).not.toMatch(
+        new RegExp(`${FACTS.domain.replace('.', '\\.')} üzerindeki sayfalar çerez`),
+      );
+      expect(text).toMatch(/herkese açık sayfa/i);
+      expect(text).toMatch(/yönetim paneli/);
+      expect(text).toMatch(/oturum ve CSRF çerez/);
+    }
+    expect(privacy).toMatch(/tarayıcı depolamasına bir çıkış işareti/);
+  });
+
   it('says the contact channel is being set up', () => {
     expect(find('/iletisim')?.status).toBe(FACTS.contact.statusLine);
   });
