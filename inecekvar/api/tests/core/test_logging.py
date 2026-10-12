@@ -38,6 +38,18 @@ def log_stream(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> Iterator[
     ("sample", "expected"),
     [
         ({"Password": "secret", "Authorization": "Bearer private"}, {}),
+        (
+            {
+                "secret": "private",
+                "totp_secret": "private",
+                "otpauth_uri": "private",
+                "code": "123456",
+                "totp_code": "123456",
+                "totp_secret_enc": b"private",
+                "nested": {"Secret": "private", "CODE": "123456"},
+            },
+            {"nested": {}},
+        ),
         ({"headers": {"Cookie": "private", "Set-Cookie": "private"}}, {"headers": {}}),
         ({"nested": [{"token": "private", "lat": 41.0123456}]}, {"nested": [{"lat": 41.012}]}),
         (

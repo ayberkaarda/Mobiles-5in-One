@@ -40,6 +40,7 @@ from app.auth.sessions import (
     revoke_user,
     roll_session,
 )
+from app.auth.step_up import revoke_session_step_up
 from app.core.deps import (
     BreachCheckerDep,
     ClientIpDep,
@@ -201,6 +202,7 @@ async def logout(
         clear_session_cookie(response, settings)
     else:
         await revoke_family(db, principal.session_id, now, RefreshRevokeReason.LOGOUT)
+    await revoke_session_step_up(db, principal.session_id)
     await db.commit()
     structlog.get_logger().info("auth.logout.succeeded", user_id=str(principal.user_id))
 
@@ -269,8 +271,7 @@ async def delete_me(
     # Re-authentication uses the login rule (5 per 15 minutes) keyed by account, before
     # any hashing.
     await enforce_rate_limit(limiter, "auth.login", "reauth:" + str(principal.user_id))
-    user = await locked_user(db, principal.user_id)
-    await request_deletion(db, settings, principal, user, body.password, clock.now())
+    await request_deletion(db, settings, principal, body.password, clock.now())
     if principal.auth_mode == "cookie":
         clear_session_cookie(response, settings)
     return StatusOut(status="deletion_scheduled")

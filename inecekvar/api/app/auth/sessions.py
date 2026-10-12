@@ -6,6 +6,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.schemas import BearerOut, CookieOut, MeOut, RefreshOut
+from app.auth.step_up import revoke_user_step_ups
 from app.auth.tokens import access_token, opaque_token, token_hash
 from app.core.deps import AuthMode, check_cookie_origin, csrf_token_for
 from app.core.ids import uuid7
@@ -132,6 +133,7 @@ async def revoke_family(
 async def revoke_user(
     db: AsyncSession, user_id: uuid.UUID, now: datetime, reason: RefreshRevokeReason
 ) -> None:
+    await revoke_user_step_ups(db, user_id)
     await db.execute(
         update(UserSession)
         .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))

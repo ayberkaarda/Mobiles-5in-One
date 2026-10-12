@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 from geoalchemy2 import Geography
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from app.cities.router import get_city
 from app.core.deps import DbDep
@@ -15,6 +15,24 @@ router = APIRouter()
 
 class StopDetail(StopOut):
     lines: list[LineSummary]
+
+
+@router.get("/stops")
+async def search_stops(
+    db: DbDep,
+    city: str,
+    q: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[StopOut]:
+    stored_city = await get_city(db, city)
+    query = select(Stop).where(Stop.city_id == stored_city.id, Stop.status == "active")
+    term = q.strip() if q is not None else ""
+    if term:
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.where(Stop.name.ilike("%" + escaped + "%", escape="\\"))
+        query = query.order_by(case((Stop.name.ilike(escaped + "%", escape="\\"), 0), else_=1))
+    rows = await db.scalars(query.order_by(Stop.name, Stop.id).limit(limit))
+    return [stop_response(stop) for stop in rows]
 
 
 @router.get("/stops/near")

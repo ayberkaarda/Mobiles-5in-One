@@ -39,6 +39,12 @@ _DROP = frozenset(
         "session",
         "body",
         "email_token",
+        "secret",
+        "totp_secret",
+        "otpauth_uri",
+        "code",
+        "totp_code",
+        "totp_secret_enc",
     }
 )
 _COORDINATE_KEYS = frozenset({"lat", "lng", "lon", "latitude", "longitude"})

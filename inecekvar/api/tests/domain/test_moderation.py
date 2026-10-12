@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.totp import encrypt_secret, new_secret
 from app.core.deps import Principal, Services
 from app.core.ids import uuid7
 from app.geo import line_geojson
@@ -26,6 +27,15 @@ class FreshStepUp:
 
     async def step_up_at(self, db: AsyncSession, principal: Principal) -> datetime:
         return self.clock.now()
+
+
+async def enable_totp(services: Services, identity: uuid.UUID) -> None:
+    async with services.session_factory() as db:
+        user = await db.get(User, identity)
+        assert user is not None
+        user.totp_secret_enc = encrypt_secret(services.settings.totp_key(), identity, new_secret())
+        user.totp_enabled_at = services.clock.now()
+        await db.commit()
 
 
 async def propose_fare(
@@ -231,6 +241,7 @@ async def test_rollback_copies_old_version(
     identity = await propose_fare(client, contributor, sample)
     assert (await approve_edit(client, moderator, identity)).status_code == 200
     services.step_up = FreshStepUp(clock)
+    await enable_totp(services, moderator.identity)
     async with services.session_factory() as db:
         city = await db.get(City, sample.city_id)
         assert city is not None
@@ -324,8 +335,11 @@ async def test_retire_requires_step_up(
     )
     assert response.status_code == 201
     identity = uuid.UUID(response.json()["id"])
-    assert (await approve_edit(client, moderator, identity)).status_code == 403
+    denied = await approve_edit(client, moderator, identity)
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "auth.totp_enrolment_required"
     services.step_up = FreshStepUp(clock)
+    await enable_totp(services, moderator.identity)
     assert (await approve_edit(client, moderator, identity)).status_code == 200
     detail = await client.get("/v1/lines/ornek-hat-1?city=ornek-test-sehri")
     assert detail.json()["status"] == "retired"

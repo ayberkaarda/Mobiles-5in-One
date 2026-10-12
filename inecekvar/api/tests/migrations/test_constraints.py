@@ -49,6 +49,57 @@ async def user(
     return value
 
 
+async def test_totp_enabled_requires_secret(
+    connection: asyncpg.Connection[asyncpg.Record],
+) -> None:
+    identity = await user(connection)
+    with pytest.raises(asyncpg.CheckViolationError, match="totp_enabled_requires_secret"):
+        await connection.execute("UPDATE users SET totp_enabled_at = now() WHERE id = $1", identity)
+    await connection.execute(
+        "UPDATE users SET totp_secret_enc = $2, totp_enabled_at = now(), "
+        "totp_last_counter = $3 WHERE id = $1",
+        identity,
+        b"encrypted",
+        2**32,
+    )
+    assert (
+        await connection.fetchval("SELECT totp_last_counter FROM users WHERE id = $1", identity)
+        == 2**32
+    )
+
+
+async def test_step_up_session_identity_has_no_fk_and_user_cascades(
+    connection: asyncpg.Connection[asyncpg.Record],
+) -> None:
+    identity = await user(connection)
+    session_id = uuid7()
+    await connection.execute(
+        "INSERT INTO session_step_ups (session_id, user_id, verified_at) VALUES ($1, $2, now())",
+        session_id,
+        identity,
+    )
+    row = await connection.fetchrow(
+        "SELECT created_at, updated_at FROM session_step_ups WHERE session_id = $1", session_id
+    )
+    assert row is not None
+    assert row["created_at"] is not None
+    assert row["updated_at"] is not None
+    with pytest.raises(asyncpg.UniqueViolationError, match="pk_session_step_ups"):
+        await connection.execute(
+            "INSERT INTO session_step_ups (session_id, user_id, verified_at) "
+            "VALUES ($1, $2, now())",
+            session_id,
+            identity,
+        )
+    await connection.execute("DELETE FROM users WHERE id = $1", identity)
+    assert (
+        await connection.fetchval(
+            "SELECT count(*) FROM session_step_ups WHERE session_id = $1", session_id
+        )
+        == 0
+    )
+
+
 async def line(
     connection: asyncpg.Connection[asyncpg.Record],
     city_id: uuid.UUID,

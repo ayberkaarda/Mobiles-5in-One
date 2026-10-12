@@ -50,8 +50,8 @@ def session_key_pair() -> KeyPair:
 
 
 @cache
-def _session_secrets() -> tuple[str, str]:
-    return secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+def _session_secrets() -> tuple[str, str, str]:
+    return secrets.token_urlsafe(32), secrets.token_urlsafe(32), secrets.token_urlsafe(32)
 
 
 def make_test_settings(**overrides: Any) -> Settings:
@@ -61,7 +61,7 @@ def make_test_settings(**overrides: Any) -> Settings:
     Redis pass the real URL from their fixture.
     """
     keys = session_key_pair()
-    csrf_secret, log_hash_key = _session_secrets()
+    csrf_secret, log_hash_key, totp_key = _session_secrets()
     values: dict[str, Any] = {
         "env": "test",
         "database_url": SecretStr("postgresql+asyncpg://unused@127.0.0.1:1/unused"),
@@ -70,6 +70,7 @@ def make_test_settings(**overrides: Any) -> Settings:
         "jwt_public_key_pem": keys.public_pem,
         "csrf_secret": SecretStr(csrf_secret),
         "log_hash_key": SecretStr(log_hash_key),
+        "totp_encryption_key": SecretStr(totp_key),
         "hibp_enabled": False,
         "magic_link_base_url": "https://app.inecekvar.app/giris/baglanti",
     }

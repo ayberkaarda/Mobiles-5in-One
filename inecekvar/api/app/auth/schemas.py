@@ -71,6 +71,34 @@ class EmptyIn(Schema):
     pass
 
 
+class TotpCodeIn(Schema):
+    code: Annotated[str, Field(min_length=6, max_length=6, pattern=r"^[0-9]{6}$")]
+
+
+class TotpStatusOut(Schema):
+    enabled: bool
+    enabled_at: datetime | None
+    pending: bool
+
+    @classmethod
+    def from_user(cls, user: User) -> Self:
+        return cls(
+            enabled=user.totp_enabled_at is not None,
+            enabled_at=user.totp_enabled_at,
+            pending=user.totp_secret_enc is not None and user.totp_enabled_at is None,
+        )
+
+
+class TotpEnrolOut(Schema):
+    secret: str
+    otpauth_uri: str
+
+
+class StepUpOut(Schema):
+    verified_at: datetime
+    expires_at: datetime
+
+
 class StatusOut(Schema):
     status: Literal["check_email", "deletion_scheduled"]
 

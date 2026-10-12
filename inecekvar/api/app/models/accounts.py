@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -35,6 +36,10 @@ class User(UUIDPrimaryKey, Timestamps, Base):
             name="password_hash_format",
         ),
         CheckConstraint("reputation >= 0", name="reputation_nonnegative"),
+        CheckConstraint(
+            "totp_enabled_at IS NULL OR totp_secret_enc IS NOT NULL",
+            name="totp_enabled_requires_secret",
+        ),
         enum_check("role", UserRole),
         UniqueConstraint("email"),
     )
@@ -53,6 +58,8 @@ class User(UUIDPrimaryKey, Timestamps, Base):
         nullable=True,
     )
     totp_secret_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    totp_last_counter: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -78,6 +85,17 @@ class UserSession(UUIDPrimaryKey, Timestamps, Base):
         server_default=text("now()"),
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SessionStepUp(Timestamps, Base):
+    __tablename__ = "session_step_ups"
+    __table_args__ = (Index("ix_session_step_ups_user_id", "user_id"),)
+
+    session_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class RefreshToken(UUIDPrimaryKey, Timestamps, Base):

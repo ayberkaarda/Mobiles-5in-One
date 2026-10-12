@@ -112,10 +112,13 @@ def test_rules_match_spec() -> None:
         "auth.register": (5, 900),
         "auth.magic_link": (5, 900),
         "auth.refresh": (5, 900),
+        "auth.step_up": (5, 900),
         "edits.low_reputation": (10, 86400),
         "edits.default": (100, 86400),
         "traces": (20, 86400),
         "plan": (30, 60),
         "media.presign": (20, 86400),
         "pack.download": (10, 86400),
+        "public.stop_pairs": (60, 60),
+        "admin.export": (10, 3600),
     }

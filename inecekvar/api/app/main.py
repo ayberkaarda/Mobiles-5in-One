@@ -8,6 +8,7 @@ is built on first access (uvicorn's lookup), so importing this module has no sid
 """
 
 import secrets
+from functools import cache
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -15,10 +16,13 @@ from fastapi import APIRouter, FastAPI
 from pydantic import SecretStr
 from redis.asyncio import Redis
 
+from app.admin.router import router as admin_router
 from app.auth.authenticator import TokenSessionAuthenticator
 from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
 from app.auth.router import router as auth_router
+from app.auth.step_up import SessionStepUpSource
+from app.auth.totp_router import router as totp_router
 from app.billing.entitlements import SubscriptionEntitlements
 from app.cities.router import router as cities_router
 from app.core.deps import Services, SystemClock
@@ -45,6 +49,7 @@ API_PREFIX = "/v1"
 ROUTERS: tuple[APIRouter, ...] = (
     health_router,
     auth_router,
+    totp_router,
     cities_router,
     lines_router,
     stops_router,
@@ -55,6 +60,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     media_router,
     planner_router,
     export_router,
+    admin_router,
 )
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing
@@ -64,6 +70,11 @@ LOCAL_REDIS_URL = "redis://localhost:57379/0"
 LOCAL_S3_URL = "http://localhost:57900"
 LOCAL_S3_USER = "inecekvar"
 LOCAL_S3_PASSWORD = "inecekvar_local_dev"  # noqa: S105 (compose default, local only)
+
+
+@cache
+def _local_totp_key() -> SecretStr:
+    return SecretStr(secrets.token_urlsafe(32))
 
 
 def with_local_defaults(settings: Settings) -> Settings:
@@ -86,6 +97,8 @@ def with_local_defaults(settings: Settings) -> Settings:
         update["csrf_secret"] = SecretStr(secrets.token_urlsafe(32))
     if settings.log_hash_key is None:
         update["log_hash_key"] = SecretStr(secrets.token_urlsafe(32))
+    if settings.totp_encryption_key is None:
+        update["totp_encryption_key"] = _local_totp_key()
     no_private = settings.jwt_private_key_pem is None and settings.jwt_private_key_path is None
     no_public = settings.jwt_public_key_pem is None and settings.jwt_public_key_path is None
     if no_private and no_public:
@@ -126,6 +139,7 @@ def build_services(settings: Settings) -> Services:
         breach_checker=HibpRangeClient(settings),
         clock=clock,
         entitlements=SubscriptionEntitlements(),
+        step_up=SessionStepUpSource(),
         object_store=(
             S3ObjectStore.from_settings(settings) if settings.s3_endpoint_url is not None else None
         ),

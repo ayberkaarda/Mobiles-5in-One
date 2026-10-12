@@ -13,7 +13,13 @@ from types import MappingProxyType
 from typing import Final, Literal
 
 from app.core.deps import Principal
-from app.core.errors import AUTH_FORBIDDEN, AUTH_REQUIRED, ProblemError
+from app.core.errors import (
+    AUTH_FORBIDDEN,
+    AUTH_REQUIRED,
+    STEP_UP_REQUIRED,
+    TOTP_ENROLMENT_REQUIRED,
+    ProblemError,
+)
 from app.models.enums import EditState, UserRole
 
 
@@ -177,6 +183,7 @@ class ResourceContext:
     edit_state: EditState | None = None
     licence_accepted_at: datetime | None = None
     step_up_at: datetime | None = None
+    totp_enrolled: bool = False
     now: datetime | None = None
 
 
@@ -216,7 +223,7 @@ def not_own_proposal(context: ResourceContext) -> bool:
 
 
 def totp_step_up(context: ResourceContext) -> bool:
-    if context.step_up_at is None or context.now is None:
+    if not context.totp_enrolled or context.step_up_at is None or context.now is None:
         return False
     try:
         return timedelta(0) <= context.now - context.step_up_at <= STEP_UP_TTL
@@ -253,6 +260,20 @@ def authorize(principal: Principal | None, action: Action, context: ResourceCont
         return
     if principal is None and isinstance(PERMISSIONS[ANONYMOUS].get(action), Deny):
         raise ProblemError(AUTH_REQUIRED, 401)
+    row = PERMISSIONS.get(role)
+    rule = row.get(action) if row is not None else None
+    if (
+        principal is not None
+        and isinstance(rule, AllowIf)
+        and Condition.TOTP_STEP_UP in rule.conditions
+        and all(
+            PREDICATES[condition](context)
+            for condition in rule.conditions
+            if condition != Condition.TOTP_STEP_UP
+        )
+    ):
+        code = STEP_UP_REQUIRED if context.totp_enrolled else TOTP_ENROLMENT_REQUIRED
+        raise ProblemError(code, 403)
     raise ProblemError(AUTH_FORBIDDEN, 403)
 
 

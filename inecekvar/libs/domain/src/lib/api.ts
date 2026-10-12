@@ -1,6 +1,74 @@
 // API types derived from docs/api/openapi.json by libs/domain/scripts/build-api-types.mjs.
 // Do not edit by hand: change the API, write the contract, then run the script.
 export type paths = {
+  '/v1/admin/audit-logs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Audit Logs */
+    get: operations['list_audit_logs_v1_admin_audit_logs_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/exports/{city}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create Export */
+    post: operations['create_export_v1_admin_exports__city__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/users': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Users */
+    get: operations['list_users_v1_admin_users_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/users/{identity}/role': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Change Role */
+    patch: operations['change_role_v1_admin_users__identity__role_patch'];
+    trace?: never;
+  };
   '/v1/auth/csrf': {
     parameters: {
       query?: never;
@@ -137,6 +205,23 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/v1/auth/step-up': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Step Up */
+    post: operations['step_up_v1_auth_step_up_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/cities': {
     parameters: {
       query?: never;
@@ -197,6 +282,23 @@ export type paths = {
     };
     /** Sitemap */
     get: operations['sitemap_v1_cities__slug__sitemap_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/cities/{slug}/stop-pairs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stop Pairs */
+    get: operations['stop_pairs_v1_cities__slug__stop_pairs_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -414,6 +516,58 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/v1/me/totp': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Status */
+    get: operations['status_v1_me_totp_get'];
+    put?: never;
+    post?: never;
+    /** Disable */
+    delete: operations['disable_v1_me_totp_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/me/totp/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirm */
+    post: operations['confirm_v1_me_totp_confirm_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/me/totp/enrol': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Enrol */
+    post: operations['enrol_v1_me_totp_enrol_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/media/presign': {
     parameters: {
       query?: never;
@@ -516,6 +670,40 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/v1/sitemap': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Sitemap Index */
+    get: operations['sitemap_index_v1_sitemap_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/stops': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search Stops */
+    get: operations['search_stops_v1_stops_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/stops/{slug}': {
     parameters: {
       query?: never;
@@ -589,6 +777,89 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
   schemas: {
+    /** AdminExportOut */
+    AdminExportOut: {
+      /** City */
+      city: string;
+      /** Path */
+      path: string;
+      /**
+       * Published At
+       * Format: date-time
+       */
+      published_at: string;
+      /** Version */
+      version: number;
+    };
+    /** AdminUserOut */
+    AdminUserOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Deactivated At */
+      deactivated_at: string | null;
+      /** Display Name */
+      display_name: string | null;
+      /** Email */
+      email: string;
+      /** Email Verified At */
+      email_verified_at: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      role: components['schemas']['UserRole'];
+      /** Totp Enabled */
+      totp_enabled: boolean;
+    };
+    /** AdminUserPage */
+    AdminUserPage: {
+      /** Items */
+      items: components['schemas']['AdminUserOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
+    /** AuditLogOut */
+    AuditLogOut: {
+      /** Action */
+      action: string;
+      /** Actor Id */
+      actor_id: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Diff Hash */
+      diff_hash: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Target Id */
+      target_id: string | null;
+      /** Target Type */
+      target_type: string;
+    };
+    /** AuditLogPage */
+    AuditLogPage: {
+      /** Items */
+      items: components['schemas']['AuditLogOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
     /** BearerOut */
     BearerOut: {
       /** Access Token */
@@ -610,6 +881,31 @@ export type components = {
        */
       token_type: 'Bearer';
       user: components['schemas']['MeOut'];
+    };
+    /** CityDetailOut */
+    CityDetailOut: {
+      /** Bbox */
+      bbox: number[];
+      /** Centroid */
+      centroid: number[];
+      /** Is Sample */
+      is_sample: boolean;
+      /** Lastmod */
+      lastmod: string | null;
+      /** Name */
+      name: string;
+      /** Pack Version */
+      pack_version: number;
+      /** Popular Lines */
+      popular_lines: components['schemas']['LineSummary'][];
+      /** Published Line Count */
+      published_line_count: number;
+      /** Recently Updated Lines */
+      recently_updated_lines: components['schemas']['RecentLineOut'][];
+      /** Slug */
+      slug: string;
+      /** Timezone */
+      timezone: string;
     };
     /** CityOut */
     CityOut: {
@@ -1047,6 +1343,22 @@ export type components = {
       /** State */
       state: string;
     };
+    /** RecentLineOut */
+    RecentLineOut: {
+      /** Code */
+      code: string;
+      /** Mode */
+      mode: string;
+      /** Name */
+      name: string;
+      /** Slug */
+      slug: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** RefreshIn */
     RefreshIn: {
       /** Refresh Token */
@@ -1127,10 +1439,33 @@ export type components = {
       /** Stop Count */
       stop_count: number;
     };
+    /** RoleChangeIn */
+    RoleChangeIn: {
+      role: components['schemas']['UserRole'];
+    };
     /** RollbackInput */
     RollbackInput: {
       /** Version No */
       version_no: number;
+    };
+    /** SitemapCityOut */
+    SitemapCityOut: {
+      /** Is Sample */
+      is_sample: boolean;
+      /**
+       * Lastmod
+       * Format: date-time
+       */
+      lastmod: string;
+      /** Published Line Count */
+      published_line_count: number;
+      /** Slug */
+      slug: string;
+    };
+    /** SitemapIndexOut */
+    SitemapIndexOut: {
+      /** Cities */
+      cities: components['schemas']['SitemapCityOut'][];
     };
     /** StatusOut */
     StatusOut: {
@@ -1139,6 +1474,19 @@ export type components = {
        * @enum {string}
        */
       status: 'check_email' | 'deletion_scheduled';
+    };
+    /** StepUpOut */
+    StepUpOut: {
+      /**
+       * Expires At
+       * Format: date-time
+       */
+      expires_at: string;
+      /**
+       * Verified At
+       * Format: date-time
+       */
+      verified_at: string;
     };
     /** StopChanges */
     StopChanges: {
@@ -1194,6 +1542,53 @@ export type components = {
       name: string;
       /** Slug */
       slug: string;
+    };
+    /** StopPairOut */
+    StopPairOut: {
+      from_stop: components['schemas']['StopRef'];
+      /** Shared Line Count */
+      shared_line_count: number;
+      to_stop: components['schemas']['StopRef'];
+    };
+    /** StopPairsOut */
+    StopPairsOut: {
+      /**
+       * Basis
+       * @constant
+       */
+      basis: 'shared_published_lines';
+      /** City */
+      city: string;
+      /** Pairs */
+      pairs: components['schemas']['StopPairOut'][];
+    };
+    /** StopRef */
+    StopRef: {
+      /** Name */
+      name: string;
+      /** Slug */
+      slug: string;
+    };
+    /** TotpCodeIn */
+    TotpCodeIn: {
+      /** Code */
+      code: string;
+    };
+    /** TotpEnrolOut */
+    TotpEnrolOut: {
+      /** Otpauth Uri */
+      otpauth_uri: string;
+      /** Secret */
+      secret: string;
+    };
+    /** TotpStatusOut */
+    TotpStatusOut: {
+      /** Enabled */
+      enabled: boolean;
+      /** Enabled At */
+      enabled_at: string | null;
+      /** Pending */
+      pending: boolean;
     };
     /** TraceCreated */
     TraceCreated: {
@@ -1362,6 +1757,143 @@ export type components = {
 };
 export type $defs = Record<string, never>;
 export interface operations {
+  list_audit_logs_v1_admin_audit_logs_get: {
+    parameters: {
+      query?: {
+        action?: string | null;
+        actor_id?: string | null;
+        limit?: number;
+        offset?: number;
+        since?: string | null;
+        target_id?: string | null;
+        target_type?: string | null;
+        until?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AuditLogPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_export_v1_admin_exports__city__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        city: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminExportOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  list_users_v1_admin_users_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        role?: components['schemas']['UserRole'] | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  change_role_v1_admin_users__identity__role_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        identity: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RoleChangeIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   csrf_v1_auth_csrf_post: {
     parameters: {
       query?: never;
@@ -1585,6 +2117,39 @@ export interface operations {
       };
     };
   };
+  step_up_v1_auth_step_up_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TotpCodeIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StepUpOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   list_cities_v1_cities_get: {
     parameters: {
       query?: never;
@@ -1622,7 +2187,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['CityOut'];
+          'application/json': components['schemas']['CityDetailOut'];
         };
       };
       /** @description Validation Error */
@@ -1691,6 +2256,39 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  stop_pairs_v1_cities__slug__stop_pairs_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        slug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StopPairsOut'];
         };
       };
       /** @description Validation Error */
@@ -2216,6 +2814,110 @@ export interface operations {
       };
     };
   };
+  status_v1_me_totp_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TotpStatusOut'];
+        };
+      };
+    };
+  };
+  disable_v1_me_totp_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  confirm_v1_me_totp_confirm_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TotpCodeIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TotpStatusOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  enrol_v1_me_totp_enrol_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EmptyIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TotpEnrolOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   presign_photo_v1_media_presign_post: {
     parameters: {
       query?: never;
@@ -2403,6 +3105,59 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PlanOutput'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  sitemap_index_v1_sitemap_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SitemapIndexOut'];
+        };
+      };
+    };
+  };
+  search_stops_v1_stops_get: {
+    parameters: {
+      query: {
+        city: string;
+        limit?: number;
+        q?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StopOut'][];
         };
       };
       /** @description Validation Error */

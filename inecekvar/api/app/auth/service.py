@@ -10,12 +10,14 @@ from app.auth.mail import account_exists_mail, magic_link_mail
 from app.auth.passwords import dummy_hash, hash_password, verify_password
 from app.auth.schemas import RefreshOut
 from app.auth.sessions import new_refresh, refresh_output, revoke_family, revoke_user
+from app.auth.step_up import revoke_session_step_up
 from app.auth.tokens import opaque_token, token_hash
 from app.core.deps import MailSender, Principal, RateLimiter, enforce_rate_limit
 from app.core.errors import (
     AUTH_INVALID_CREDENTIALS,
     AUTH_REQUIRED,
     AUTH_TOKEN_INVALID,
+    REAUTH_REQUIRED,
     ProblemError,
 )
 from app.core.ids import uuid7
@@ -38,6 +40,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.ops import AuditLog
+from app.security.admins import ensure_admin_remains, lock_admins
 
 
 async def locked_user(db: AsyncSession, user_id: uuid.UUID) -> User:
@@ -179,6 +182,7 @@ async def rotate_refresh(
     # revokes the family that descends from it.
     if token.used_at is not None or token.revoked_at is not None:
         await revoke_family(db, token.family_id, now, RefreshRevokeReason.REUSE_DETECTED)
+        await revoke_session_step_up(db, token.family_id)
         token.revoked_at = now
         token.revoked_reason = RefreshRevokeReason.REUSE_DETECTED.value
         token.updated_at = now
@@ -224,34 +228,44 @@ async def accept_licence(db: AsyncSession, user: User, now: datetime) -> None:
     )
 
 
+REAUTH_WINDOW = timedelta(minutes=10)
+
+
+async def session_started_at(db: AsyncSession, principal: Principal) -> datetime | None:
+    if principal.auth_mode == "cookie":
+        return await db.scalar(
+            select(UserSession.created_at).where(
+                UserSession.id == principal.session_id, UserSession.user_id == principal.user_id
+            )
+        )
+    created: datetime | None = await db.scalar(
+        select(func.min(RefreshToken.created_at)).where(
+            RefreshToken.family_id == principal.session_id,
+            RefreshToken.user_id == principal.user_id,
+        )
+    )
+    return created
+
+
 async def request_deletion(
     db: AsyncSession,
     settings: Settings,
     principal: Principal,
-    user: User,
     password: str | None,
     now: datetime,
 ) -> None:
+    active_admins = await lock_admins(db)
+    user = await locked_user(db, principal.user_id)
+    ensure_admin_remains(active_admins, user.id)
     if user.password_hash is not None:
         ok, _ = await verify_password(password or "", user.password_hash, settings)
         if password is None or not ok:
             raise ProblemError(AUTH_INVALID_CREDENTIALS, 401)
     else:
         await verify_password(password or "", await dummy_hash(settings), settings)
-        created: datetime | None
-        if principal.auth_mode == "cookie":
-            created = await db.scalar(
-                select(UserSession.created_at).where(UserSession.id == principal.session_id)
-            )
-        else:
-            created = await db.scalar(
-                select(func.min(RefreshToken.created_at)).where(
-                    RefreshToken.family_id == principal.session_id,
-                    RefreshToken.user_id == user.id,
-                )
-            )
-        if created is None or created < now - timedelta(minutes=10):
-            raise ProblemError("auth.reauth_required", 401)
+        created = await session_started_at(db, principal)
+        if created is None or created < now - REAUTH_WINDOW:
+            raise ProblemError(REAUTH_REQUIRED, 401)
     user.deactivated_at = now
     user.updated_at = now
     scheduled = await db.scalar(
