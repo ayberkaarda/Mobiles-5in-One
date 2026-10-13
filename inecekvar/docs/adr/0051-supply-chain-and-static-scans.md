@@ -92,7 +92,7 @@ Run on 2026-10-13, Windows 11 host, Docker Desktop 29.7.2. Output tails as print
 | `semgrep scan --error --config ops/security/semgrep api/app apps libs`, first run | `6 Code Findings`, all `iv-python-secret-compare` on SQLAlchemy `where()` column comparisons, exit 1 |
 | same after narrowing the rule | `Ran 12 rules on 443 files: 0 findings.` exit 0 |
 | mutation: a copy of `cities/router.py` with `text(f"SELECT set_config('statement_timeout', '{timeout}', true)")` | semgrep `iv-python-sql-string-built` at line 179, `Findings: 1`, exit 1; bandit `-ll` on the same copy: `Medium: 0`, `High: 0` (B608 matches only SELECT ... FROM shapes) |
-| `gitleaks git --no-banner --redact --config .gitleaks.toml --log-opts="origin/main..HEAD" .` (8.30.1), before the docs commit | `10 commits scanned.` `no leaks found` |
+| `gitleaks git --no-banner --redact --config .gitleaks.toml --log-opts="origin/main..HEAD" .` (8.30.1) | before the package: `10 commits scanned.` `no leaks found`; after the documents commit `931df99d`: `16 commits scanned.` `no leaks found` |
 | same with `--log-opts="--all"` | `1137 commits scanned.` `leaks found: 1` (local-only Kadro branch, dependency-audit.md section 5) |
 | same with `--log-opts="--remotes HEAD"` | `1103 commits scanned.` `no leaks found` |
 | lefthook 2.1.15 in a throwaway clone: `lefthook install`; dummy token staged; `git commit` | `sync hooks: ✔️(pre-commit, commit-msg)`; `WRN leaks found: 1`, `🥊 gitleaks`, commit exit 1; clean file: `no leaks found`, exit 0 |
