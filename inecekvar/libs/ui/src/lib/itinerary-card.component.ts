@@ -40,7 +40,7 @@ export interface ItinerarySummary {
             <svg class="sep" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2l4 4-4 4" /></svg>
           }
           @if (leg.kind === 'ride') {
-            <span class="plate">
+            <span class="plate iv-placard iv-placard--s">
               {{ leg.code }}<span class="iv-visually-hidden"> {{ leg.name }}</span>
             </span>
           } @else {
@@ -80,10 +80,18 @@ export interface ItinerarySummary {
       cursor: pointer;
     }
     .card.on {
-      border-color: var(--iv-ink);
+      --iv-ink: var(--iv-board-ink);
+      --iv-ink-muted: var(--iv-board-muted);
+      --iv-line-strong: rgba(255, 248, 231, 0.34);
+      border-color: var(--iv-board-edge);
+      background: var(--iv-board);
       box-shadow:
-        inset 4px 0 0 var(--iv-stripe),
-        var(--iv-shadow-hard);
+        inset 0 -4px 0 var(--iv-stripe),
+        var(--iv-shadow-board);
+    }
+    .card.on .duration {
+      color: var(--iv-board-sign);
+      text-shadow: var(--iv-board-glow);
     }
     .card:focus-visible {
       outline: none;
@@ -96,17 +104,16 @@ export interface ItinerarySummary {
       gap: 12px;
     }
     .title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: var(--iv-font-body-weight-600);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
       color: var(--iv-ink-muted);
     }
     .duration {
       font-family: var(--iv-font-display);
       font-weight: var(--iv-font-display-weight);
-      font-size: 22px;
+      font-size: 26px;
       line-height: 1;
+      letter-spacing: -0.01em;
       font-variant-numeric: tabular-nums;
     }
     .chain {
@@ -126,16 +133,6 @@ export interface ItinerarySummary {
       stroke-linejoin: round;
     }
     .plate {
-      padding: 6px 8px 4px;
-      border-radius: var(--iv-radius-s);
-      background: var(--iv-plate);
-      color: var(--iv-plate-ink);
-      border-bottom: 3px solid var(--iv-stripe);
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: 15px;
-      letter-spacing: 0.04em;
-      line-height: 1;
       white-space: nowrap;
     }
     .walk {

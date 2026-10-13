@@ -24,7 +24,7 @@ export interface ItineraryStep {
         <li class="step" [class.walk]="step.kind === 'walk'">
           <span class="marker" aria-hidden="true">
             @if (step.kind === 'ride') {
-              <span class="plate">{{ step.code }}</span>
+              <span class="plate iv-placard iv-placard--s">{{ step.code }}</span>
             } @else {
               <span class="ring"></span>
             }
@@ -59,10 +59,13 @@ export interface ItineraryStep {
       left: 31px;
       top: 26px;
       bottom: 0;
-      border-left: 3px solid var(--iv-stripe);
+      border-left: 5px solid var(--iv-rail);
+      box-shadow: -3px 0 0 var(--iv-rail-casing);
+      margin-left: -1px;
     }
     .step.walk:not(:last-child)::before {
-      border-left: 2px dashed var(--iv-line-strong);
+      border-left: 3px dotted var(--iv-walk);
+      box-shadow: none;
     }
     .marker {
       display: flex;
@@ -72,17 +75,6 @@ export interface ItineraryStep {
       z-index: 1;
     }
     .plate {
-      min-width: 52px;
-      padding: 6px 6px 4px;
-      border-radius: var(--iv-radius-s);
-      background: var(--iv-plate);
-      color: var(--iv-plate-ink);
-      border-bottom: 3px solid var(--iv-stripe);
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: 14px;
-      text-align: center;
-      line-height: 1;
       white-space: nowrap;
     }
     .ring {

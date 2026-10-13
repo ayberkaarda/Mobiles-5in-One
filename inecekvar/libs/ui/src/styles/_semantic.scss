@@ -1,0 +1,143 @@
+// Semantic design tokens of the route-board language (ADR-0059), shared by the app and the web.
+// Light is krem paper with lacivert route boards and yellow placards; dark is the night bus: a
+// deep lacivert street, near-black boards and the same yellow signs, slightly lit.
+// The app applies `dark` under `:root.ion-palette-dark` (manual or system choice, ThemeService);
+// the web applies it under `prefers-color-scheme: dark`.
+
+@mixin scale {
+  --iv-radius-xs: 4px;
+  --iv-radius-s: 8px;
+  --iv-radius-m: 14px;
+  --iv-radius-l: 22px;
+  --iv-radius-pill: 999px;
+  --iv-space-1: 4px;
+  --iv-space-2: 8px;
+  --iv-space-3: 12px;
+  --iv-space-4: 16px;
+  --iv-space-5: 24px;
+  --iv-space-6: 32px;
+  --iv-space-7: 48px;
+  --iv-gutter: 16px;
+  --iv-ease-flip: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --iv-ease-out: cubic-bezier(0.25, 0.8, 0.3, 1);
+  --iv-font-sign: var(--iv-font-display);
+}
+
+@mixin light {
+  --iv-bg: #fff8e7;
+  --iv-bg-deep: #f6ead0;
+  --iv-surface: #ffffff;
+  --iv-surface-sunk: #f8efd9;
+  --iv-ink: #14213d;
+  /* Yol Grisi darkened so muted text keeps 4.5:1 on krem and white. */
+  --iv-ink-muted: #4f5866;
+  --iv-line: rgba(20, 33, 61, 0.14);
+  --iv-line-strong: rgba(20, 33, 61, 0.34);
+
+  /* Route boards: the lacivert sign with krem and yellow lettering. */
+  --iv-board: #14213d;
+  --iv-board-raised: #1d2c4f;
+  --iv-board-ink: #fff8e7;
+  --iv-board-muted: rgba(255, 248, 231, 0.74);
+  --iv-board-sign: #f2b705;
+  --iv-board-glow: none;
+  --iv-board-edge: #0b1428;
+
+  --iv-plate: #f2b705;
+  --iv-plate-ink: #14213d;
+  --iv-stripe: #2ab7ca;
+  --iv-rail: #2ab7ca;
+  --iv-rail-casing: #14213d;
+  --iv-walk: #6c757d;
+  --iv-stop-fill: #fff8e7;
+
+  --iv-accent: #f2b705;
+  --iv-accent-ink: #14213d;
+  /* Fren Kırmızısı is the stop-request button: used for "İnecek var" moments only. */
+  --iv-signal: #d7263d;
+  --iv-signal-ink: #ffffff;
+  --iv-danger: #c41f35;
+  --iv-success: #24774a;
+  --iv-ticket: #f2b705;
+  --iv-ticket-ink: #14213d;
+
+  --iv-chrome: #14213d;
+  --iv-chrome-ink: #fff8e7;
+  --iv-chrome-ink-muted: rgba(255, 248, 231, 0.7);
+  --iv-tag: #14213d;
+  --iv-tag-ink: #fff8e7;
+  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.26);
+  --iv-mode-minibus-bg: rgba(42, 183, 202, 0.22);
+  --iv-mode-servis-bg: rgba(20, 33, 61, 0.08);
+
+  --iv-shadow-hard: 0 3px 0 rgba(20, 33, 61, 0.16);
+  --iv-shadow-board: 0 4px 0 #0b1428;
+  --iv-press: #14213d;
+  --iv-focus: 0 0 0 3px rgba(42, 183, 202, 0.6);
+  --iv-hazard: repeating-linear-gradient(-45deg, #f2b705 0 7px, #14213d 7px 14px);
+  --iv-dots: radial-gradient(rgba(20, 33, 61, 0.09) 1px, transparent 1.4px);
+  --iv-scene-far: #f1e1bc;
+  --iv-scene-win: rgba(20, 33, 61, 0.16);
+  --iv-scene-curb: #e9d7ae;
+  --iv-scene-road: #14213d;
+  --iv-scene-glass: #cfeef2;
+  --iv-scene-sun: rgba(242, 183, 5, 0.45);
+}
+
+@mixin dark {
+  --iv-bg: #0a1226;
+  --iv-bg-deep: #070d1c;
+  --iv-surface: #121d38;
+  --iv-surface-sunk: #0e1730;
+  --iv-ink: #fff8e7;
+  --iv-ink-muted: #b6bdcb;
+  --iv-line: rgba(255, 248, 231, 0.12);
+  --iv-line-strong: rgba(255, 248, 231, 0.3);
+
+  --iv-board: #050a17;
+  --iv-board-raised: #0d1630;
+  --iv-board-ink: #fff3d1;
+  --iv-board-muted: rgba(255, 243, 209, 0.72);
+  --iv-board-sign: #ffc61a;
+  --iv-board-glow: 0 0 10px rgba(255, 198, 26, 0.38);
+  --iv-board-edge: rgba(255, 248, 231, 0.14);
+
+  --iv-plate: #f2b705;
+  --iv-plate-ink: #14213d;
+  --iv-stripe: #3cc8da;
+  --iv-rail: #3cc8da;
+  --iv-rail-casing: #050a17;
+  --iv-walk: #9aa3b2;
+  --iv-stop-fill: #fff8e7;
+
+  --iv-accent: #f2b705;
+  --iv-accent-ink: #14213d;
+  --iv-signal: #ff5a6e;
+  --iv-signal-ink: #14213d;
+  --iv-danger: #ff6b7d;
+  --iv-success: #5cc98b;
+  --iv-ticket: #f2b705;
+  --iv-ticket-ink: #14213d;
+
+  --iv-chrome: #050a17;
+  --iv-chrome-ink: #fff8e7;
+  --iv-chrome-ink-muted: rgba(255, 248, 231, 0.68);
+  --iv-tag: #fff8e7;
+  --iv-tag-ink: #14213d;
+  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.2);
+  --iv-mode-minibus-bg: rgba(60, 200, 218, 0.2);
+  --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
+
+  --iv-shadow-hard: 0 3px 0 rgba(0, 0, 0, 0.45);
+  --iv-shadow-board: 0 4px 0 rgba(0, 0, 0, 0.55);
+  --iv-press: rgba(0, 0, 0, 0.6);
+  --iv-focus: 0 0 0 3px rgba(60, 200, 218, 0.65);
+  --iv-hazard: repeating-linear-gradient(-45deg, #f2b705 0 7px, #050a17 7px 14px);
+  --iv-dots: radial-gradient(rgba(255, 248, 231, 0.07) 1px, transparent 1.4px);
+  --iv-scene-far: #142142;
+  --iv-scene-win: #f2b705;
+  --iv-scene-curb: #1b2847;
+  --iv-scene-road: #040914;
+  --iv-scene-glass: #ffd659;
+  --iv-scene-sun: #fff3d1;
+}

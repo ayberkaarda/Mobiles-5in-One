@@ -1,0 +1,208 @@
+/*
+ * The sign family of the route-board language (ADR-0059), global in both apps so markup from
+ * any component can use it: the line-code placard, the route board, the fare ticket and the
+ * destination flip. Load after the semantic tokens.
+ */
+
+/* Line-code placard: the yellow window sign of a dolmuş with the turquoise minibüs stripe and
+   two rivets. The code never wraps. */
+.iv-placard {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 3.9em;
+  padding: 0.5em 0.6em 0.42em;
+  border-radius: 0.42em;
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
+  box-shadow:
+    inset 0 -0.24em 0 var(--iv-stripe),
+    0 0 0 2px var(--iv-plate-ink);
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.iv-placard::before,
+.iv-placard::after {
+  content: '';
+  position: absolute;
+  top: 0.26em;
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: var(--iv-plate-ink);
+  opacity: 0.55;
+}
+
+.iv-placard::before {
+  left: 0.3em;
+}
+
+.iv-placard::after {
+  right: 0.3em;
+}
+
+.iv-placard--s {
+  font-size: 13px;
+  min-width: 3.6em;
+}
+
+.iv-placard--l {
+  font-size: 22px;
+}
+
+.iv-placard--xl {
+  font-size: clamp(26px, 8vw, 40px);
+  border-radius: 0.3em;
+}
+
+/* Route board: a lacivert sign with krem lettering and the stripe along its foot. */
+.iv-board {
+  position: relative;
+  background: var(--iv-board);
+  color: var(--iv-board-ink);
+  border-radius: var(--iv-radius-m);
+  box-shadow:
+    inset 0 -4px 0 var(--iv-stripe),
+    var(--iv-shadow-board);
+  outline: 1px solid var(--iv-board-edge);
+  outline-offset: -1px;
+}
+
+/* Sign lettering on a board: the one place where capitals belong. */
+.iv-sign-text {
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  color: var(--iv-board-sign);
+  text-shadow: var(--iv-board-glow);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Fare ticket: a yellow stub with a perforated tear line and notches. */
+.iv-ticket {
+  --iv-ticket-cut: 4.25rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--iv-ticket-cut) 1fr;
+  align-items: stretch;
+  min-height: 4.5rem;
+  border-radius: 10px;
+  background: var(--iv-ticket);
+  color: var(--iv-ticket-ink);
+  -webkit-mask:
+    radial-gradient(circle at var(--iv-ticket-cut) 0, transparent 8px, #000 8.5px) top / 100% 51%
+      no-repeat,
+    radial-gradient(circle at var(--iv-ticket-cut) 100%, transparent 8px, #000 8.5px) bottom / 100%
+      51% no-repeat;
+  mask:
+    radial-gradient(circle at var(--iv-ticket-cut) 0, transparent 8px, #000 8.5px) top / 100% 51%
+      no-repeat,
+    radial-gradient(circle at var(--iv-ticket-cut) 100%, transparent 8px, #000 8.5px) bottom / 100%
+      51% no-repeat;
+}
+
+.iv-ticket__stub {
+  display: grid;
+  place-items: center;
+  /* The stub is turned half a turn, so its left edge is the tear line. */
+  border-left: 2px dashed rgba(20, 33, 61, 0.45);
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-transform: uppercase;
+}
+
+.iv-ticket__body {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 0.7rem 1rem 0.7rem 1.1rem;
+  min-width: 0;
+}
+
+.iv-ticket__amount {
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 1.85rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-ticket__note {
+  font-size: 0.82rem;
+  line-height: 1.35;
+  opacity: 0.86;
+}
+
+/* Destination flip: each row of a sign turns in once from the top edge, row by row. */
+@keyframes iv-flip-in {
+  from {
+    transform: perspective(400px) rotateX(-88deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.iv-flip {
+  display: block;
+  transform-origin: 50% 0;
+  animation: iv-flip-in 520ms var(--iv-ease-flip) both;
+  animation-delay: 60ms;
+}
+
+.iv-flip--1 {
+  animation-delay: 150ms;
+}
+
+.iv-flip--2 {
+  animation-delay: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-flip {
+    animation: none;
+  }
+}
+
+/* Hazard tape: the sample-data warning and nothing else. */
+.iv-tape {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0 0.7em 0 0;
+  min-height: 1.75em;
+  border-radius: var(--iv-radius-xs);
+  background: var(--iv-board);
+  color: var(--iv-board-sign);
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 0.78rem;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.iv-tape::before {
+  content: '';
+  align-self: stretch;
+  width: 1.5em;
+  background: var(--iv-hazard);
+}
