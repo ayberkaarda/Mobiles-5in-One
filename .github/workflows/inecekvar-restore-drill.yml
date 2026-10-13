@@ -8,8 +8,9 @@ name: Inecek Var restore drill
 # (bucket-setup.sh), migrates with Alembic, seeds the sample city and synthetic accounts,
 # fingerprints the source, runs backup.sh (pg_dump -Fc | age, upload with the write-only
 # identity), runs backup.verify with the list-only identity, checks the identity denials, records a
-# deletion request after the dump, then runs restore-drill.sh: newest dump with the read-only
-# identity, age -d, pg_restore into a throwaway PostGIS, the restore checks (Alembic head,
+# deletion request and a cancelled request after the dump, then runs restore-drill.sh: newest dump
+# with the read-only identity (name stamp checked against LastModified), age -d, pg_restore into a
+# throwaway PostGIS, the restore checks (Alembic head,
 # published line geometry and stops, TOTP ciphertext, required tables, fingerprint) and the
 # deletion replay. Six negative runs inject one fault each and must fail on the named check.
 # The output is kept as an artifact for 30 days.
@@ -48,7 +49,7 @@ jobs:
       PG_IMAGE: postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07
       MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
       MC_IMAGE: pgsty/mc:RELEASE.2026-09-16T00-00-00Z@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
-      SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0
+      SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
