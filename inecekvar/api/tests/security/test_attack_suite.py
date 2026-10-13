@@ -1363,6 +1363,14 @@ BOUNDS: list[tuple[str, UserRole | None, str, str, object, dict[str, str] | None
         None,
     ),
     (
+        "trace-over-150km",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body([[34.0, 42.5], [35.0, 42.5], [34.0, 42.51], [35.0, 42.51]]),
+        None,
+    ),
+    (
         "trace-string-number",
         UserRole.CONTRIBUTOR,
         "POST",

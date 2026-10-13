@@ -229,18 +229,20 @@ test('admin queue, diff, users, versions and audit log show payloads as text', a
   const token = ((await login.json()) as { access_token: string }).access_token;
   psql(POSTGRES, `update users set role = 'admin' where email = '${adminEmail}'`);
   const enrol = await request.post(`${API}/me/totp/enrol`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, 'X-Real-IP': '198.51.100.253' },
     data: {},
   });
   expect(enrol.status()).toBe(201);
   const device = new TotpDevice(((await enrol.json()) as { secret: string }).secret);
   const confirmed = await request.post(`${API}/me/totp/confirm`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, 'X-Real-IP': '198.51.100.253' },
     data: { code: device.next() },
   });
   expect(confirmed.status()).toBe(200);
 
   const watch = await guard(page);
+  // Its own client address: the moderation spec already used the proxy address's step-up quota.
+  await page.setExtraHTTPHeaders({ 'x-e2e-client-ip': '198.51.100.254' });
   await page.goto(`${PROXY}/admin`);
   await expect(page).toHaveURL(/\/admin\/giris$/);
   await page.locator('#iv-admin-email').fill(adminEmail);
