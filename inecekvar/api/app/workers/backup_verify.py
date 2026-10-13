@@ -9,6 +9,14 @@ alert, and the result is kept in Redis under `RESULT_KEY` for the ops documents
 (docs/ops/backup-restore.md, ADR-0053). A dry run logs `backup.verify.alert_suppressed`
 instead and writes nothing.
 
+Tamper checks (phase 6 review F3): the write-only identity of the backup host may overwrite an
+existing key. The job therefore also alerts when a dump's key stamp lies in the future
+(`future_stamp`), when the stamp and the object's `LastModified` differ by more than
+`max_stamp_skew_hours` (`stamp_skew`: an overwrite of an old key shows a large skew), and, in
+the worker, when the ETag or size of a key seen on an earlier run has changed (`changed`; the
+last listing is kept in the Redis hash `SEEN_KEY`). A change alerts once: the new listing is
+remembered after the alert.
+
 Settings come from `INECEKVAR_BACKUP_VERIFY_*` environment values (docs/ops/env.md). Outside
 `local` an unconfigured verifier is itself an alert in production and a logged skip otherwise.
 
@@ -21,11 +29,11 @@ import asyncio
 import json
 import re
 import sys
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import anyio
 import boto3
@@ -38,10 +46,14 @@ from app.core.settings import Settings
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
+    from redis.asyncio import Redis
 
 RESULT_KEY = "inecekvar:ops:backup-verify:last"
 RESULT_TTL_SECONDS = 8 * 24 * 60 * 60
-DUMP_NAME = re.compile(r"inecekvar-[0-9]{8}T[0-9]{6}Z\.dump\.age")
+SEEN_KEY = "inecekvar:ops:backup-verify:seen"
+SEEN_TTL_SECONDS = 40 * 24 * 60 * 60
+DUMP_NAME = re.compile(r"inecekvar-([0-9]{8}T[0-9]{6}Z)\.dump\.age")
+STAMP_FORMAT = "%Y%m%dT%H%M%SZ"
 
 
 class BackupVerifySettings(BaseSettings):
@@ -64,6 +76,10 @@ class BackupVerifySettings(BaseSettings):
     max_age_hours: float = Field(default=26.0, gt=0, le=24 * 14)
     # The schema alone dumps to several kilobytes; anything smaller is not a usable backup.
     min_size_bytes: int = Field(default=4096, ge=1)
+    # The dump is uploaded minutes after its stamp; an overwrite days later shows as skew.
+    max_stamp_skew_hours: float = Field(default=6.0, gt=0, le=48)
+    # Clock skew allowed between the backup host and the verifier before a stamp is "future".
+    future_tolerance_minutes: int = Field(default=10, ge=0, le=120)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +87,10 @@ class BackupObject:
     key: str
     size: int
     last_modified: datetime
+    etag: str | None = None
+
+    def fingerprint(self) -> str:
+        return f"{self.etag or ''}:{self.size}"
 
 
 class BackupLister(Protocol):
@@ -94,6 +114,7 @@ class S3BackupLister:
                             key=str(item["Key"]),
                             size=int(item.get("Size", 0)),
                             last_modified=item["LastModified"],
+                            etag=str(item["ETag"]) if item.get("ETag") else None,
                         )
                     )
             return found
@@ -140,6 +161,9 @@ class VerifyStatus(StrEnum):
     EMPTY = "empty"
     TOO_SMALL = "too_small"
     NO_CHECKSUM = "no_checksum"
+    FUTURE_STAMP = "future_stamp"
+    STAMP_SKEW = "stamp_skew"
+    CHANGED = "changed"
     LISTING_ERROR = "listing_error"
     NOT_CONFIGURED = "not_configured"
 
@@ -157,6 +181,8 @@ class BackupVerifyResult:
     age_seconds: int | None = None
     size_bytes: int | None = None
     error: str | None = None
+    suspect_key: str | None = None
+    changed: int = 0
 
     @property
     def ok(self) -> bool:
@@ -175,6 +201,8 @@ class BackupVerifyResult:
             "max_age_seconds": self.max_age_seconds,
             "min_size_bytes": self.min_size_bytes,
             "error": self.error,
+            "suspect_key": self.suspect_key,
+            "changed": self.changed,
         }
 
 
@@ -187,6 +215,8 @@ def _result(
     newest: BackupObject | None = None,
     age: timedelta | None = None,
     error: str | None = None,
+    suspect: str | None = None,
+    changed: int = 0,
 ) -> BackupVerifyResult:
     return BackupVerifyResult(
         status=status,
@@ -200,13 +230,50 @@ def _result(
         age_seconds=int(age.total_seconds()) if age is not None else None,
         size_bytes=newest.size if newest is not None else None,
         error=error,
+        suspect_key=suspect,
+        changed=changed,
+    )
+
+
+def key_stamp(key: str) -> datetime | None:
+    """The UTC stamp embedded in a dump key, or None when it is not a valid date."""
+    match = DUMP_NAME.search(key)
+    if match is None:
+        return None
+    try:
+        return datetime.strptime(match[1], STAMP_FORMAT).replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def stamp_problem(
+    item: BackupObject, config: BackupVerifySettings, now: datetime
+) -> VerifyStatus | None:
+    """`future_stamp` or `stamp_skew` for one dump, None when its stamp is plausible."""
+    stamp = key_stamp(item.key)
+    if stamp is None:
+        return VerifyStatus.STAMP_SKEW
+    if stamp > now + timedelta(minutes=config.future_tolerance_minutes):
+        return VerifyStatus.FUTURE_STAMP
+    if abs(item.last_modified - stamp) > timedelta(hours=config.max_stamp_skew_hours):
+        return VerifyStatus.STAMP_SKEW
+    return None
+
+
+def changed_keys(objects: Sequence[BackupObject], seen: Mapping[str, str]) -> list[str]:
+    """Keys of an earlier listing whose ETag or size is different now."""
+    return sorted(
+        item.key for item in objects if item.key in seen and seen[item.key] != item.fingerprint()
     )
 
 
 def evaluate(
-    objects: Sequence[BackupObject], config: BackupVerifySettings, now: datetime
+    objects: Sequence[BackupObject],
+    config: BackupVerifySettings,
+    now: datetime,
+    seen: Mapping[str, str] | None = None,
 ) -> BackupVerifyResult:
-    """Pure decision over one listing; the newest dump decides."""
+    """Pure decision over one listing: tamper signs first, then the newest dump decides."""
     keys = {item.key for item in objects}
     dumps = [
         item
@@ -218,6 +285,24 @@ def evaluate(
         return _result(VerifyStatus.MISSING, config, now)
     newest = max(dumps, key=lambda item: (item.last_modified, item.key))
     age = max(now - newest.last_modified, timedelta(0))
+    changed = changed_keys(objects, seen) if seen is not None else []
+    if changed:
+        return _result(
+            VerifyStatus.CHANGED,
+            config,
+            now,
+            dumps=len(dumps),
+            newest=newest,
+            age=age,
+            suspect=changed[0],
+            changed=len(changed),
+        )
+    for problem in (VerifyStatus.FUTURE_STAMP, VerifyStatus.STAMP_SKEW):
+        suspects = sorted(item.key for item in dumps if stamp_problem(item, config, now) is problem)
+        if suspects:
+            return _result(
+                problem, config, now, dumps=len(dumps), newest=newest, age=age, suspect=suspects[0]
+            )
     if newest.size <= 0:
         status = VerifyStatus.EMPTY
     elif newest.size < config.min_size_bytes:
@@ -231,8 +316,43 @@ def evaluate(
     return _result(status, config, now, dumps=len(dumps), newest=newest, age=age)
 
 
+class SeenStore(Protocol):
+    """The ETag and size of every key of the last listing (the worker keeps it in Redis)."""
+
+    async def load(self) -> dict[str, str]: ...
+
+    async def save(self, fingerprints: dict[str, str]) -> None: ...
+
+
+class RedisSeenStore:
+    def __init__(self, redis: "Redis") -> None:
+        self.redis = redis
+
+    async def load(self) -> dict[str, str]:
+        raw = await self.redis.hgetall(SEEN_KEY)
+        return {_text(key): _text(value) for key, value in raw.items()}
+
+    async def save(self, fingerprints: dict[str, str]) -> None:
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.delete(SEEN_KEY)
+            if fingerprints:
+                mapping: dict[Any, Any] = dict(fingerprints)
+                pipe.hset(SEEN_KEY, mapping=mapping)
+                pipe.expire(SEEN_KEY, SEEN_TTL_SECONDS)
+            await pipe.execute()
+
+
+def _text(value: object) -> str:
+    return value.decode() if isinstance(value, bytes) else str(value)
+
+
 async def verify_backups(
-    lister: BackupLister, config: BackupVerifySettings, now: datetime
+    lister: BackupLister,
+    config: BackupVerifySettings,
+    now: datetime,
+    seen: SeenStore | None = None,
+    *,
+    remember: bool = False,
 ) -> BackupVerifyResult:
     try:
         objects = await lister.list_objects(config.bucket, config.prefix)
@@ -240,7 +360,23 @@ async def verify_backups(
         # The class name only: messages of storage clients may carry the endpoint or a request
         # URL, and an alert line must never carry either.
         return _result(VerifyStatus.LISTING_ERROR, config, now, error=type(error).__name__)
-    return evaluate(objects, config, now)
+    previous: dict[str, str] | None = None
+    if seen is not None:
+        try:
+            previous = await seen.load()
+        except Exception as error:
+            structlog.get_logger().warning(
+                "backup.verify.seen_unavailable", error=type(error).__name__
+            )
+    result = evaluate(objects, config, now, previous)
+    if seen is not None and remember and previous is not None:
+        try:
+            await seen.save({item.key: item.fingerprint() for item in objects})
+        except Exception as error:
+            structlog.get_logger().warning(
+                "backup.verify.seen_unavailable", error=type(error).__name__
+            )
+    return result
 
 
 Publisher = Callable[[str], Awaitable[None]]
@@ -254,8 +390,9 @@ async def run_backup_verify(
     *,
     dry_run: bool,
     require_configured: bool,
+    seen: SeenStore | None = None,
 ) -> BackupVerifyResult:
-    """One run: check, log one line, keep the result (not in a dry run)."""
+    """One run: check, log one line, keep the result and the listing (not in a dry run)."""
     logger = structlog.get_logger()
     if lister is None:
         result = _result(VerifyStatus.NOT_CONFIGURED, config, now)
@@ -263,7 +400,7 @@ async def run_backup_verify(
             logger.warning("backup.verify.skipped_not_configured", dry_run=dry_run)
             return result
     else:
-        result = await verify_backups(lister, config, now)
+        result = await verify_backups(lister, config, now, seen, remember=not dry_run)
     fields = {key: value for key, value in result.as_dict().items() if key != "checked_at"}
     if result.ok:
         logger.info("backup.verify.ok", dry_run=dry_run, **fields)

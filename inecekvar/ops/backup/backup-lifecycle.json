@@ -10,7 +10,7 @@
         "Days": 30
       },
       "NoncurrentVersionExpiration": {
-        "NoncurrentDays": 1
+        "NoncurrentDays": 30
       },
       "AbortIncompleteMultipartUpload": {
         "DaysAfterInitiation": 1

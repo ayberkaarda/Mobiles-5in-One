@@ -21,8 +21,10 @@ from app.models.session import create_engine, create_session_factory
 from app.workers import main
 from app.workers.backup_verify import (
     RESULT_KEY,
+    SEEN_KEY,
     BackupObject,
     BackupVerifySettings,
+    RedisSeenStore,
     VerifyStatus,
     evaluate,
     lister_from_settings,
@@ -127,6 +129,96 @@ def test_newest_dump_decides() -> None:
     assert result.dumps == 2
     older_good_newest_stale = dump(hours_ago=60) + dump(hours_ago=30)
     assert evaluate(older_good_newest_stale, CONFIG, NOW).status is VerifyStatus.STALE
+
+
+def test_future_key_stamp_alerts() -> None:
+    planted = BackupObject("inecekvar/inecekvar-29991231T235959Z.dump.age", 250_000, NOW)
+    sidecar = BackupObject(planted.key + ".sha256", 99, NOW)
+    result = evaluate([*dump(hours_ago=5), planted, sidecar], CONFIG, NOW)
+    assert result.status is VerifyStatus.FUTURE_STAMP
+    assert result.suspect_key == planted.key
+    # Within the clock tolerance a stamp a few minutes ahead is fine.
+    ahead = NOW + timedelta(minutes=5)
+    key = "inecekvar/inecekvar-" + ahead.strftime("%Y%m%dT%H%M%SZ") + ".dump.age"
+    near = [BackupObject(key, 250_000, NOW), BackupObject(key + ".sha256", 99, NOW)]
+    assert evaluate(near, CONFIG, NOW).status is VerifyStatus.OK
+
+
+def test_stamp_far_from_last_modified_alerts() -> None:
+    # An old key overwritten an hour ago: its stamp is days before its LastModified.
+    old = dump(hours_ago=24 * 5)
+    overwritten = [BackupObject(item.key, item.size, NOW - timedelta(hours=1)) for item in old]
+    result = evaluate([*dump(hours_ago=3), *overwritten], CONFIG, NOW)
+    assert result.status is VerifyStatus.STAMP_SKEW
+    assert result.suspect_key == old[0].key
+    # A slow upload within the allowed skew stays fine.
+    slow = [
+        BackupObject(item.key, item.size, item.last_modified + timedelta(hours=5))
+        for item in dump(hours_ago=8)
+    ]
+    assert evaluate(slow, CONFIG, NOW).status is VerifyStatus.OK
+    impossible = [BackupObject("inecekvar/inecekvar-20261399T000000Z.dump.age", 250_000, NOW)]
+    assert evaluate(impossible, CONFIG, NOW).status is VerifyStatus.STAMP_SKEW
+
+
+def test_changed_etag_or_size_of_a_seen_key_alerts() -> None:
+    objects = [
+        BackupObject(item.key, item.size, item.last_modified, etag='"abc"')
+        for item in dump(hours_ago=4)
+    ]
+    seen = {item.key: item.fingerprint() for item in objects}
+    assert evaluate(objects, CONFIG, NOW, seen).status is VerifyStatus.OK
+    same_size = [
+        BackupObject(objects[0].key, objects[0].size, objects[0].last_modified, '"def"'),
+        objects[1],
+    ]
+    result = evaluate(same_size, CONFIG, NOW, seen)
+    assert result.status is VerifyStatus.CHANGED
+    assert (result.suspect_key, result.changed) == (objects[0].key, 1)
+    resized = [objects[0], BackupObject(objects[1].key, 100, objects[1].last_modified, '"abc"')]
+    assert evaluate(resized, CONFIG, NOW, seen).status is VerifyStatus.CHANGED
+    # A key not seen before, or one that expired from the bucket, is not a change.
+    assert evaluate(objects + dump(hours_ago=1), CONFIG, NOW, seen).status is VerifyStatus.OK
+
+
+@pytest.mark.anyio
+async def test_seen_listing_is_kept_in_redis_and_alerts_once() -> None:
+    redis = fakeredis.FakeAsyncRedis()
+    try:
+        store = RedisSeenStore(redis)
+        objects = [
+            BackupObject(item.key, item.size, item.last_modified, etag='"abc"')
+            for item in dump(hours_ago=2)
+        ]
+        lister = FakeLister(objects)
+        first = await run_backup_verify(
+            lister, CONFIG, NOW, None, dry_run=False, require_configured=True, seen=store
+        )
+        assert first.ok
+        assert set(await store.load()) == {item.key for item in objects}
+        assert await redis.ttl(SEEN_KEY) > 0
+        lister.objects = [
+            BackupObject(objects[0].key, objects[0].size, objects[0].last_modified, '"zzz"'),
+            objects[1],
+        ]
+        with capture_logs() as logs:
+            dry = await run_backup_verify(
+                lister, CONFIG, NOW, None, dry_run=True, require_configured=True, seen=store
+            )
+            changed = await run_backup_verify(
+                lister, CONFIG, NOW, None, dry_run=False, require_configured=True, seen=store
+            )
+            again = await run_backup_verify(
+                lister, CONFIG, NOW, None, dry_run=False, require_configured=True, seen=store
+            )
+        # A dry run compares but does not remember.
+        assert dry.status is changed.status is VerifyStatus.CHANGED
+        assert again.ok
+        alert = [entry for entry in logs if entry["event"] == "backup.verify.alert"]
+        assert [entry["status"] for entry in alert] == ["changed"]
+        assert alert[0]["suspect_key"] == objects[0].key
+    finally:
+        await redis.aclose()
 
 
 @pytest.mark.anyio
@@ -293,7 +385,12 @@ async def test_job_lists_a_real_bucket(
     store.client.put_object(Bucket=bucket, Key=key + ".sha256", Body=b"0" * 64)
     assert (await main.backup_verify_job(ctx))["status"] == "empty"
 
+    # Overwriting a key seen on an earlier run is a tamper sign on real MinIO (ETag and size).
     store.client.put_object(Bucket=bucket, Key=key, Body=b"age-encryption.org/v1\n" * 400)
+    changed = await main.backup_verify_job(ctx)
+    assert changed["status"] == "changed"
+    assert changed["suspect_key"] == key
+    # The change alerts once; the new listing is remembered.
     result = await main.backup_verify_job(ctx)
     assert result["status"] == "ok"
     assert result["newest_key"] == key

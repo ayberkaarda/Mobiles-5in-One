@@ -14,7 +14,7 @@ age -r <public recipient>          the plain dump never touches the disk
    │
    ▼
 backups bucket  <prefix>inecekvar-<UTC stamp>.dump.age  +  .sha256 sidecar
-   │   versioning on; dumps expire 30 days after upload, a replaced or expired version 1 day later
+   │   versioning on; dumps expire 30 days after upload, a replaced or expired version 30 days later
    │   identities: writer (PutObject under the prefix only)
    │               reader (list + get, restore only, kept offline with the age identity)
    │               verifier (list only, the backup.verify worker job)
@@ -81,7 +81,9 @@ Other copies: photos and exports live in versioned buckets (`inecekvar-media`, `
 
 ## Deleted accounts and backups (item 21)
 
-**Expiry.** A dump holds every account that existed at dump time, including accounts deleted later. Dumps expire 30 days after upload (a replaced or expired version is removed 1 day later, so at most about 31 days plus the lifecycle scan delay). Photos deleted by the hard delete stay as noncurrent versions in the versioned media bucket for 30 days. So a deleted account leaves the backups and the photo versions within about a month of its hard delete; the privacy text should say "backups are kept for 30 days".
+**Expiry.** A dump holds every account that existed at dump time, including accounts deleted later. Dumps expire 30 days after upload; since the phase 6 review a replaced or expired version is kept 30 more days (so an overwrite by a stolen writer key is recoverable for the whole retention), so a dump is gone at most about 60 days after upload plus the lifecycle scan delay. Photos deleted by the hard delete stay as noncurrent versions in the versioned media bucket for 30 days. So a deleted account leaves the photo versions within about a month and the backups within about two months of its hard delete; the privacy text should say "encrypted backups are kept for up to 60 days" (owner decision: a shorter total needs `Expiration` below 30 days, which shortens the restore window).
+
+**Overwrite protection.** The writer identity holds `s3:PutObject` under the prefix, which S3 cannot split into "create only". Two layers answer an overwrite: the 30-day noncurrent retention above keeps the original version, and `backup.verify` alerts on a key stamp in the future (`future_stamp`), a stamp far from `LastModified` (`stamp_skew`, default more than 6 hours) and an ETag or size change of a key seen on an earlier run (`changed`, the last listing is kept in Redis; ADR-0053 decision 10). Object Lock in compliance or governance mode, where the store offers it (S3, MinIO; R2 has bucket locks), is the stronger option: it refuses the overwrite instead of detecting it, and is an owner item when the bucket is created.
 
 **A restore must replay deletions.** Three cases, by when the request happened relative to the dump:
 

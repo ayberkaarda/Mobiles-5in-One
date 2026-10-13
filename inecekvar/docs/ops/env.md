@@ -129,8 +129,10 @@ Worker (`backup.verify`, daily 07:30 Europe/Istanbul):
 | `INECEKVAR_BACKUP_VERIFY_PREFIX` | `inecekvar/` | Dump prefix; empty or ending with `/`. |
 | `INECEKVAR_BACKUP_VERIFY_MAX_AGE_HOURS` | `26` | Newest dump older than this alerts as `stale` (a daily dump plus slack; above 0, at most 336). |
 | `INECEKVAR_BACKUP_VERIFY_MIN_SIZE_BYTES` | `4096` | Newest dump smaller than this alerts as `too_small`; 0 bytes as `empty`. |
+| `INECEKVAR_BACKUP_VERIFY_MAX_STAMP_SKEW_HOURS` | `6` | A dump whose key stamp and `LastModified` differ by more than this alerts as `stamp_skew` (an overwrite of an old key); above 0, at most 48. |
+| `INECEKVAR_BACKUP_VERIFY_FUTURE_TOLERANCE_MINUTES` | `10` | A key stamp more than this far in the future alerts as `future_stamp`; 0 to 120. |
 
-`INECEKVAR_JOBS_DRY_RUN` also applies: a dry run logs `backup.verify.alert_suppressed` and does not write the Redis result `inecekvar:ops:backup-verify:last`.
+`INECEKVAR_JOBS_DRY_RUN` also applies: a dry run logs `backup.verify.alert_suppressed` and does not write the Redis result `inecekvar:ops:backup-verify:last`. The worker also keeps the last listing (ETag and size per key) in the Redis hash `inecekvar:ops:backup-verify:seen` (40 days) and alerts `changed` once when a seen key changes; a dry run compares but does not update it. The command-line run (`python -m app.workers.backup_verify`, used by the drill) has no Redis and skips the change check.
 
 Scripts (`ops/backup/*.sh --help` prints the same list):
 

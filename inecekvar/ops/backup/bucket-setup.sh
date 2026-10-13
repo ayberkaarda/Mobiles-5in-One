@@ -5,8 +5,9 @@
 # checklist items 20 and 21, docs/ops/backup-restore.md).
 #
 #   1. create the backup bucket (private), enable versioning and import backup-lifecycle.json
-#      (dumps expire 30 days after upload, a replaced or expired version 1 day later,
-#      incomplete uploads after 1 day)
+#      (dumps expire 30 days after upload, a replaced or expired version 30 days later so an
+#      overwrite is recoverable for the whole retention, incomplete uploads after 1 day;
+#      Object Lock, where the store offers it, is the stronger option, see the runbook)
 #   2. create the policies of minio/ (writer: PutObject under the prefix only; reader: list the
 #      prefix and get; verifier: list the prefix only, for the backup.verify worker job) and
 #      attach each to a new user

@@ -33,6 +33,7 @@ from app.workers.backup_verify import (
     RESULT_KEY,
     RESULT_TTL_SECONDS,
     BackupVerifySettings,
+    RedisSeenStore,
     lister_from_settings,
     run_backup_verify,
 )
@@ -213,6 +214,7 @@ async def backup_verify_job(ctx: Context, dry_run: bool | None = None) -> dict[s
         publish,
         dry_run=dry_run_of(services, dry_run),
         require_configured=services.settings.env == "production",
+        seen=RedisSeenStore(services.redis),
     )
     return result.as_dict()
 
