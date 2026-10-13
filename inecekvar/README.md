@@ -4,6 +4,10 @@ English | [Türkçe](README.tr.md)
 
 Tagline (tr): "Dolmuş nereden geçer? Mahalle bilir."
 
+<img src="docs/screenshots/web/home.png" alt="Inecek Var web home page: the name, the destination-sign tagline, the street scene with the dolmuş, the labelled sample city and the three steps on a route rail, local build, sample data" width="100%">
+
+Web home page from a local build with sample data. The [line page](docs/screenshots/web/line.png), a [guide](docs/screenshots/web/guide.png) and the [dark home page](docs/screenshots/web/home-dark.png) are in `docs/screenshots/web`.
+
 ## Product summary
 
 İnecek Var is a crowdsourced route map for dolmuş, minibus and servis lines in Turkish cities, where official data is often missing. Passengers can look up lines, stops, fares and hours, plan A to B trips with transfers, and download offline city packs. Neighbourhood contributors record rides as GPS traces and propose or edit lines, and moderators review and publish them. The name is the phrase passengers shout to stop a dolmuş. The tone is street-smart, playful and clear.
