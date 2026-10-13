@@ -174,7 +174,22 @@ The manual degrade command `uv run python -m app.ops.planner_degrade on|off|stat
 
 ## Read by the web SSR server (Phase 4)
 
-`apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
+`apps/web/src/server/config.ts` reads these keys (ADR-0038 item 1, ADR-0039 item 13). `INECEKVAR_ENV` unset means production; an invalid origin, URL, fingerprint or team id stops start-up.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `IV_WEB_CANONICAL_ORIGIN` | `https://inecekvar.app` | Origin written into canonical links, sitemaps and JSON-LD; in production any other allowed host is redirected to it with 301. |
+| `IV_WEB_ALLOWED_HOSTS` | `inecekvar.app,www.inecekvar.app` | `Host` values the server answers; anything else is 400. The PWA host's Caddy site sends the canonical host for the app-link files (`INECEKVAR_WEB_HOST`). |
+| `IV_WEB_API_PUBLIC_ORIGIN` | `https://api.inecekvar.app` | Public API origin, listed in the CSP `connect-src` and used for the export URL shown on `/veri`. |
+| `IV_WEB_API_INTERNAL_URL` | `http://127.0.0.1:57800/v1` | API base the SSR server reads public data from (server side only, never sent to browsers). |
+| `IV_WEB_TILES_ORIGIN` | `https://tiles.inecekvar.app` | Tiles origin for the CSP `img-src` and `connect-src`; keep it equal to `INECEKVAR_PWA_TILES_ORIGIN` and the app's `tilesBase` (`docs/release/pmtiles-recipe.md`). |
+| `IV_WEB_APP_ORIGIN` | `https://app.inecekvar.app` | Origin of the web app (PWA) that public pages link to. |
+| `IV_WEB_ANDROID_CERT_SHA256` | unset (owner-provided) | Comma-separated SHA-256 signing fingerprints (`AA:BB:...`, 32 bytes each) for `/.well-known/assetlinks.json`; unset answers 404. Served on both hosts (the PWA host through Caddy, ADR-0057). |
+| `IV_WEB_IOS_TEAM_ID` | unset (owner-provided) | Apple team id (`^[A-Z0-9]{10}$`) for `/.well-known/apple-app-site-association`; unset answers 404. |
+| `IV_WEB_IOS_APP_ID` | unset | App Store id (6 to 12 digits) for the Smart App Banner; other values are ignored. |
+| `IV_WEB_CACHE_TTL_SECONDS`, `IV_WEB_CACHE_MAX_ENTRIES`, `IV_WEB_CACHE_QUERY_ALLOWLIST` | `600`, `500`, `sayfa` | Page cache lifetime, size and the query parameters that may vary a cached page. |
+
+Two keys were added after the phase 4 review:
 
 | Key | Default | Purpose |
 | --- | --- | --- |
@@ -188,3 +203,21 @@ The bucket is keyed on the TCP peer address (`trust proxy` stays off and forward
 The staff session cookie is `__Host-iv_session` with `Path=/` (the `__Host-` prefix forbids a narrower path), plus a CSRF cookie. While the admin UI lives under `inecekvar.app/admin`, every public page request of a signed-in moderator carries these cookies to the public SSR Node process (which never reads them, never forwards them to rendering and bypasses the page cache for them). A compromise of the SSR tier would therefore expose staff sessions.
 
 Production should serve the admin UI on a separate origin (for example `yonetim.inecekvar.app`, its own Caddy site that proxies `/api/*` to the API and everything else to a static build of the admin shell) or behind a path whose cookie never reaches the public SSR node. Current state, recorded honestly: the repository has only the local `ops/Caddyfile` (`:8080` web, `:8081` PWA, both proxying `/api/*`); no production Caddy configuration exists, no admin origin is configured, and the API cookie settings have not been checked for such an origin. This is a deployment decision for the hosting work (ADR-0002); no code changed for it in phase 4 (ADR-0041 item 15).
+
+## Reverse proxy (`ops/Caddyfile`)
+
+Caddy reads these from its process environment (compose passes them through). Production uses the same snippets with public TLS (release checklist G2).
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_API_UPSTREAM` | `host.docker.internal:57800` | API address that `/api/*` on both browser origins and the API site are proxied to. |
+| `INECEKVAR_WEB_UPSTREAM` | `host.docker.internal:4200` | Web SSR server address; also the source of the two app-link files on the PWA site. |
+| `INECEKVAR_WEB_HOST` | `inecekvar.app` | `Host` header Caddy sends when it fetches `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` for the PWA site; must be the web server's canonical host. |
+| `INECEKVAR_PWA_API_ORIGIN` | `https://api.inecekvar.app` | API origin in the PWA CSP `connect-src`. |
+| `INECEKVAR_PWA_TILES_ORIGIN` | `https://tiles.inecekvar.app` | Tiles origin in the PWA CSP `img-src` and `connect-src`. |
+| `INECEKVAR_PWA_UPLOAD_ORIGIN` | `https://*.r2.cloudflarestorage.com` (compose: `http://127.0.0.1:57900`) | Presigned photo upload origin in the PWA CSP; the deployment narrows it to the media bucket's account endpoint. |
+| `INECEKVAR_WEB_TLS_PORT`, `INECEKVAR_APP_TLS_PORT`, `INECEKVAR_API_TLS_PORT` | `58443`, `58444`, `58445` | Local host ports of the https sites (redirect targets of the plain http sites). |
+
+## First-run bootstrap (`python -m app.ops.bootstrap`)
+
+The command (ADR-0057, release checklist section 7) reads the API settings, so it runs with the API's environment: with `INECEKVAR_ENV=production` every key that the API requires must be set, as for the API process. It uses `INECEKVAR_DATABASE_URL` and, for `admin`, `INECEKVAR_LOG_HASH_KEY` (the audit row stores an HMAC-SHA256 digest of the address in `diff_hash`, never the address). With `INECEKVAR_ENV=local` and no log hash key set, the digest key is missing and `admin` stops with a configuration error; set the key. A new account's password is read from stdin (`--password-stdin`), never from an argument or a key. On invalid settings only the field names are printed.

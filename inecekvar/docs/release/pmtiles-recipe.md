@@ -85,10 +85,10 @@ is written and reviewed.
 | Long cache with a new file name per rebuild, or a short edge TTL with `ETag`                                                                                                                                                                                                                 | a changed archive under the same name can break range reads of an open map                                                                                                           |
 | Hotlink and egress control                                                                                                                                                                                                                                                                   | threat model "PMTiles hotlinking"; R2 egress is free, Class B reads are not: a Cloudflare cache rule in front of the bucket that respects range requests (`docs/ops/cost-alerts.md`) |
 
-Discrepancy to fix in the ops note, not in code: `docs/ops/cost-alerts.md` writes the cache rule
-for `cities/*.pmtiles`, while the app and the API read `<slug>.pmtiles` at the root of the tiles
-host. Either the rule matches `*.pmtiles` at the root, or both `environment.tilesBase` and
-`INECEKVAR_PMTILES_BASE_URL` gain the `/cities` path together.
+The cache rule in `docs/ops/cost-alerts.md` matches `*.pmtiles` at the root of the tiles host, as
+the app and the API read `<slug>.pmtiles` there (corrected in ADR-0057; it named `cities/*.pmtiles`
+before). Moving the files under a path means changing `environment.tilesBase`,
+`INECEKVAR_PMTILES_BASE_URL` and the rule together.
 
 Example R2 CORS policy (bucket settings, JSON):
 

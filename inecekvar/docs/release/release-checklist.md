@@ -15,12 +15,12 @@ Recorded honestly so nobody assumes they exist:
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | G1  | No Dockerfile for the API, the worker or the SSR web server exists in the repository (`docker-compose.yml` runs only the backing services and Caddy; the API and web run on the host). Specification section 12 asks for Docker images.                                                     | lead         |
 | G2  | No production Caddy configuration: `ops/Caddyfile` is the local one (`local_certs`, 127.0.0.1, host ports). Production needs the same snippets with public TLS for `inecekvar.app`, `app.inecekvar.app`, `api.inecekvar.app` (ADR-0055) and the admin-origin decision of `docs/ops/env.md`. | lead         |
-| G3  | No tool creates a real city: the only city writer is the sample seed, which refuses production. A first city needs an operator SQL insert or a new admin route.                                                                                                                             | api          |
-| G4  | No tool promotes the first admin: `PATCH admin/users/{id}/role` needs an existing admin. The first one needs an operator SQL update (`users.role = 'admin'`), then TOTP enrolment in the admin UI.                                                                                          | api          |
+| G3  | Closed by ADR-0057: `python -m app.ops.bootstrap city` creates an empty, non-sample city (section 7). Not exercised against a production database. | api |
+| G4  | Closed by ADR-0057: `python -m app.ops.bootstrap admin` creates or promotes the first admin, then TOTP enrolment in the admin UI (section 7). Not exercised against a production database. | api |
 | G5  | `environment.ts` has no per-build replacement, so the RevenueCat **public** SDK key of a store build has to be written into the file in the release workspace (it is public; the file must still not be committed with a value unless the owner decides so).                                | mobile       |
-| G6  | The PWA host serves no `/.well-known/assetlinks.json`, so app links on `app.inecekvar.app` (magic links) stay unverified (`signing.md` section 2.1).                                                                                                                                        | lead, mobile |
+| G6  | The PWA site of `ops/Caddyfile` now forwards both association files to the web SSR server (ADR-0057, checked locally through compose); the fingerprint and team id stay owner-provided, and the iOS component list does not yet name `/giris/baglanti`. | lead, mobile |
 | G7  | No iOS platform (`signing.md` section 3).                                                                                                                                                                                                                                                   | mobile       |
-| G8  | Store listing blockers: title over 30 characters (owner decision), sample-data screenshots with a 2.22 ratio, no support contact, no web deletion path (`store-listing.tr.md`, `privacy-labels.md` M5).                                                                                     | owner        |
+| G8  | Store listing blockers: title over 30 characters (owner decision), sample-data screenshots with a 2.22 ratio, no support contact (`store-listing.tr.md`); the web deletion path exists since ADR-0057 (`privacy-labels.md` M5).                                                                                     | owner        |
 
 ## 2. Versions
 
@@ -140,7 +140,18 @@ Order for every release that carries a migration (`api/alembic/versions/`, now `
   production database.
 - No real line data is ever imported from outside; lines come from contributors and moderators
   (specification section 0.4).
-- First admin and first city: G3 and G4. Record both operator actions in an audit note.
+- First admin and first city, in `api/` with the API's production environment (`docs/ops/env.md`
+  "First-run bootstrap"); each writes an audit row without personal data and prints one JSON line:
+
+  ```sh
+  uv run python -m app.ops.bootstrap city --slug istanbul --name "İstanbul" --bbox 28.5,40.8,29.5,41.3 --timezone Europe/Istanbul
+  read -rs PW && printf '%s\n' "$PW" | uv run python -m app.ops.bootstrap admin --email <address> --password-stdin; unset PW
+  ```
+
+  `admin` without `--password-stdin` promotes an account registered in the app; it refuses while
+  another active admin exists (`--force-additional` overrides). The new admin then signs in on
+  `/admin` and enrols TOTP, since every step-up action answers `auth.totp_enrolment_required` until then.
+  `city` is idempotent for the same values and refuses a changed one. Record both runs in an audit note.
 
 ## 8. Deploy
 
