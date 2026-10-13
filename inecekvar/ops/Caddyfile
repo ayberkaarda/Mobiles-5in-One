@@ -11,6 +11,7 @@
 #   (the API site listens on 8445, host port INECEKVAR_API_TLS_PORT=58445, https only)
 #   INECEKVAR_API_UPSTREAM=host.docker.internal:57800
 #   INECEKVAR_WEB_UPSTREAM=host.docker.internal:4200  (SSR server: `node dist/apps/web/server/server.mjs`)
+#   INECEKVAR_WEB_HOST=inecekvar.app  Host header for the app-link files fetched from the SSR server
 #   INECEKVAR_PWA_API_ORIGIN=https://api.inecekvar.app  INECEKVAR_PWA_TILES_ORIGIN=https://tiles.inecekvar.app
 #   INECEKVAR_PWA_UPLOAD_ORIGIN=https://*.r2.cloudflarestorage.com (presigned photo uploads; the
 #   deployment narrows it to the account endpoint of the media bucket, locally the MinIO origin)
@@ -70,6 +71,20 @@
 	}
 }
 
+# App links (ADR-0057, signing.md): magic links open https://app.inecekvar.app/giris/baglanti, so
+# Android and iOS check the association files on the PWA host. The web SSR server already builds
+# both from its environment (IV_WEB_ANDROID_CERT_SHA256, IV_WEB_IOS_TEAM_ID; unset answers 404),
+# so the PWA site forwards exactly these two paths to it with the canonical Host it accepts. The
+# response keeps the SSR server's `application/json` type and is never redirected.
+(app_association) {
+	@association path /.well-known/assetlinks.json /.well-known/apple-app-site-association
+	handle @association {
+		reverse_proxy {$INECEKVAR_WEB_UPSTREAM:host.docker.internal:4200} {
+			header_up Host {$INECEKVAR_WEB_HOST:inecekvar.app}
+		}
+	}
+}
+
 (pwa_static) {
 	root * /srv/app
 	# Hashed bundles never change; everything else (app shell, service worker and its manifest,
@@ -101,6 +116,7 @@ https://localhost:8443, https://127.0.0.1:8443, https://host.docker.internal:844
 https://localhost:8444, https://127.0.0.1:8444, https://host.docker.internal:8444 {
 	import common_headers
 	import api_proxy
+	import app_association
 	handle {
 		import pwa_headers
 		import pwa_static
