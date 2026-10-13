@@ -1,39 +1,121 @@
-# Local reverse proxy for docker-compose.yml. Production uses automatic TLS for inecekvar.app,
-# app.inecekvar.app and api.inecekvar.app (hosting is decided in ADR-0002); locally the sites are
-# plain HTTP on 127.0.0.1 only. Both browser origins proxy /api/* to the API so the session
-# cookie stays same-origin (spec section 4, auth strategy for web and PWA).
+# Local reverse proxy for docker-compose.yml (ADR-0055). Production serves inecekvar.app,
+# app.inecekvar.app and api.inecekvar.app with automatic public TLS (hosting is decided in
+# ADR-0002) and imports the same snippets; locally the certificates come from Caddy's own CA
+# (`local_certs`, never a public CA) and every site listens on 127.0.0.1 only (compose ports).
+# Plain http answers nothing but a 308 redirect to https. Both browser origins proxy /api/* to
+# the API so the session cookie stays same-origin (spec section 4, auth strategy for web and PWA).
+#
+# Environment (defaults shown; compose passes them through):
+#   INECEKVAR_WEB_TLS_PORT=58443   host port of the web https site (redirect target)
+#   INECEKVAR_APP_TLS_PORT=58444   host port of the PWA https site (redirect target)
+#   INECEKVAR_API_UPSTREAM=host.docker.internal:57800
+#   INECEKVAR_WEB_UPSTREAM=host.docker.internal:4200  (SSR server: `node dist/apps/web/server/server.mjs`)
+#   INECEKVAR_PWA_API_ORIGIN=https://api.inecekvar.app  INECEKVAR_PWA_TILES_ORIGIN=https://tiles.inecekvar.app
+#   INECEKVAR_PWA_UPLOAD_ORIGIN=https://*.r2.cloudflarestorage.com (presigned photo uploads; the
+#   deployment narrows it to the account endpoint of the media bucket, locally the MinIO origin)
+# The PWA site serves the production build (`pnpm nx build mobile`, mounted read-only from
+# dist/apps/mobile/browser) as production does; `pnpm nx serve mobile` stays on port 8100 for
+# development without the proxy.
 {
 	admin off
-	auto_https off
+	local_certs
+	skip_install_trust
+	# The published host ports differ from the container ports, so the redirects are written
+	# below with the host port instead of the automatic ones.
+	auto_https disable_redirects
+	# Requests by IP address carry no SNI; answer them with the localhost certificate.
+	default_sni localhost
+	# No trusted_proxies: Caddy overwrites any X-Forwarded-* header a client sends.
 }
 
 (api_proxy) {
 	handle_path /api/* {
-		reverse_proxy host.docker.internal:57800 {
-			# The API trusts only this header, and only from a trusted proxy address
-			# (INECEKVAR_TRUSTED_PROXY_CIDRS); X-Forwarded-For is never read for client IPs.
+		reverse_proxy {$INECEKVAR_API_UPSTREAM:host.docker.internal:57800} {
+			# The API trusts X-Real-IP and X-Forwarded-Proto only from a trusted proxy address
+			# (INECEKVAR_TRUSTED_PROXY_CIDRS); X-Forwarded-For is never read for client IPs. Caddy sets
+			# X-Forwarded-Proto by default from the connection it accepted (no trusted_proxies, so a
+			# client value is replaced); the API refuses requests it does not mark https (ADR-0055).
 			header_up X-Real-IP {remote_host}
 		}
 	}
 }
 
-# inecekvar.app locally: Angular SSR web dev server.
-:8080 {
-	import api_proxy
-	handle {
-		reverse_proxy host.docker.internal:4200
+(common_headers) {
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		-Server
 	}
 }
 
-# app.inecekvar.app locally: Ionic PWA dev server.
-:8081 {
+# Response headers of the PWA (spec section 6.9 and 6.16, ADR-0055). The script hash is the
+# SHA-256 of the one inline script of the production build (the stylesheet loader that the
+# critical-CSS step writes); `node apps/mobile/scripts/csp-hash-check.mjs` (target
+# `mobile:csp-check`) rebuilds the expectation from dist/ and fails when this list and the build
+# differ. Styles: Angular and Ionic insert <style> elements and the build inlines critical CSS, so
+# style-src keeps 'unsafe-inline' (styles only, never scripts). worker-src covers the Angular
+# service worker and the MapLibre worker module; blob: is what MapLibre falls back to. One line
+# per header: apps/mobile-e2e/serve.mjs reads this block and serves the same headers.
+(pwa_headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-LMY6wYoFV9I4wWzxaq1N/dTpl4iurQktw706UCHK3vM='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: {$INECEKVAR_PWA_TILES_ORIGIN:https://tiles.inecekvar.app}; font-src 'self'; connect-src 'self' {$INECEKVAR_PWA_API_ORIGIN:https://api.inecekvar.app} {$INECEKVAR_PWA_TILES_ORIGIN:https://tiles.inecekvar.app} {$INECEKVAR_PWA_UPLOAD_ORIGIN:https://*.r2.cloudflarestorage.com}; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+	}
+}
+
+(pwa_static) {
+	root * /srv/app
+	# Hashed bundles never change; everything else (app shell, service worker and its manifest,
+	# web manifest, MapLibre worker modules) is revalidated so an update reaches the client.
+	@hashed path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+	@unhashed not path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	header @unhashed Cache-Control "no-cache"
+	# App routes (no file extension, no file) get the shell; a missing asset stays 404.
+	@route {
+		not path_regexp \.[A-Za-z0-9]+$
+		not file
+	}
+	rewrite @route /index.html
+	encode gzip
+	file_server
+}
+
+# inecekvar.app locally: the Angular SSR server sends its own headers (helmet, ADR-0038).
+https://localhost:8443, https://127.0.0.1:8443, https://host.docker.internal:8443 {
+	import common_headers
 	import api_proxy
 	handle {
-		reverse_proxy host.docker.internal:8100
+		reverse_proxy {$INECEKVAR_WEB_UPSTREAM:host.docker.internal:4200}
 	}
+}
+
+# app.inecekvar.app locally: the PWA production build.
+https://localhost:8444, https://127.0.0.1:8444, https://host.docker.internal:8444 {
+	import common_headers
+	import api_proxy
+	handle {
+		import pwa_headers
+		import pwa_static
+	}
+}
+
+# Plain http: redirect only (308 keeps the method), nothing is proxied or served.
+http://:8080 {
+	redir https://{host}:{$INECEKVAR_WEB_TLS_PORT:58443}{uri} 308
+}
+
+http://:8081 {
+	redir https://{host}:{$INECEKVAR_APP_TLS_PORT:58444}{uri} 308
 }
 
 # Container health check only; not published to the host.
-:8090 {
+http://:8090 {
 	respond /healthz 200
 }

@@ -1,17 +1,26 @@
 // Serves the production build of the PWA like Caddy does locally: static files with an SPA
 // fallback, and /api/* proxied to the API with the prefix stripped (ops/Caddyfile api_proxy).
 // Binds to 127.0.0.1 only. Environment: IV_E2E_PORT, IV_E2E_API, IV_E2E_ROOT, IV_E2E_GZIP (1 =
-// gzip text responses as Caddy's `encode` does, used for Lighthouse runs).
+// gzip text responses as Caddy's `encode` does, used for Lighthouse runs), IV_E2E_UPLOAD_ORIGIN.
+// Static responses carry the PWA headers of the `(pwa_headers)` snippet in ops/Caddyfile, the
+// Content-Security-Policy included (ADR-0055), so every scenario runs under the production policy.
+// The presigned photo upload goes to the MinIO of the stack under test: IV_E2E_UPLOAD_ORIGIN
+// (default the compose MinIO, http://127.0.0.1:57900) stands in for the R2 origin.
 import { createReadStream, statSync } from 'node:fs';
 import { createServer, request } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { createGzip } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { readPwaHeaders } from '../mobile/scripts/pwa-headers.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const root = resolve(process.env.IV_E2E_ROOT ?? join(here, '../../dist/apps/mobile/browser'));
 const port = Number(process.env.IV_E2E_PORT ?? 57990);
 const api = new URL(process.env.IV_E2E_API ?? 'http://127.0.0.1:57980');
+const pwaHeaders = readPwaHeaders(join(here, '../../ops/Caddyfile'), {
+  ...process.env,
+  INECEKVAR_PWA_UPLOAD_ORIGIN: process.env.IV_E2E_UPLOAD_ORIGIN ?? 'http://127.0.0.1:57900',
+});
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -82,6 +91,7 @@ function serveStatic(req, res) {
     /^(text\/|application\/(json|manifest\+json)|image\/svg)/.test(type) &&
     /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
   res.writeHead(200, {
+    ...pwaHeaders,
     'content-type': type,
     'cache-control': 'no-cache',
     vary: 'accept-encoding',

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Spec section 6.10, ADR-0055: no cleartext traffic in any build type and only the system trust
+    store (no user-added certificate authorities). The app talks to https://api.inecekvar.app and
+    the tiles CDN only; the web content itself is served by Capacitor from https://localhost
+    inside the process. scripts/android-transport-check.mjs fails the lint target if this file or
+    the manifest permits cleartext.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
