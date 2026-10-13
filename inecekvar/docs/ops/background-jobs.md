@@ -14,6 +14,7 @@ Run the worker with `uv run arq app.workers.main.WorkerSettings`. It connects to
 | Expired entitlement sweep | Daily 04:40 Europe/Istanbul | Mark entitling rows whose `expires_at` has passed as `expired` (bookkeeping; `has_plus` already denies by date). |
 | Retention purge | Daily 04:50 Europe/Istanbul | Delete processed `webhook_events` after 30 days and bounce suppressions after 365 days; complaints and manual entries are kept until an admin removes them (`DELETE /v1/admin/suppressions`). |
 | Pack download roll-up | Daily 05:00 Europe/Istanbul | Count `pack_downloads` rows older than 90 days per city and day into `pack_download_stats` and delete them, except the earliest row of each account. |
+| Backup verify (`backup.verify`) | Daily 07:30 Europe/Istanbul | List the backup prefix with the list-only identity and check the newest dump: missing, older than 26 hours, empty, under 4 KiB or without its `.sha256` sidecar logs one `backup.verify.alert` line at error level; the result is kept in Redis (`inecekvar:ops:backup-verify:last`, 8 days). Honours the dry run. ADR-0053, `docs/ops/backup-restore.md`. |
 
 The phase 5 jobs are idempotent and honour `INECEKVAR_JOBS_DRY_RUN` or a `dry_run` job argument, which wins; a dry run logs the counts it would change.
 

@@ -112,6 +112,44 @@ Webhooks, billing and nightly jobs (ADR-0050). Every secret below is unset by de
 
 Worker schedule (Europe/Istanbul): pending webhook sweep every five minutes; RevenueCat reconciliation 04:10; expired entitlement sweep 04:40; retention purge 04:50; pack download roll-up 05:00 (`app/workers/main.py`, ADR-0050). The suppression list stores HMAC-SHA256 digests under `INECEKVAR_LOG_HASH_KEY`; rotating that key empties the effective list.
 
+## Backups and restore (Phase 6)
+
+Runbook: [backup-restore.md](backup-restore.md); ADR-0053. Two readers: the worker job `backup.verify` (a separate settings class in `app/workers/backup_verify.py`, prefix `INECEKVAR_BACKUP_VERIFY_`; the API settings ignore these keys) and the shell scripts of `ops/backup/` (process environment of the backup host or the operator, `/etc/inecekvar/backup.env` mode 0600). No key below has an example value that works outside the local stack; the secrets have none at all.
+
+Worker (`backup.verify`, daily 07:30 Europe/Istanbul):
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_BACKUP_VERIFY_ENDPOINT_URL` | unset; with `INECEKVAR_ENV=local` the API's `INECEKVAR_S3_ENDPOINT_URL` | S3 endpoint of the backup bucket. Unset in production: the job logs `backup.verify.alert` with status `not_configured`; in test it logs a skip. |
+| `INECEKVAR_BACKUP_VERIFY_REGION` | `auto` | Signing region. |
+| `INECEKVAR_BACKUP_VERIFY_ACCESS_KEY_ID`, `INECEKVAR_BACKUP_VERIFY_SECRET_ACCESS_KEY` | unset; locally the API's S3 keys | List-only identity of the backup prefix (`minio/backup-verifier-policy.json`); it can read no dump. On the rotation list. |
+| `INECEKVAR_BACKUP_VERIFY_BUCKET` | `inecekvar-backups` | Backup bucket. |
+| `INECEKVAR_BACKUP_VERIFY_PREFIX` | `inecekvar/` | Dump prefix; empty or ending with `/`. |
+| `INECEKVAR_BACKUP_VERIFY_MAX_AGE_HOURS` | `26` | Newest dump older than this alerts as `stale` (a daily dump plus slack; above 0, at most 336). |
+| `INECEKVAR_BACKUP_VERIFY_MIN_SIZE_BYTES` | `4096` | Newest dump smaller than this alerts as `too_small`; 0 bytes as `empty`. |
+
+`INECEKVAR_JOBS_DRY_RUN` also applies: a dry run logs `backup.verify.alert_suppressed` and does not write the Redis result `inecekvar:ops:backup-verify:last`.
+
+Scripts (`ops/backup/*.sh --help` prints the same list):
+
+| Key | Read by | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_BACKUP_AGE_RECIPIENT` | `backup.sh` | age public recipient (`age1...`); a private identity is refused. |
+| `INECEKVAR_BACKUP_S3_ENDPOINT` | all bucket scripts | S3 endpoint; https, plain http only for loopback or a single-label name on `INECEKVAR_BACKUP_DOCKER_NETWORK`. |
+| `INECEKVAR_BACKUP_S3_BUCKET`, `INECEKVAR_BACKUP_S3_PREFIX` | all bucket scripts | default `inecekvar-backups` and `inecekvar/`. |
+| `INECEKVAR_BACKUP_S3_WRITE_ACCESS_KEY`, `INECEKVAR_BACKUP_S3_WRITE_SECRET_KEY` | `backup.sh`, `bucket-setup.sh` | Write-only identity (PutObject under the prefix). Secret; backup host only. |
+| `INECEKVAR_RESTORE_S3_READ_ACCESS_KEY`, `INECEKVAR_RESTORE_S3_READ_SECRET_KEY` | `restore.sh`, `restore-drill.sh`, `bucket-setup.sh` | Read-only identity (list and get). Secret; kept offline with the age identity. |
+| `INECEKVAR_BACKUP_S3_ADMIN_ACCESS_KEY`, `INECEKVAR_BACKUP_S3_ADMIN_SECRET_KEY` | `bucket-setup.sh` | MinIO admin identity (local stack and drill only). |
+| `INECEKVAR_MEDIA_BUCKET`, `INECEKVAR_EXPORTS_BUCKET` | `bucket-setup.sh` | The API settings of the same name; versioning and lifecycle are applied to them. |
+| `INECEKVAR_BACKUP_PG_CONTAINER`, `INECEKVAR_BACKUP_PG_DATABASE`, `INECEKVAR_BACKUP_PG_USER` | `backup.sh` | Source database (container or libpq environment); defaults `inecekvar`. |
+| `INECEKVAR_RESTORE_AGE_IDENTITY_FILE` or `INECEKVAR_RESTORE_AGE_IDENTITY` | `restore.sh`, `restore-drill.sh` | The age identity (private key): a file path, or the text, which is written to a 0600 temp file and removed. Never stored in the repository. |
+| `INECEKVAR_RESTORE_PG_DATABASE`, `INECEKVAR_RESTORE_PG_CONTAINER`, `INECEKVAR_RESTORE_PG_USER` | `restore.sh`, `replay-deletions.sh` | Restore target; must be empty for `restore.sh`. |
+| `INECEKVAR_RESTORE_OBJECT` | `restore.sh` | A dump key to restore instead of the newest. |
+| `INECEKVAR_REPLAY_DELETIONS_FILE`, `INECEKVAR_REPLAY_APPLY`, `INECEKVAR_REPLAY_STATE_FILE` | `replay-deletions.sh` | Replay list, `1` to re-apply missing requests, and an optional state output. |
+| `INECEKVAR_BACKUP_MC_IMAGE`, `INECEKVAR_BACKUP_DOCKER_NETWORK`, `INECEKVAR_BACKUP_AGE_BIN` | all | Bucket client image (default the `minio-init` image), its docker network, the age binary. |
+| `INECEKVAR_DRILL_EXPECTED`, `INECEKVAR_DRILL_DELETIONS`, `INECEKVAR_DRILL_REPLAY`, `INECEKVAR_DRILL_REQUIRED_TABLES`, `INECEKVAR_DRILL_EXPECTED_HEAD`, `INECEKVAR_DRILL_PG_IMAGE` | `restore-drill.sh` | Source fingerprint, replay list, replay switch (default `1`), tables that must hold rows, expected Alembic head, scratch PostGIS image. |
+| `INECEKVAR_DRILL_PG_PORT`, `INECEKVAR_DRILL_MINIO_PORT`, `INECEKVAR_DRILL_MINIO_IMAGE`, `INECEKVAR_DRILL_AGE_KEYGEN_BIN`, `INECEKVAR_DRILL_UV_BIN`, `INECEKVAR_DRILL_MUTATION` | `drill-e2e.sh` | Host ports on 127.0.0.1 (default 57791 and 57792; 57277 to 57776 refused), images and tools, and the negative-run switch. Passwords of the scratch stack are random per run. |
+
 ## Read by the web SSR server (Phase 4)
 
 `apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
