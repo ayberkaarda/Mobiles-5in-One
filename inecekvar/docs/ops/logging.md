@@ -96,4 +96,4 @@ this one. `not exercised: no host`, so no collector has been configured yet.
   `uv run python -c "from app.core.logging import hash_for_log; from app.core.settings import load_settings; print(hash_for_log(load_settings(), 'address'))"`,
   and filter on `email_hash`. Never paste an address into a log query tool that keeps history.
 - Alerts: `level` `error` with `event` starting with `cost.guard.` or `backup.verify.`.
-- Locally: `uv run uvicorn app.main:app` prints the lines to the console; pipe them through `jq`.
+- Locally: `uv run uvicorn app.main:app --no-proxy-headers --forwarded-allow-ips 127.0.0.1` prints the lines to the console; pipe them through `jq`.

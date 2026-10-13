@@ -74,7 +74,7 @@ and from `inecekvar/api/`:
 uv sync --locked
 uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
 uv run pytest
-uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
+uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1
 ```
 
 Compose runs only the data and proxy services; the API and the dev servers run on the host. Ports and environment keys are listed in `docs/ops/env.md`.

@@ -74,7 +74,7 @@ ve `inecekvar/api/` içinden:
 uv sync --locked
 uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
 uv run pytest
-uv run uvicorn app.main:app --host 127.0.0.1 --port 57800
+uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1
 ```
 
 Compose yalnızca veri ve proxy servislerini çalıştırır; API ve geliştirme sunucuları makinede çalışır. Portlar ve ortam değişkenleri `docs/ops/env.md` dosyasında.

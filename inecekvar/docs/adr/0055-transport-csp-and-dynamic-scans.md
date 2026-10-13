@@ -32,7 +32,18 @@ no hosted target and no macOS host.
    the client IP header is (ADR-0009). `INECEKVAR_REQUIRE_HTTPS` unset means enforced in
    `production` and off in `local` and `test` (dev servers and the test client speak http);
    `production` refuses `false`. `GET /v1/health` stays reachable for platform probes (no data).
-   uvicorn runs with `--no-proxy-headers` so only these settings decide what is trusted.
+   uvicorn must run with `--no-proxy-headers` so only these settings decide what is trusted. The
+   application cannot enforce a server flag; since the phase 6 review every documented start
+   command carries `--no-proxy-headers --forwarded-allow-ips 127.0.0.1` (README, CONTRIBUTING,
+   `docs/ops/env.md`, the compose header, the release checklist deploy row, the web e2e real
+   stack; no Dockerfile or entry point exists yet, release checklist G1). Before that the
+   commands omitted it, and uvicorn's default (`--proxy-headers` for peers in
+   `--forwarded-allow-ips`, default 127.0.0.1) rewrote the client address and the scheme from
+   `X-Forwarded-For` and `X-Forwarded-Proto` before this middleware ran; executed on the
+   workstation with `INECEKVAR_REQUIRE_HTTPS=true` and a trusted-proxy list without 127.0.0.1, a
+   spoofed `X-Forwarded-Proto: https` sent straight to uvicorn answered 404 (passed the https
+   check) with the default flags and 403 with `--no-proxy-headers`. The release checklist
+   section 9 repeats that smoke check after deploy.
 2. **HSTS stays on every API answer.** Browsers ignore it over http (RFC 6797), so sending it
    always is harmless and keeps the header test simple; on https answers it is asserted.
 3. **Caddy serves https only and redirects http with 308.** `ops/Caddyfile`: `local_certs`

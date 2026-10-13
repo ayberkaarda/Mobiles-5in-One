@@ -164,7 +164,7 @@ export default defineConfig({
             },
           },
           {
-            command: `uv run uvicorn app.main:app --host 127.0.0.1 --port ${REAL_STACK.apiPort}`,
+            command: `uv run uvicorn app.main:app --host 127.0.0.1 --port ${REAL_STACK.apiPort} --no-proxy-headers --forwarded-allow-ips 127.0.0.1`,
             cwd: apiDir,
             url: `http://127.0.0.1:${REAL_STACK.apiPort}/v1/health`,
             reuseExistingServer: false,

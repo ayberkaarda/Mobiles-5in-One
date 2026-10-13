@@ -34,7 +34,7 @@ Read from the process environment by other Phase 0 code (not from `.env`):
 | `INECEKVAR_TEST_S3_SECRET_KEY` | `api/tests/conftest.py` | Secret key for the configured S3 service (default `inecekvar-test-only`). |
 | `INECEKVAR_REQUIRE_DOCKER` | `api/tests/conftest.py` | `1` turns a skipped container-backed test into a failure (set in CI). |
 
-The API bind address and port are uvicorn flags, not environment keys: `uv run uvicorn app.main:app --host 127.0.0.1 --port 57800` (Caddy proxies `/api/*` to port 57800).
+The API bind address and port are uvicorn flags, not environment keys: `uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1` (Caddy proxies `/api/*` to port 57800). Always pass `--no-proxy-headers`: uvicorn's default (`--proxy-headers` with `--forwarded-allow-ips 127.0.0.1`) rewrites the client address and the scheme from `X-Forwarded-For` and `X-Forwarded-Proto` before the API middleware runs, so any local process could set them; with the flag only `INECEKVAR_TRUSTED_PROXY_CIDRS` decides (ADR-0055, release checklist smoke check). `--forwarded-allow-ips` is then inert and kept explicit so a later edit does not widen it silently.
 
 ## Read by the API (Phase 1)
 
@@ -89,7 +89,7 @@ The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.downl
 
 Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 
-The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
+The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload --no-proxy-headers --forwarded-allow-ips 127.0.0.1` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
 
 Do not place signing keys, provider credentials, production endpoints or other secrets in the example file. Production hosting, the public domain, TLS and HSTS preload are not exercised: no domain, no host.
 
