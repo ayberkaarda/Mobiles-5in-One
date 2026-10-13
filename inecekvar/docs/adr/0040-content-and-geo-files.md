@@ -111,3 +111,21 @@ of use draft.
 - `not exercised: Firefox and Safari`, and the pages in a real mobile browser (Chromium only).
 - Open: `/kullanim-kosullari`, a real contact channel, English pages, an OG image for content
   pages, a per-city export link list on `/veri`, the store title decision (owner).
+
+## Amendment (phase 6, package 6G, ADR-0057)
+
+- `/hesap-silme` gains a client-only web deletion panel. The server render keeps the informative
+  text (no form element, works without JavaScript) plus a "Web üzerinden silme" slot with a
+  fallback sentence; after hydration the browser entry loads the panel chunk into the slot. The
+  honesty rule of item 7 for this page now reads: the page states that the panel exists, that it
+  needs JavaScript, that magic-link sign-in is not offered there and that signing in during the
+  grace period cancels a deletion. Test renamed to "describes the web deletion panel, its limits
+  and the grace rule, and stays indexable"; the e2e check is "draft and thin pages are noindex;
+  the deletion page is indexable and needs JavaScript for its panel".
+- Robots: unchanged. The page was indexable (`index` not set to false, listed in
+  `/sitemap-pages.xml`) and stays so, because the panel adds no content of its own to the server
+  render and no account data is ever rendered on the server. The panel's session requests go to
+  `/api/v1`, which the proxy routes to the API before the SSR server and its page cache.
+- Item 8 changes: `/gizlilik` and the FAQ now name two places that set the session and CSRF
+  cookies (the staff area and the deletion panel, only after a sign-in there).
+- The "Not exercised: web account deletion form" line above is superseded by ADR-0057.
