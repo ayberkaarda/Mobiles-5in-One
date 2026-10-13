@@ -306,10 +306,16 @@ describe('legal and honesty rules', () => {
     expect(claimsGrantedLicence(sentence)).toBe(true);
   });
 
-  it('says the web deletion flow does not exist and shows no form', () => {
+  it('describes the web deletion panel, its limits and the grace rule, and stays indexable', () => {
     const page = find('/hesap-silme');
-    expect(page?.status).toMatch(/silme formu yoktur/);
-    expect(blocksText(page?.blocks ?? [])).toMatch(/uygulanmamıştır/);
+    expect(page?.status).toMatch(/web silme panelinden/);
+    expect(page?.status).toMatch(/JavaScript gerektirir/);
+    const text = blocksText(page?.blocks ?? []);
+    expect(text).toMatch(/E-posta bağlantısıyla giriş panelde sunulmaz/);
+    expect(text).toMatch(/yeniden giriş yaparsan silme iptal edilir/);
+    expect(text).toMatch(/oturum ve CSRF çerezleri/);
+    expect(text).not.toMatch(/silme formu yoktur|uygulanmamıştır/);
+    expect(page?.index).not.toBe(false);
   });
 
   it('scopes the no-cookie promise to public pages and names the staff area cookies', () => {

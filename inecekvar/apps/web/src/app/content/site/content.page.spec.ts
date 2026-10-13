@@ -150,7 +150,7 @@ describe('ContentPage other pages', () => {
     }
   });
 
-  it('renders the KVKK draft status and the deletion page without a form', async () => {
+  it('renders the KVKK draft status and the deletion page without server-side form controls', async () => {
     const kvkk = render('/kvkk-aydinlatma');
     await kvkk.whenStable();
     expect((kvkk.nativeElement as HTMLElement).querySelector('.status')?.textContent).toMatch(
@@ -161,8 +161,13 @@ describe('ContentPage other pages', () => {
     const deletion = render('/hesap-silme');
     await deletion.whenStable();
     const element = deletion.nativeElement as HTMLElement;
+    // The panel is client-only (ADR-0057): the server render carries the slot and its fallback.
     expect(element.querySelector('form, input, button, textarea')).toBeNull();
-    expect(element.querySelector('.status')?.textContent).toMatch(/silme formu yoktur/);
+    expect(element.querySelector('.status')?.textContent).toMatch(/web silme panelinden/);
+    expect(element.querySelector('iv-deletion-slot h2')?.textContent).toBe('Web üzerinden silme');
+    expect(element.querySelector('[data-deletion-fallback]')?.textContent).toMatch(
+      /JavaScript gerektirir/,
+    );
   });
 
   it('renders the guide list on the index page', async () => {

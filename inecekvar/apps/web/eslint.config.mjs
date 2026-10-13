@@ -34,6 +34,18 @@ const noAdminReach = [
     message: 'Public code must not load the admin area; only src/main.ts provides its loader.',
   },
 ];
+// The deletion panel (src/app/deletion/**) is reachable only through the browser entry too
+// (ADR-0057); public code knows only the slot and the loader token in deletion-entry.ts.
+const noDeletionReach = [
+  {
+    selector: 'ImportExpression[source.value=/(^|[^\\w-])deletion([^\\w-]|$)/]',
+    message: 'Public code must not load the deletion panel; only src/main.ts provides its loader.',
+  },
+];
+const deletionImportBan = {
+  regex: '(^|/)deletion(/|$)',
+  message: 'Public code must not import the deletion panel (ADR-0057).',
+};
 const sessionStoreBan = {
   group: ['@inecekvar/data-access', '@inecekvar/data-access/*', '**/libs/data-access/**'],
   message: 'Public SSR code must not load the browser session store.',
@@ -89,8 +101,17 @@ export default [
   {
     files: ['**/*.ts'],
     rules: {
-      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly, ...noAdminReach],
-      'no-restricted-imports': ['error', { patterns: [sessionStoreBan, adminImportBan] }],
+      'no-restricted-syntax': [
+        'error',
+        ...noHtmlSinksTs,
+        ...jsonLdOnly,
+        ...noAdminReach,
+        ...noDeletionReach,
+      ],
+      'no-restricted-imports': [
+        'error',
+        { patterns: [sessionStoreBan, adminImportBan, deletionImportBan] },
+      ],
       ...storageBans,
       ...selectors,
     },
@@ -98,10 +119,10 @@ export default [
   {
     files: ['src/app/seo/json-ld.service.ts', '**/src/app/seo/json-ld.service.ts'],
     rules: {
-      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...noAdminReach],
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...noAdminReach, ...noDeletionReach],
     },
   },
-  // The browser entry is the one place that names the admin chunk (a dynamic import).
+  // The browser entry is the one place that names the admin and deletion chunks (dynamic imports).
   {
     files: ['src/main.ts', '**/apps/web/src/main.ts'],
     rules: {
@@ -115,6 +136,16 @@ export default [
     rules: {
       'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly],
       'no-restricted-imports': 'off',
+      ...storageBans,
+    },
+  },
+  // The client-only deletion panel uses the session store like the admin area, never the admin
+  // code; HTML sinks, sanitizer bypasses and browser storage stay banned.
+  {
+    files: ['src/app/deletion/**/*.ts', '**/apps/web/src/app/deletion/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...noHtmlSinksTs, ...jsonLdOnly, ...noAdminReach],
+      'no-restricted-imports': ['error', { patterns: [adminImportBan] }],
       ...storageBans,
     },
   },

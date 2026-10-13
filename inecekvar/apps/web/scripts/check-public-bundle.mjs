@@ -1,16 +1,16 @@
-// Boundary check of the web build output (ADR-0038, extended by ADR-0041).
+// Boundary check of the web build output (ADR-0038, extended by ADR-0041 and ADR-0057).
 //
 // Public SSR pages must not carry the session or auth parts of libs/data-access (code that reads
-// localStorage, location or history for sign-in state). The client-only admin area may use them,
-// so the check allows those markers only in browser chunks that public code never loads
-// statically:
+// localStorage, location or history for sign-in state). The client-only admin area and the
+// account deletion panel of /hesap-silme may use them, so the check allows those markers only in
+// browser chunks that public code never loads statically:
 //   1. server output (every SSR render) contains no session marker and no admin marker;
 //   2. the browser entry (main, polyfills, modulepreload links of index.csr.html) and everything
 //      it imports statically contains neither;
 //   3. no browser chunk without markers imports a marked chunk statically, so opening a public
 //      route never loads admin code; the admin chunk is reached only through a dynamic import;
-//   4. at least one browser chunk carries the admin marker (the check is not vacuous) and no
-//      admin page is prerendered.
+//   4. at least one browser chunk carries the admin marker and one the deletion panel marker
+//      (the check is not vacuous), and no admin page is prerendered.
 // Third-party code (the `debug` module inside express) may mention localStorage, so the check
 // looks for markers that only libs/data-access and the admin shell define.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -26,7 +26,8 @@ const sessionMarkers = [
   'X-CSRF-Token',
 ];
 const adminMarker = 'data-iv-admin';
-const markers = [...sessionMarkers, adminMarker];
+const deletionMarker = 'data-iv-deletion';
+const markers = [...sessionMarkers, adminMarker, deletionMarker];
 
 function files(dir) {
   if (!existsSync(dir)) return [];
@@ -142,6 +143,11 @@ if (!hasLayout) {
   );
   if (adminChunks.length === 0)
     failures.push(`no browser chunk carries ${adminMarker}; the check would be vacuous`);
+  const deletionChunks = [...marked].filter((name) =>
+    readFileSync(scripts.get(name), 'utf8').includes(deletionMarker),
+  );
+  if (deletionChunks.length === 0)
+    failures.push(`no browser chunk carries ${deletionMarker}; the check would be vacuous`);
   for (const path of browserFiles) {
     if (/[\\/]admin([\\/]|\.html$)/i.test(relative(browserDir, path))) {
       failures.push(`prerendered admin output ${relative(root, path)}`);
@@ -150,6 +156,7 @@ if (!hasLayout) {
   if (failures.length === 0) {
     console.log(
       `Admin chunks (lazy, browser only): ${adminChunks.join(', ')}; ` +
+        `deletion panel chunks (lazy, browser only): ${deletionChunks.join(', ')}; ` +
         `initial browser chunks: ${initial.size}; marked chunks: ${marked.size}.`,
     );
   }

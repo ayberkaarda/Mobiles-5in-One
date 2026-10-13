@@ -202,7 +202,7 @@ const privacyPage: StaticPage = {
       `${FACTS.domain} üzerindeki herkese açık sayfalar (şehir, hat, durak, rehber ve bilgi sayfaları) çerez bırakmaz, tarayıcı depolamasına bir şey yazmaz ve bir analiz ya da reklam aracı yüklemez. Sayfaları açtığında sunucu, her web sunucusu gibi, isteğin adresini ve zamanını işler.`,
     ),
     p(
-      'Tek istisna, yalnızca moderatör ve yöneticilerin kullandığı yönetim paneli (/admin): giriş yapıldığında oturum ve CSRF çerezleri koyar ve yarım kalan bir çıkışı tamamlayabilmek için tarayıcı depolamasına bir çıkış işareti yazar. Bu çerezler yalnızca girişi ve güvenliği sağlar; izleme ya da reklam için kullanılmaz.',
+      'İki istisna var: yalnızca moderatör ve yöneticilerin kullandığı yönetim paneli (/admin) ve hesap silme sayfasındaki silme paneli. İkisi de giriş yapıldığında oturum ve CSRF çerezleri koyar ve yarım kalan bir çıkışı tamamlayabilmek için tarayıcı depolamasına bir çıkış işareti yazar. Bu çerezler yalnızca girişi ve güvenliği sağlar; izleme ya da reklam için kullanılmaz.',
     ),
     h2('Konum'),
     ul(
@@ -307,22 +307,22 @@ const deletionPage: StaticPage = {
   kind: 'info',
   h1: 'Hesap silme',
   title: 'Hesabını nasıl silersin',
-  description: `${FACTS.name} hesabı uygulamadan silinir: ne hemen silinir, ${FACTS.deletion.graceDays} günlük bekleme nedir, ne kalır. Bu sayfada silme formu yok.`,
+  description: `${FACTS.name} hesabını bu sayfadan ya da uygulamadan silebilirsin: ne hemen silinir, ${FACTS.deletion.graceDays} günlük bekleme nedir, ne kalır.`,
   status:
-    'Bu sayfada silme formu yoktur. Web üzerinden silme akışı bu aşamada hazır değil; silme uygulamadan yapılır.',
+    'Hesabını bu sayfanın altındaki web silme panelinden ya da uygulamadan silebilirsin. Panel tarayıcıda açılır ve JavaScript gerektirir.',
   blocks: [
     p(
-      `Hesabını uygulamadan silebilirsin: Ayarlar, Hesap, hesabı sil. Silme isteğinden sonra hesabın hemen devre dışı kalır, ${FACTS.deletion.graceDays} gün bekleme süresi başlar ve süre dolunca kişisel kayıtların silinir.`,
+      `Hesabını bu sayfadaki panelden e-posta adresin ve şifrenle ya da uygulamadan (Ayarlar, Hesap, hesabı sil) silebilirsin. Silme isteğinden sonra hesabın hemen devre dışı kalır, ${FACTS.deletion.graceDays} gün bekleme süresi başlar ve süre dolunca kişisel kayıtların silinir.`,
     ),
     h2('Adımlar'),
     ol(
-      `Uygulamayı ya da ${FACTS.appDomain} üzerindeki web uygulamasını aç ve giriş yap.`,
-      'Ayarlar bölümünde Hesap sayfasına git ve hesabı silmeyi seç.',
-      'Ne silineceğini okuyup onayla. Şifreni gir; son 10 dakika içinde giriş yaptıysan şifre sorulmayabilir.',
-      'Silme isteği kabul edilince cihazındaki oturum, favori eşitleme kayıtları ve kayıt taslağı da temizlenir.',
+      'Aşağıdaki panelde e-posta adresin ve şifrenle giriş yap. E-posta bağlantısıyla giriş panelde sunulmaz; hesabında şifre yoksa uygulamayı kullan.',
+      'Ne silineceğini ve ne kalacağını oku.',
+      'Güvenlik için şifreni yeniden gir, onay kutusunu işaretle ve hesabı silmeyi seç.',
+      'Sunucu isteği kabul edince bu tarayıcıdaki oturum ve form bilgileri temizlenir.',
     ),
     p(
-      'İnternet yoksa uygulama silme isteği göndermez ve cihazdaki yerel verini silmez; önce sunucunun isteği kabul etmesi beklenir.',
+      `Uygulamada da aynı adımlar var: uygulamayı ya da ${FACTS.appDomain} üzerindeki web uygulamasını aç, Ayarlar bölümünde Hesap sayfasına git ve hesabı silmeyi seç. İnternet yoksa silme isteği gönderilmez ve hiçbir şey silinmez; önce sunucunun isteği kabul etmesi beklenir.`,
     ),
     h2('Hemen silinenler'),
     ul(
@@ -333,7 +333,7 @@ const deletionPage: StaticPage = {
     ),
     h2(`${FACTS.deletion.graceDays} günlük bekleme`),
     p(
-      `Bekleme süresi içinde yeniden giriş yaparsan silme iptal edilir ve hesabın yeniden etkinleşir. Silinmiş favoriler ve kayıtlar geri gelmez. Süre dolunca e-posta adresin, kişisel kayıtların ve yüklediğin fotoğraflar silinir ve bir onay e-postası gelir.`,
+      `Bekleme süresi içinde yeniden giriş yaparsan silme iptal edilir ve hesabın yeniden etkinleşir. Bu yüzden silme istedikten sonra bu sayfada ya da uygulamada yeniden giriş yapma. Silinmiş favoriler ve kayıtlar geri gelmez. Süre dolunca e-posta adresin, kişisel kayıtların ve yüklediğin fotoğraflar silinir ve bir onay e-postası gelir.`,
     ),
     h2('Ne kalır'),
     ul(
@@ -343,9 +343,9 @@ const deletionPage: StaticPage = {
     p(
       'Aktif bir Plus aboneliği olan hesaplarda, abonelik kaydı sağlayıcıdan silinene kadar silme ertelenir; hesabın bu sırada silinmiş sayılmaz.',
     ),
-    h2('Web üzerinden silme'),
+    h2('Çerezler ve yardım'),
     p(
-      `Bu sayfada bir silme formu yoktur ve web üzerinden bağımsız bir silme akışı bu aşamada uygulanmamıştır. Silme için ${FACTS.appDomain} adresindeki web uygulaması ya da mobil uygulama kullanılır. Giriş yapamıyorsan veya yardım gerekiyorsa: ${FACTS.contact.statusLine}`,
+      `Panelde giriş yaptığında oturum ve CSRF çerezleri konur; silme isteği kabul edilince ya da çıkış yapınca kaldırılır. Giriş yapamıyorsan veya yardım gerekiyorsa: ${FACTS.contact.statusLine}`,
     ),
     p(
       'Genel gizlilik bilgisi için ',
