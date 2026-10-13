@@ -150,6 +150,26 @@ Scripts (`ops/backup/*.sh --help` prints the same list):
 | `INECEKVAR_DRILL_EXPECTED`, `INECEKVAR_DRILL_DELETIONS`, `INECEKVAR_DRILL_REPLAY`, `INECEKVAR_DRILL_REQUIRED_TABLES`, `INECEKVAR_DRILL_EXPECTED_HEAD`, `INECEKVAR_DRILL_PG_IMAGE` | `restore-drill.sh` | Source fingerprint, replay list, replay switch (default `1`), tables that must hold rows, expected Alembic head, scratch PostGIS image. |
 | `INECEKVAR_DRILL_PG_PORT`, `INECEKVAR_DRILL_MINIO_PORT`, `INECEKVAR_DRILL_MINIO_IMAGE`, `INECEKVAR_DRILL_AGE_KEYGEN_BIN`, `INECEKVAR_DRILL_UV_BIN`, `INECEKVAR_DRILL_MUTATION` | `drill-e2e.sh` | Host ports on 127.0.0.1 (default 57791 and 57792; 57277 to 57776 refused), images and tools, and the negative-run switch. Passwords of the scratch stack are random per run. |
 
+## Cost guard, degrade mode and error reports (Phase 6)
+
+Runbooks: [cost-alerts.md](cost-alerts.md), [logging.md](logging.md); ADR-0054. The worker job `cost.guard` reads its own settings class (`app/workers/cost_guard.py`, prefix `INECEKVAR_COST_GUARD_`); the API settings ignore these keys. A count at or above its threshold alerts once per resource and UTC day.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_COST_GUARD_EMAILS_PER_DAY` | `80` | Sign-in, registration and erasure mails per UTC day (80 % of the Resend free tier). |
+| `INECEKVAR_COST_GUARD_PACK_DOWNLOADS_PER_DAY` | `1000` | `pack_downloads` rows per UTC day. |
+| `INECEKVAR_COST_GUARD_PRESIGNS_PER_DAY` | `300` | Presigned photo uploads per UTC day (300 x 4 MiB = 1.2 GiB). |
+| `INECEKVAR_COST_GUARD_EXPORTS_PER_DAY` | `20` | Export runs (weekly job and admin) per UTC day. |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_DAY` | `20000` | Planner requests per UTC day (alert only). |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR` | `3000` | Planner requests in the busier of the current and previous UTC hour; reaching it alerts and sets the planner degrade flag. |
+| `INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD` | `true` | `false` keeps the load alert but never sets the flag automatically. |
+| `INECEKVAR_COST_GUARD_COOL_DOWN_MINUTES` | `60` | Lifetime of the guard's flag, re-armed while the load holds; the guard clears it a full cool-down after the last re-arm (5 to 1440). |
+| `INECEKVAR_COST_GUARD_DRY_RUN` | `false` | Log `cost.guard.alert_suppressed` and `cost.guard.degrade_suppressed`, write nothing. `INECEKVAR_JOBS_DRY_RUN` and the job argument also apply. |
+| `INECEKVAR_SENTRY_DSN` | unset | Error reports (API and worker). Unset: no SDK is imported. Set without the `sentry_sdk` package installed (the case in this repository): one `error_reporting.sdk_missing` warning, nothing sent. Treat as a secret. |
+| `INECEKVAR_SENTRY_ENVIRONMENT` | `production` | Environment name sent with error reports. |
+
+The manual degrade command `uv run python -m app.ops.planner_degrade on|off|status` reads only `INECEKVAR_REDIS_URL`. Redis keys: `inecekvar:ops:planner-degrade` (the flag), `inecekvar:cost:planner-calls:<UTC YYYYMMDDHH>` (3 days), `inecekvar:cost:alerted:<day>:<resource>` (2 days).
+
 ## Read by the web SSR server (Phase 4)
 
 `apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
