@@ -14,6 +14,18 @@ from app.core.settings import TWO_TIER_IP_RULES, Settings
 UNKNOWN_PEER = ip_address(0).compressed
 
 
+def canonical_text(address: IPv4Address | IPv6Address) -> str:
+    """The text form of an address, the same on every Python release.
+
+    Older releases print an IPv4-mapped IPv6 address as `::ffff:cb00:7107`, newer ones as
+    `::ffff:203.0.113.7`; rate-limit keys and logs need one form, so the mapped address is
+    always written with its IPv4 part in dotted quads.
+    """
+    if isinstance(address, IPv6Address) and address.ipv4_mapped is not None:
+        return "::ffff:" + str(address.ipv4_mapped)
+    return address.compressed
+
+
 def unwrap_mapped(address: IPv4Address | IPv6Address) -> IPv4Address | IPv6Address:
     """`::ffff:a.b.c.d` is the IPv4 client a.b.c.d (a dual-stack socket reports it so)."""
     if isinstance(address, IPv6Address) and address.ipv4_mapped is not None:
@@ -42,10 +54,10 @@ def resolve_client_ip(peer: str | None, headers: Mapping[str, str], settings: Se
         ]
         if len(values) == 1:
             try:
-                return ip_address(values[0]).compressed
+                return canonical_text(ip_address(values[0]))
             except ValueError:
-                return address.compressed
-    return address.compressed
+                return canonical_text(address)
+    return canonical_text(address)
 
 
 def rate_limit_key(client_ip: str) -> str:
