@@ -110,6 +110,9 @@ test('the PWA runs under the Caddy CSP with no violation, map and service worker
   const card = page.locator('iv-search-page .results iv-line-card', { hasText: 'ORN-2' });
   await card.locator('button.main').click();
   await expect(page).toHaveURL(/\/hat\/ornek-hat-2/);
+  // The strip diagram is the default view; the map loads behind the Harita switch.
+  await expect(page.locator('iv-line-page iv-route-strip circle.node')).toHaveCount(5);
+  await page.getByRole('button', { name: 'Harita', exact: true }).click();
   const map = page.locator('iv-line-page iv-map');
   await expect(map).toHaveAttribute('data-status', /^(ready|no-basemap)$/, { timeout: 30_000 });
   await expect(page.locator('iv-line-page iv-map canvas.maplibregl-canvas')).toBeVisible();
