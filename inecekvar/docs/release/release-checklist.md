@@ -145,9 +145,7 @@ Order for every release that carries a migration (`api/alembic/versions/`, now `
 
   ```sh
   uv run python -m app.ops.bootstrap city --slug istanbul --name "İstanbul" --bbox 28.5,40.8,29.5,41.3 --timezone Europe/Istanbul
-  read -r EM && read -rs PW && printf '%s
-%s
-' "$EM" "$PW" | uv run python -m app.ops.bootstrap admin --email-stdin --password-stdin; unset EM PW
+  read -r EM && read -rs PW && printf '%s\n%s\n' "$EM" "$PW" | uv run python -m app.ops.bootstrap admin --email-stdin --password-stdin; unset EM PW
   ```
 
   `admin` without `--password-stdin` promotes an account registered in the app; it refuses while
