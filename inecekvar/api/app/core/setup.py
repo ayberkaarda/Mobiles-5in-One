@@ -1,8 +1,8 @@
 """Install the baseline in outside-to-inside runtime order.
 
 RequestIdMiddleware -> AccessLogMiddleware -> SecurityHeadersMiddleware -> HttpsOnlyMiddleware
--> CorsMiddleware -> ClientIpMiddleware -> BodyLimitMiddleware -> UnhandledErrorMiddleware
--> application.
+-> CorsMiddleware -> ClientIpMiddleware -> UrlGuardMiddleware -> BodyLimitMiddleware
+-> UnhandledErrorMiddleware -> application.
 FastAPI prepends middleware, so registration proceeds in reverse order.
 Logging configuration belongs to the process entry point.
 """
@@ -18,12 +18,14 @@ from app.core.https import HttpsOnlyMiddleware
 from app.core.logging import AccessLogMiddleware
 from app.core.request_id import RequestIdMiddleware
 from app.core.settings import Settings
+from app.core.url_guard import UrlGuardMiddleware
 
 
 def install_core(app: FastAPI, settings: Settings) -> None:
     install_exception_handlers(app)
     app.add_middleware(UnhandledErrorMiddleware)
     app.add_middleware(BodyLimitMiddleware, settings=settings)
+    app.add_middleware(UrlGuardMiddleware)
     app.add_middleware(ClientIpMiddleware, settings=settings)
     app.add_middleware(CorsMiddleware, settings=settings)
     app.add_middleware(HttpsOnlyMiddleware, settings=settings)

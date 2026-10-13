@@ -2150,3 +2150,30 @@ async def test_payloads_round_trip_as_json_text_or_are_refused(services: Service
             )
             assert patched.status_code == 200, payload.name
             assert patched.json()["display_name"] == fit(payload.value, 60).strip()
+
+
+# --- Phase 6C: NUL in path and query (ZAP API scan finding, ADR-0055) ---------------------------
+
+
+async def test_nul_in_path_or_query_is_refused_not_a_server_error(services: Services) -> None:
+    await sample(services)
+    async with connect(build_test_app(services)) as client:
+        for target in (
+            f"/v1/lines/slug?city={CITY}%00",
+            "/v1/lines/slug/versions?city=%27%22%00%3Cscript%3E",
+            f"/v1/stops/slug?city={CITY}%00",
+            f"/v1/lines?city={CITY}&q=a%00",
+            f"/v1/stops?city={CITY}&q=a%00",
+            "/v1/cities/x%00",
+            "/v1/cities/x%00/pack",
+            "/v1/export/x%00/latest.geojson",
+            f"/v1/lines/a%00?city={CITY}",
+            f"/v1/lines?city={CITY}&q=a%2500",
+        ):
+            response = await client.get(target)
+            if target.endswith("%2500"):
+                # A percent-encoded percent sign is the text "%00", not a NUL: served normally.
+                assert response.status_code == 200, target
+                continue
+            assert_problem(response, 422)
+            assert response.json()["code"] == "validation.failed", target

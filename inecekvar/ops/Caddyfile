@@ -8,6 +8,7 @@
 # Environment (defaults shown; compose passes them through):
 #   INECEKVAR_WEB_TLS_PORT=58443   host port of the web https site (redirect target)
 #   INECEKVAR_APP_TLS_PORT=58444   host port of the PWA https site (redirect target)
+#   (the API site listens on 8445, host port INECEKVAR_API_TLS_PORT=58445, https only)
 #   INECEKVAR_API_UPSTREAM=host.docker.internal:57800
 #   INECEKVAR_WEB_UPSTREAM=host.docker.internal:4200  (SSR server: `node dist/apps/web/server/server.mjs`)
 #   INECEKVAR_PWA_API_ORIGIN=https://api.inecekvar.app  INECEKVAR_PWA_TILES_ORIGIN=https://tiles.inecekvar.app
@@ -103,6 +104,15 @@ https://localhost:8444, https://127.0.0.1:8444, https://host.docker.internal:844
 	handle {
 		import pwa_headers
 		import pwa_static
+	}
+}
+
+# api.inecekvar.app locally (the native shells call it directly; bearer only, ADR-0012). The API
+# sends its own headers; the dynamic scans reach it here over https (ops/security/zap).
+https://localhost:8445, https://127.0.0.1:8445, https://host.docker.internal:8445 {
+	import common_headers
+	reverse_proxy {$INECEKVAR_API_UPSTREAM:host.docker.internal:57800} {
+		header_up X-Real-IP {remote_host}
 	}
 }
 
