@@ -1191,6 +1191,224 @@ async def test_coordinates_outside_the_city_are_refused_on_every_write(services:
     assert await count(services, Edit) == 0
 
 
+# --- Section 6 extras: one refusal per field bound (docs/security/input-constraints.md) --------
+
+
+ZERO_UUID = "00000000-0000-7000-8000-000000000000"
+STOPS_PLACEHOLDER = "{stops}"
+
+
+def line_with(**changes: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "kind": "new_line",
+        "city": CITY,
+        "code": "S-1",
+        "name": "Sınır hattı",
+        "mode": "dolmus",
+        "geometry": [[34.01, 42.51], [34.03, 42.51]],
+        "stop_ids": STOPS_PLACEHOLDER,
+        "payment_methods": ["nakit"],
+    }
+    body.update(changes)
+    return body
+
+
+# (id, role, method, path, json body or None, query or None)
+BOUNDS: list[tuple[str, UserRole | None, str, str, object, dict[str, str] | None]] = [
+    ("name-161", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(name="n" * 161), None),
+    ("code-33", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(code="A" * 33), None),
+    ("code-pattern", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(code="<b>1"), None),
+    ("city-slug-81", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(city="c" * 81), None),
+    ("hours-501", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(hours_text="h" * 501), None),
+    (
+        "notes-1001",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        line_with(hail_notes="n" * 1001),
+        None,
+    ),
+    ("blank-name", UserRole.CONTRIBUTOR, "POST", "/v1/edits", line_with(name="   "), None),
+    (
+        "stop-ids-one",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        line_with(stop_ids=[ZERO_UUID]),
+        None,
+    ),
+    (
+        "stop-ids-201",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        line_with(stop_ids=[str(uuid.UUID(int=index)) for index in range(201)]),
+        None,
+    ),
+    (
+        "payments-four",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        line_with(payment_methods=["nakit", "kart", "istanbulkart", "kart"]),
+        None,
+    ),
+    (
+        "geometry-one-point",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        line_with(geometry=[[34.01, 42.51]]),
+        None,
+    ),
+    (
+        "base-version-zero",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        {"kind": "fare_update", "line": ZERO_UUID, "base_version_no": 0, "fare_minor": 100},
+        None,
+    ),
+    (
+        "retire-reason-501",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/edits",
+        {"kind": "retire", "line": ZERO_UUID, "reason": "r" * 501},
+        None,
+    ),
+    (
+        "reject-reason-1001",
+        UserRole.MODERATOR,
+        "POST",
+        f"/v1/moderation/edits/{ZERO_UUID}/reject",
+        {"reason": "r" * 1001},
+        None,
+    ),
+    (
+        "reject-reason-blank",
+        UserRole.MODERATOR,
+        "POST",
+        f"/v1/moderation/edits/{ZERO_UUID}/reject",
+        {"reason": " \t "},
+        None,
+    ),
+    (
+        "rollback-version-zero",
+        UserRole.MODERATOR,
+        "POST",
+        f"/v1/moderation/lines/{ZERO_UUID}/rollback",
+        {"version_no": 0},
+        None,
+    ),
+    ("display-name-61", UserRole.CONTRIBUTOR, "PATCH", "/v1/me", {"display_name": "d" * 61}, None),
+    (
+        "display-name-control",
+        UserRole.CONTRIBUTOR,
+        "PATCH",
+        "/v1/me",
+        {"display_name": "Ad\u0000Soyad"},
+        None,
+    ),
+    ("email-321", None, "POST", "/v1/auth/magic-link", {"email": "e" * 309 + "@example.com"}, None),
+    (
+        "password-1025",
+        None,
+        "POST",
+        "/v1/auth/login",
+        {"email": "a@example.com", "password": "p" * 1025, "mode": "bearer"},
+        None,
+    ),
+    ("token-short", None, "POST", "/v1/auth/refresh", {"refresh_token": "abc"}, None),
+    ("token-charset", None, "POST", "/v1/auth/refresh", {"refresh_token": "!" * 32}, None),
+    ("totp-code-five", UserRole.CONTRIBUTOR, "POST", "/v1/auth/step-up", {"code": "12345"}, None),
+    (
+        "totp-code-letters",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/auth/step-up",
+        {"code": "12a456"},
+        None,
+    ),
+    (
+        "trace-city-81",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body(TRACE_POINTS, city="c" * 81),
+        None,
+    ),
+    (
+        "trace-one-point",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body(TRACE_POINTS[:1]),
+        None,
+    ),
+    (
+        "trace-naive-time",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body(TRACE_POINTS) | {"started_at": "2026-10-12T08:00:00"},
+        None,
+    ),
+    (
+        "trace-span-13h",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body(TRACE_POINTS) | {"started_at": "2026-10-11T19:00:00+00:00"},
+        None,
+    ),
+    (
+        "trace-string-number",
+        UserRole.CONTRIBUTOR,
+        "POST",
+        "/v1/traces",
+        trace_body([["34.01", "42.51"], ["34.02", "42.52"]]),
+        None,
+    ),
+    (
+        "near-radius-2001",
+        None,
+        "GET",
+        "/v1/stops/near",
+        None,
+        {"lat": "42.5", "lng": "34.0", "radius": "2001"},
+    ),
+    ("near-latitude-91", None, "GET", "/v1/stops/near", None, {"lat": "91", "lng": "34.0"}),
+    ("lines-limit-101", None, "GET", "/v1/lines", None, {"city": CITY, "limit": "101"}),
+    ("lines-offset-negative", None, "GET", "/v1/lines", None, {"city": CITY, "offset": "-1"}),
+    ("stops-limit-51", None, "GET", "/v1/stops", None, {"city": CITY, "limit": "51"}),
+]
+
+
+@pytest.mark.parametrize(
+    ("role", "method", "path", "body", "query"),
+    [case[1:] for case in BOUNDS],
+    ids=[case[0] for case in BOUNDS],
+)
+async def test_field_bounds_are_refused(
+    services: Services,
+    role: UserRole | None,
+    method: str,
+    path: str,
+    body: object,
+    query: dict[str, str] | None,
+) -> None:
+    data = await sample(services)
+    async with connect(build_test_app(services)) as client:
+        headers: dict[str, str] = {}
+        if role is not None:
+            headers = (await actor(client, services, role, reputation=100)).headers
+        if isinstance(body, dict) and body.get("stop_ids") == STOPS_PLACEHOLDER:
+            body = body | {"stop_ids": [str(identity) for identity in data.stop_ids[:2]]}
+        response = await client.request(method, path, headers=headers, json=body, params=query)
+    assert_problem(response, 422, "validation.failed")
+
+
 # --- Section 6 extras: mass assignment ---------------------------------------------------------
 
 
