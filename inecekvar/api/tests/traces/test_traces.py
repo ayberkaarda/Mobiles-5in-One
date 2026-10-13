@@ -193,4 +193,12 @@ async def test_trace_body_not_logged(
 ) -> None:
     await upload(client, contributor, clock)
     assert "points" not in log_stream.getvalue()
-    assert re.search(r"(?:34|42)\.\d{4,}", log_stream.getvalue()) is None
+    # The wall-clock timestamp (seconds with microseconds, e.g. 34.963348) is not a coordinate.
+    values = [
+        str(value)
+        for line in log_stream.getvalue().splitlines()
+        if line.strip()
+        for key, value in json.loads(line).items()
+        if key != "timestamp"
+    ]
+    assert [value for value in values if re.search(r"(?:34|42)\.\d{4,}", value)] == []
