@@ -3,7 +3,7 @@
 ## Summary (5 lines max)
 
 Phases 0 to 6 are built: API core and dual auth, domain and planner, the Ionic app and PWA, the SSR web with SEO/GEO pages and the admin, webhooks and entitlements, and the phase 6 hardening.
-Merged into `main`: phases 0 to 4 (PRs #118, #119, #120 and #121, #123, #126); phase 5 is in the open PR #127; phase 6 is on `feat/inecekvar-p6` for a pull request (to be opened, no push from this session).
+Merged into `main`: all phases 0 to 6 (PRs #118, #119, #120 and #121, #123, #126, #127 and #128), followed by the test flake fix #129, the README gallery and branded web home #130 and the visual redesign #131.
 Phase 6 gate: API 1195 passed, 0 skipped; Nx lint, test and build green (web 797, mobile 472 tests); web e2e 64 and mobile e2e 10 passed on the real stack; scans, audits, gitleaks and the restore drill with six negative runs clean.
 Final security matrix: 15 done, 8 partial, 0 not-started. **This is not 23 of 23**: the partial rows need hosting, the domain and TLS, R2, provider accounts, GitHub runs, macOS and iOS, legal texts and owner decisions.
 An independent review of phase 6 found 15 issues (none high); all are addressed, each with a test that is red when the fix is reverted (ADR-0058).
@@ -21,8 +21,8 @@ Paths are under `inecekvar/`.
 | 2 Domain | cities, lines, stops, versions, edits and moderation, traces, photos, favorites, planner, packs, weekly export and sitemaps, deletion flow, OpenAPI and TS types (ADR-0020 to ADR-0029) | #120, #121 | merged |
 | 3 Ionic app | design system, search and map, line and stop pages, planner UI, offline packs, contributor tools, auth strategies, favourites, settings and deletion, deep links, Plus paywall, tr and en (ADR-0030 to ADR-0036) | #123 | merged |
 | 4 SSR web and admin | city, line, stop and route pages with SVG maps, guides, legal pages, sitemaps, JSON-LD, OG, `llms.txt`, association files, moderation and admin UI with TOTP step-up (ADR-0037 to ADR-0042) | #126 | merged |
-| 5 Webhooks and entitlements | RevenueCat and Resend webhooks, reconciliation, Plus entitlement, suppression list, nightly jobs (ADR-0050) | #127 | open |
-| 6 Hardening and release readiness | security workflow and scans, attack suite and XSS sweep, transport and CSP with ZAP and MobSF, backups and restore drill, cost guards and degrade mode, release documents and purge runbook, web deletion and bootstrap, review fixes, final matrix (ADR-0051 to ADR-0058) | to be opened from `feat/inecekvar-p6` | not merged |
+| 5 Webhooks and entitlements | RevenueCat and Resend webhooks, reconciliation, Plus entitlement, suppression list, nightly jobs (ADR-0050) | #127 | merged |
+| 6 Hardening and release readiness | security workflow and scans, attack suite and XSS sweep, transport and CSP with ZAP and MobSF, backups and restore drill, cost guards and degrade mode, release documents and purge runbook, web deletion and bootstrap, review fixes, final matrix (ADR-0051 to ADR-0058) | #128 | merged |
 
 ### Phase 6 files
 
