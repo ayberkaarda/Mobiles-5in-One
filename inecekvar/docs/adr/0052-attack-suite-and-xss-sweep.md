@@ -24,7 +24,7 @@ Section 6 item 23 asks for `api/tests/security/test_attack_suite.py` covering ev
 
 Commands in `inecekvar/api` with `INECEKVAR_ENV=test INECEKVAR_REQUIRE_DOCKER=1`, 2026-10-13:
 
-- `uv run pytest tests/security -q`: `396 passed in 215.39s` (attack suite 97, dump and log scans 2, existing security tests).
+- `uv run pytest tests/security -q`: `396 passed in 215.39s` (attack suite 97 at that run, 98 collected at the phase 6 gate; dump and log scans 2, existing security tests).
 - Full gate: `uv run ruff check .` `All checks passed!`; `uv run mypy --strict app tests` `Success: no issues found in 219 source files`; `uv run pytest -q` `1042 passed in 623.38s` (0 skipped). Before the timestamp fix one full run failed `tests/traces/test_traces.py::test_trace_body_not_logged` (finding 3).
 - Finding 1 red before the fix: `test_ipv6_rotation_within_one_64_and_mapped_ipv4_share_a_window` (renamed by decision 9 to `test_ipv6_address_window_mapped_ipv4_alias_and_shared_64_neighbours`; the 6-address rotation now meets the /64 ceiling in `tests/core/test_ratelimit.py`): `assert [401, 401, 401, 401, 401, 401] == [401, 401, 401, 401, 401, 429]`.
 - `IV_E2E_STACK=iv6b IV_E2E_REAL_API=1 pnpm nx run web-e2e:e2e` (fresh `iv6b` stack): `63 passed (1.1m)`, `Successfully ran target e2e for project web-e2e`; the 5 sweep tests among them.

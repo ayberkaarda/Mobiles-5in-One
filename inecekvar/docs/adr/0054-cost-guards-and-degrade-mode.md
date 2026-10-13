@@ -71,7 +71,7 @@ host, no provider account and no error reporting SDK (ADR-0005).
    and long decimal pairs in text rounded to three decimals. `scrub_event` also keeps only
    `user.id`, drops request bodies, cookies, query strings and environment, and removes
    `server_name`.
-8. **Error reporting is inert until configured.** `init_error_reporting` (called by
+8. **Error reporting is inert until configured: inert scrub helpers, no Sentry SDK in the API, the mobile app or the web app.** `init_error_reporting` (called by
    `configure_logging`) returns at once without `INECEKVAR_SENTRY_DSN` and imports nothing; with
    a DSN it imports `sentry_sdk` and passes `before_send=scrub_event`, `send_default_pii=False`;
    without the package it logs `error_reporting.sdk_missing`. No dependency is added. The mobile

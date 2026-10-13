@@ -1,6 +1,6 @@
 # Attack report (phase 6, package 6B)
 
-Executed attacks against the API through the real ASGI application (all routers, Testcontainers PostGIS, MinIO and Redis) in `api/tests/security/test_attack_suite.py` (97 tests), storage and log scans in `api/tests/security/test_dump_and_log_scan.py` (2 tests), and the stored-XSS sweep over the web, admin and PWA surfaces against the real local stack (`apps/web-e2e/src/xss-sweep.spec.ts`, `apps/mobile-e2e/src/xss-sweep.spec.ts`, see `xss-sweep.md`). Decisions and evidence: ADR-0052. This report covers what the attack suite and the sweep found; the ZAP, MobSF and pentest steps of item 23 are separate packages.
+Executed attacks against the API through the real ASGI application (all routers, Testcontainers PostGIS, MinIO and Redis) in `api/tests/security/test_attack_suite.py` (98 tests collected on 2026-10-13), storage and log scans in `api/tests/security/test_dump_and_log_scan.py` (2 tests), and the stored-XSS sweep over the web, admin and PWA surfaces against the real local stack (`apps/web-e2e/src/xss-sweep.spec.ts`, `apps/mobile-e2e/src/xss-sweep.spec.ts`, see `xss-sweep.md`). Decisions and evidence: ADR-0052. This report covers what the attack suite and the sweep found; the ZAP, MobSF and pentest steps of item 23 are separate packages.
 
 ## Findings
 
