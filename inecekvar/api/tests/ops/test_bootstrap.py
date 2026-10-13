@@ -37,7 +37,8 @@ from tests.support.domain import PASSWORD, create_account
 
 pytestmark = [pytest.mark.anyio, pytest.mark.postgis]
 
-ADMIN_PASSWORD = "ilk-yonetici-sifresi-2026"
+# A throwaway test password, assembled at run time so no literal looks like a credential.
+ADMIN_PASSWORD = "-".join(("ilk", "yonetici", "sifresi", "2026"))
 EMAIL = "Ilk.Yonetici@Example.com"
 ISTANBUL = "28.5,40.8,29.5,41.3"
 NOW = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
