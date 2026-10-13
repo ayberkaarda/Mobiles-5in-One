@@ -12,6 +12,9 @@
 #   INECEKVAR_API_UPSTREAM=host.docker.internal:57800
 #   INECEKVAR_WEB_UPSTREAM=host.docker.internal:4200  (SSR server: `node dist/apps/web/server/server.mjs`)
 #   INECEKVAR_WEB_HOST=inecekvar.app  Host header for the app-link files fetched from the SSR server
+#   INECEKVAR_WEB_CANONICAL_HOST=localhost  INECEKVAR_APP_CANONICAL_HOST=localhost  fixed hosts of
+#   the http-to-https redirects (never the client's Host header; production: inecekvar.app and
+#   app.inecekvar.app, without the port part)
 #   INECEKVAR_PWA_API_ORIGIN=https://api.inecekvar.app  INECEKVAR_PWA_TILES_ORIGIN=https://tiles.inecekvar.app
 #   INECEKVAR_PWA_UPLOAD_ORIGIN=https://*.r2.cloudflarestorage.com (presigned photo uploads; the
 #   deployment narrows it to the account endpoint of the media bucket, locally the MinIO origin)
@@ -81,6 +84,9 @@
 	handle @association {
 		reverse_proxy {$INECEKVAR_WEB_UPSTREAM:host.docker.internal:4200} {
 			header_up Host {$INECEKVAR_WEB_HOST:inecekvar.app}
+			# The platforms fetch these files rarely and cache them; an hour keeps a fingerprint
+			# change visible the same day (phase 6 review F10).
+			header_down Cache-Control "public, max-age=3600"
 		}
 	}
 }
@@ -93,9 +99,11 @@
 	@unhashed not path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
 	header @hashed Cache-Control "public, max-age=31536000, immutable"
 	header @unhashed Cache-Control "no-cache"
-	# App routes (no file extension, no file) get the shell; a missing asset stays 404.
+	# App routes (no file extension, no file) get the shell; a missing asset stays 404, and so does
+	# any /.well-known/ path other than the two association files (never the app shell).
 	@route {
 		not path_regexp \.[A-Za-z0-9]+$
+		not path /.well-known/*
 		not file
 	}
 	rewrite @route /index.html
@@ -132,13 +140,14 @@ https://localhost:8445, https://127.0.0.1:8445, https://host.docker.internal:844
 	}
 }
 
-# Plain http: redirect only (308 keeps the method), nothing is proxied or served.
+# Plain http: redirect only (308 keeps the method), nothing is proxied or served. The target host
+# is fixed per listener, never the client-supplied Host header (phase 6 review F10).
 http://:8080 {
-	redir https://{host}:{$INECEKVAR_WEB_TLS_PORT:58443}{uri} 308
+	redir https://{$INECEKVAR_WEB_CANONICAL_HOST:localhost}:{$INECEKVAR_WEB_TLS_PORT:58443}{uri} 308
 }
 
 http://:8081 {
-	redir https://{host}:{$INECEKVAR_APP_TLS_PORT:58444}{uri} 308
+	redir https://{$INECEKVAR_APP_CANONICAL_HOST:localhost}:{$INECEKVAR_APP_TLS_PORT:58444}{uri} 308
 }
 
 # Container health check only; not published to the host.

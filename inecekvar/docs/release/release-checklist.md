@@ -14,7 +14,7 @@ Recorded honestly so nobody assumes they exist:
 | #   | Gap                                                                                                                                                                                                                                                                                         | Owner        |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | G1  | No Dockerfile for the API, the worker or the SSR web server exists in the repository (`docker-compose.yml` runs only the backing services and Caddy; the API and web run on the host). Specification section 12 asks for Docker images.                                                     | lead         |
-| G2  | No production Caddy configuration: `ops/Caddyfile` is the local one (`local_certs`, 127.0.0.1, host ports). Production needs the same snippets with public TLS for `inecekvar.app`, `app.inecekvar.app`, `api.inecekvar.app` (ADR-0055) and the admin-origin decision of `docs/ops/env.md`. The production Caddyfile must import the same snippets (`(common_headers)`, `(pwa_headers)`, `(app_association)`, the fixed-host redirects with `INECEKVAR_CANONICAL_*_HOST`, the `/.well-known/*` exclusion from the SPA rewrite) and be reviewed in the repository before security checklist item 10 can be marked done; it does not exist yet (phase 6 review F10). | lead         |
+| G2  | No production Caddy configuration: `ops/Caddyfile` is the local one (`local_certs`, 127.0.0.1, host ports). Production needs the same snippets with public TLS for `inecekvar.app`, `app.inecekvar.app`, `api.inecekvar.app` (ADR-0055) and the admin-origin decision of `docs/ops/env.md`. The production Caddyfile must import the same snippets (`(common_headers)`, `(pwa_headers)`, `(app_association)`, the fixed-host redirects with `INECEKVAR_WEB_CANONICAL_HOST` and `INECEKVAR_APP_CANONICAL_HOST`, the `/.well-known/*` exclusion from the SPA rewrite) and be reviewed in the repository before security checklist item 10 can be marked done; it does not exist yet (phase 6 review F10). | lead         |
 | G3  | Closed by ADR-0057: `python -m app.ops.bootstrap city` creates an empty, non-sample city (section 7). Not exercised against a production database. | api |
 | G4  | Closed by ADR-0057: `python -m app.ops.bootstrap admin` creates or promotes the first admin, then TOTP enrolment in the admin UI (section 7). Not exercised against a production database. | api |
 | G5  | `environment.ts` has no per-build replacement, so the RevenueCat **public** SDK key of a store build has to be written into the file in the release workspace (it is public; the file must still not be committed with a value unless the owner decides so).                                | mobile       |
@@ -145,7 +145,9 @@ Order for every release that carries a migration (`api/alembic/versions/`, now `
 
   ```sh
   uv run python -m app.ops.bootstrap city --slug istanbul --name "İstanbul" --bbox 28.5,40.8,29.5,41.3 --timezone Europe/Istanbul
-  read -rs PW && printf '%s\n' "$PW" | uv run python -m app.ops.bootstrap admin --email <address> --password-stdin; unset PW
+  read -r EM && read -rs PW && printf '%s
+%s
+' "$EM" "$PW" | uv run python -m app.ops.bootstrap admin --email-stdin --password-stdin; unset EM PW
   ```
 
   `admin` without `--password-stdin` promotes an account registered in the app; it refuses while

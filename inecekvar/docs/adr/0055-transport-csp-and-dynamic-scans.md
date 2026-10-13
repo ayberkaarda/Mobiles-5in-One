@@ -103,6 +103,18 @@ no hosted target and no macOS host.
     random API key, 127.0.0.1 only). Raw reports stay out of git
     (`docs/security/scan-reports/.gitignore`); the trimmed numbers are in `zap-scans.md` and
     `mobsf-static.md`.
+11. **Review amendment: fixed redirect hosts and a closed `.well-known` space** (phase 6 review
+    F10, F14). The plain http listeners redirected to `https://{host}:...`, the client's Host
+    header; they now redirect to `INECEKVAR_WEB_CANONICAL_HOST` and `INECEKVAR_APP_CANONICAL_HOST`
+    (local default `localhost`). `/.well-known/*` is excluded from the PWA's SPA rewrite, so an
+    unknown well-known path answers 404 instead of the app shell, and the two association files
+    get `Cache-Control: public, max-age=3600` (`header_down` in `(app_association)`).
+    `ops/security/caddy-check.sh` checks all four behaviours against a running compose `caddy`;
+    executed on the workstation (caddy only, project `iv6c`, ports 58180/58181/58543/58544, a
+    stub upstream for the association files): 6 ok; with the previous Caddyfile 5 of the 6
+    checks failed (`https://evil.example:58543/...`, `200` for `/.well-known/change-password`,
+    `no-store`). The production Caddyfile still does not exist (release checklist G2): it must
+    import the same snippets and be reviewed before item 10 is done.
 
 ## Evidence
 

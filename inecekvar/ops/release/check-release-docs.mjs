@@ -165,6 +165,34 @@ if (elsewhere.length > 0) {
   warnings.push(`not in docs/ops/env.md, documented elsewhere: ${elsewhere.join(', ')}`);
 }
 
+// 4. uvicorn start commands (phase 6 review F9, ADR-0055 decision 1) ----------------------------
+// Every `uvicorn app.main:app` command in the start documents must carry --no-proxy-headers:
+// uvicorn's default rewrites the client address and scheme from X-Forwarded-* headers.
+
+const startDocs = [
+  'README.md',
+  'README.tr.md',
+  'CONTRIBUTING.md',
+  'docker-compose.yml',
+  'docs/ops/env.md',
+  'docs/ops/logging.md',
+  'docs/release/release-checklist.md',
+  'apps/web-e2e/playwright.config.ts',
+  'api/app/main.py',
+];
+let commands = 0;
+for (const file of startDocs) {
+  const text = read(file);
+  for (const match of text.matchAll(/uvicorn app\.main:app[^`\n]*(?:\n#[^`\n]*)?/g)) {
+    commands += 1;
+    if (!match[0].includes('--no-proxy-headers')) {
+      failures.push(`${file}: uvicorn command without --no-proxy-headers: ${match[0].split('\n')[0]}`);
+    }
+  }
+}
+if (commands === 0) failures.push('no uvicorn start command found in the start documents');
+lines.push(`uvicorn start commands: ${commands}, all with --no-proxy-headers unless listed below`);
+
 // Report ----------------------------------------------------------------------------------------
 
 for (const line of lines) console.log(line);
