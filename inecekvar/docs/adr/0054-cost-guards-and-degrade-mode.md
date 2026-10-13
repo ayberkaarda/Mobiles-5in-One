@@ -47,8 +47,8 @@ host, no provider account and no error reporting SDK (ADR-0005).
    it watches, and the host's log collector (not chosen, ADR-0002) is the place to page on
    `level=error`. This is stated in the cost document as owner work.
 5. **Degrade on load the application can see, plus a manual switch for the CPU alert.** The
-   application cannot read host CPU. The guard uses the planner request rate as the load signal
-   (busier of the current and previous UTC hour, default 3,000) and writes the Redis flag
+   application cannot read host CPU. The guard uses the computed plan rate as the load signal
+   (cache misses of the current UTC hour, default 3,000; amended by decision 10) and writes the Redis flag
    `inecekvar:ops:planner-degrade` (JSON `source`, `reason`, `set_at`, `expires_at`, Redis expiry
    equal to the lifetime) for the cool-down (default 60 minutes), re-arming it while the load
    holds and deleting its own flag a full cool-down after the last re-arm. For a real CPU alert the
@@ -60,8 +60,8 @@ host, no provider account and no error reporting SDK (ADR-0005).
    no contract change) and a 30-minute cache under a separate `...:degraded` key. A flag is
    active only while `expires_at` is in the future, so expiry holds even if the Redis expiry is
    lost; a Redis error or an unreadable value reads as inactive (the timeout and the rate limit
-   still bound the cost). Every request adds one to the hour bucket; that write never fails a
-   plan. The mobile app already shows `planner.degradedNote` for `degraded: true` with results and
+   still bound the cost). Every computed plan (a cache miss) adds one to the hour bucket; that
+   write never fails a plan. The mobile app already shows `planner.degradedNote` for `degraded: true` with results and
    the degraded empty state without; no client change was needed.
 7. **One scrubber for logs and error reports.** The log processor became a `Scrubber` class used
    by `mask_sensitive` (addresses as keyed digests) and by `scrub_event` (addresses as `[email]`).
@@ -79,6 +79,27 @@ host, no provider account and no error reporting SDK (ADR-0005).
    `beforeSendFor(dsn)`) with the wiring point documented in `docs/ops/logging.md`.
 9. **Retention is the collector's setting, stated as 30 days.** The application writes JSON to
    stdout and keeps no file; `docs/ops/logging.md` gives the Docker, journald and hosted settings.
+10. **Review amendment: the load trigger counts computed plans of the current hour, and a forced
+    degrade is an alert.** The independent phase 6 review showed an unauthenticated degrade with
+    amplification: every request was counted before the cache lookup and the guard read the
+    busier of the current and the previous hour, so two addresses sending cheap cached requests
+    for an hour kept every city degraded for about three hours. Now only cache misses are counted
+    (`planner/service.py` counts after the cache lookup), the guard reads the current UTC hour
+    only (the flag's cool-down is the hysteresis), and the run that switches the flag on logs one
+    `cost.guard.alert` line with resource `planner_load` besides `cost.guard.degrade_on`.
+    **Attack cost with the defaults:** the plan limit is 30 a minute per address (per /64 for
+    IPv6, ADR-0052), at most 1,800 computed plans an hour per address, and each must be a distinct
+    cache key (a different origin or destination cell or transfer limit). Reaching 3,000 in one
+    UTC hour takes two addresses at the limit for most of an hour; keeping the flag on takes the
+    same rate for as long as the attacker wants it. The effect is degraded answers (one transfer,
+    1 s budget) for everyone plus an error-level alert, not an outage. The knob is
+    `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR`: it must exceed the per-address limit times the
+    number of attacker addresses the operator wants to absorb (docs/ops/env.md); the automatic
+    switch can be turned off (`INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD=false`) and the alert stays.
+    The default stays at 3,000 because it is also the CPU line of a single small host. Tests:
+    `test_only_the_current_hour_counts_for_the_load`, `test_forced_degrade_is_an_alert_line`,
+    `test_one_hour_of_load_ends_after_one_cool_down`,
+    `test_planner_counts_only_computed_plans_in_the_hour_bucket`.
 
 ## Evidence
 
@@ -97,11 +118,12 @@ Workstation (Windows 11, Docker Desktop, uv, Python 3.12), 2026-10-13.
   and above; every resource has a threshold; idempotent per day and again the next day; dry run
   writes nothing; settings dry run wins; load sets the flag, re-arms it and clears it after the
   cool-down on a fake clock; operator flag left alone; automatic degrade can be switched off;
-  previous hour counts; Redis failure and database failure do not crash and leak no URL or
+  previous hour counts (replaced by decision 10: only the current hour counts); Redis failure and database failure do not crash and leak no URL or
   credential; settings from the environment; cron registration; database counts of today only
   and the worker job against PostgreSQL), `tests/planner/test_degrade.py` (flag forces one
   transfer, a budget of at most 1 s and a cache lifetime above the default; a stricter request is
-  kept; expiry on a fake clock restores normal planning with two transfers; every call counted;
+  kept; expiry on a fake clock restores normal planning with two transfers; every call counted
+  (since decision 10: every computed plan);
   `degraded` is a required boolean of the response schema; round trip, unreadable values, Redis
   errors), `tests/planner/test_ops_command.py` (on, status, off with audit lines; lifetime equals
   minutes; bad minutes, free-text reasons and addresses as operator refused),

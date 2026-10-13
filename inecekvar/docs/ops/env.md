@@ -162,8 +162,8 @@ Runbooks: [cost-alerts.md](cost-alerts.md), [logging.md](logging.md); ADR-0054. 
 | `INECEKVAR_COST_GUARD_PACK_DOWNLOADS_PER_DAY` | `1000` | `pack_downloads` rows per UTC day. |
 | `INECEKVAR_COST_GUARD_PRESIGNS_PER_DAY` | `300` | Presigned photo uploads per UTC day (300 x 4 MiB = 1.2 GiB). |
 | `INECEKVAR_COST_GUARD_EXPORTS_PER_DAY` | `20` | Export runs (weekly job and admin) per UTC day. |
-| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_DAY` | `20000` | Planner requests per UTC day (alert only). |
-| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR` | `3000` | Planner requests in the busier of the current and previous UTC hour; reaching it alerts and sets the planner degrade flag. |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_DAY` | `20000` | Computed plans (cache misses) per UTC day (alert only). |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR` | `3000` | Computed plans (cache misses) in the current UTC hour; reaching it logs `cost.guard.alert` (resource `planner_load`) and sets the planner degrade flag. **Must exceed the per-IP plan limit (30 a minute, so 1,800 an hour per address or IPv6 /64) times the number of attacker addresses you want to absorb**: with the default, two addresses at the limit can force a degrade for every city (ADR-0054 decision 10). |
 | `INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD` | `true` | `false` keeps the load alert but never sets the flag automatically. |
 | `INECEKVAR_COST_GUARD_COOL_DOWN_MINUTES` | `60` | Lifetime of the guard's flag, re-armed while the load holds; the guard clears it a full cool-down after the last re-arm (5 to 1440). |
 | `INECEKVAR_COST_GUARD_DRY_RUN` | `false` | Log `cost.guard.alert_suppressed` and `cost.guard.degrade_suppressed`, write nothing. `INECEKVAR_JOBS_DRY_RUN` and the job argument also apply. |

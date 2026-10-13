@@ -51,8 +51,8 @@ day.
 | `pack_downloads` | `pack_downloads` rows of today | 1,000 | packs are served by the API from the database; 1,000 a day is far above the expected use of one sample city | alert; check `pack_download_stats` per city and the anon hash spread |
 | `presigns` | `photos` created today | 300 | 300 x 4 MiB = 1.2 GiB a day; ten such days fill the 10 GB R2 free storage | alert; moderation queue and R2 storage checked; the per-user quota still holds |
 | `exports` | `exports` created today | 20 | one weekly run per city plus a few admin runs; more means a loop or an abused admin account | alert; check the `admin.export` audit rows |
-| `planner_calls` | Redis hour buckets `inecekvar:cost:planner-calls:<UTC YYYYMMDDHH>` of today | 20,000 | about 14 plans a minute all day long; the single-host planner is CPU bound | alert only |
-| planner load | the busier of the current and the previous UTC hour | 3,000 per hour | about 50 plans a minute for an hour: the point where one host's CPU is the risk | **sets the planner degrade flag** (below) |
+| `planner_calls` | Redis hour buckets `inecekvar:cost:planner-calls:<UTC YYYYMMDDHH>` of today; only computed plans (cache misses) are counted | 20,000 | about 14 computed plans a minute all day long; the single-host planner is CPU bound | alert only |
+| planner load | computed plans of the current UTC hour only | 3,000 per hour | about 50 computed plans a minute for an hour: the point where one host's CPU is the risk | **sets the planner degrade flag** (below) and logs one `cost.guard.alert` with resource `planner_load` |
 
 What is counted is what the application did, not what the provider billed: a mail rejected by
 Resend still counts, a mail sent by a provider retry does not. The counters are a tripwire, not
@@ -76,10 +76,18 @@ request rate, and gives the operator a switch for a real CPU alert:
 
 - **Automatic:** when the hourly planner load reaches `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR`,
   the guard writes `inecekvar:ops:planner-degrade` (source `cost_guard`, reason `planner_load`) for
-  `INECEKVAR_COST_GUARD_COOL_DOWN_MINUTES` (default 60) and re-arms it on every run while the load
-  holds. After the load drops and a full cool-down has passed since the last re-arm, the guard
-  deletes its flag (`cost.guard.degrade_off`). `INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD=false` turns
-  the automatic switch off and keeps the alert.
+  `INECEKVAR_COST_GUARD_COOL_DOWN_MINUTES` (default 60), logs one `cost.guard.alert` line
+  (resource `planner_load`) when the flag goes on, and re-arms it on every run while the load
+  holds. Only the current UTC hour counts; the cool-down is the hysteresis. After the load drops
+  and a full cool-down has passed since the last re-arm, the guard deletes its flag
+  (`cost.guard.degrade_off`). `INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD=false` turns the automatic
+  switch off and keeps the alert.
+- **Forced degrade (abuse):** the trigger is unauthenticated load, so anyone who sends enough
+  distinct uncached plans can switch every city to degraded answers. The cost and the knob are in
+  ADR-0054 decision 10: with the defaults it takes two addresses at the per-IP limit for an hour;
+  raise `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR` above the per-IP limit (1,800 computed plans
+  an hour) times the attacker addresses you want to absorb, or turn the automatic switch off and
+  rely on the alert.
 - **By hand:** `uv run python -m app.ops.planner_degrade on --minutes 60 --reason cpu_alert --operator <slug>`,
   `... off`, `... status`. Each switch writes one `ops.planner_degrade` audit line (action,
   previous state, source, reason, lifetime, operator label). The guard never overwrites or

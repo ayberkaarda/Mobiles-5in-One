@@ -168,7 +168,6 @@ class PlannerService:
         self, services: Services, db: AsyncSession, city: City, body: PlanInput
     ) -> tuple[PlanOutput, bool]:
         now = services.clock.now()
-        await count_planner_call(services.redis, now)
         # The degrade flag (ADR-0054) forces one transfer, a short budget and a long cache life.
         forced = await degrade_active(services.redis, now)
         transfers = (
@@ -185,6 +184,8 @@ class PlannerService:
         cached = await services.redis.get(key)
         if cached is not None:
             return PlanOutput.model_validate_json(cached), True
+        # Only computed plans count for the cost guard (ADR-0054): a cache hit is cheap.
+        await count_planner_call(services.redis, now)
         try:
             stored = await self.load_network(db, city)
         except PlannerCapacityError:

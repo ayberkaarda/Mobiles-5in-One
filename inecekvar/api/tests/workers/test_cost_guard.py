@@ -243,14 +243,61 @@ async def test_degrade_on_load_can_be_switched_off(redis: fakeredis.FakeAsyncRed
     assert await redis.get(DEGRADE_KEY) is None
 
 
-async def test_previous_hour_counts_for_the_load(redis: fakeredis.FakeAsyncRedis) -> None:
+async def test_only_the_current_hour_counts_for_the_load(
+    redis: fakeredis.FakeAsyncRedis,
+) -> None:
     clock = FixedClock()
     await redis.set(hour_key(clock.now() - timedelta(hours=1)), 150)
     await redis.set(hour_key(clock.now() - timedelta(days=1)), 900)
     result = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
-    assert result.planner_hour == 150
+    # The previous hour still counts for the daily total, never for the load trigger.
+    assert result.planner_hour == 0
     assert result.counts[Resource.PLANNER_CALLS] == 150
-    assert result.load_alert is True
+    assert result.load_alert is False
+    assert result.degrade == "unchanged"
+    assert await redis.get(DEGRADE_KEY) is None
+
+
+async def test_forced_degrade_is_an_alert_line(redis: fakeredis.FakeAsyncRedis) -> None:
+    clock = FixedClock()
+    await redis.set(hour_key(clock.now()), 100)
+    with capture_logs() as logs:
+        first = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
+        clock.advance(minutes=15)
+        await redis.set(hour_key(clock.now()), 120)
+        second = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
+    assert (first.degrade, second.degrade) == ("on", "rearmed")
+    load = [line for line in alerts(logs) if line["resource"] == "planner_load"]
+    assert load == [
+        {
+            "event": "cost.guard.alert",
+            "log_level": "error",
+            "dry_run": False,
+            "resource": "planner_load",
+            "count": 100,
+            "threshold": 100,
+            "day": "2026-10-12",
+        }
+    ]
+
+
+async def test_one_hour_of_load_ends_after_one_cool_down(
+    redis: fakeredis.FakeAsyncRedis,
+) -> None:
+    clock = FixedClock()
+    clock.current = clock.now().replace(minute=52, second=0, microsecond=0)
+    await redis.set(hour_key(clock.now()), 100)
+    on = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
+    assert on.degrade == "on"
+    # Next hour, no new computed plans: the old hour no longer re-arms the flag.
+    clock.advance(minutes=15)
+    quiet = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
+    assert quiet.load_alert is False
+    assert quiet.degrade == "cooling"
+    clock.advance(minutes=15)
+    off = await run_cost_guard(FakeUsage(), redis, config(), clock.now(), dry_run=False)
+    assert off.degrade == "off"
+    assert await redis.get(DEGRADE_KEY) is None
 
 
 async def test_redis_failure_does_not_crash_the_run() -> None:

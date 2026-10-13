@@ -11,7 +11,8 @@ A flag counts as active only while its key exists and `expires_at` lies in the f
 expiry holds even when the Redis expiry was lost. A Redis error or an unreadable value reads as
 inactive: the planner keeps its own timeout and the hourly rate limit either way.
 
-`count_planner_call` adds one call to the hour bucket the guard reads; it never fails a plan.
+`count_planner_call` adds one computed plan (a cache miss) to the hour bucket the guard reads;
+it never fails a plan.
 """
 
 import json

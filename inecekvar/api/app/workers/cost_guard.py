@@ -8,16 +8,20 @@ Every run (cron in `app/workers/main.py`) counts, for the current UTC day:
 - `presigns`: `photos` rows created today (one per presigned upload);
 - `exports`: `exports` rows created today (weekly job and admin runs);
 - `planner_calls`: the Redis hour buckets of today written by the planner
-  (`app/planner/degrade.py`).
+  (`app/planner/degrade.py`); only computed plans (cache misses) are counted, a cached answer
+  costs no planner time and is not a cost signal.
 
 A count at or above its threshold logs one `cost.guard.alert` line at error level (resource,
 count, threshold, UTC day; nothing else) once per resource and day: a marker key in Redis
 suppresses repeats, and when Redis cannot be written the alert is logged again rather than lost.
 
-Load: when the planner calls of the current or the previous UTC hour reach
-`planner_calls_per_hour`, the guard sets the planner degrade flag (source `cost_guard`) for the
-cool-down and re-arms it on every run while the load holds. Once the load has dropped and the
-cool-down since the last re-arm has passed, the guard removes its own flag. A flag set by an
+Load: when the computed plans of the current UTC hour reach `planner_calls_per_hour`, the guard
+sets the planner degrade flag (source `cost_guard`) for the cool-down, logs one
+`cost.guard.alert` line (resource `planner_load`) so an operator notices a forced degrade, and
+re-arms the flag on every run while the load holds. The previous hour is not looked at: the
+flag's own cool-down is the hysteresis, so a quiet hour ends the degrade after one cool-down.
+Once the load has dropped and the cool-down since the last re-arm has passed, the guard removes
+its own flag. The attack cost of forcing a degrade is in ADR-0054. A flag set by an
 operator (`python -m app.ops.planner_degrade`) is never touched here.
 
 A dry run (`INECEKVAR_COST_GUARD_DRY_RUN`, `INECEKVAR_JOBS_DRY_RUN` or the job argument) logs
@@ -74,7 +78,9 @@ class CostGuardSettings(BaseSettings):
     # One weekly run per city plus admin runs (10 per admin and hour).
     exports_per_day: int = Field(default=20, ge=1)
     planner_calls_per_day: int = Field(default=20_000, ge=1)
-    # Load trigger of the degrade flag: about 50 uncached and cached plans a minute for an hour.
+    # Load trigger of the degrade flag: about 50 computed (uncached) plans a minute for an hour.
+    # It must exceed the per-IP plan limit (30/min, 1800/h) times the attacker addresses an
+    # operator wants to absorb (docs/ops/env.md, ADR-0054).
     planner_calls_per_hour: int = Field(default=3_000, ge=1)
     degrade_on_load: bool = True
     cool_down_minutes: int = Field(default=60, ge=5, le=24 * 60)
@@ -144,16 +150,13 @@ class DatabaseUsageSource:
 
 
 async def planner_counts(redis: Redis, now: datetime) -> tuple[int, int]:
-    """(calls today, calls in the busier of the current and the previous hour)."""
+    """(computed plans today, computed plans in the current UTC hour)."""
     current = now.astimezone(UTC)
     start = current.replace(hour=0, minute=0, second=0, microsecond=0)
     hours = [start + timedelta(hours=offset) for offset in range(current.hour + 1)]
-    previous = current - timedelta(hours=1)
-    keys = [hour_key(moment) for moment in hours] + [hour_key(previous)]
-    values = await redis.mget(keys)
+    values = await redis.mget([hour_key(moment) for moment in hours])
     numbers = [int(value) if value is not None else 0 for value in values]
-    today = sum(numbers[:-1])
-    return today, max(numbers[-2], numbers[-1])
+    return sum(numbers), numbers[-1]
 
 
 def over(count: int, threshold: int) -> bool:
@@ -225,6 +228,16 @@ async def evaluate_degrade(
                 return
             await set_flag(redis, "cost_guard", "planner_load", now, seconds)
             result.degrade = "rearmed" if flag is not None and flag.active(now) else "on"
+            if result.degrade == "on":
+                # A forced degrade affects every city: it is an alert, not only a state change.
+                logger.error(
+                    "cost.guard.alert",
+                    dry_run=False,
+                    resource="planner_load",
+                    count=result.planner_hour,
+                    threshold=config.planner_calls_per_hour,
+                    day=result.day.isoformat(),
+                )
             logger.error(
                 "cost.guard.degrade_on",
                 state=result.degrade,

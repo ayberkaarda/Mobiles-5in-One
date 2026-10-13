@@ -145,12 +145,16 @@ async def test_flag_expiry_restores_normal_planning(
 
 
 @pytest.mark.postgis
-async def test_planner_counts_every_call_in_the_hour_bucket(
+async def test_planner_counts_only_computed_plans_in_the_hour_bucket(
     planner_client: httpx.AsyncClient, services: Services, clock: FixedClock
 ) -> None:
+    # Three identical requests: one computed plan, two cache hits that cost no planner time.
     for _ in range(3):
         assert (await planner_client.post("/v1/plan", json=body())).status_code == 200
-    assert await services.redis.get(hour_key(clock.now())) == b"3"
+    assert await services.redis.get(hour_key(clock.now())) == b"1"
+    # A different transfer limit is a new cache key, so a second computed plan.
+    assert (await planner_client.post("/v1/plan", json=body(1))).status_code == 200
+    assert await services.redis.get(hour_key(clock.now())) == b"2"
     assert 0 < await services.redis.ttl(hour_key(clock.now())) <= degrade.PLANNER_CALLS_TTL_SECONDS
 
 
