@@ -1,0 +1,24 @@
+rules:
+  - id: iv-angular-html-sink
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Markup is written into the DOM (innerHTML, outerHTML, insertAdjacentHTML,
+      document.write or an innerHTML host binding). Bind text instead; the project bans these
+      writes in lint (spec item 16) and this rule repeats the ban as defence in depth.
+    metadata:
+      cwe: "CWE-79: Cross-site scripting"
+      spec-item: 16
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $VALUE
+          - pattern: $EL.outerHTML = $VALUE
+          - pattern: $EL.innerHTML += $VALUE
+          - pattern: $EL.insertAdjacentHTML(...)
+          - pattern: document.write(...)
+          - pattern: document.writeln(...)
+          - pattern: $RENDERER.setProperty($EL, 'innerHTML', ...)
+          - pattern: '@HostBinding("innerHTML") $PROP'
+          - pattern: "@HostBinding('innerHTML') $PROP"
+      # Clearing a node with a constant empty string writes no markup.
+      - pattern-not: $EL.innerHTML = ''

@@ -1,0 +1,14 @@
+rules:
+  - id: iv-python-subprocess-shell
+    languages: [python]
+    severity: ERROR
+    message: >-
+      A command runs through a shell (shell=True, os.system, os.popen or
+      create_subprocess_shell). Pass an argument list without a shell.
+    metadata:
+      cwe: "CWE-78: OS command injection"
+    pattern-either:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
+      - pattern: os.system(...)
+      - pattern: os.popen(...)
+      - pattern: asyncio.create_subprocess_shell(...)

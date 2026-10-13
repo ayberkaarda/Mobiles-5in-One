@@ -1,0 +1,5 @@
+# Python scan tools for .github/workflows/inecekvar-security.yml, pinned with hashes in
+# requirements.txt (uv pip compile, see docs/security/dependency-audit.md section 1).
+bandit==1.9.4
+pip-audit==2.10.1
+cyclonedx-bom==7.3.0

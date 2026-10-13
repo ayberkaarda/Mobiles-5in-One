@@ -1,0 +1,14 @@
+# osv-scanner exemptions for inecekvar/pnpm-lock.yaml and inecekvar/api/uv.lock, passed with
+# --config by .github/workflows/inecekvar-security.yml. Every entry has an expiry; after that date
+# the finding fails the job again. Owner, reason and review notes: docs/security/dependency-audit.md
+# section 4. Add an entry only together with that section.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-13T00:00:00Z
+reason = "braces 3.0.3, no patched release; reached only through @nx/angular > @angular-devkit/build-angular (webpack dev server and file watching, not used by any project executor); patterns come from build configuration, never from users."
+
+[[IgnoredVulns]]
+id = "GHSA-w5hq-g745-h8pq"
+ignoreUntil = 2027-01-13T00:00:00Z
+reason = "uuid 7.0.3 (xcode via @capacitor/cli) and 8.3.2 (sockjs via webpack-dev-server); fixed only in the 11.x major; both callers use v4() without a caller buffer, the advisory needs v3/v5/v6 with a buffer argument; build and dev tooling only."

@@ -1,0 +1,25 @@
+rules:
+  - id: iv-python-random-token
+    languages: [python]
+    severity: ERROR
+    message: >-
+      The random module is predictable and must not produce tokens, secrets, nonces, salts,
+      passwords, keys or one-time codes. Use the secrets module.
+    metadata:
+      cwe: "CWE-338: Weak PRNG"
+    patterns:
+      - pattern: random.$FUNC(...)
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ^(random|randint|randrange|choice|choices|getrandbits|randbytes|sample|shuffle|uniform)$
+      - pattern-either:
+          - pattern-inside: |
+              $NAME = <... random.$FUNC(...) ...>
+          - pattern-inside: |
+              $OBJ.$NAME = <... random.$FUNC(...) ...>
+          - pattern-inside: |
+              def $NAME(...):
+                ...
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: (?i).*(token|secret|nonce|salt|passw|otp|api_key|session|csrf|signing|_key$|^key$).*

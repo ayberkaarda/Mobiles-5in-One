@@ -1,0 +1,21 @@
+rules:
+  - id: iv-python-weak-hash
+    languages: [python]
+    severity: WARNING
+    message: >-
+      MD5 and SHA-1 are broken for security use (tokens, signatures, password or integrity
+      checks). Use hashlib.sha256 or better; a non-security use (cache keys, ETags) must say so
+      with usedforsecurity=False.
+    metadata:
+      cwe: "CWE-328: Use of weak hash"
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+          - pattern: hashlib.new("md5", ...)
+          - pattern: hashlib.new("sha1", ...)
+          - pattern: hashlib.new("MD5", ...)
+          - pattern: hashlib.new("SHA1", ...)
+      - pattern-not: hashlib.md5(..., usedforsecurity=False, ...)
+      - pattern-not: hashlib.sha1(..., usedforsecurity=False, ...)
+      - pattern-not: hashlib.new(..., usedforsecurity=False, ...)

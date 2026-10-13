@@ -1,0 +1,40 @@
+rules:
+  - id: iv-python-sql-string-built
+    languages: [python]
+    severity: ERROR
+    message: >-
+      SQL text is built by string formatting, concatenation or an f-string and passed to
+      text(), execute() or exec_driver_sql(). Use a constant statement with :named bound
+      parameters, or SQLAlchemy expressions (spec item 15).
+    metadata:
+      cwe: "CWE-89: SQL injection"
+      spec-item: 15
+    patterns:
+      # The first argument itself is the built string (not an expression that merely contains
+      # one, such as an ORM ilike() with a bound f-string pattern).
+      - pattern-either:
+          - pattern: $CALL(f"...", ...)
+          - pattern: $CALL("..." % $ARGS, ...)
+          - pattern: $CALL("...".format(...), ...)
+          - patterns:
+              - pattern: $CALL($LEFT + $RIGHT, ...)
+              - pattern-not: $CALL("..." + "...", ...)
+          # The statement is built into a name first and the name is passed.
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      $NAME = f"..."
+                      ...
+                  - pattern-inside: |
+                      $NAME = "..." % $ARGS
+                      ...
+                  - pattern-inside: |
+                      $NAME = "...".format(...)
+                      ...
+                  - pattern-inside: |
+                      $NAME = $LEFT + $RIGHT
+                      ...
+              - pattern: $CALL($NAME, ...)
+      - metavariable-regex:
+          metavariable: $CALL
+          regex: '^((sqlalchemy\.(sql\.(expression\.)?)?)?text|.+\.execute|.+\.exec_driver_sql)$'
