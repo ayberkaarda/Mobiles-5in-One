@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda and Cetele have applications. Each of the three application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) and in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. The Inecek Var card is a placeholder (its API is merged, the app UI is not) and the Patika card is a placeholder for a product that is still in the design stage.
+One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. Each of the four application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) and in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/readme/). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Only the Patika card is a placeholder, for a product that is still in the design stage.
 
 <table>
   <tr>
@@ -45,8 +45,11 @@ One card per project. Kadro, Askıda and Cetele have applications. Each of the t
       <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: API merged (phases 0 to 2), app UI not yet" width="100%"><br>
-      <sub><b>Inecek Var</b>: API merged (phases 0 to 2), app UI not yet</sub>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: web home page with the sample city and the Android line page, local stack, sample data" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android app: search screen with the labelled sample city and its lines, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android app: line page with the route drawn over five stops, fare, hours and payment, sample data, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android app: A to B planner result with the line, estimated time and fare and the steps, sample data, emulator" width="32%"><br>
+      <sub><b>Inecek Var</b>: web home page and Android line screens (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>
   <tr>
@@ -95,10 +98,15 @@ phases are merged and the real-world proofs stay open. Since then the hardening 
 design refresh of the Android app and the web (PR #116) and the security batch round 2 (PR #117:
 reauthentication scope, device sessions, shop and SMS caps, admin and billing fixes) have merged.
 
-Inecek Var has phases 0 to 2 merged into `main` (PRs #118, #119, #120 and #121): an Nx workspace with
-the Ionic/Angular mobile PWA and Capacitor Android shell and the Angular SSR web, and a FastAPI api with
-the data model, authentication, moderation, traces, planner, city packs, export and account deletion.
-The app UI (Phase 3, in progress on a branch), web SEO, webhooks and hardening are not merged yet.
+Inecek Var has phases 0 to 4 merged into `main` (PRs #118, #119, #120, #121, #123 and #126): an Nx
+workspace with the Ionic/Angular app and PWA on a Capacitor Android shell (search, line and stop pages,
+planner, offline packs, contributor tools, favourites, settings and deletion), the Angular SSR web with
+city, line and stop pages, guides, legal pages and the moderation and admin area, and a FastAPI api with
+the data model, dual authentication, moderation, traces, planner, city packs, export and account
+deletion. Phase 5 (RevenueCat and Resend webhooks, entitlements) is in the open PR #127 and phase 6
+(hardening, scans, backups, cost guards, release documents) in the open PR #128; neither is merged.
+The final security matrix stands at 15 of 23 done and 8 partial: the partial rows need hosting, the
+domain and TLS, provider accounts, GitHub runs of the workflows and iOS.
 Patika is still a single specification document with no application code.
 
 ### Progress

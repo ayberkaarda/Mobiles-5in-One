@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var. Üç uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri) ve [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Inecek Var kartı bir yer tutucudur (API birleşti, uygulama arayüzü henüz yok); Patika kartı henüz tasarım aşamasındaki bir ürün için yer tutucudur.
+Her proje için bir kart. Kadro'nun, Askıda'nın, Cetele'nin ve Inecek Var'ın uygulaması var. Dört uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri), [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) ve [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/readme/) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Yalnızca Patika kartı, henüz tasarım aşamasındaki bir ürün için yer tutucudur.
 
 <table>
   <tr>
@@ -45,8 +45,11 @@ Her proje için bir kart. Kadro'nun, Askıda'nın ve Cetele'nin uygulaması var.
       <sub><b>Cetele</b>: web ana sayfası ve Android müşteri listesi (yerel sunucu, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: API birleşti (faz 0-2), uygulama arayüzü henüz yok" width="100%"><br>
-      <sub><b>Inecek Var</b>: API birleşti (faz 0-2), uygulama arayüzü henüz yok</sub>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: örnek şehirli web ana sayfası ve Android hat sayfası, yerel yığın, örnek veri" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android uygulaması: etiketli örnek şehir ve hatlarıyla arama ekranı, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android uygulaması: beş durak üzerinde çizilmiş güzergâh, ücret, saatler ve ödeme ile hat sayfası, örnek veri, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android uygulaması: hat, tahmini süre ve ücret ile adım adım A'dan B'ye rota sonucu, örnek veri, emülatör" width="32%"><br>
+      <sub><b>Inecek Var</b>: web ana sayfası ve Android hat ekranları (yerel yığın, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>
   <tr>
@@ -96,10 +99,15 @@ de birleşti: 7 fazın 7'si tamam, gerçek dünya kanıtları açık kalıyor. A
 yeniden kimlik doğrulama kapsamı, cihaz oturumları, dükkân ve SMS üst sınırları, yönetim ve faturalama
 düzeltmeleri) birleşti.
 
-Inecek Var'ın 0-2. fazları `main`'e birleşti (PR #118, #119, #120 ve #121): Ionic/Angular mobil PWA ve
-Capacitor Android kabuğu ile Angular SSR webi olan bir Nx workspace; veri modeli, kimlik doğrulama,
-moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarım ve hesap silme içeren bir FastAPI api.
-Uygulama arayüzü (Faz 3, bir dalda sürüyor), web SEO, webhook ve sertleştirme henüz birleşmedi.
+Inecek Var'ın 0-4. fazları `main`'e birleşti (PR #118, #119, #120, #121, #123 ve #126): Capacitor
+Android kabuğu üzerinde Ionic/Angular uygulama ve PWA (arama, hat ve durak sayfaları, planlayıcı,
+çevrimdışı paketler, katkı araçları, favoriler, ayarlar ve hesap silme), şehir, hat ve durak sayfaları,
+rehberler, yasal sayfalar ve moderasyon ile yönetim alanı olan Angular SSR web içeren bir Nx workspace;
+veri modeli, çift kimlik doğrulama, moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarım ve
+hesap silme içeren bir FastAPI api. Faz 5 (RevenueCat ve Resend webhook'ları, haklar) açık PR #127'de,
+faz 6 (sertleştirme, taramalar, yedekler, maliyet korumaları, yayın belgeleri) açık PR #128'de; ikisi de
+birleşmedi. Son güvenlik matrisi 23 maddeden 15'i tamam, 8'i kısmi: kısmi satırlar barındırma, alan adı
+ve TLS, sağlayıcı hesapları, iş akışlarının GitHub'da çalışması ve iOS gerektiriyor.
 Patika hâlâ yalnızca tek bir spesifikasyon dokümanı; uygulama kodu yok.
 
 ### İlerleme
