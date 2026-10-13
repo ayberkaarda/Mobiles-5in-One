@@ -9,6 +9,13 @@ out-tsc/
 .env
 .env.*
 !.env.example
+# Signing keys and native service files stay outside the repository (spec item 1).
+*.keystore
+*.jks
+*.p8
+*.p12
+google-services.json
+GoogleService-Info.plist
 *.log
 .DS_Store
 # Python API
