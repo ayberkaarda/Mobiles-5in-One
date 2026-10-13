@@ -186,7 +186,9 @@ for (const file of startDocs) {
   for (const match of text.matchAll(/uvicorn app\.main:app[^`\n]*(?:\n#[^`\n]*)?/g)) {
     commands += 1;
     if (!match[0].includes('--no-proxy-headers')) {
-      failures.push(`${file}: uvicorn command without --no-proxy-headers: ${match[0].split('\n')[0]}`);
+      failures.push(
+        `${file}: uvicorn command without --no-proxy-headers: ${match[0].split('\n')[0]}`,
+      );
     }
   }
 }
