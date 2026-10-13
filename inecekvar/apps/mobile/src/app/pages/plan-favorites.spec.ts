@@ -127,9 +127,9 @@ describe('plan page', () => {
       '40 m yürü: varış noktası',
     ]);
     // The chosen route is drawn as a strip: start, the transfer stops and the destination.
-    const names = Array.from(root.querySelectorAll('.chosen iv-route-strip text.name')).map((n) =>
-      clean(n.textContent),
-    );
+    const names = Array.from(
+      root.querySelectorAll('.itinerary-strip iv-route-strip text.name'),
+    ).map((n) => clean(n.textContent));
     expect(names).toHaveLength(6);
     expect(names.slice(1, 5)).toEqual([
       '[ÖRNEK] Durak 1-1',
@@ -138,11 +138,11 @@ describe('plan page', () => {
       '[ÖRNEK] Durak 3-3',
     ]);
     expect(
-      Array.from(root.querySelectorAll('.chosen iv-route-strip text.code')).map((n) =>
+      Array.from(root.querySelectorAll('.itinerary-strip iv-route-strip text.code')).map((n) =>
         clean(n.textContent),
       ),
     ).toEqual(['ORN-1', 'ORN-2']);
-    expect(root.querySelectorAll('.chosen iv-route-strip path.walk')).toHaveLength(3);
+    expect(root.querySelectorAll('.itinerary-strip iv-route-strip path.walk')).toHaveLength(3);
     // The map waits until asked for once the results are in.
     expect(root.querySelector('.map-section iv-map')).toBeNull();
     root.querySelector<HTMLButtonElement>('.map-section .iv-button')?.click();

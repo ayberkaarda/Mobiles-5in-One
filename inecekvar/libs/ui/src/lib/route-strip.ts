@@ -92,6 +92,9 @@ export function stripLabel(name: string, max: number): string {
 
 const round = (value: number) => Number(svgNumber(value));
 
+/** Drawn width of a line-code placard (13 px DM Sans 700 with padding). */
+const placardWidth = (code: string) => round(Array.from(stripLabel(code, 10)).length * 8.6 + 18);
+
 export function stripLayout(
   nodes: readonly StripNode[],
   segments: readonly StripSegment[] = [],
@@ -112,7 +115,16 @@ export function stripLayout(
   const labels = nodes.map((node) => stripLabel(node.name, maxLabel));
   const longest = Math.max(...labels.map((label) => Array.from(label).length)) * CHAR;
   const lastReach = Array.from(labels[count - 1] ?? '').length * CHAR * COS + 14;
-  const pitch = Math.max(minPitch, (fit - PAD_LEFT - lastReach) / (count - 1));
+  // Placards sit under their segment: the pitch leaves room for the widest one and a gap.
+  const placardRoom = Math.max(
+    0,
+    ...segments
+      .slice(0, count - 1)
+      .map((segment) =>
+        segment.kind === 'ride' && segment.code ? placardWidth(segment.code) + 10 : 0,
+      ),
+  );
+  const pitch = Math.max(minPitch, placardRoom, (fit - PAD_LEFT - lastReach) / (count - 1));
   const railY = round(PAD_TOP + longest * SIN + 26);
   const hasTicks = nodes.some((node) => !!node.tick);
   const rideSegments = segments.slice(0, count - 1);
@@ -173,11 +185,11 @@ export function stripLayout(
     const middle = round((from.x + to.x) / 2);
     if (segment.kind === 'ride' && segment.code) {
       const code = stripLabel(segment.code, 10);
-      const placardWidth = round(Array.from(code).length * 8.6 + 18);
+      const width = placardWidth(segment.code);
       placards.push({
-        x: round(middle - placardWidth / 2),
+        x: round(middle - width / 2),
         y: round(placardY),
-        width: placardWidth,
+        width,
         height: 24,
         code,
         textX: middle,

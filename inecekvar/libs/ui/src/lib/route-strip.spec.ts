@@ -64,6 +64,32 @@ describe('stripLayout', () => {
     expect(long?.width).toBeGreaterThan(46 * 23);
   });
 
+  it('spaces stops so neighbouring placards never overlap', () => {
+    const layout = stripLayout(
+      [
+        { name: 'A' },
+        { name: 'B', kind: 'transfer' },
+        { name: 'C', kind: 'transfer' },
+        { name: 'D' },
+      ],
+      [
+        { kind: 'ride', code: 'ORN-1' },
+        { kind: 'ride', code: 'ORN-3' },
+        { kind: 'ride', code: 'ORN-2' },
+      ],
+      { fit: 300 },
+    );
+    const placards = layout?.placards ?? [];
+    expect(placards).toHaveLength(3);
+    for (let index = 1; index < placards.length; index++) {
+      const previous = placards[index - 1];
+      const current = placards[index];
+      expect(
+        (current?.x ?? 0) - ((previous?.x ?? 0) + (previous?.width ?? 0)),
+      ).toBeGreaterThanOrEqual(8);
+    }
+  });
+
   it('refuses a strip of fewer than two stops and bad options', () => {
     expect(stripLayout(stops(1))).toBeNull();
     expect(stripLayout(stops(3), [], { fit: Number.NaN })).toBeNull();
