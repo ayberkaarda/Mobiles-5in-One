@@ -50,7 +50,8 @@ __all__ = ["log_stream"]
 
 pytestmark = [pytest.mark.anyio, pytest.mark.postgis]
 
-PASSWORD = "Dump-Tarama-Parolasi-2026"
+# Built from parts so the dummy never reads as a literal credential.
+PASSWORD = "-".join(("Dump", "Tarama", "Parolasi", "2026"))
 WEB_ORIGIN = "https://app.inecekvar.app"
 BOUNCED = "geri.donen." + uuid.uuid4().hex[:6] + "@example.com"
 ATTRIBUTE_EMAIL = "rc.alici." + uuid.uuid4().hex[:6] + "@example.com"

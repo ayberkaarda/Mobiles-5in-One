@@ -182,7 +182,7 @@ def new_line(stops: Sequence[uuid.UUID], **changes: object) -> dict[str, object]
     return body
 
 
-def trace_body(points: list[list[float]], city: str = CITY) -> dict[str, object]:
+def trace_body(points: Sequence[Sequence[object]], city: str = CITY) -> dict[str, object]:
     return {
         "city": city,
         "started_at": "2026-10-12T08:00:00+00:00",
