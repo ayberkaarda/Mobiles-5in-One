@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { LineMode } from '@inecekvar/domain';
 import { FareChipComponent } from './fare-chip.component';
+import { KeepCodesComponent } from './keep-codes.component';
 import { ModeChipComponent } from './mode-chip.component';
 
 /** Labels the card needs; the caller passes translated strings. */
@@ -20,14 +21,14 @@ export interface LineCardLabels {
 @Component({
   selector: 'iv-line-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FareChipComponent, ModeChipComponent],
+  imports: [FareChipComponent, KeepCodesComponent, ModeChipComponent],
   template: `
     <article class="card">
       <button type="button" class="main" (click)="opened.emit()">
         <span class="plate" aria-hidden="true">{{ code() }}</span>
         <span class="body">
           <span class="name">
-            <span class="iv-visually-hidden">{{ code() }} </span>{{ name() }}
+            <span class="iv-visually-hidden">{{ code() }} </span><iv-keep-codes [text]="name()" />
           </span>
           <span class="chips">
             <iv-mode-chip [mode]="mode()" [label]="labels().mode" />
@@ -113,6 +114,7 @@ export interface LineCardLabels {
       letter-spacing: 0.04em;
       text-align: center;
       line-height: 1;
+      white-space: nowrap;
     }
     .body {
       display: grid;

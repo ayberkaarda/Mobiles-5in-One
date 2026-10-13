@@ -22,7 +22,7 @@ import {
   StopDetail,
   StopSummary,
 } from '@inecekvar/data-access';
-import { FarePipe } from '@inecekvar/ui';
+import { FarePipe, KeepCodesComponent } from '@inecekvar/ui';
 import { LicenceGate } from '../auth/licence-gate';
 import { CityPickerComponent } from '../city/city-picker.component';
 import { CityStore } from '../city/city.store';
@@ -127,6 +127,7 @@ export function proposalFailure(error: unknown): TranslationKey {
     CityPickerComponent,
     MapComponent,
     FarePipe,
+    KeepCodesComponent,
     TPipe,
   ],
   templateUrl: './proposal.page.html',

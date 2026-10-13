@@ -42,7 +42,8 @@
       <span class="plate" aria-hidden="true">{{ line.code }}</span>
       <div class="hero-body">
         <h1 class="name">
-          <span class="iv-visually-hidden">{{ line.code }} </span>{{ line.name }}
+          <span class="iv-visually-hidden">{{ line.code }} </span
+          ><iv-keep-codes [text]="line.name" />
         </h1>
         <iv-mode-chip [mode]="mode()" [label]="modeLabel()" />
       </div>
