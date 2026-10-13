@@ -1,0 +1,43 @@
+# ADR-0052: Attack suite and stored-XSS sweep
+
+- Status: Accepted
+- Deciders: Project owner (decision delegated to the lead)
+- Phase: 6, package 6B (spec item 23 attack suite, item 16 Verify; closes the open checks of items 6 and 11)
+
+## Context
+
+Section 6 item 23 asks for `api/tests/security/test_attack_suite.py` covering every threat-model item plus spoofed client-IP headers, JWT tampering, refresh reuse, oversized traces, invalid geometries, MIME spoof and planner inputs outside the bbox. Item 16 is done when a stored `<script>` in a line note renders as text on web, PWA and SSR pages; phase 6 widens that to a payload sweep over every rendering surface (section 10). Item 6 asks for a negative test per constraint, item 11 for a database dump that shows only `$argon2id$` and hashes; both rows were partial after 6A. The phase 4 real-stack helper (`apps/web-e2e/scripts/real-stack.mjs`, ADR-0041) and the Askida sweep (`askida/docs/security/xss-sweep.md`) are the patterns.
+
+## Decision
+
+1. **One attack test per threat-model heading, through the real application.** Every test builds the production composition (`create_app` with all routers, `build_test_app`) against a Testcontainers PostGIS database, real MinIO for uploads and a real Redis for the rate-limit variants. The threat model now names its attack test under every heading. Phase 5 webhook forgery tests stay the reference; the suite adds only the combination they lack (a forged purchase followed by the entitlement it would unlock).
+2. **Structural coverage checks beside the attacks.** `test_every_body_route_is_listed_and_forbids_extra_fields` compares the mounted body routes with the mass-assignment table and walks every request model recursively for `extra="forbid"`, so a new route or model without the guard fails before review.
+3. **One refusal per bound, documented.** `docs/security/input-constraints.md` maps each section 6 bound to its constraint and test; missing negatives were added as the parametrized `test_field_bounds_are_refused` (35 cases).
+4. **Per-IP quotas count IPv6 per /64 and unwrap IPv4-mapped addresses** (finding 1). `rate_limit_key` in `app/core/client_ip.py` is the single place that turns the trusted client IP into a quota subject; logs and the trusted-proxy rule keep the full address.
+5. **The XSS sweep writes only through the API.** `apps/web-e2e/src/xss-world.ts` registers accounts with the mailed link, proposes, approves, rejects and renames through `/v1`; the database is touched only for what an operator does (the city row, roles, reputation). Each run uses a fresh city, so reruns on one stack do not collide.
+6. **Rendering-context assertions instead of markup greps.** A self-contained `auditDocument` runs in the browser on the live DOM or on an SSR string parsed with `DOMParser` and reports handlers, script URLs, injected elements, unexpected scripts and `</script` breakouts; hydrated pages also fail on dialogs and CSP violations; JSON-LD is parsed back. Payloads refused at validation are asserted as `422` and recorded as input validation, not as escaping passes.
+7. **A second real stack for this package.** `IV_E2E_STACK=iv6b` selects compose project `iv6b` on 127.0.0.1 ports 57951-57959 (API 57957, admin proxy 57958, an SSR server reading the real API 57959) so it runs beside `iv4e`; the admin proxy accepts an `x-e2e-client-ip` header so one spec's quota windows do not leak into the next (Caddy sets the real peer the same way).
+8. **Dump and log scans run the real tools.** `pg_dump` runs inside the PostGIS container that publishes the test database (or a throwaway PostGIS container on the host network when CI provides the database), the log scan runs the production `configure_logging`.
+
+## Evidence
+
+Commands in `inecekvar/api` with `INECEKVAR_ENV=test INECEKVAR_REQUIRE_DOCKER=1`, 2026-10-13:
+
+- `uv run pytest tests/security -q`: `396 passed in 215.39s` (attack suite 97, dump and log scans 2, existing security tests).
+- Full gate: `uv run ruff check .` `All checks passed!`; `uv run mypy --strict app tests` `Success: no issues found in 219 source files`; `uv run pytest -q` `1042 passed in 623.38s` (0 skipped). Before the timestamp fix one full run failed `tests/traces/test_traces.py::test_trace_body_not_logged` (finding 3).
+- Finding 1 red before the fix: `test_ipv6_rotation_within_one_64_and_mapped_ipv4_share_a_window` `assert [401, 401, 401, 401, 401, 401] == [401, 401, 401, 401, 401, 429]`.
+- `IV_E2E_STACK=iv6b IV_E2E_REAL_API=1 pnpm nx run web-e2e:e2e` (fresh `iv6b` stack): `63 passed (1.1m)`, `Successfully ran target e2e for project web-e2e`; the 5 sweep tests among them.
+- `pnpm nx run mobile-e2e:e2e` against a fresh `iv6b` stack with uvicorn and the arq worker on 127.0.0.1:57957: `9 passed (2.7m)` (the 6 earlier scenarios and the 3 sweep tests).
+- Mutations, each restored and re-run green (outputs in `docs/security/attack-report.md`): M1 SVG text unescaped (`script-element <script>` in the OG SVG), M2 JSON-LD `<` escape removed (`line script-element JSON-LD`), M3 admin `[innerHTML]` (`admin queue: injected elements ["img src=x", "b element"]`), M4 trace owner check removed (`assert 200 == 403`, private points returned), M5 CSRF skipped on `PATCH /v1/me` (`assert 200 == 403`), M6 step-up dropped on `GET /v1/admin/users` (`assert 200 == 403`), M7 body limit raised to 4 MiB (`assert 422 == 413`), M8 /64 grouping reverted (finding 1 test red).
+- Secret scan: `gitleaks dir` over the new test, e2e and doc files: no leaks. `gitleaks git --log-opts="origin/main..HEAD"` reports one `generic-api-key` finding: the dummy password literal of `test_dump_and_log_scan.py` in commit `17ea86d5`, replaced in a later commit by a value built from parts; clearing the history entry needs a commit-scoped allowlist entry in the root `.gitleaks.toml` (outside this package, as for `8197119d` in 6A).
+
+## Consequences
+
+- Items 6, 11 and 16 move to done in the verification matrix; items 5, 14 and 23 gain evidence and stay as they were (14 and 23 partial).
+- Finding 2 (the PWA sends no CSP) stays open for the owner of `ops/Caddyfile` and the mobile build; the PWA sweep shows Angular's text binding holds on every surface.
+- IPv6 devices behind one /64 now share login, registration, step-up, plan and pack windows and the anonymous first free city.
+- New routes with a body must be added to the mass-assignment table of the attack suite; the structural test fails until they are.
+
+## Not exercised
+
+ZAP, MobSF and the pentest report (later 6 packages); payloads in native WebViews on a device; mail clients; the live HIBP API; a hosted proxy or CDN in front of the SSR server; Sentry scrubbing and log retention; a restore drill of the dumped database.
