@@ -4,7 +4,8 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { HomeData, PageData } from './content/page-data';
 import { cityData } from './content/test-data';
-import { Home } from './home/home';
+import { FACTS } from '../content/facts';
+import { featuredCity, Home } from './home/home';
 import { DEFAULT_PUBLIC_WEB_CONFIG, PUBLIC_WEB_CONFIG } from './public-config';
 import { JsonLdService } from './seo/json-ld.service';
 import { SeoService } from './seo/seo.service';
@@ -44,6 +45,54 @@ describe('Home', () => {
     expect(element.querySelector('.tagline')?.textContent).toContain(
       'Dolmuş nereden geçer? Mahalle bilir.',
     );
+  });
+
+  it('has banner, main and footer landmarks with the internal content links', async () => {
+    const fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('header')).toHaveLength(1);
+    expect(element.querySelectorAll('main#icerik')).toHaveLength(1);
+    expect(element.querySelectorAll('footer')).toHaveLength(1);
+    expect(element.querySelector('main header, main footer')).toBeNull();
+    expect(element.querySelector('a.skip')?.getAttribute('href')).toBe('#icerik');
+    const hrefs = (selector: string): string[] =>
+      Array.from(element.querySelectorAll<HTMLAnchorElement>(selector)).map(
+        (link) => link.getAttribute('href') ?? '',
+      );
+    expect(hrefs('header nav[aria-label="Site"] a')).toEqual(['/rehber', '/sss', '/veri']);
+    expect(hrefs('footer nav a')).toEqual(['/rehber', '/sss', '/veri', '/hakkinda', '/gizlilik']);
+    expect(hrefs('main a[href^="/rehber/"]')).toEqual([
+      '/rehber/cevrimdisi-sehir-paketi-nasil-kullanilir',
+      '/rehber/hat-bilgisi-nasil-dogrulanir',
+    ]);
+  });
+
+  it('leads with the description and calls to the sample city and the app', async () => {
+    const fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.lead')?.textContent?.trim()).toBe(FACTS.description);
+    const primary = element.querySelector<HTMLAnchorElement>('a.btn.primary');
+    expect(primary?.textContent).toContain('Örnek şehri gez');
+    expect(primary?.getAttribute('href')).toBe('/ornek-sehir');
+    expect(element.querySelector('a.btn.secondary')?.getAttribute('href')).toBe(
+      'https://app.inecekvar.app/',
+    );
+    const city = element.querySelector('#cities-title + ul .city');
+    expect(city?.querySelector('a')?.textContent).toBe('Örnek Şehir');
+    expect(city?.querySelector('.badge')?.textContent).toBe('örnek veri');
+    expect(element.querySelectorAll('.steps li h3')).toHaveLength(3);
+  });
+
+  it('features the first city with published lines', () => {
+    const empty = cityData({ slug: 'bos', published_line_count: 0 });
+    const full = cityData({ slug: 'dolu', is_sample: false });
+    expect(featuredCity([empty, full])?.slug).toBe('dolu');
+    expect(featuredCity([empty])?.slug).toBe('bos');
+    expect(featuredCity([])).toBeNull();
   });
 
   it('renders an unavailable home as 503 and clears JSON-LD', () => {
