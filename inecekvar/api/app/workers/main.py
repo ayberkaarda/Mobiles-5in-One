@@ -6,6 +6,8 @@ Phase 5 (ADR-0050): the pending webhook sweep every five minutes; nightly the Re
 reconciliation (04:10), the expired entitlement sweep (04:40), the retention purge (04:50) and
 the pack download roll-up (05:00), each idempotent with a dry-run switch.
 Phase 6 (ADR-0053): `backup.verify` daily at 07:30 checks the age and size of the newest dump.
+Phase 6 (ADR-0054): `cost.guard` every 15 minutes counts today's mails, pack downloads, presigns,
+exports and planner calls against thresholds and sets or clears the planner degrade flag.
 The jobs reuse the API composition (`build_services`), so they read the same settings and
 fail closed the same way: no object store defers photo and export work, no subscriber
 deleter defers erasure of subscribers. Every job logs counts only.
@@ -34,6 +36,7 @@ from app.workers.backup_verify import (
     lister_from_settings,
     run_backup_verify,
 )
+from app.workers.cost_guard import CostGuardSettings, DatabaseUsageSource, run_cost_guard
 from app.workers.deletion import hard_delete_due
 from app.workers.export import export_all_cities
 from app.workers.media import process_pending_photos
@@ -214,6 +217,19 @@ async def backup_verify_job(ctx: Context, dry_run: bool | None = None) -> dict[s
     return result.as_dict()
 
 
+async def cost_guard_job(ctx: Context, dry_run: bool | None = None) -> dict[str, object]:
+    """`cost.guard`: daily usage against thresholds and the planner degrade flag."""
+    services = services_of(ctx)
+    result = await run_cost_guard(
+        DatabaseUsageSource(services.session_factory),
+        services.redis,
+        CostGuardSettings(),
+        services.clock.now(),
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return result.as_dict()
+
+
 CRON_JOBS: tuple[CronJob, ...] = (
     cron(photos_job, second=0),
     cron(traces_job, minute=5, second=0),
@@ -225,6 +241,7 @@ CRON_JOBS: tuple[CronJob, ...] = (
     cron(retention_job, hour=4, minute=50, second=0),
     cron(pack_rollup_job, hour=5, minute=0, second=0),
     cron(backup_verify_job, hour=7, minute=30, second=0),
+    cron(cost_guard_job, minute={7, 22, 37, 52}, second=0),
 )
 
 
@@ -249,6 +266,7 @@ def worker_settings() -> type[Any]:
             retention_job,
             pack_rollup_job,
             backup_verify_job,
+            cost_guard_job,
         ]
         cron_jobs: ClassVar[list[CronJob]] = list(CRON_JOBS)
         on_startup = startup

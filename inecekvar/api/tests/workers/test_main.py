@@ -22,6 +22,7 @@ def test_schedule() -> None:
         "cron:retention_job",
         "cron:pack_rollup_job",
         "cron:backup_verify_job",
+        "cron:cost_guard_job",
     }
     export = jobs["cron:export_job"]
     assert (export.weekday, export.hour, export.minute) == ("mon", 3, 0)
