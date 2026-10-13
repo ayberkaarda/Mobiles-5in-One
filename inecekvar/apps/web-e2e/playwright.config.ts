@@ -64,6 +64,13 @@ export default defineConfig({
       dependencies: ['admin'],
       timeout: 240_000,
     },
+    // Item 16 sweep against the real API and an SSR server that reads it (ADR-0052).
+    {
+      name: 'xss',
+      testMatch: '**/xss-sweep.spec.ts',
+      dependencies: ['moderation'],
+      timeout: 300_000,
+    },
   ],
   webServer: [
     {
@@ -134,6 +141,21 @@ export default defineConfig({
     },
     ...(realApi
       ? [
+          {
+            // SSR server reading the real API: the stored-XSS sweep renders its data.
+            command: webCommand,
+            cwd: __dirname,
+            url: `http://127.0.0.1:${REAL_STACK.ssrPort}/healthz`,
+            reuseExistingServer: false,
+            timeout: 30_000,
+            env: {
+              ...sharedEnv,
+              PORT: String(REAL_STACK.ssrPort),
+              INECEKVAR_ENV: 'test',
+              IV_WEB_CANONICAL_ORIGIN: `http://127.0.0.1:${REAL_STACK.ssrPort}`,
+              IV_WEB_API_INTERNAL_URL: `http://127.0.0.1:${REAL_STACK.apiPort}/v1`,
+            },
+          },
           {
             command: `uv run uvicorn app.main:app --host 127.0.0.1 --port ${REAL_STACK.apiPort}`,
             cwd: apiDir,
