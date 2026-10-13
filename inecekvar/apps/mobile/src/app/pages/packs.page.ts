@@ -91,6 +91,23 @@ export class PacksPage {
     return this.size(Math.max(0, estimate.quota - estimate.usage));
   });
 
+  /** Share of the space packs could use that they use now, in percent; null when unknown. */
+  protected readonly storageShare = computed<number | null>(() => {
+    const estimate = this.manager.estimate();
+    if (!estimate || estimate.quota === null || estimate.usage === null) return null;
+    const free = Math.max(0, estimate.quota - estimate.usage);
+    const total = estimate.packs + free;
+    return total > 0 ? Math.round((estimate.packs / total) * 1000) / 10 : 0;
+  });
+
+  /** The drawn fill: never thinner than a sliver so an installed pack stays visible. */
+  protected readonly meterWidth = computed(() => {
+    const share = this.storageShare();
+    const used = (this.manager.estimate()?.packs ?? 0) > 0;
+    if (share === null) return used ? 12 : 0;
+    return used ? Math.max(3, share) : 0;
+  });
+
   protected readonly storageWhere = computed<TranslationKey>(
     () => `packs.storageWhere.${this.registry.kind}` as TranslationKey,
   );

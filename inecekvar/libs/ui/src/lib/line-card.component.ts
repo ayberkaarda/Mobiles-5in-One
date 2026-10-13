@@ -3,6 +3,7 @@ import { LineMode } from '@inecekvar/domain';
 import { FareChipComponent } from './fare-chip.component';
 import { KeepCodesComponent } from './keep-codes.component';
 import { ModeChipComponent } from './mode-chip.component';
+import { PLACARD_STYLES } from './sign-styles';
 
 /** Labels the card needs; the caller passes translated strings. */
 export interface LineCardLabels {
@@ -76,126 +77,129 @@ export interface LineCardLabels {
       }
     </article>
   `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .card {
-      --iv-ink: var(--iv-board-ink);
-      --iv-ink-muted: var(--iv-board-muted);
-      --iv-line-strong: rgba(255, 248, 231, 0.34);
-      --iv-tag: var(--iv-plate);
-      --iv-tag-ink: var(--iv-plate-ink);
-      --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
-      display: flex;
-      align-items: stretch;
-      transition: transform 120ms var(--iv-ease-out);
-    }
-    .card:active {
-      transform: translateY(2px);
-    }
-    .main {
-      flex: 1;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      min-width: 0;
-      min-height: 76px;
-      padding: 14px 4px 18px 14px;
-      border: 0;
-      background: none;
-      color: inherit;
-      font: inherit;
-      text-align: left;
-      cursor: pointer;
-      border-radius: var(--iv-radius-m);
-    }
-    .main:focus-visible,
-    .star:focus-visible {
-      outline: none;
-      box-shadow: var(--iv-focus);
-    }
-    .plate {
-      flex: none;
-      margin-top: 2px;
-      white-space: nowrap;
-    }
-    .body {
-      display: grid;
-      gap: 7px;
-      min-width: 0;
-    }
-    .name {
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: 17px;
-      line-height: 1.25;
-      letter-spacing: -0.005em;
-      color: var(--iv-board-ink);
-      overflow-wrap: anywhere;
-    }
-    .ends {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 2px 6px;
-      font-size: 13px;
-      font-weight: var(--iv-font-body-weight-600);
-      color: var(--iv-board-sign);
-    }
-    .ends svg {
-      width: 16px;
-      height: 8px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.6;
-    }
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .meta-part {
-      white-space: nowrap;
-    }
-    .meta-part:not(:last-child)::after {
-      content: '·';
-      margin: 0 5px;
-    }
-    .meta {
-      display: flex;
-      flex-wrap: wrap;
-      font-size: 13px;
-      color: var(--iv-board-muted);
-      font-variant-numeric: tabular-nums;
-    }
-    .star {
-      flex: none;
-      width: 52px;
-      border: 0;
-      background: none;
-      color: var(--iv-board-muted);
-      cursor: pointer;
-      border-radius: var(--iv-radius-m);
-    }
-    .star path {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linejoin: round;
-    }
-    .star.on {
-      color: var(--iv-board-sign);
-    }
-    .star.on path {
-      fill: currentColor;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .card {
-        transition: none;
+  styles: [
+    PLACARD_STYLES,
+    `
+      :host {
+        display: block;
       }
-    }
-  `,
+      .card {
+        --iv-ink: var(--iv-board-ink);
+        --iv-ink-muted: var(--iv-board-muted);
+        --iv-line-strong: rgba(255, 248, 231, 0.34);
+        --iv-tag: var(--iv-plate);
+        --iv-tag-ink: var(--iv-plate-ink);
+        --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
+        display: flex;
+        align-items: stretch;
+        transition: transform 120ms var(--iv-ease-out);
+      }
+      .card:active {
+        transform: translateY(2px);
+      }
+      .main {
+        flex: 1;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        min-width: 0;
+        min-height: 76px;
+        padding: 14px 4px 18px 14px;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        border-radius: var(--iv-radius-m);
+      }
+      .main:focus-visible,
+      .star:focus-visible {
+        outline: none;
+        box-shadow: var(--iv-focus);
+      }
+      .plate {
+        flex: none;
+        margin-top: 2px;
+        white-space: nowrap;
+      }
+      .body {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+      }
+      .name {
+        font-family: var(--iv-font-display);
+        font-weight: var(--iv-font-display-weight);
+        font-size: 17px;
+        line-height: 1.25;
+        letter-spacing: -0.005em;
+        color: var(--iv-board-ink);
+        overflow-wrap: anywhere;
+      }
+      .ends {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 6px;
+        font-size: 13px;
+        font-weight: var(--iv-font-body-weight-600);
+        color: var(--iv-board-sign);
+      }
+      .ends svg {
+        width: 16px;
+        height: 8px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .meta-part {
+        white-space: nowrap;
+      }
+      .meta-part:not(:last-child)::after {
+        content: '·';
+        margin: 0 5px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 13px;
+        color: var(--iv-board-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .star {
+        flex: none;
+        width: 52px;
+        border: 0;
+        background: none;
+        color: var(--iv-board-muted);
+        cursor: pointer;
+        border-radius: var(--iv-radius-m);
+      }
+      .star path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linejoin: round;
+      }
+      .star.on {
+        color: var(--iv-board-sign);
+      }
+      .star.on path {
+        fill: currentColor;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          transition: none;
+        }
+      }
+    `,
+  ],
 })
 export class LineCardComponent {
   readonly code = input.required<string>();

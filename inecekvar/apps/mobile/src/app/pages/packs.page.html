@@ -9,15 +9,31 @@
 
 <ion-content>
   <div class="iv-page">
-    <p class="iv-kicker">{{ 'packs.kicker' | t }}</p>
-    <h1 class="iv-heading">{{ 'packs.heading' | t }}</h1>
-    <p class="iv-lead">{{ 'packs.lead' | t }}</p>
+    <header class="iv-hero iv-board">
+      <p class="iv-kicker">{{ 'packs.kicker' | t }}</p>
+      <h1 class="iv-heading">{{ 'packs.heading' | t }}</h1>
+      <p class="iv-lead">{{ 'packs.lead' | t }}</p>
+    </header>
     <p class="free">{{ 'packs.freeNote' | t }}</p>
 
     <section class="iv-section" aria-labelledby="storage-title">
       <h2 class="iv-section-title" id="storage-title">{{ 'packs.storageTitle' | t }}</h2>
       <div class="storage">
         <p class="used">{{ 'packs.storageUsed' | t: { size: storageUsed() } }}</p>
+        <div
+          class="meter"
+          role="meter"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="storageShare() ?? 0"
+          [attr.aria-label]="'packs.storageTitle' | t"
+        >
+          <span
+            class="meter-fill"
+            [class.known]="storageShare() !== null"
+            [style.width.%]="meterWidth()"
+          ></span>
+        </div>
         @if (storageFree(); as free) {
         <p class="iv-note">{{ 'packs.storageFree' | t: { size: free } }}</p>
         }

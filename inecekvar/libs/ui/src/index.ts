@@ -18,3 +18,4 @@ export * from './lib/route-strip';
 export * from './lib/route-strip.component';
 export * from './lib/city-scene.component';
 export * from './lib/stop-sign.component';
+export * from './lib/sign-styles';

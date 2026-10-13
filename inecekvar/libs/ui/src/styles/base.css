@@ -3,7 +3,6 @@ body {
   font-family: var(--iv-font-body);
   color: var(--iv-color-text);
   background: var(--iv-color-background);
-  -webkit-font-smoothing: antialiased;
 }
 
 h1,

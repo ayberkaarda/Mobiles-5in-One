@@ -9,8 +9,8 @@
   width: 100%;
   min-height: 48px;
   padding: 0 var(--iv-space-3);
-  border: 1.5px solid var(--iv-line-strong);
-  border-radius: var(--iv-radius-m);
+  border: 2px solid var(--iv-ink);
+  border-radius: var(--iv-radius-pill);
   background: var(--iv-surface);
   color: var(--iv-ink);
   font: inherit;
@@ -37,10 +37,8 @@
 }
 
 .trigger-label {
-  font-size: 12px;
-  font-weight: var(--iv-font-body-weight-600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: var(--iv-font-body-weight-500);
   color: var(--iv-ink-muted);
 }
 

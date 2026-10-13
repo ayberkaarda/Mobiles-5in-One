@@ -12,16 +12,14 @@
 }
 
 .iv-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: var(--iv-font-body-weight-600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--iv-ink-muted);
+  color: var(--iv-ink);
 }
 
 .iv-input {
   width: 100%;
-  min-height: 46px;
+  min-height: 50px;
   padding: 0 12px;
   border: 1.5px solid var(--iv-line-strong);
   border-radius: var(--iv-radius-s);

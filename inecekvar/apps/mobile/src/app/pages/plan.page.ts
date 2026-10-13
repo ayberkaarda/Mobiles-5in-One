@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import {
   ItineraryCardComponent,
+  RouteStripComponent,
   ItineraryStep,
   ItineraryStepsComponent,
   ItinerarySummary,
@@ -16,7 +24,7 @@ import { PluralKey, TranslationKey } from '../i18n/translation';
 import { MapComponent } from '../map/map.component';
 import { MapMarker } from '../map/map-style';
 import { PackRegistry } from '../packs/pack-registry';
-import { steps, summarize, Translate } from '../planner/itinerary';
+import { itineraryStrip, steps, summarize, Translate } from '../planner/itinerary';
 import { formatFare } from '@inecekvar/ui';
 import { formatNumber, localeOf } from '../shared/format';
 import { MAX_TRANSFER_CHOICES, MaxTransfers, PlanEnd, PlanFormError } from '../planner/plan-form';
@@ -55,6 +63,7 @@ interface EndView {
     IonContent,
     CityPickerComponent,
     ItineraryCardComponent,
+    RouteStripComponent,
     ItineraryStepsComponent,
     MapComponent,
     StateComponent,
@@ -63,7 +72,7 @@ interface EndView {
   ],
   providers: [PlannerStore],
   templateUrl: './plan.page.html',
-  styleUrl: './plan.page.scss',
+  styleUrls: ['./plan-form.scss', './plan.page.scss'],
 })
 export class PlanPage {
   private readonly i18n = inject(LanguageService);
@@ -108,6 +117,23 @@ export class PlanPage {
     this.i18n.lang();
     const itinerary = this.planner.selectedItinerary();
     return itinerary ? steps(itinerary, this.t) : [];
+  });
+
+  /** The map shows while a point is being picked, otherwise only on request. */
+  protected readonly showMap = signal(false);
+
+  protected readonly strip = computed(() => {
+    this.i18n.lang();
+    const itinerary = this.planner.selectedItinerary();
+    if (!itinerary) return null;
+    const origin = this.planner.from()?.label || this.i18n.t('plan.from');
+    const destination = this.planner.to()?.label || this.i18n.t('plan.to');
+    const diagram = itineraryStrip(itinerary, this.t, origin, destination);
+    const first = diagram.nodes[0]?.name ?? origin;
+    const last = diagram.nodes[diagram.nodes.length - 1]?.name ?? destination;
+    return diagram.nodes.length > 1
+      ? { ...diagram, label: this.i18n.t('planner.stripLabel', { from: first, to: last }) }
+      : null;
   });
 
   protected readonly markers = computed<MapMarker[]>(() => {

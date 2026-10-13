@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonSearchbar, IonToolbar } from '@ionic/angular';
-import { NoticeComponent, StateComponent } from '@inecekvar/ui';
+import { CitySceneComponent, NoticeComponent, StateComponent } from '@inecekvar/ui';
 import { CityPickerComponent } from '../city/city-picker.component';
 import { CityStore } from '../city/city.store';
 import { LanguageService } from '../core/language.service';
@@ -39,6 +39,7 @@ interface PackPrompt {
     IonSearchbar,
     RouterLink,
     CityPickerComponent,
+    CitySceneComponent,
     LineListComponent,
     NoticeComponent,
     StateComponent,
@@ -47,7 +48,7 @@ interface PackPrompt {
   ],
   providers: [SearchStore],
   templateUrl: './search.page.html',
-  styleUrl: './search.page.scss',
+  styleUrls: ['./search.page.scss', './search-cards.scss'],
 })
 export class SearchPage {
   private readonly i18n = inject(LanguageService);

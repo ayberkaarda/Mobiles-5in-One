@@ -1,15 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { LineDetail } from '@inecekvar/data-access';
 import { formatFare } from '@inecekvar/ui';
 import {
+  DestinationSignComponent,
   KeepCodesComponent,
-  ModeChipComponent,
   RouteSketchComponent,
+  RouteStripComponent,
   StateComponent,
   StopSequenceComponent,
   StopSequenceItem,
+  StripNode,
+  TicketComponent,
 } from '@inecekvar/ui';
 import { CityStore } from '../city/city.store';
 import { FavoritesStore } from '../core/favorites.store';
@@ -31,7 +41,10 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
   istanbulkart: 'payment.istanbulkart',
 };
 
-/** `/hat/:slug?city=`: route map, ordered stops, fare, hours, payment, hailing and freshness. */
+/**
+ * `/hat/:slug?city=`: the destination sign, the strip diagram (or the map on request), the fare
+ * ticket, hours, payment, hailing, the ordered stops and freshness.
+ */
 @Component({
   selector: 'iv-line-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,11 +56,13 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
     IonTitle,
     IonContent,
     MapComponent,
+    DestinationSignComponent,
     KeepCodesComponent,
-    ModeChipComponent,
     RouteSketchComponent,
+    RouteStripComponent,
     StateComponent,
     StopSequenceComponent,
+    TicketComponent,
     TPipe,
     TpPipe,
   ],
@@ -94,12 +109,41 @@ export class LinePage {
   protected readonly coordinates = computed(() => this.data()?.geometry.coordinates ?? []);
   protected readonly stopPoints = computed(() => this.data()?.stops.map((s) => s.location) ?? []);
 
+  /** Diagram first; the interactive map loads only when asked for. */
+  protected readonly display = signal<'diagram' | 'map'>('diagram');
+
+  protected readonly ends = computed(() => {
+    const stops = this.data()?.stops ?? [];
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    return stops.length >= 2 && first && last ? { from: first.name, to: last.name } : null;
+  });
+
+  protected readonly stripNodes = computed<StripNode[]>(
+    () =>
+      this.data()?.stops.map((stop, index) => ({ name: stop.name, tick: String(index + 1) })) ?? [],
+  );
+
+  protected readonly diagramLabel = computed(() => {
+    const line = this.data();
+    const ends = this.ends();
+    return line && ends
+      ? this.i18n.t('line.diagramLabel', {
+          code: line.code,
+          count: line.stops.length,
+          from: ends.from,
+          to: ends.to,
+        })
+      : '';
+  });
+
   protected readonly stopItems = computed<StopSequenceItem[]>(
     () =>
-      this.data()?.stops.map((stop) => ({
+      this.data()?.stops.map((stop, index) => ({
         slug: stop.slug,
         name: stop.name,
         note: stop.kind === 'informal' ? this.i18n.t('stop.kindInformal') : undefined,
+        tick: String(index + 1),
       })) ?? [],
   );
 

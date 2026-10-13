@@ -6,10 +6,26 @@
 
 <ion-content>
   <div class="iv-page">
-    <section class="sign">
-      <p class="sign-kicker">{{ 'contribute.kicker' | t }}</p>
-      <h1>{{ 'contribute.heading' | t }}</h1>
-      <p class="sign-lead">{{ 'contribute.lead' | t }}</p>
+    <section class="ride iv-hero iv-board">
+      <p class="iv-kicker">{{ 'contribute.kicker' | t }}</p>
+      <h1 class="iv-heading">{{ 'contribute.heading' | t }}</h1>
+      <p class="iv-lead">{{ 'contribute.lead' | t }}</p>
+      <svg class="trail" viewBox="0 0 300 28" aria-hidden="true">
+        <path class="trail-rail" d="M14 14 L286 14" />
+        <circle class="trail-dot" cx="14" cy="14" r="6" />
+        <circle class="trail-dot" cx="68" cy="14" r="6" />
+        <circle class="trail-dot" cx="122" cy="14" r="6" />
+        <circle class="trail-dot" cx="176" cy="14" r="6" />
+        <circle class="trail-dot" cx="230" cy="14" r="6" />
+        <circle class="trail-dot" cx="286" cy="14" r="6" />
+      </svg>
+      <a class="record" routerLink="/katki/kayit">
+        <span class="rec" aria-hidden="true"></span>
+        <span class="record-text">
+          <strong>{{ 'contribute.traceTitle' | t }}</strong>
+          <span>{{ 'contribute.recordHint' | t }}</span>
+        </span>
+      </a>
     </section>
 
     @if (session.isSignedIn()) {

@@ -114,7 +114,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   styles: `
     :host {
       display: block;
-      color: var(--iv-board);
+      color: var(--iv-scene-ink);
     }
     svg {
       display: block;
@@ -187,6 +187,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     .lamp {
       fill: #fff8e7;
       stroke: #14213d;
+      stroke-width: 1.5;
+    }
+    .wheel .ink {
+      fill: #14213d;
+      stroke: #fff8e7;
       stroke-width: 1.5;
     }
     .hub {
