@@ -9,7 +9,9 @@ raw address from the webhooks, `$argon2id$` hashes only and `totp_secret_enc` as
 
 `test_combined_session_log_has_no_email_token_coordinate_or_secret` runs sign-in, trace upload,
 planning, both webhooks and account deletion with the production log configuration and greps
-everything written to stdout.
+everything written to stdout. Package 6E adds a degraded plan under the planner degrade flag, a
+`cost.guard` run and one probe line that carries a bearer header, the access token as text and
+a coordinate collection, so the scrub hook is checked on the same production stream.
 """
 
 import base64
@@ -23,6 +25,7 @@ from typing import cast
 import docker
 import pyotp
 import pytest
+import structlog
 from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
@@ -32,6 +35,8 @@ from app.auth.step_up import SessionStepUpSource
 from app.auth.totp import stored_secret
 from app.core.deps import Services
 from app.models import User
+from app.planner.degrade import set_flag
+from app.workers.cost_guard import CostGuardSettings, DatabaseUsageSource, run_cost_guard
 from tests.auth.conftest import mailed_token
 from tests.core.test_logging import log_stream
 from tests.security.test_attack_suite import CITY, TRACE_POINTS, connect, sample, trace_body
@@ -251,6 +256,23 @@ async def test_combined_session_log_has_no_email_token_coordinate_or_secret(
             },
         )
         assert plan.status_code == 200
+        await set_flag(services.redis, "ops", "manual", clock.now(), 600)
+        degraded = await client.post(
+            "/v1/plan",
+            json={
+                "city": CITY,
+                "from": {"lat": 42.5134567, "lng": 34.0134567},
+                "to": {"lat": 42.5654321, "lng": 34.0854321},
+            },
+        )
+        assert degraded.json()["degraded"] is True
+        structlog.get_logger().warning(
+            "log.scan.probe",
+            detail="upstream sent Authorization: Bearer " + bearer.access_token,
+            echoed="token " + bearer.access_token,
+            trace={"coordinates": [list(point) for point in TRACE_POINTS]},
+            origin=[42.5134567, 34.0134567],
+        )
         async with services.session_factory() as db:
             identity = await db.scalar(select(User.id).where(User.email == email))
         event = rc_event(
@@ -272,6 +294,14 @@ async def test_combined_session_log_has_no_email_token_coordinate_or_secret(
             "DELETE", "/v1/me", headers=headers, json={"password": PASSWORD}
         )
         assert deleted.status_code == 202
+    guard = await run_cost_guard(
+        DatabaseUsageSource(services.session_factory),
+        services.redis,
+        CostGuardSettings(emails_per_day=1),
+        clock.now(),
+        dry_run=False,
+    )
+    assert guard.alerts
     captured = log_stream.getvalue()
     lines = [json.loads(line) for line in captured.splitlines() if line.strip()]
     events = {line.get("event") for line in lines}
@@ -281,7 +311,15 @@ async def test_combined_session_log_has_no_email_token_coordinate_or_secret(
         "plan",
         "webhook.received",
         "auth.account.delete_requested",
+        "log.scan.probe",
+        "cost.guard.alert",
+        "cost.guard.run",
     } <= events
+    assert [line["degraded"] for line in lines if line.get("event") == "plan"] == [False, True]
+    probe = next(line for line in lines if line.get("event") == "log.scan.probe")
+    assert probe["trace"] == {}
+    assert probe["origin"] == [42.513, 34.013]
+    assert "[redacted]" in probe["detail"]
     assert "@" not in captured
     for value in secrets:
         assert value not in captured
@@ -298,5 +336,5 @@ async def test_combined_session_log_has_no_email_token_coordinate_or_secret(
     ]
     assert precise == []
     requests = [line for line in lines if line.get("event") == "http.request"]
-    assert len(requests) == 10
+    assert len(requests) == 11
     assert all(line["request_id"] == "log-scan-6b-0001" for line in requests)
