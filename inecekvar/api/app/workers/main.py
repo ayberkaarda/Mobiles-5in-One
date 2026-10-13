@@ -5,6 +5,7 @@ retention purge and account hard delete hourly, the GeoJSON export every Monday 
 Phase 5 (ADR-0050): the pending webhook sweep every five minutes; nightly the RevenueCat
 reconciliation (04:10), the expired entitlement sweep (04:40), the retention purge (04:50) and
 the pack download roll-up (05:00), each idempotent with a dry-run switch.
+Phase 6 (ADR-0053): `backup.verify` daily at 07:30 checks the age and size of the newest dump.
 The jobs reuse the API composition (`build_services`), so they read the same settings and
 fail closed the same way: no object store defers photo and export work, no subscriber
 deleter defers erasure of subscribers. Every job logs counts only.
@@ -26,6 +27,13 @@ from app.core.jobs import ArqJobQueue
 from app.core.logging import configure_logging
 from app.core.settings import load_settings
 from app.main import build_services, with_local_defaults
+from app.workers.backup_verify import (
+    RESULT_KEY,
+    RESULT_TTL_SECONDS,
+    BackupVerifySettings,
+    lister_from_settings,
+    run_backup_verify,
+)
 from app.workers.deletion import hard_delete_due
 from app.workers.export import export_all_cities
 from app.workers.media import process_pending_photos
@@ -187,6 +195,25 @@ async def pack_rollup_job(ctx: Context, dry_run: bool | None = None) -> int:
     return summary.rows_deleted
 
 
+async def backup_verify_job(ctx: Context, dry_run: bool | None = None) -> dict[str, object]:
+    """`backup.verify`: alert when the newest dump is missing, stale, empty or too small."""
+    services = services_of(ctx)
+    config = BackupVerifySettings()
+
+    async def publish(payload: str) -> None:
+        await services.redis.set(RESULT_KEY, payload, ex=RESULT_TTL_SECONDS)
+
+    result = await run_backup_verify(
+        lister_from_settings(config, services.settings),
+        config,
+        services.clock.now(),
+        publish,
+        dry_run=dry_run_of(services, dry_run),
+        require_configured=services.settings.env == "production",
+    )
+    return result.as_dict()
+
+
 CRON_JOBS: tuple[CronJob, ...] = (
     cron(photos_job, second=0),
     cron(traces_job, minute=5, second=0),
@@ -197,6 +224,7 @@ CRON_JOBS: tuple[CronJob, ...] = (
     cron(entitlement_sweep_job, hour=4, minute=40, second=0),
     cron(retention_job, hour=4, minute=50, second=0),
     cron(pack_rollup_job, hour=5, minute=0, second=0),
+    cron(backup_verify_job, hour=7, minute=30, second=0),
 )
 
 
@@ -220,6 +248,7 @@ def worker_settings() -> type[Any]:
             entitlement_sweep_job,
             retention_job,
             pack_rollup_job,
+            backup_verify_job,
         ]
         cron_jobs: ClassVar[list[CronJob]] = list(CRON_JOBS)
         on_startup = startup
