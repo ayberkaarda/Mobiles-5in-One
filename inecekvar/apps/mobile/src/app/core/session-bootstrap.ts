@@ -12,11 +12,14 @@ type UrlOpenSource = Pick<typeof App, 'addListener'>;
  * the first render does not wait for the network. In the native shell, app links arrive through
  * `appUrlOpen` and are routed through the allowlist of `resolveDeepLink`: line and stop pages,
  * the magic-link page (its token is captured in memory, never routed) or the not-found page.
+ *
+ * The returned promise settles (never rejects) once the start-up retry of a pending trace draft
+ * cleanup has finished. Start-up does not wait for it; callers that need the result can.
  */
-export function bootstrapSession(appPlugin: UrlOpenSource = App): void {
+export function bootstrapSession(appPlugin: UrlOpenSource = App): Promise<void> {
   const session = inject(SessionStore);
   const injector = inject(Injector);
-  void import('../contribute/trace-draft')
+  const cleanup = import('../contribute/trace-draft')
     .then(({ TraceDraftStore }) => injector.get(TraceDraftStore).retryCleanup())
     .catch(() => undefined);
   void session.init();
@@ -30,4 +33,5 @@ export function bootstrapSession(appPlugin: UrlOpenSource = App): void {
         .catch(() => false);
     });
   }
+  return cleanup;
 }

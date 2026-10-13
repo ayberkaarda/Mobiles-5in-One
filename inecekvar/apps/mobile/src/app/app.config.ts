@@ -39,7 +39,7 @@ export const appConfig: ApplicationConfig = {
       void import('./packs/map-warmup')
         .then(({ MapWarmup }) => injector.get(MapWarmup))
         .catch(() => undefined);
-      bootstrapSession();
+      void bootstrapSession();
       return inject(LanguageService).init();
     }),
     // PWA shell caching; off in development so the dev server always serves fresh code.

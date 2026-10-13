@@ -12,7 +12,7 @@ import { apiBaseFor, environment } from '../../environments/environment';
 import { appConfig } from '../app.config';
 import { PREFERENCE_STORE } from '../city/city.store';
 import { TRACE_CLEANUP_KEY, TRACE_DRAFT_KEY } from '../contribute/trace-draft';
-import { MemoryPreferences, settle } from '../testing/catalog.fixtures';
+import { MemoryPreferences } from '../testing/catalog.fixtures';
 import { LanguageService } from './language.service';
 import { bootstrapSession } from './session-bootstrap';
 
@@ -43,13 +43,12 @@ describe('bootstrapSession', () => {
         { provide: PREFERENCE_STORE, useValue: prefs },
       ],
     });
-    TestBed.runInInjectionContext(() => bootstrapSession());
-    await settle();
+    await TestBed.runInInjectionContext(() => bootstrapSession());
     expect(prefs.values.has(TRACE_DRAFT_KEY)).toBe(false);
     expect(prefs.values.has(TRACE_CLEANUP_KEY)).toBe(false);
   });
 
-  it('starts the session check on the web without a deep-link listener', () => {
+  it('starts the session check on the web without a deep-link listener', async () => {
     const session = fakeSession();
     const app = fakeApp();
     TestBed.configureTestingModule({
@@ -58,12 +57,12 @@ describe('bootstrapSession', () => {
         { provide: IS_NATIVE_PLATFORM, useValue: false },
       ],
     });
-    TestBed.runInInjectionContext(() => bootstrapSession(app as never));
+    await TestBed.runInInjectionContext(() => bootstrapSession(app as never));
     expect(session.init).toHaveBeenCalledTimes(1);
     expect(app.addListener).not.toHaveBeenCalled();
   });
 
-  it('captures magic links opened in the native app', () => {
+  it('captures magic links opened in the native app', async () => {
     const session = fakeSession();
     const app = fakeApp();
     TestBed.configureTestingModule({
@@ -72,7 +71,7 @@ describe('bootstrapSession', () => {
         { provide: IS_NATIVE_PLATFORM, useValue: true },
       ],
     });
-    TestBed.runInInjectionContext(() => bootstrapSession(app as never));
+    await TestBed.runInInjectionContext(() => bootstrapSession(app as never));
     expect(app.addListener).toHaveBeenCalledWith('appUrlOpen', expect.any(Function));
     app.open('https://app.inecekvar.app/giris/baglanti#token=abc');
     expect(session.consumeMagicLinkUrl).toHaveBeenCalledWith(
