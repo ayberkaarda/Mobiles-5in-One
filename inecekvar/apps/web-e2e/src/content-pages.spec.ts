@@ -68,7 +68,9 @@ test('/veri carries Dataset data and the proposed-licence status', async ({ page
   expect(datasets[0]['license']).toBe(TEST_ORIGIN + '/veri-lisansi');
 });
 
-test('draft and thin pages are noindex, the deletion page has no form', async ({ page }) => {
+test('draft and thin pages are noindex; the deletion page is indexable and needs JavaScript for its panel', async ({
+  page,
+}) => {
   for (const path of ['/kvkk-aydinlatma', '/iletisim']) {
     await page.goto(path);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /^noindex,follow/);
@@ -76,8 +78,11 @@ test('draft and thin pages are noindex, the deletion page has no form', async ({
   await page.goto('/kvkk-aydinlatma');
   await expect(page.locator('.status')).toContainText('Taslak');
   await page.goto('/hesap-silme');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /^index,follow/);
+  // Without JavaScript the server text and the fallback stay; the panel is client-only.
   await expect(page.locator('form, input, button, textarea')).toHaveCount(0);
-  await expect(page.locator('.status')).toContainText('silme formu yoktur');
+  await expect(page.locator('.status')).toContainText('web silme panelinden');
+  await expect(page.locator('[data-deletion-fallback]')).toContainText('JavaScript gerektirir');
 });
 
 test('every internal link on every content page resolves', async ({ page, request }) => {

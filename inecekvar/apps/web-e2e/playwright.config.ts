@@ -64,6 +64,13 @@ export default defineConfig({
       dependencies: ['admin'],
       timeout: 240_000,
     },
+    // Web account deletion on /hesap-silme against the real API (ADR-0057).
+    {
+      name: 'deletion',
+      testMatch: '**/account-deletion.spec.ts',
+      dependencies: ['admin'],
+      timeout: 180_000,
+    },
     // Item 16 sweep against the real API and an SSR server that reads it (ADR-0052).
     {
       name: 'xss',
