@@ -2021,10 +2021,13 @@ async def test_trusted_proxy_header_forms_of_one_address_share_a_window(
     assert garbled == [401]
 
 
-async def test_ipv6_rotation_within_one_64_and_mapped_ipv4_share_a_window(
+async def test_ipv6_address_window_mapped_ipv4_alias_and_shared_64_neighbours(
     real_limiter: Services,
 ) -> None:
-    rotation = [f"2001:db8:1:2::{index:x}" for index in range(1, 7)]
+    # Two tiers since the phase 6 review (ADR-0052 decision 9): one IPv6 address has its own
+    # window at the rule's limit; the /64 ceiling (20 times) bounds rotation and is covered in
+    # tests/core/test_ratelimit.py.
+    rotation = ["2001:db8:1:2::1"] * 6
     mapped = [
         "::ffff:198.51.100.7",
         "198.51.100.7",
@@ -2043,9 +2046,12 @@ async def test_ipv6_rotation_within_one_64_and_mapped_ipv4_share_a_window(
         neighbour = await failed_logins(
             client, [({"X-Real-IP": "2001:db8:1:3::1"}, unique_email())]
         )
+        same_64 = await failed_logins(client, [({"X-Real-IP": "2001:db8:1:2::2"}, unique_email())])
     assert rotated == [401] * 5 + [429]
     assert aliased == [401] * 5 + [429]
     assert neighbour == [401]
+    # A neighbour on the same /64 is not locked out by the first address.
+    assert same_64 == [401]
 
 
 async def test_email_spelling_variants_share_the_victim_window(real_limiter: Services) -> None:

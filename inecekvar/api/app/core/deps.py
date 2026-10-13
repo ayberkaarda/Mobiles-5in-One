@@ -20,7 +20,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.billing.revenuecat import SubscriberDirectory
-from app.core.client_ip import rate_limit_key
+from app.core.client_ip import rate_limit_subjects
 from app.core.errors import (
     AUTH_FORBIDDEN,
     AUTH_REQUIRED,
@@ -356,6 +356,15 @@ def rate_limit(rule: str) -> Callable[[RateLimiter, str], Awaitable[None]]:
     """
 
     async def dependency(limiter: RateLimiterDep, client_ip: ClientIpDep) -> None:
-        await enforce_rate_limit(limiter, rule, "ip:" + rate_limit_key(client_ip))
+        await enforce_ip_rate_limit(limiter, rule, client_ip)
 
     return dependency
+
+
+async def enforce_ip_rate_limit(
+    limiter: RateLimiter, rule: str, client_ip: str, prefix: str = "ip:"
+) -> None:
+    """Per-IP quota: one window per address, plus the /64 ceiling for an IPv6 client of a
+    two-tier rule (`rate_limit_subjects`, ADR-0052 decision 9)."""
+    for name, key in rate_limit_subjects(rule, client_ip):
+        await enforce_rate_limit(limiter, name, prefix + key)

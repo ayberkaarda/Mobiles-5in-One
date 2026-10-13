@@ -50,6 +50,31 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     "mail.security_after_bounce": RateLimitRule(limit=3, window_seconds=24 * 60 * 60),
 }
 
+# Phase 6 review F8 (ADR-0052 decision 9): per-IP auth and plan quotas of an IPv6 client count
+# per address (/128) at the rule's limit, plus a ceiling for the whole /64 at this factor times
+# the limit under `<rule>.net64`. One host on a shared /64 (campus or enterprise Wi-Fi, a carrier
+# segment) can no longer lock out its neighbours, and rotating addresses inside one /64 stays
+# bounded by the ceiling. IPv4 (and IPv4-mapped) clients count per address as before; the other
+# per-IP rules (`public.stop_pairs`, the anonymous pack identity) keep one window per /64.
+IPV6_NETWORK_FACTOR = 20
+TWO_TIER_IP_RULES: tuple[str, ...] = (
+    "auth.login",
+    "auth.register",
+    "auth.magic_link",
+    "auth.refresh",
+    "auth.step_up",
+    "plan",
+)
+RATE_LIMIT_RULES.update(
+    {
+        name + ".net64": RateLimitRule(
+            limit=RATE_LIMIT_RULES[name].limit * IPV6_NETWORK_FACTOR,
+            window_seconds=RATE_LIMIT_RULES[name].window_seconds,
+        )
+        for name in TWO_TIER_IP_RULES
+    }
+)
+
 # Reputation below this value uses `edits.low_reputation` (spec section 6.5).
 EDITS_REPUTATION_THRESHOLD = 20
 

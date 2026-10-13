@@ -5,9 +5,12 @@ import pytest
 from redis.asyncio import Redis, from_url
 from redis.exceptions import RedisError
 
+from app.core.client_ip import rate_limit_subjects
+from app.core.deps import enforce_ip_rate_limit
+from app.core.errors import ProblemError
 from app.core.ratelimit import RedisSlidingWindowLimiter
 from app.core.settings import RATE_LIMIT_RULES, Settings
-from tests.support.app import FixedClock
+from tests.support.app import FixedClock, InMemoryRateLimiter
 
 pytestmark = pytest.mark.anyio
 
@@ -122,4 +125,65 @@ def test_rules_match_spec() -> None:
         "public.stop_pairs": (60, 60),
         "admin.export": (10, 3600),
         "mail.security_after_bounce": (3, 86400),
+        # ADR-0052 decision 9: /64 ceilings of the two-tier IPv6 rules, 20 times the limit.
+        "auth.login.net64": (100, 900),
+        "auth.register.net64": (100, 900),
+        "auth.magic_link.net64": (100, 900),
+        "auth.refresh.net64": (100, 900),
+        "auth.step_up.net64": (100, 900),
+        "plan.net64": (600, 60),
     }
+
+
+def test_rate_limit_subjects_two_tier_for_ipv6_only() -> None:
+    assert rate_limit_subjects("auth.login", "2001:db8:1:2::7") == [
+        ("auth.login", "2001:db8:1:2::7"),
+        ("auth.login.net64", "2001:db8:1:2::/64"),
+    ]
+    assert rate_limit_subjects("plan", "2001:DB8:1:2:0:0:0:7") == [
+        ("plan", "2001:db8:1:2::7"),
+        ("plan.net64", "2001:db8:1:2::/64"),
+    ]
+    assert rate_limit_subjects("auth.login", "198.51.100.7") == [("auth.login", "198.51.100.7")]
+    assert rate_limit_subjects("auth.login", "::ffff:198.51.100.7") == [
+        ("auth.login", "198.51.100.7")
+    ]
+    # Rules outside the two-tier list keep one window per /64.
+    assert rate_limit_subjects("public.stop_pairs", "2001:db8:1:2::7") == [
+        ("public.stop_pairs", "2001:db8:1:2::/64")
+    ]
+    assert rate_limit_subjects("auth.login", "not-an-ip") == [("auth.login", "not-an-ip")]
+
+
+async def login_status(limiter: InMemoryRateLimiter, address: str) -> int:
+    try:
+        await enforce_ip_rate_limit(limiter, "auth.login", address)
+    except ProblemError as error:
+        return error.status
+    return 200
+
+
+async def test_one_host_on_a_shared_64_cannot_lock_out_its_neighbours(
+    settings: Settings, clock: FixedClock
+) -> None:
+    limiter = InMemoryRateLimiter(settings.rate_limit_rules, clock)
+    hostile = [await login_status(limiter, "2001:db8:1:2::bad") for _ in range(200)]
+    assert hostile == [200] * 5 + [429] * 195
+    # The refused hits of the hostile host added nothing to the /64 ceiling (100).
+    neighbours = [await login_status(limiter, f"2001:db8:1:2::{index:x}") for index in range(1, 20)]
+    assert neighbours == [200] * 19
+
+
+async def test_rotation_inside_one_64_meets_the_ceiling(
+    settings: Settings, clock: FixedClock
+) -> None:
+    limiter = InMemoryRateLimiter(settings.rate_limit_rules, clock)
+    statuses = [
+        await login_status(limiter, f"2001:db8:1:2::{index:x}")
+        for index in range(1, 30)
+        for _ in range(5)
+    ]
+    assert statuses.count(200) == 100
+    assert set(statuses[100:]) == {429}
+    # Another /64 has its own ceiling.
+    assert await login_status(limiter, "2001:db8:1:3::1") == 200

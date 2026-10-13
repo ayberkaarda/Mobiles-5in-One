@@ -15,6 +15,7 @@ from ipaddress import ip_address
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from app.core.client_ip import in_trusted_networks
 from app.core.errors import HTTPS_REQUIRED
 from app.core.handlers import send_problem
 from app.core.settings import Settings
@@ -30,7 +31,8 @@ def is_trusted_peer(peer: str | None, settings: Settings) -> bool:
         address = ip_address(peer)
     except ValueError:
         return False
-    return any(address in network for network in settings.trusted_proxy_networks)
+    # An IPv4-mapped peer (`::ffff:127.0.0.1` on a dual-stack bind) is the IPv4 proxy.
+    return in_trusted_networks(address, settings)
 
 
 def effective_scheme(

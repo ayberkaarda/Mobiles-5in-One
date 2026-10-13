@@ -54,7 +54,7 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_SMTP_USERNAME`, `INECEKVAR_SMTP_PASSWORD` | unset | SMTP login when the server needs one. |
 | `INECEKVAR_MAIL_FROM` | `İnecek Var <no-reply@inecekvar.app>` | Sender address. |
 | `INECEKVAR_MAGIC_LINK_BASE_URL` | `https://app.inecekvar.app/giris/baglanti` | Page that receives the magic-link token in the URL fragment. |
-| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` and forwarded-proto headers are trusted (Caddy); in production the proxy address only. |
+| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` and forwarded-proto headers are trusted (Caddy); in production the proxy address only. An IPv4-mapped peer (`::ffff:127.0.0.1`, what a dual-stack `--host ::` socket reports for an IPv4 connection) is unwrapped to its IPv4 address before this test, so the IPv4 CIDR covers it; prefer `--host 127.0.0.1` (or the proxy-facing address) anyway, and list the proxy's IPv6 address separately if it connects over IPv6. |
 | `INECEKVAR_REQUIRE_HTTPS` | unset: enforced in `production`, off in `local` and `test` | Refuse plain http with 403 `transport.https_required` unless the request came over TLS or a trusted proxy marks it https; `false` is refused in production (ADR-0055). |
 | `INECEKVAR_FORWARDED_PROTO_HEADER` | `X-Forwarded-Proto` | Header a trusted proxy uses to report the client's scheme (ADR-0055). |
 | `INECEKVAR_CLIENT_IP_HEADER` | `X-Real-IP` | The only header read for the client address. |
@@ -85,7 +85,7 @@ Object-storage, planner, offline-pack and retention settings are also read by th
 | `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
 | `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |
 
-The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP; `mail.security_after_bounce` allows 3 sign-in or account-exists mails per address per 24 hours to an address that hard-bounced more than 30 days ago (ADR-0050 item 13). These limits are fixed rules, not environment keys.
+The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP; `mail.security_after_bounce` allows 3 sign-in or account-exists mails per address per 24 hours to an address that hard-bounced more than 30 days ago (ADR-0050 item 13). These limits are fixed rules, not environment keys. Per-IP windows of an IPv6 client: the auth rules and `plan` count per address plus a ceiling per /64 at 20 times the limit; `public.stop_pairs` and the anonymous pack identity count per /64; IPv4-mapped addresses count as the IPv4 address (ADR-0052 decisions 4 and 9).
 
 Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 

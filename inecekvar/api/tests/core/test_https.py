@@ -52,6 +52,10 @@ def test_enforcement_follows_environment() -> None:
         ("http", "not-an-address", ["https"], "http"),
         ("https", "203.0.113.7", [], "https"),
         ("https", "127.0.0.1", ["http"], "http"),
+        # Dual-stack bind: the IPv4 proxy arrives IPv4-mapped (phase 6 review F2).
+        ("http", "::ffff:127.0.0.1", ["https"], "https"),
+        ("http", "::FFFF:7f00:1", ["https"], "https"),
+        ("http", "::ffff:203.0.113.7", ["https"], "http"),
     ],
 )
 def test_effective_scheme(
@@ -101,6 +105,17 @@ async def test_trusted_proxy_marked_https_is_served_with_hsts(core_app: FastAPI)
             headers=[("X-Forwarded-Proto", "https"), ("X-Forwarded-Proto", "https")],
         )
         assert duplicated.status_code == 403
+
+
+async def test_ipv4_mapped_proxy_peer_is_trusted(core_app: FastAPI) -> None:
+    async with client_for(
+        core_app, ("::ffff:127.0.0.1", 50000), "http://api.inecekvar.app"
+    ) as client:
+        response = await client.get(
+            "/v1/_test/ip", headers={"X-Forwarded-Proto": "https", "X-Real-IP": "198.51.100.4"}
+        )
+        assert response.status_code == 200
+        assert response.json() == {"ip": "198.51.100.4"}
 
 
 async def test_tls_terminated_at_the_process_is_served(core_app: FastAPI) -> None:
