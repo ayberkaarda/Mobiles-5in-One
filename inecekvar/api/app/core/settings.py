@@ -138,6 +138,14 @@ class Settings(BaseSettings):
     client_ip_header: str = "X-Real-IP"
     trusted_proxy_cidrs: tuple[str, ...] = ("127.0.0.1/32", "::1/128")
 
+    # --- Transport (spec section 6.10, ADR-0055) -----------------------------------------------
+    # Plain http is refused unless the request arrived over TLS or the direct peer is a trusted
+    # proxy (the networks above) that marks it https in this header. `None` means: enforced in
+    # production, off in local and test (the dev servers and the test client speak plain http);
+    # production refuses `false`.
+    forwarded_proto_header: str = "X-Forwarded-Proto"
+    require_https: bool | None = None
+
     # --- Request bodies (spec section 6.6) ---------------------------------------------------
     max_body_bytes: int = Field(default=1024 * 1024, ge=1024)
     max_trace_body_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
@@ -258,6 +266,8 @@ class Settings(BaseSettings):
             missing.append("totp_encryption_key")
         if missing:
             raise ValueError("missing required settings: " + ", ".join(missing))
+        if self.env == "production" and self.require_https is False:
+            raise ValueError("require_https cannot be false in production (spec section 6.10)")
         if self.env == "production" and not self.smtp_use_tls:
             raise ValueError("smtp_use_tls must be true in production (magic links travel by mail)")
         named = (("csrf_secret", self.csrf_secret), ("log_hash_key", self.log_hash_key))
@@ -271,6 +281,13 @@ class Settings(BaseSettings):
     @cached_property
     def trusted_proxy_networks(self) -> tuple[IPNetwork, ...]:
         return tuple(ip_network(item, strict=False) for item in self.trusted_proxy_cidrs)
+
+    @property
+    def https_enforced(self) -> bool:
+        """Whether plain http requests are refused (ADR-0055)."""
+        if self.require_https is None:
+            return self.env == "production"
+        return self.require_https
 
     @property
     def cookie_origins(self) -> tuple[str, ...]:
