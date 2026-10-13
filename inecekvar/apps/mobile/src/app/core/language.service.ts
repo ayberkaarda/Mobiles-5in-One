@@ -52,7 +52,10 @@ export class LanguageService {
   }
 
   private async apply(lang: AppLang): Promise<void> {
-    await firstValueFrom(this.transloco.load(lang));
+    // A destroyed Transloco hands back an empty stream (a start-up initializer that outlives its
+    // injector, e.g. a torn-down test module); that is not a language failure, so stop quietly.
+    const loaded = await firstValueFrom(this.transloco.load(lang), { defaultValue: null });
+    if (loaded === null) return;
     this.transloco.setActiveLang(lang);
     this.lang.set(lang);
     this.document.documentElement.lang = lang;

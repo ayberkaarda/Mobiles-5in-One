@@ -1,7 +1,8 @@
-// Starts or removes the local API stack for the moderation e2e (ADR-0041): compose project
-// `iv4e` (PostgreSQL/PostGIS, Redis, MinIO, Mailpit) on 127.0.0.1 ports 57941-57946, a fresh
-// database with migrations and the sample city, and Redis flushed so rate limits start empty.
-// Playwright then runs uvicorn on 127.0.0.1:57947 itself when IV_E2E_REAL_API=1.
+// Starts or removes the local API stack for the real-API e2e runs (ADR-0041, ADR-0052): compose
+// project `iv4e` (PostgreSQL/PostGIS, Redis, MinIO, Mailpit) on 127.0.0.1 ports 57941-57946, or
+// with IV_E2E_STACK=iv6b project `iv6b` on 57951-57956; a fresh database with migrations and the
+// sample city, and Redis flushed so rate limits start empty. Playwright then runs uvicorn (and,
+// for the XSS sweep, an SSR server reading it) itself when IV_E2E_REAL_API=1.
 //
 //   node apps/web-e2e/scripts/real-stack.mjs up     # reset and prepare
 //   node apps/web-e2e/scripts/real-stack.mjs down   # stop and remove containers and volumes

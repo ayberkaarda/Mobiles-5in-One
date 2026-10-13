@@ -1,2 +1,7 @@
 # Normalize line endings to LF in the repository and in checkouts
 * text=auto eol=lf
+
+# Scripts and configuration run in Linux CI and containers: always text with LF.
+*.sh text eol=lf
+*.sql text eol=lf
+*.conf text eol=lf

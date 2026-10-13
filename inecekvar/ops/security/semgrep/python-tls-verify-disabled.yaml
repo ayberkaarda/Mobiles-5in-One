@@ -1,0 +1,16 @@
+rules:
+  - id: iv-python-tls-verify-disabled
+    languages: [python]
+    severity: ERROR
+    message: >-
+      TLS certificate verification is turned off. Keep the default verification (or pass a CA
+      bundle path) for httpx, requests and ssl contexts.
+    metadata:
+      cwe: "CWE-295: Improper certificate validation"
+    pattern-either:
+      - pattern: httpx.$FUNC(..., verify=False, ...)
+      - pattern: requests.$FUNC(..., verify=False, ...)
+      - pattern: $SESSION.verify = False
+      - pattern: ssl._create_unverified_context(...)
+      - pattern: $CTX.verify_mode = ssl.CERT_NONE
+      - pattern: $CTX.check_hostname = False

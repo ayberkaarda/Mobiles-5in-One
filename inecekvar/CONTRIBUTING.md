@@ -43,7 +43,7 @@ From `inecekvar/api/`:
 
 ```sh
 uv sync --locked
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 57800
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict app tests

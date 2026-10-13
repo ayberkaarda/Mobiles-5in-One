@@ -1,0 +1,51 @@
+rules:
+  - id: iv-python-response-user-content-type
+    languages: [python]
+    severity: ERROR
+    message: >-
+      A raw Response takes its media type or Content-Type header from the request (header,
+      query, path, cookie or form value). A client-chosen type turns stored data into
+      text/html. Use a fixed media type from an allowlist.
+    metadata:
+      cwe: "CWE-79: Cross-site scripting through content-type confusion"
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.headers
+      - pattern: $REQ.query_params
+      - pattern: $REQ.path_params
+      - pattern: $REQ.cookies
+      - patterns:
+          - pattern-inside: |
+              def $FUNC(..., $PARAM: $TYPE = $SOURCE(...), ...):
+                ...
+          - metavariable-regex:
+              metavariable: $SOURCE
+              regex: ^(fastapi\.)?(Query|Header|Path|Cookie|Form|Body)$
+          - pattern: $PARAM
+      - patterns:
+          - pattern-inside: |
+              def $FUNC(..., $PARAM: Annotated[$TYPE, $SOURCE(...)], ...):
+                ...
+          - metavariable-regex:
+              metavariable: $SOURCE
+              regex: ^(fastapi\.)?(Query|Header|Path|Cookie|Form|Body)$
+          - pattern: $PARAM
+    pattern-sinks:
+      - patterns:
+          - pattern: $RESPONSE(..., media_type=$TYPE_VALUE, ...)
+          - metavariable-regex:
+              metavariable: $RESPONSE
+              regex: (^|\.)(Response|StreamingResponse|PlainTextResponse)$
+          - focus-metavariable: $TYPE_VALUE
+      - patterns:
+          - pattern: "$RESPONSE(..., headers={..., $NAME: $TYPE_VALUE, ...}, ...)"
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: (?i)^["']content-type["']$
+          - focus-metavariable: $TYPE_VALUE
+      - patterns:
+          - pattern: "$OUT.headers[$NAME] = $TYPE_VALUE"
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: (?i)^["']content-type["']$
+          - focus-metavariable: $TYPE_VALUE

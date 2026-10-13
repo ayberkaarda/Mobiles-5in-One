@@ -1,0 +1,13 @@
+<!-- Fixture for iv-angular-template-html-binding (semgrep --test). -->
+<section class="line-note">
+  <!-- ruleid: iv-angular-template-html-binding -->
+  <p [innerHTML]="note"></p>
+  <!-- ruleid: iv-angular-template-html-binding -->
+  <iframe [srcdoc]="preview"></iframe>
+  <!-- ruleid: iv-angular-template-html-binding -->
+  <div [attr.innerHTML]="note"></div>
+  <!-- ok: iv-angular-template-html-binding -->
+  <p>{{ note }}</p>
+  <!-- ok: iv-angular-template-html-binding -->
+  <p [textContent]="note"></p>
+</section>

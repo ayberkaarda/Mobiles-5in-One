@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ZAP context for the Inecek Var API scan (zap-api-scan.py -n api-context.xml). It holds no
+  credential: the bearer token of a throw-away scan account is minted at run time and handed to
+  ZAP through the ZAP_AUTH_HEADER_VALUE environment variable (see run-zap.sh).
+  Scope: the API site of the local Caddy stack over https on any port (zap-api-scan.py starts
+  the active scan from the site root, so the root must be in the context). Excluded, each because
+  it would end the scan's own session, not to hide a finding:
+    - /v1/auth/logout, /v1/auth/logout-all and /v1/auth/refresh: they revoke or rotate the
+      credential used by the run;
+    - /v1/me exactly (any method): DELETE schedules the deletion of the scan account, which a
+      fresh sign-in may do without a password (ADR-0026), after which every later request is 401.
+      /v1/me/* stays in scope.
+-->
+<configuration>
+    <context>
+        <name>inecekvar-api</name>
+        <desc>Inecek Var JSON API (/v1) behind the local Caddy API site</desc>
+        <inscope>true</inscope>
+        <incregexes>https://host\.docker\.internal:[0-9]+.*</incregexes>
+        <excregexes>https://host\.docker\.internal:[0-9]+/v1/auth/logout.*</excregexes>
+        <excregexes>https://host\.docker\.internal:[0-9]+/v1/auth/refresh.*</excregexes>
+        <excregexes>https://host\.docker\.internal:[0-9]+/v1/me([?#].*)?</excregexes>
+        <tech>
+            <include>Db.PostgreSQL</include>
+            <include>Language.Python</include>
+            <include>OS.Linux</include>
+            <exclude>Db.CouchDB</exclude>
+            <exclude>Db.Firebird</exclude>
+            <exclude>Db.HypersonicSQL</exclude>
+            <exclude>Db.IBM DB2</exclude>
+            <exclude>Db.MariaDB</exclude>
+            <exclude>Db.Microsoft Access</exclude>
+            <exclude>Db.Microsoft SQL Server</exclude>
+            <exclude>Db.MongoDB</exclude>
+            <exclude>Db.MySQL</exclude>
+            <exclude>Db.Oracle</exclude>
+            <exclude>Db.SAP MaxDB</exclude>
+            <exclude>Db.SQLite</exclude>
+            <exclude>Db.Sybase</exclude>
+            <exclude>Language.ASP</exclude>
+            <exclude>Language.C</exclude>
+            <exclude>Language.Java</exclude>
+            <exclude>Language.PHP</exclude>
+            <exclude>Language.Ruby</exclude>
+            <exclude>OS.MacOS</exclude>
+            <exclude>OS.Windows</exclude>
+            <exclude>SCM.Git</exclude>
+            <exclude>SCM.SVN</exclude>
+            <exclude>WS.Apache</exclude>
+            <exclude>WS.IIS</exclude>
+            <exclude>WS.Tomcat</exclude>
+        </tech>
+        <urlparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </urlparser>
+        <postparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </postparser>
+        <authentication>
+            <type>0</type>
+        </authentication>
+        <forceduser>-1</forceduser>
+        <session>
+            <type>0</type>
+        </session>
+        <authorization>
+            <type>0</type>
+            <basic>
+                <header/>
+                <body/>
+                <logic>AND</logic>
+                <code>-1</code>
+            </basic>
+        </authorization>
+    </context>
+</configuration>

@@ -10,7 +10,9 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "no-referrer",
     "X-Frame-Options": "DENY",
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
-    "Cross-Origin-Resource-Policy": "same-site",
+    # same-origin since ADR-0055 (ZAP 90004): every caller reads the API with fetch (CORS mode,
+    # where CORP does not apply) or through the same-origin proxy; no page embeds API answers.
+    "Cross-Origin-Resource-Policy": "same-origin",
 }
 
 

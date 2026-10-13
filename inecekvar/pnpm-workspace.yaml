@@ -12,3 +12,20 @@ allowBuilds:
   lmdb: false
   msgpackr-extract: false
   "@parcel/watcher": false
+
+# Security overrides for transitive packages with a High or Critical advisory and a patched
+# release in the same major (docs/security/dependency-audit.md). Each one only moves the
+# vulnerable version; remove an entry once its parent package depends on the patched release.
+overrides:
+  # nx: GHSA-w293-vg96-wgc3, GHSA-rfgv-xxqx-mfg5 and eight lower advisories, fixed in 7.29.1.
+  "undici@>=7.0.0 <7.29.1": 7.29.1
+  # @nx/angular > @angular-devkit/build-angular 22.1.9: GHSA-g84c-rxfj-3j2c, fixed in 8.3.0.
+  "webpack-dev-middleware@>=8.0.0 <8.3.0": 8.3.0
+  # @nx/angular > @angular/build 22.1.9 and build-angular 22.1.9: GHSA-67c8-pqhq-4rmx, fixed in 5.3.2.
+  "piscina@>=5.0.0 <5.3.2": 5.3.2
+
+# No patched release exists; accepted with an owner and an expiry in
+# docs/security/dependency-audit.md section 4 (dev server file watching only).
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

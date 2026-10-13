@@ -14,9 +14,13 @@ Run the worker with `uv run arq app.workers.main.WorkerSettings`. It connects to
 | Expired entitlement sweep | Daily 04:40 Europe/Istanbul | Mark entitling rows whose `expires_at` has passed as `expired` (bookkeeping; `has_plus` already denies by date). |
 | Retention purge | Daily 04:50 Europe/Istanbul | Delete processed `webhook_events` after 30 days and bounce suppressions after 365 days; complaints and manual entries are kept until an admin removes them (`DELETE /v1/admin/suppressions`). |
 | Pack download roll-up | Daily 05:00 Europe/Istanbul | Count `pack_downloads` rows older than 90 days per city and day into `pack_download_stats` and delete them, except the earliest row of each account. |
+| Backup verify (`backup.verify`) | Daily 07:30 Europe/Istanbul | List the backup prefix with the list-only identity and check the newest dump: missing, older than 26 hours, empty, under 4 KiB or without its `.sha256` sidecar logs one `backup.verify.alert` line at error level; the result is kept in Redis (`inecekvar:ops:backup-verify:last`, 8 days). Honours the dry run. ADR-0053, `docs/ops/backup-restore.md`. |
+| Cost guard (`cost.guard`) | Every 15 minutes (:07, :22, :37, :52) | Count today's (UTC) mails, pack downloads, presigns, export runs and planner calls against `INECEKVAR_COST_GUARD_*`; a count at or above its threshold logs one `cost.guard.alert` at error level once per resource and day. When the hourly planner load reaches its threshold, set the planner degrade flag (`inecekvar:ops:planner-degrade`) for the cool-down, re-arm it while the load holds and clear it a cool-down after the last re-arm; an operator flag is never touched. Database or Redis errors are logged by class and never stop the run. Honours the dry run. ADR-0054, `docs/ops/cost-alerts.md`. |
 
 The phase 5 jobs are idempotent and honour `INECEKVAR_JOBS_DRY_RUN` or a `dry_run` job argument, which wins; a dry run logs the counts it would change.
 
 Email suppressions (ADR-0050 item 12): only a `Permanent` Resend bounce suppresses, a later `email.delivered` clears it, and an admin with a fresh TOTP step-up lifts any entry with `DELETE /v1/admin/suppressions` and the address in the JSON body (`{"email": "..."}`); the audit row `admin.suppression_removed` keeps only the keyed digest. Sign-in links to an address that bounced more than 30 days ago are tried again, at most 3 per address per day.
 
-Every job logs counts and ids only. Logs never include coordinates, email addresses or points.
+Every job logs counts and ids only. Logs never include coordinates, email addresses or points (`docs/ops/logging.md`).
+
+Manual planner degrade switch: `uv run python -m app.ops.planner_degrade on --minutes 60 --reason cpu_alert --operator <slug>`, `off`, `status` (ADR-0054).

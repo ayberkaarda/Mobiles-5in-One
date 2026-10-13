@@ -1,0 +1,144 @@
+name: Inecek Var restore drill
+
+# Weekly backup and restore drill (security checklist items 20 and 21,
+# inecekvar/docs/ops/backup-restore.md, ADR-0053). inecekvar/ops/backup/drill-e2e.sh owns every
+# container it uses: a compose project with a unique name (source PostGIS and MinIO, ports on
+# 127.0.0.1 only). It creates the backup bucket with versioning and its 30-day rule, the
+# write-only, read-only and list-only identities and media and exports versioning
+# (bucket-setup.sh), migrates with Alembic, seeds the sample city and synthetic accounts,
+# fingerprints the source, runs backup.sh (pg_dump -Fc | age, upload with the write-only
+# identity), runs backup.verify with the list-only identity, checks the identity denials, records a
+# deletion request and a cancelled request after the dump, then runs restore-drill.sh: newest dump
+# with the read-only identity (name stamp checked against LastModified), age -d, pg_restore into a
+# throwaway PostGIS, the restore checks (Alembic head,
+# published line geometry and stops, TOTP ciphertext, required tables, fingerprint) and the
+# deletion replay. Six negative runs inject one fault each and must fail on the named check.
+# The output is kept as an artifact for 30 days.
+#
+# Scope: this proves the mechanics on every run. It never touches a production bucket: that
+# needs the R2 bucket, the read-only token and the offline age identity, which do not exist in
+# this repository (owner tasks in the runbook). Every credential and the age key pair are created
+# at run time by the script and never printed; the job uses no repository secret. Actions are
+# pinned to full commit SHAs and images to digests.
+
+on:
+  schedule:
+    - cron: "10 6 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inecekvar-restore-drill-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: inecekvar
+
+env:
+  UV_VERSION: 0.12.5
+
+jobs:
+  drill:
+    name: Inecek Var restore drill (PostGIS 16, MinIO, age)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PG_IMAGE: postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07
+      MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+      MC_IMAGE: pgsty/mc:RELEASE.2026-09-16T00-00-00Z@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
+      SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # age from the Ubuntu archive (signed packages); the drill needs age and age-keygen.
+      - name: Install age
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends age
+          age --version
+
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: inecekvar/api/uv.lock
+
+      - name: Install API dependencies
+        working-directory: inecekvar/api
+        run: uv sync --locked
+
+      - name: Pull images
+        run: |
+          for image in "$PG_IMAGE" "$MINIO_IMAGE" "$MC_IMAGE" "$SHELLCHECK_IMAGE"; do
+            docker pull --quiet "$image"
+          done
+
+      - name: Shell checks and shellcheck
+        run: |
+          bash ops/backup/checks.test.sh
+          docker run --rm -v "$PWD/ops/backup:/mnt" -w /mnt "$SHELLCHECK_IMAGE" -x -S style \
+            backup.sh bucket-setup.sh restore.sh restore-drill.sh replay-deletions.sh drill-e2e.sh checks.test.sh lib.sh
+
+      - name: Run restore drill
+        shell: bash
+        env:
+          INECEKVAR_DRILL_PG_IMAGE: ${{ env.PG_IMAGE }}
+          INECEKVAR_DRILL_MINIO_IMAGE: ${{ env.MINIO_IMAGE }}
+          INECEKVAR_BACKUP_MC_IMAGE: ${{ env.MC_IMAGE }}
+        run: |
+          set -o pipefail
+          {
+            echo "run: ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT}, commit ${GITHUB_SHA}"
+            echo "started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            docker --version
+          } | tee restore-drill-output.txt
+          bash ops/backup/drill-e2e.sh 2>&1 | tee -a restore-drill-output.txt
+          echo "finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a restore-drill-output.txt
+          grep -q '^RESULT: restore drill passed$' restore-drill-output.txt
+          grep -q '^RESULT: end-to-end drill passed$' restore-drill-output.txt
+
+      - name: Negative runs (each must fail on its check)
+        shell: bash
+        env:
+          INECEKVAR_DRILL_PG_IMAGE: ${{ env.PG_IMAGE }}
+          INECEKVAR_DRILL_MINIO_IMAGE: ${{ env.MINIO_IMAGE }}
+          INECEKVAR_BACKUP_MC_IMAGE: ${{ env.MC_IMAGE }}
+        run: |
+          set -u
+          expect_failure() {
+            local mutation="$1" pattern="$2" status
+            echo "== mutation ${mutation}" | tee -a restore-drill-output.txt
+            set +e
+            INECEKVAR_DRILL_MUTATION="${mutation}" bash ops/backup/drill-e2e.sh >"mutation-${mutation}.txt" 2>&1
+            status=$?
+            set -e
+            grep -E 'FAIL|^mutation:' "mutation-${mutation}.txt" | tee -a restore-drill-output.txt
+            if [ "${status}" -ne 1 ] || ! grep -Eq "${pattern}" "mutation-${mutation}.txt"; then
+              echo "mutation ${mutation} was not caught (exit ${status})" | tee -a restore-drill-output.txt
+              return 1
+            fi
+          }
+          set -e
+          expect_failure corrupt-dump 'restore: FAIL checksum mismatch'
+          expect_failure wrong-identity 'restore: FAIL age could not decrypt'
+          expect_failure drop-stop 'published_line_at_least_2_stops +FAIL'
+          expect_failure plain-totp 'totp_secret_still_ciphertext +FAIL'
+          expect_failure empty-table 'required_tables_not_empty +FAIL'
+          expect_failure skip-replay 'deletions_after_dump_reapplied +FAIL'
+
+      - name: Upload drill output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: inecekvar-restore-drill-output
+          path: inecekvar/restore-drill-output.txt
+          retention-days: 30
+          if-no-files-found: error

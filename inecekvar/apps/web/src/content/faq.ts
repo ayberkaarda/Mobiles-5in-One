@@ -78,6 +78,6 @@ export const FAQ: readonly FaqItem[] = [
   {
     question: 'Kişisel verilerim ve izleme konusunda ne yapılıyor?',
     answer:
-      'Reklam yok, üçüncü taraf reklam ya da izleme aracı kullanılmıyor ve herkese açık sayfalarda çerez konmuyor; yalnızca moderatörlerin kullandığı yönetim paneli giriş için oturum ve CSRF çerezleri koyar.Neyin toplandığı Gizlilik sayfasında, KVKK aydınlatma metni ise taslak olarak yayımlanır ve hukuki inceleme bekler.',
+      'Reklam yok, üçüncü taraf reklam ya da izleme aracı kullanılmıyor ve herkese açık sayfalarda çerez konmuyor; yalnızca moderatörlerin kullandığı yönetim paneli ve hesap silme sayfasındaki silme paneli giriş için oturum ve CSRF çerezleri koyar. Neyin toplandığı Gizlilik sayfasında, KVKK aydınlatma metni ise taslak olarak yayımlanır ve hukuki inceleme bekler.',
   },
 ];

@@ -19,6 +19,7 @@ from app.core.deps import (
     PrincipalDep,
     Services,
     ServicesDep,
+    enforce_ip_rate_limit,
     enforce_rate_limit,
 )
 from app.core.errors import (
@@ -41,7 +42,7 @@ async def limit_verification(services: Services, principal: Principal, client_ip
     await enforce_rate_limit(
         services.rate_limiter, "auth.step_up", "user:" + str(principal.user_id)
     )
-    await enforce_rate_limit(services.rate_limiter, "auth.step_up", "ip:" + client_ip)
+    await enforce_ip_rate_limit(services.rate_limiter, "auth.step_up", client_ip)
 
 
 @router.get("/me/totp")

@@ -34,7 +34,7 @@ Read from the process environment by other Phase 0 code (not from `.env`):
 | `INECEKVAR_TEST_S3_SECRET_KEY` | `api/tests/conftest.py` | Secret key for the configured S3 service (default `inecekvar-test-only`). |
 | `INECEKVAR_REQUIRE_DOCKER` | `api/tests/conftest.py` | `1` turns a skipped container-backed test into a failure (set in CI). |
 
-The API bind address and port are uvicorn flags, not environment keys: `uv run uvicorn app.main:app --host 127.0.0.1 --port 57800` (Caddy proxies `/api/*` to port 57800).
+The API bind address and port are uvicorn flags, not environment keys: `uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1` (Caddy proxies `/api/*` to port 57800). Always pass `--no-proxy-headers`: uvicorn's default (`--proxy-headers` with `--forwarded-allow-ips 127.0.0.1`) rewrites the client address and the scheme from `X-Forwarded-For` and `X-Forwarded-Proto` before the API middleware runs, so any local process could set them; with the flag only `INECEKVAR_TRUSTED_PROXY_CIDRS` decides (ADR-0055, release checklist smoke check). `--forwarded-allow-ips` is then inert and kept explicit so a later edit does not widen it silently.
 
 ## Read by the API (Phase 1)
 
@@ -54,7 +54,9 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_SMTP_USERNAME`, `INECEKVAR_SMTP_PASSWORD` | unset | SMTP login when the server needs one. |
 | `INECEKVAR_MAIL_FROM` | `İnecek Var <no-reply@inecekvar.app>` | Sender address. |
 | `INECEKVAR_MAGIC_LINK_BASE_URL` | `https://app.inecekvar.app/giris/baglanti` | Page that receives the magic-link token in the URL fragment. |
-| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` header is trusted (Caddy). |
+| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` and forwarded-proto headers are trusted (Caddy); in production the proxy address only. An IPv4-mapped peer (`::ffff:127.0.0.1`, what a dual-stack `--host ::` socket reports for an IPv4 connection) is unwrapped to its IPv4 address before this test, so the IPv4 CIDR covers it; prefer `--host 127.0.0.1` (or the proxy-facing address) anyway, and list the proxy's IPv6 address separately if it connects over IPv6. |
+| `INECEKVAR_REQUIRE_HTTPS` | unset: enforced in `production`, off in `local` and `test` | Refuse plain http with 403 `transport.https_required` unless the request came over TLS or a trusted proxy marks it https; `false` is refused in production (ADR-0055). |
+| `INECEKVAR_FORWARDED_PROTO_HEADER` | `X-Forwarded-Proto` | Header a trusted proxy uses to report the client's scheme (ADR-0055). |
 | `INECEKVAR_CLIENT_IP_HEADER` | `X-Real-IP` | The only header read for the client address. |
 | `INECEKVAR_HIBP_ENABLED` | `true` | Breached-password range check at registration. |
 | `INECEKVAR_LOG_LEVEL` | `INFO` | Log level of the JSON logs. |
@@ -83,11 +85,11 @@ Object-storage, planner, offline-pack and retention settings are also read by th
 | `INECEKVAR_TRACE_RETENTION_DAYS` | `30` | Retention period in days for raw traces. |
 | `INECEKVAR_DELETION_GRACE_DAYS` | `7` | Grace period in days before an account deletion request can be completed. |
 
-The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP; `mail.security_after_bounce` allows 3 sign-in or account-exists mails per address per 24 hours to an address that hard-bounced more than 30 days ago (ADR-0050 item 13). These limits are fixed rules, not environment keys.
+The `media.presign` rate limit is 20 requests per user per 24 hours; `pack.download` is 10 per anonymous hash or signed-in user per 24 hours; `auth.step_up` (TOTP confirmation and step-up) is 5 per 15 minutes per user and, separately, per client IP; `mail.security_after_bounce` allows 3 sign-in or account-exists mails per address per 24 hours to an address that hard-bounced more than 30 days ago (ADR-0050 item 13). These limits are fixed rules, not environment keys. Per-IP windows of an IPv6 client: the auth rules and `plan` count per address plus a ceiling per /64 at 20 times the limit; `public.stop_pairs` and the anonymous pack identity count per /64; IPv4-mapped addresses count as the IPv4 address (ADR-0052 decisions 4 and 9).
 
 Token lifetimes, Argon2 parameters, body limits and other rate-limit rules have defaults fixed by the specification and are not meant to be changed per environment.
 
-The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
+The API does not read `.env` files: export the values in the shell before `uv run uvicorn app.main:app --reload --no-proxy-headers --forwarded-allow-ips 127.0.0.1` (at least `INECEKVAR_ENV=local`); without `INECEKVAR_ENV` startup stops with a validation error.
 
 Do not place signing keys, provider credentials, production endpoints or other secrets in the example file. Production hosting, the public domain, TLS and HSTS preload are not exercised: no domain, no host.
 
@@ -112,9 +114,85 @@ Webhooks, billing and nightly jobs (ADR-0050). Every secret below is unset by de
 
 Worker schedule (Europe/Istanbul): pending webhook sweep every five minutes; RevenueCat reconciliation 04:10; expired entitlement sweep 04:40; retention purge 04:50; pack download roll-up 05:00 (`app/workers/main.py`, ADR-0050). The suppression list stores HMAC-SHA256 digests under `INECEKVAR_LOG_HASH_KEY`; rotating that key empties the effective list.
 
+## Backups and restore (Phase 6)
+
+Runbook: [backup-restore.md](backup-restore.md); ADR-0053. Two readers: the worker job `backup.verify` (a separate settings class in `app/workers/backup_verify.py`, prefix `INECEKVAR_BACKUP_VERIFY_`; the API settings ignore these keys) and the shell scripts of `ops/backup/` (process environment of the backup host or the operator, `/etc/inecekvar/backup.env` mode 0600). No key below has an example value that works outside the local stack; the secrets have none at all.
+
+Worker (`backup.verify`, daily 07:30 Europe/Istanbul):
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_BACKUP_VERIFY_ENDPOINT_URL` | unset; with `INECEKVAR_ENV=local` the API's `INECEKVAR_S3_ENDPOINT_URL` | S3 endpoint of the backup bucket. Unset in production: the job logs `backup.verify.alert` with status `not_configured`; in test it logs a skip. |
+| `INECEKVAR_BACKUP_VERIFY_REGION` | `auto` | Signing region. |
+| `INECEKVAR_BACKUP_VERIFY_ACCESS_KEY_ID`, `INECEKVAR_BACKUP_VERIFY_SECRET_ACCESS_KEY` | unset; locally the API's S3 keys | List-only identity of the backup prefix (`minio/backup-verifier-policy.json`); it can read no dump. On the rotation list. |
+| `INECEKVAR_BACKUP_VERIFY_BUCKET` | `inecekvar-backups` | Backup bucket. |
+| `INECEKVAR_BACKUP_VERIFY_PREFIX` | `inecekvar/` | Dump prefix; empty or ending with `/`. |
+| `INECEKVAR_BACKUP_VERIFY_MAX_AGE_HOURS` | `26` | Newest dump older than this alerts as `stale` (a daily dump plus slack; above 0, at most 336). |
+| `INECEKVAR_BACKUP_VERIFY_MIN_SIZE_BYTES` | `4096` | Newest dump smaller than this alerts as `too_small`; 0 bytes as `empty`. |
+| `INECEKVAR_BACKUP_VERIFY_MAX_STAMP_SKEW_HOURS` | `6` | A dump whose key stamp and `LastModified` differ by more than this alerts as `stamp_skew` (an overwrite of an old key); above 0, at most 48. |
+| `INECEKVAR_BACKUP_VERIFY_FUTURE_TOLERANCE_MINUTES` | `10` | A key stamp more than this far in the future alerts as `future_stamp`; 0 to 120. |
+
+`INECEKVAR_JOBS_DRY_RUN` also applies: a dry run logs `backup.verify.alert_suppressed` and does not write the Redis result `inecekvar:ops:backup-verify:last`. The worker also keeps the last listing (ETag and size per key) in the Redis hash `inecekvar:ops:backup-verify:seen` (40 days) and alerts `changed` once when a seen key changes; a dry run compares but does not update it. The command-line run (`python -m app.workers.backup_verify`, used by the drill) has no Redis and skips the change check.
+
+Scripts (`ops/backup/*.sh --help` prints the same list):
+
+| Key | Read by | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_BACKUP_AGE_RECIPIENT` | `backup.sh` | age public recipient (`age1...`); a private identity is refused. |
+| `INECEKVAR_BACKUP_S3_ENDPOINT` | all bucket scripts | S3 endpoint; https, plain http only for loopback or a single-label name on `INECEKVAR_BACKUP_DOCKER_NETWORK`. |
+| `INECEKVAR_BACKUP_S3_BUCKET`, `INECEKVAR_BACKUP_S3_PREFIX` | all bucket scripts | default `inecekvar-backups` and `inecekvar/`. |
+| `INECEKVAR_BACKUP_S3_WRITE_ACCESS_KEY`, `INECEKVAR_BACKUP_S3_WRITE_SECRET_KEY` | `backup.sh`, `bucket-setup.sh` | Write-only identity (PutObject under the prefix). Secret; backup host only. |
+| `INECEKVAR_RESTORE_S3_READ_ACCESS_KEY`, `INECEKVAR_RESTORE_S3_READ_SECRET_KEY` | `restore.sh`, `restore-drill.sh`, `bucket-setup.sh` | Read-only identity (list and get). Secret; kept offline with the age identity. |
+| `INECEKVAR_BACKUP_S3_ADMIN_ACCESS_KEY`, `INECEKVAR_BACKUP_S3_ADMIN_SECRET_KEY` | `bucket-setup.sh` | MinIO admin identity (local stack and drill only). |
+| `INECEKVAR_MEDIA_BUCKET`, `INECEKVAR_EXPORTS_BUCKET` | `bucket-setup.sh` | The API settings of the same name; versioning and lifecycle are applied to them. |
+| `INECEKVAR_BACKUP_PG_CONTAINER`, `INECEKVAR_BACKUP_PG_DATABASE`, `INECEKVAR_BACKUP_PG_USER` | `backup.sh` | Source database (container or libpq environment); defaults `inecekvar`. |
+| `INECEKVAR_RESTORE_AGE_IDENTITY_FILE` or `INECEKVAR_RESTORE_AGE_IDENTITY` | `restore.sh`, `restore-drill.sh` | The age identity (private key): a file path, or the text, which is written to a 0600 temp file and removed. Never stored in the repository. |
+| `INECEKVAR_RESTORE_PG_DATABASE`, `INECEKVAR_RESTORE_PG_CONTAINER`, `INECEKVAR_RESTORE_PG_USER` | `restore.sh`, `replay-deletions.sh` | Restore target; must be empty for `restore.sh`. |
+| `INECEKVAR_RESTORE_OBJECT` | `restore.sh` | A dump key to restore instead of the newest. |
+| `INECEKVAR_RESTORE_MAX_SKEW_HOURS`, `INECEKVAR_RESTORE_FUTURE_MINUTES` | `restore.sh` | Largest distance between a dump's name stamp and its `LastModified` (default 6 hours) and the clock tolerance for a stamp ahead of now (default 10 minutes); outside them the restore refuses the dump. `restore.sh --yes` skips the typed confirmation that every target except the drill container needs. |
+| `INECEKVAR_REPLAY_DELETIONS_FILE`, `INECEKVAR_REPLAY_APPLY`, `INECEKVAR_REPLAY_STATE_FILE`, `INECEKVAR_REPLAY_CANCELLATIONS_FILE` | `replay-deletions.sh` | Replay list, `1` to re-apply missing work, an optional state output, and the optional list of cancellations made after the dump. |
+| `INECEKVAR_BACKUP_MC_IMAGE`, `INECEKVAR_BACKUP_DOCKER_NETWORK`, `INECEKVAR_BACKUP_AGE_BIN` | all | Bucket client image (default the `minio-init` image), its docker network, the age binary. |
+| `INECEKVAR_DRILL_EXPECTED`, `INECEKVAR_DRILL_DELETIONS`, `INECEKVAR_DRILL_CANCELLATIONS`, `INECEKVAR_DRILL_REPLAY`, `INECEKVAR_DRILL_REQUIRED_TABLES`, `INECEKVAR_DRILL_EXPECTED_HEAD`, `INECEKVAR_DRILL_PG_IMAGE` | `restore-drill.sh` | Source fingerprint, replay list, replay switch (default `1`), tables that must hold rows, expected Alembic head, scratch PostGIS image. |
+| `INECEKVAR_DRILL_PG_PORT`, `INECEKVAR_DRILL_MINIO_PORT`, `INECEKVAR_DRILL_MINIO_IMAGE`, `INECEKVAR_DRILL_AGE_KEYGEN_BIN`, `INECEKVAR_DRILL_UV_BIN`, `INECEKVAR_DRILL_MUTATION` | `drill-e2e.sh` | Host ports on 127.0.0.1 (default 57791 and 57792; 57277 to 57776 refused), images and tools, and the negative-run switch. Passwords of the scratch stack are random per run. |
+
+## Cost guard, degrade mode and error reports (Phase 6)
+
+Runbooks: [cost-alerts.md](cost-alerts.md), [logging.md](logging.md); ADR-0054. The worker job `cost.guard` reads its own settings class (`app/workers/cost_guard.py`, prefix `INECEKVAR_COST_GUARD_`); the API settings ignore these keys. A count at or above its threshold alerts once per resource and UTC day.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_COST_GUARD_EMAILS_PER_DAY` | `80` | Sign-in, registration and erasure mails per UTC day (80 % of the Resend free tier). |
+| `INECEKVAR_COST_GUARD_PACK_DOWNLOADS_PER_DAY` | `1000` | `pack_downloads` rows per UTC day. |
+| `INECEKVAR_COST_GUARD_PRESIGNS_PER_DAY` | `300` | Presigned photo uploads per UTC day (300 x 4 MiB = 1.2 GiB). |
+| `INECEKVAR_COST_GUARD_EXPORTS_PER_DAY` | `20` | Export runs (weekly job and admin) per UTC day. |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_DAY` | `20000` | Computed plans (cache misses) per UTC day (alert only). |
+| `INECEKVAR_COST_GUARD_PLANNER_CALLS_PER_HOUR` | `3000` | Computed plans (cache misses) in the current UTC hour; reaching it logs `cost.guard.alert` (resource `planner_load`) and sets the planner degrade flag. **Must exceed the per-IP plan limit (30 a minute, so 1,800 an hour per address or IPv6 /64) times the number of attacker addresses you want to absorb**: with the default, two addresses at the limit can force a degrade for every city (ADR-0054 decision 10). |
+| `INECEKVAR_COST_GUARD_DEGRADE_ON_LOAD` | `true` | `false` keeps the load alert but never sets the flag automatically. |
+| `INECEKVAR_COST_GUARD_COOL_DOWN_MINUTES` | `60` | Lifetime of the guard's flag, re-armed while the load holds; the guard clears it a full cool-down after the last re-arm (5 to 1440). |
+| `INECEKVAR_COST_GUARD_DRY_RUN` | `false` | Log `cost.guard.alert_suppressed` and `cost.guard.degrade_suppressed`, write nothing. `INECEKVAR_JOBS_DRY_RUN` and the job argument also apply. |
+| `INECEKVAR_SENTRY_DSN` | unset | Error reports (API and worker). Unset: no SDK is imported. Set without the `sentry_sdk` package installed (the case in this repository): one `error_reporting.sdk_missing` warning, nothing sent. Treat as a secret. |
+| `INECEKVAR_SENTRY_ENVIRONMENT` | `production` | Environment name sent with error reports. |
+
+The manual degrade command `uv run python -m app.ops.planner_degrade on|off|status` reads only `INECEKVAR_REDIS_URL`. Redis keys: `inecekvar:ops:planner-degrade` (the flag), `inecekvar:cost:planner-calls:<UTC YYYYMMDDHH>` (3 days), `inecekvar:cost:alerted:<day>:<resource>` (2 days).
+
 ## Read by the web SSR server (Phase 4)
 
-`apps/web/src/server/config.ts` reads the `IV_WEB_*` keys listed in ADR-0038 item 1. Two keys were added after the phase 4 review:
+`apps/web/src/server/config.ts` reads these keys (ADR-0038 item 1, ADR-0039 item 13). `INECEKVAR_ENV` unset means production; an invalid origin, URL, fingerprint or team id stops start-up.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `IV_WEB_CANONICAL_ORIGIN` | `https://inecekvar.app` | Origin written into canonical links, sitemaps and JSON-LD; in production any other allowed host is redirected to it with 301. |
+| `IV_WEB_ALLOWED_HOSTS` | `inecekvar.app,www.inecekvar.app` | `Host` values the server answers; anything else is 400. The PWA host's Caddy site sends the canonical host for the app-link files (`INECEKVAR_WEB_HOST`). |
+| `IV_WEB_API_PUBLIC_ORIGIN` | `https://api.inecekvar.app` | Public API origin, listed in the CSP `connect-src` and used for the export URL shown on `/veri`. |
+| `IV_WEB_API_INTERNAL_URL` | `http://127.0.0.1:57800/v1` | API base the SSR server reads public data from (server side only, never sent to browsers). |
+| `IV_WEB_TILES_ORIGIN` | `https://tiles.inecekvar.app` | Tiles origin for the CSP `img-src` and `connect-src`; keep it equal to `INECEKVAR_PWA_TILES_ORIGIN` and the app's `tilesBase` (`docs/release/pmtiles-recipe.md`). |
+| `IV_WEB_APP_ORIGIN` | `https://app.inecekvar.app` | Origin of the web app (PWA) that public pages link to. |
+| `IV_WEB_ANDROID_CERT_SHA256` | unset (owner-provided) | Comma-separated SHA-256 signing fingerprints (`AA:BB:...`, 32 bytes each) for `/.well-known/assetlinks.json`; unset answers 404. Served on both hosts (the PWA host through Caddy, ADR-0057). |
+| `IV_WEB_IOS_TEAM_ID` | unset (owner-provided) | Apple team id (`^[A-Z0-9]{10}$`) for `/.well-known/apple-app-site-association`; unset answers 404. |
+| `IV_WEB_IOS_APP_ID` | unset | App Store id (6 to 12 digits) for the Smart App Banner; other values are ignored. |
+| `IV_WEB_CACHE_TTL_SECONDS`, `IV_WEB_CACHE_MAX_ENTRIES`, `IV_WEB_CACHE_QUERY_ALLOWLIST` | `600`, `500`, `sayfa` | Page cache lifetime, size and the query parameters that may vary a cached page. |
+
+Two keys were added after the phase 4 review:
 
 | Key | Default | Purpose |
 | --- | --- | --- |
@@ -128,3 +206,22 @@ The bucket is keyed on the TCP peer address (`trust proxy` stays off and forward
 The staff session cookie is `__Host-iv_session` with `Path=/` (the `__Host-` prefix forbids a narrower path), plus a CSRF cookie. While the admin UI lives under `inecekvar.app/admin`, every public page request of a signed-in moderator carries these cookies to the public SSR Node process (which never reads them, never forwards them to rendering and bypasses the page cache for them). A compromise of the SSR tier would therefore expose staff sessions.
 
 Production should serve the admin UI on a separate origin (for example `yonetim.inecekvar.app`, its own Caddy site that proxies `/api/*` to the API and everything else to a static build of the admin shell) or behind a path whose cookie never reaches the public SSR node. Current state, recorded honestly: the repository has only the local `ops/Caddyfile` (`:8080` web, `:8081` PWA, both proxying `/api/*`); no production Caddy configuration exists, no admin origin is configured, and the API cookie settings have not been checked for such an origin. This is a deployment decision for the hosting work (ADR-0002); no code changed for it in phase 4 (ADR-0041 item 15).
+
+## Reverse proxy (`ops/Caddyfile`)
+
+Caddy reads these from its process environment (compose passes them through). Production uses the same snippets with public TLS (release checklist G2).
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `INECEKVAR_API_UPSTREAM` | `host.docker.internal:57800` | API address that `/api/*` on both browser origins and the API site are proxied to. |
+| `INECEKVAR_WEB_UPSTREAM` | `host.docker.internal:4200` | Web SSR server address; also the source of the two app-link files on the PWA site. |
+| `INECEKVAR_WEB_HOST` | `inecekvar.app` | `Host` header Caddy sends when it fetches `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` for the PWA site; must be the web server's canonical host. |
+| `INECEKVAR_PWA_API_ORIGIN` | `https://api.inecekvar.app` | API origin in the PWA CSP `connect-src`. |
+| `INECEKVAR_PWA_TILES_ORIGIN` | `https://tiles.inecekvar.app` | Tiles origin in the PWA CSP `img-src` and `connect-src`. |
+| `INECEKVAR_PWA_UPLOAD_ORIGIN` | `https://*.r2.cloudflarestorage.com` (compose: `http://127.0.0.1:57900`) | Presigned photo upload origin in the PWA CSP; the deployment narrows it to the media bucket's account endpoint. |
+| `INECEKVAR_WEB_TLS_PORT`, `INECEKVAR_APP_TLS_PORT`, `INECEKVAR_API_TLS_PORT` | `58443`, `58444`, `58445` | Local host ports of the https sites (redirect targets of the plain http sites). |
+| `INECEKVAR_WEB_CANONICAL_HOST`, `INECEKVAR_APP_CANONICAL_HOST` | `localhost`, `localhost` | Fixed host of the http-to-https redirect of the web and PWA listeners; the client's `Host` header is never used (phase 6 review F10). Production: `inecekvar.app` and `app.inecekvar.app`. Checked by `ops/security/caddy-check.sh` against the running compose `caddy`. |
+
+## First-run bootstrap (`python -m app.ops.bootstrap`)
+
+The command (ADR-0057, release checklist section 7) reads the API settings, so it runs with the API's environment: with `INECEKVAR_ENV=production` every key that the API requires must be set, as for the API process. It uses `INECEKVAR_DATABASE_URL` and, for `admin`, `INECEKVAR_LOG_HASH_KEY` (the audit row stores an HMAC-SHA256 digest of the address in `diff_hash`, never the address). With `INECEKVAR_ENV=local` and no log hash key set, the digest key is missing and `admin` stops with a configuration error; set the key. A new account's password is read from stdin (`--password-stdin`), never from an argument or a key. The address can stay off the command line as well: `--email-stdin` reads it from the first stdin line (the password then from the second), or `INECEKVAR_BOOTSTRAP_EMAIL` holds it when neither `--email` nor `--email-stdin` is given; stdin lines longer than 1024 characters are refused. On invalid settings only the field names are printed.

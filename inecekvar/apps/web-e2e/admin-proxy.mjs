@@ -15,8 +15,13 @@ const presentedOrigin = process.env.IV_E2E_ORIGIN ?? 'http://localhost:4200';
 
 function forward(req, res, target, isApi) {
   const headers = { ...req.headers, host: isApi ? target.host : req.headers.host };
+  // A spec may name its client address (`x-e2e-client-ip`), so one run's quota windows (per
+  // client IP) do not spill into the next spec; Caddy sets the real peer the same way.
+  const clientIp = req.headers['x-e2e-client-ip'];
+  delete headers['x-e2e-client-ip'];
   if (isApi) {
-    headers['x-real-ip'] = '127.0.0.1';
+    headers['x-real-ip'] =
+      typeof clientIp === 'string' && /^[0-9.]{7,15}$/.test(clientIp) ? clientIp : '127.0.0.1';
     if (headers.origin) headers.origin = presentedOrigin;
     delete headers.referer;
   }

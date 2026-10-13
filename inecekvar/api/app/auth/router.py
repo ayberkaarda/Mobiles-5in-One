@@ -53,6 +53,7 @@ from app.core.deps import (
     SettingsDep,
     check_cookie_origin,
     csrf_token_for,
+    enforce_ip_rate_limit,
     enforce_rate_limit,
     normalize_email,
     rate_limit,
@@ -128,7 +129,7 @@ async def magic_link_verify(
     if body.password is not None:
         # A registration link verifies a password: bound by the login rule per client IP
         # before any hashing, so a link holder cannot drive unlimited Argon2 work.
-        await enforce_rate_limit(limiter, "auth.login", "verify-ip:" + client_ip)
+        await enforce_ip_rate_limit(limiter, "auth.login", client_ip, prefix="verify-ip:")
     now = clock.now()
     user = await verify_link(db, settings, body.token, body.password, now)
     output = await issue_session(db, settings, request, response, user, body.mode, now)

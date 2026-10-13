@@ -28,3 +28,16 @@ async def test_api_security_headers(client: httpx.AsyncClient, status: int) -> N
     for name, value in SECURITY_HEADERS.items():
         assert response.headers[name] == value
     assert response.headers["x-request-id"]
+
+
+async def test_api_isolation_headers_are_pinned(client: httpx.AsyncClient) -> None:
+    """Literal values, so a change of the shared constant cannot pass unnoticed (ADR-0055: ZAP
+    90004 asked for same-origin, `same-site` let sibling hosts embed API answers)."""
+    response = await client.get("/v1/_test/ip")
+    assert response.headers["cross-origin-resource-policy"] == "same-origin"
+    assert (
+        response.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+    )
+    assert response.headers["strict-transport-security"] == (
+        "max-age=63072000; includeSubDomains; preload"
+    )

@@ -1,0 +1,14 @@
+rules:
+  - id: iv-python-eval-exec
+    languages: [python]
+    severity: ERROR
+    message: >-
+      eval() and exec() run arbitrary code. Parse data with json, ast.literal_eval or an
+      explicit mapping instead.
+    metadata:
+      cwe: "CWE-95: Eval injection"
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: builtins.eval(...)
+      - pattern: builtins.exec(...)

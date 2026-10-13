@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { exportUrlTemplate } from '../../../content/facts';
+import { exportUrlTemplate, FACTS } from '../../../content/facts';
+import { DeletionSlot } from '../../deletion-entry';
 import { GUIDES } from '../../../content/guides';
 import { StatusPageComponent } from '../../pages/status-page.component';
 import { formatTurkishDate } from '../format';
@@ -12,7 +13,7 @@ import { ContentData } from './content-view';
 @Component({
   selector: 'iv-content-page',
   standalone: true,
-  imports: [RouterLink, StatusPageComponent, ContentBlocksComponent],
+  imports: [RouterLink, StatusPageComponent, ContentBlocksComponent, DeletionSlot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let page = data();
@@ -26,6 +27,9 @@ import { ContentData } from './content-view';
           }
           <p class="meta">Son güncelleme: {{ updated(view.dateModified) }}</p>
           <iv-content-blocks [blocks]="view.blocks" />
+          @if (view.path === deletionPath) {
+            <iv-deletion-slot />
+          }
           @if (view.faq; as items) {
             @for (item of items; track $index) {
               <section>
@@ -107,6 +111,7 @@ import { ContentData } from './content-view';
 })
 export class ContentPage extends PageView<ContentData> {
   protected readonly guides = GUIDES;
+  protected readonly deletionPath = FACTS.topLevelPaths.deletion;
   protected readonly exportTemplate = exportUrlTemplate(this.config.apiPublicBaseUrl);
   protected readonly updated = (date: string): string => formatTurkishDate(`${date}T12:00:00Z`);
 

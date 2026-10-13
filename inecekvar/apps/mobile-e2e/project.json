@@ -8,7 +8,12 @@
   "targets": {
     "e2e": {
       "executor": "nx:run-commands",
-      "dependsOn": [{ "projects": ["mobile"], "target": "build" }],
+      "dependsOn": [
+        {
+          "projects": ["mobile"],
+          "target": "csp-check"
+        }
+      ],
       "cache": false,
       "options": {
         "cwd": "apps/mobile-e2e",

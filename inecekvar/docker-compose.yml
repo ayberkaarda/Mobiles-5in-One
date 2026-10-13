@@ -1,12 +1,16 @@
 # Inecek Var local development stack. Host ports sit in the 57xxx range so the stack runs next
 # to the Askida (5xxxx offsets), Kadro and Cetele stacks without clashes. Every port binds to
 # 127.0.0.1 only. The passwords below are local development defaults, never used elsewhere.
-# The API (uv run uvicorn app.main:app --port 57800), the web dev server (pnpm nx serve web,
-# port 4200) and the mobile dev server (pnpm nx serve mobile, port 8100) run on the host; Caddy
+# The API (uv run uvicorn app.main:app --port 57800 --no-proxy-headers
+# --forwarded-allow-ips 127.0.0.1; without the flag uvicorn rewrites the client address and scheme
+# from X-Forwarded-* headers), the web dev server (pnpm nx serve web, port 4200) and the mobile
+# dev server (pnpm nx serve mobile, port 8100) run on the host; Caddy
 # reaches them through host.docker.internal, as production reaches them through its own network.
 # Host ports can be overridden through the environment (defaults shown):
 #   INECEKVAR_PG_PORT=57432  INECEKVAR_REDIS_PORT=57379
-#   INECEKVAR_WEB_PORT=57080  INECEKVAR_APP_PORT=57081
+#   INECEKVAR_WEB_PORT=57080  INECEKVAR_APP_PORT=57081 (http, redirect only)
+#   INECEKVAR_WEB_TLS_PORT=58443  INECEKVAR_APP_TLS_PORT=58444  INECEKVAR_API_TLS_PORT=58445
+#   (https, Caddy's local CA)
 #   INECEKVAR_MINIO_PORT=57900  INECEKVAR_MINIO_CONSOLE_PORT=57901
 #   INECEKVAR_MAIL_SMTP_PORT=57025  INECEKVAR_MAIL_UI_PORT=57825
 name: inecekvar
@@ -89,14 +93,29 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # Same-origin reverse proxy, as in production: /api/* goes to the API on both sites.
+  # Same-origin reverse proxy, as in production: /api/* goes to the API on both sites; plain
+  # http only redirects to https (local CA, ADR-0055). The PWA site serves the production build,
+  # so run `pnpm nx build mobile` first.
   caddy:
     image: caddy:2.11.7-alpine
     ports:
       - "127.0.0.1:${INECEKVAR_WEB_PORT:-57080}:8080"
       - "127.0.0.1:${INECEKVAR_APP_PORT:-57081}:8081"
+      - "127.0.0.1:${INECEKVAR_WEB_TLS_PORT:-58443}:8443"
+      - "127.0.0.1:${INECEKVAR_APP_TLS_PORT:-58444}:8444"
+      - "127.0.0.1:${INECEKVAR_API_TLS_PORT:-58445}:8445"
+    environment:
+      INECEKVAR_WEB_TLS_PORT: ${INECEKVAR_WEB_TLS_PORT:-58443}
+      INECEKVAR_APP_TLS_PORT: ${INECEKVAR_APP_TLS_PORT:-58444}
+      INECEKVAR_API_UPSTREAM: ${INECEKVAR_API_UPSTREAM:-host.docker.internal:57800}
+      INECEKVAR_WEB_UPSTREAM: ${INECEKVAR_WEB_UPSTREAM:-host.docker.internal:4200}
+      INECEKVAR_WEB_HOST: ${INECEKVAR_WEB_HOST:-inecekvar.app}
+      INECEKVAR_WEB_CANONICAL_HOST: ${INECEKVAR_WEB_CANONICAL_HOST:-localhost}
+      INECEKVAR_APP_CANONICAL_HOST: ${INECEKVAR_APP_CANONICAL_HOST:-localhost}
+      INECEKVAR_PWA_UPLOAD_ORIGIN: ${INECEKVAR_PWA_UPLOAD_ORIGIN:-http://127.0.0.1:57900}
     volumes:
       - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist/apps/mobile/browser:/srv/app:ro
       - inecekvar_caddy_data:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"

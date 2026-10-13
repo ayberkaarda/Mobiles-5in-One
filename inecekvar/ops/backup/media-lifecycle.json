@@ -1,0 +1,52 @@
+{
+  "Rules": [
+    {
+      "ID": "inecekvar-photos-noncurrent-versions-expire-after-30-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "photos/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      "ID": "inecekvar-incoming-noncurrent-versions-expire-after-1-day",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "incoming/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      "ID": "inecekvar-quarantine-noncurrent-versions-expire-after-1-day",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "quarantine/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

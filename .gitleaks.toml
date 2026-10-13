@@ -67,3 +67,21 @@ paths = [
   '''inecekvar/api/tests/webhooks/test_resend_webhook\.py''',
 ]
 targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "A dummy password literal in the phase 6 dump and log scan test, present in one early commit and since replaced by a value built from parts"
+condition = "AND"
+commits = ['17ea86d5ed051158c5ae74ed5d7dde69d5c1fe1e']
+paths = [
+  '''inecekvar/api/tests/security/test_dump_and_log_scan\.py''',
+]
+targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "A dummy bootstrap password literal in one early phase 6 test commit, since replaced by a value built at run time"
+condition = "AND"
+commits = ['4da3e9100b234453997d8a5c2b9545bb0d1779b5']
+paths = [
+  '''inecekvar/api/tests/ops/test_bootstrap\.py''',
+]
+targetRules = ['generic-api-key']

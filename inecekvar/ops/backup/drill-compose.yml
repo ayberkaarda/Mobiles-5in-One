@@ -1,0 +1,35 @@
+# Scratch stack of drill-e2e.sh: a source PostGIS database and MinIO, nothing else. The script
+# starts it under a project name unique to the run (inecekvar-drill-<id>), passes every value
+# below through the environment (passwords are random per run) and removes it with `down -v`.
+# Both publish one port on 127.0.0.1 only: the database for Alembic and the sample seed run from
+# the host, MinIO for the backup.verify check run from the host. Bucket client containers reach
+# MinIO on the project network.
+services:
+  source:
+    image: ${INECEKVAR_DRILL_PG_IMAGE:?set by drill-e2e.sh}
+    environment:
+      POSTGRES_DB: inecekvar
+      POSTGRES_USER: inecekvar
+      POSTGRES_PASSWORD: ${INECEKVAR_DRILL_PG_PASSWORD:?set by drill-e2e.sh}
+    ports:
+      - "127.0.0.1:${INECEKVAR_DRILL_PG_PORT:?set by drill-e2e.sh}:5432"
+    healthcheck:
+      # Only the final server listens on TCP; the init-time server uses the socket only.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U inecekvar -d inecekvar"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+  minio:
+    image: ${INECEKVAR_DRILL_MINIO_IMAGE:?set by drill-e2e.sh}
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${INECEKVAR_DRILL_MINIO_ROOT_USER:?set by drill-e2e.sh}
+      MINIO_ROOT_PASSWORD: ${INECEKVAR_DRILL_MINIO_ROOT_PASSWORD:?set by drill-e2e.sh}
+    ports:
+      - "127.0.0.1:${INECEKVAR_DRILL_MINIO_PORT:?set by drill-e2e.sh}:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 2s
+      timeout: 3s
+      retries: 60

@@ -4,9 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
  * PWA end-to-end tests against the production build (`nx build mobile`) served by `serve.mjs`
  * with `/api/*` proxied to a running API (`IV_E2E_API`, default http://127.0.0.1:57980). The
  * API stack (Postgres, Redis, migrations, sample seed, uvicorn) is started outside, as in
- * docs/adr/0034. Ports stay on 127.0.0.1 and outside 57277-57776.
+ * docs/adr/0034. Ports stay on 127.0.0.1 and outside 57277-57776. IV_E2E_BASE_URL points the
+ * browser at another origin instead, for example the compose Caddy site
+ * `https://localhost:58444` with its local CA (certificate errors ignored), to run `csp.spec.ts`
+ * against the real proxy (ADR-0055).
  */
 const port = Number(process.env['IV_E2E_PORT'] ?? 57990);
+const baseURL = process.env['IV_E2E_BASE_URL'] ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: './src',
@@ -18,7 +22,10 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL,
+    ignoreHTTPSErrors: !!process.env['IV_E2E_BASE_URL'],
+    // Service workers refuse a certificate error even with ignoreHTTPSErrors.
+    launchOptions: process.env['IV_E2E_BASE_URL'] ? { args: ['--ignore-certificate-errors'] } : {},
     ...devices['Desktop Chrome'],
     viewport: { width: 360, height: 800 },
     deviceScaleFactor: 2,

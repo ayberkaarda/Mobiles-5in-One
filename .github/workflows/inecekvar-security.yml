@@ -1,0 +1,421 @@
+name: Inecek Var Security
+
+# Security checklist items 15 and 19, and the CI half of items 1 and 2: secret scan of the full
+# history, dependency audits of both lockfiles, the OSV scan, bandit, semgrep with the project's
+# own rules and CycloneDX SBOMs. Actions are pinned to full commit SHAs; downloaded binaries
+# (gitleaks, osv-scanner) are pinned to a release and checked against their SHA-256; the Python
+# scan tools are installed from inecekvar/ops/security/tools/requirements.txt with
+# --require-hashes; the semgrep image is pinned by digest. The workflow lives at the Git
+# repository root; Inecek Var is inecekvar/.
+#
+# It runs on every pull request and every push to main, without a path filter, so the single
+# "Inecek Var Security gate" check always reports and can be a required status check on main.
+# The "changes" job limits the work to changes under inecekvar/, an inecekvar-* workflow (this
+# file included), .gitleaks.toml or renovate.json; otherwise every scan job is skipped and the
+# gate passes. The weekly schedule and manual runs always run every job, so new advisories
+# surface without a code change. Same pattern as askida-security.yml and kadro-security.yml.
+# See inecekvar/docs/security/dependency-audit.md and inecekvar/docs/adr/0051-supply-chain-and-static-scans.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, Monday, after the Renovate window (before 06:00 Europe/Istanbul).
+    - cron: "29 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inecekvar-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  OSV_SCANNER_VERSION: 2.6.0
+  OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+  SEMGREP_IMAGE: semgrep/semgrep:1.179.0@sha256:93963d9295a366f59e4850127b1550400ee7b388f04fe144e4a1f6325d96e01b
+  UV_VERSION: 0.12.5
+
+jobs:
+  changes:
+    name: Detect Inecek Var changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      inecekvar: ${{ steps.diff.outputs.inecekvar }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pull requests: the checked-out merge commit against its first parent (the base branch).
+      # Pushes: the pushed range; a new branch or an unknown "before" commit runs everything.
+      # Scheduled and manual runs have no range and run everything.
+      # The decision comes from the exit code of `git diff --quiet` limited to the pathspecs,
+      # not from parsing file names, so quoted or non-ASCII names cannot slip past. --no-renames
+      # reports a file moved out of inecekvar/ as a deletion inside it. Exit 0 means no change,
+      # 1 a change, anything else is an error and runs every job.
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            echo "No diff range for $EVENT_NAME; running every Inecek Var security job."
+            inecekvar=true
+          else
+            set -- inecekvar/ ':(glob).github/workflows/inecekvar-*.yml' .gitleaks.toml renovate.json
+            # Log only; the decision below does not read this output.
+            git -c core.quotePath=false diff --no-renames --name-status "$base" "$head" -- "$@" \
+              || true
+            if git diff --quiet --no-renames "$base" "$head" -- "$@"; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) inecekvar=false ;;
+              1) inecekvar=true ;;
+              *)
+                echo "git diff failed with exit code $status; running every Inecek Var security job."
+                inecekvar=true
+                ;;
+            esac
+          fi
+          echo "inecekvar=$inecekvar" >> "$GITHUB_OUTPUT"
+          echo "Inecek Var security jobs run: $inecekvar"
+
+  gitleaks:
+    name: Gitleaks (full history)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      # Every commit of every ref, from the repository root, with the root .gitleaks.toml;
+      # findings are redacted in the log.
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  # Production and development dependencies together (no --prod): the build and test tool chain
+  # runs on developer machines and in CI, so a High advisory there counts too. Exemptions live in
+  # auditConfig.ignoreGhsas of inecekvar/pnpm-workspace.yaml, each with an owner and an expiry in
+  # docs/security/dependency-audit.md.
+  pnpm-audit:
+    name: pnpm audit (high and critical)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pnpm version is read from the "packageManager" field in inecekvar/package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: inecekvar/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: inecekvar/.nvmrc
+
+      # Reads inecekvar/pnpm-lock.yaml; no install and no lifecycle scripts run.
+      - name: pnpm audit
+        run: pnpm audit --audit-level=high
+
+  # The uv.lock export (runtime and dev groups, no hashes) is audited without resolving it again.
+  # pip-audit has no severity filter, so any known vulnerability fails the job (stricter than the
+  # High/Critical bar of spec item 19).
+  pip-audit:
+    name: pip-audit (uv.lock export)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+
+      - name: Install scan tools (hash-checked)
+        run: |
+          uv venv "$RUNNER_TEMP/scan-tools"
+          VIRTUAL_ENV="$RUNNER_TEMP/scan-tools" uv pip install --require-hashes \
+            -r ops/security/tools/requirements.txt
+          echo "$RUNNER_TEMP/scan-tools/bin" >> "$GITHUB_PATH"
+
+      - name: Export the lockfile
+        working-directory: inecekvar/api
+        run: |
+          uv export --frozen --no-hashes --no-emit-project --all-groups \
+            --output-file "$RUNNER_TEMP/requirements-audit.txt"
+          test -s "$RUNNER_TEMP/requirements-audit.txt"
+
+      - name: pip-audit
+        run: |
+          pip-audit --version
+          pip-audit --strict --disable-pip --no-deps --progress-spinner off \
+            --requirement "$RUNNER_TEMP/requirements-audit.txt"
+
+  osv-scanner:
+    name: OSV scan (pnpm-lock.yaml, uv.lock)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install osv-scanner
+        run: |
+          binary="osv-scanner_linux_amd64"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/${binary}"
+          echo "${OSV_SCANNER_SHA256}  $RUNNER_TEMP/osv-scanner" | sha256sum --check --strict
+          chmod 0755 "$RUNNER_TEMP/osv-scanner"
+          "$RUNNER_TEMP/osv-scanner" --version
+
+      # Exit code 1 means vulnerabilities were found; any non-zero exit fails the job. The config
+      # holds the dated exemptions (each one expires and fails the job again).
+      - name: Scan lockfiles
+        run: |
+          "$RUNNER_TEMP/osv-scanner" scan \
+            --config=inecekvar/ops/security/osv-scanner.toml \
+            --lockfile=inecekvar/pnpm-lock.yaml \
+            --lockfile=inecekvar/api/uv.lock
+
+  bandit:
+    name: Bandit (API, medium and above)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+
+      - name: Install scan tools (hash-checked)
+        run: |
+          uv venv "$RUNNER_TEMP/scan-tools"
+          VIRTUAL_ENV="$RUNNER_TEMP/scan-tools" uv pip install --require-hashes \
+            -r ops/security/tools/requirements.txt
+          echo "$RUNNER_TEMP/scan-tools/bin" >> "$GITHUB_PATH"
+
+      # -ll: medium and high severity fail the job; low findings are listed in the audit page.
+      - name: bandit
+        run: |
+          bandit --version
+          bandit -r api/app -ll
+
+  # The project's own rules (inecekvar/ops/security/semgrep), no registry rules and no network
+  # rule download: the fixture tests first, then the scan of the API and the Angular sources.
+  # inecekvar/ is mounted read-only; --metrics=off keeps the run offline apart from the image pull.
+  semgrep:
+    name: Semgrep (project rules)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pull the pinned image
+        run: docker pull "$SEMGREP_IMAGE"
+
+      - name: Rule tests
+        run: |
+          docker run --rm -v "$PWD/inecekvar:/src:ro" -w /src "$SEMGREP_IMAGE" \
+            semgrep --test --metrics=off --disable-version-check ops/security/semgrep
+
+      - name: Scan
+        run: |
+          docker run --rm -v "$PWD/inecekvar:/src:ro" -w /src "$SEMGREP_IMAGE" \
+            semgrep scan --metrics=off --disable-version-check --error \
+            --config ops/security/semgrep api/app apps libs
+
+  # CycloneDX SBOMs of both dependency sets, uploaded as artifacts. Lockfile data only: no
+  # install and no lifecycle scripts.
+  sbom:
+    name: SBOM (CycloneDX, npm and Python)
+    needs: changes
+    if: needs.changes.outputs.inecekvar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: inecekvar
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: inecekvar/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: inecekvar/.nvmrc
+
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+
+      - name: Install scan tools (hash-checked)
+        run: |
+          uv venv "$RUNNER_TEMP/scan-tools"
+          VIRTUAL_ENV="$RUNNER_TEMP/scan-tools" uv pip install --require-hashes \
+            -r ops/security/tools/requirements.txt
+          echo "$RUNNER_TEMP/scan-tools/bin" >> "$GITHUB_PATH"
+
+      - name: npm SBOM
+        run: |
+          mkdir -p "$RUNNER_TEMP/sbom"
+          pnpm sbom --sbom-format cyclonedx --lockfile-only --sbom-type application \
+            --out "$RUNNER_TEMP/sbom/inecekvar-npm.cdx.json"
+          test -s "$RUNNER_TEMP/sbom/inecekvar-npm.cdx.json"
+
+      # Runtime dependencies of the API only (the image content), from the frozen lockfile.
+      - name: Python SBOM
+        working-directory: inecekvar/api
+        run: |
+          uv export --frozen --no-hashes --no-emit-project --no-dev \
+            --output-file "$RUNNER_TEMP/requirements-runtime.txt"
+          cyclonedx-py requirements "$RUNNER_TEMP/requirements-runtime.txt" \
+            --output-format JSON --output-file "$RUNNER_TEMP/sbom/inecekvar-api.cdx.json"
+          test -s "$RUNNER_TEMP/sbom/inecekvar-api.cdx.json"
+          ls -l "$RUNNER_TEMP/sbom"
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: inecekvar-sbom
+          path: ${{ runner.temp }}/sbom/
+          if-no-files-found: error
+          retention-days: 30
+
+  # The only security check to mark as required on main. "changes" must succeed and report
+  # inecekvar=true or inecekvar=false. true: every scan job must succeed. false: every scan job
+  # must be skipped. Any other output or result (failure, cancelled, empty) fails the gate.
+  # When a job is added to this workflow, add it to "needs" and to the list below.
+  gate:
+    name: Inecek Var Security gate
+    needs: [changes, gitleaks, pnpm-audit, pip-audit, osv-scanner, bandit, semgrep, sbom]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          INECEKVAR_CHANGED: ${{ needs.changes.outputs.inecekvar }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          PNPM_AUDIT_RESULT: ${{ needs.pnpm-audit.result }}
+          PIP_AUDIT_RESULT: ${{ needs.pip-audit.result }}
+          OSV_RESULT: ${{ needs.osv-scanner.result }}
+          BANDIT_RESULT: ${{ needs.bandit.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          SBOM_RESULT: ${{ needs.sbom.result }}
+        run: |
+          echo "changes: ${CHANGES_RESULT:-<none>} (inecekvar=${INECEKVAR_CHANGED:-<none>})"
+          echo "gitleaks: ${GITLEAKS_RESULT:-<none>}"
+          echo "pnpm-audit: ${PNPM_AUDIT_RESULT:-<none>}"
+          echo "pip-audit: ${PIP_AUDIT_RESULT:-<none>}"
+          echo "osv-scanner: ${OSV_RESULT:-<none>}"
+          echo "bandit: ${BANDIT_RESULT:-<none>}"
+          echo "semgrep: ${SEMGREP_RESULT:-<none>}"
+          echo "sbom: ${SBOM_RESULT:-<none>}"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Inecek Var Security failed: change detection did not succeed."
+            exit 1
+          fi
+          case "$INECEKVAR_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *)
+              echo "Inecek Var Security failed: change detection reported no valid inecekvar output."
+              exit 1
+              ;;
+          esac
+          for result in "$GITLEAKS_RESULT" "$PNPM_AUDIT_RESULT" "$PIP_AUDIT_RESULT" "$OSV_RESULT" \
+            "$BANDIT_RESULT" "$SEMGREP_RESULT" "$SBOM_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Inecek Var Security failed: inecekvar=$INECEKVAR_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Inecek Var Security passed (inecekvar=$INECEKVAR_CHANGED, all jobs $expected)."

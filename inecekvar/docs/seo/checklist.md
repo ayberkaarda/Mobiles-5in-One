@@ -1,4 +1,4 @@
-# SEO and GEO checklist (package 4D)
+# SEO and GEO checklist (package 4D; ASO and store rows updated in package 6F)
 
 Legend: done = implemented and covered by a test in this repository; needs URL = requires a public
 host; open = decision or work outside this package.
@@ -20,7 +20,8 @@ host; open = decision or work outside this package.
 | The line list of a city without published lines is `noindex`, like its hub | `pages/line-list.page.ts` | `page-builders.spec.ts`, e2e `pages-no-js.spec.ts` |
 | One entity description, tagline and licence status everywhere | `content/facts.ts` | `content.spec.ts` (entity facts, home metadata) |
 | No banned or placeholder words in any text | all of the above | `content.spec.ts` and the CI grep |
-| Aso notes, Data Safety and App Privacy answers | `docs/seo/aso.md` | review against ADR-0022, ADR-0026 |
+| ASO notes: both title forms, final keyword set, 6 screenshot captions (tr and en), Data Safety and App Privacy summary | `docs/seo/aso.md` (package 6F) | review against ADR-0022, ADR-0026, ADR-0050; `node ops/release/check-release-docs.mjs` (limits, screenshot paths) |
+| Store copy tr and en, privacy-label mapping with its mismatch list | `docs/release/store-listing.tr.md`, `store-listing.en.md`, `privacy-labels.md` (ADR-0056) | same script; every mapping row traced to code or an ADR |
 
 ## Needs a public URL
 
@@ -34,12 +35,13 @@ host; open = decision or work outside this package.
 | hreflang check of the live pages, canonical origin check behind the real proxy | origin comes from `IV_WEB_CANONICAL_ORIGIN` |
 | `llms.txt` fetch by real crawlers, `robots.txt` interplay | no public host |
 | Smart App Banner (`IV_WEB_IOS_APP_ID`), app association files | no App Store id, no signing certificate |
-| Store listings and screenshots (`aso.md`) | no developer accounts; the title exceeds the 30 character store cap and choosing the title is the owner's decision |
+| Store submission (`docs/release/store-listing.*.md`) | no developer accounts; open owner decisions: the store title (36 characters in the specification, cap 30; options a to c listed), sample-data screenshots at a 2.22 ratio to retake, support contact and web deletion path (`docs/release/legal-open-items.md`) |
 
 ## Open
 
 | Item | State |
 | ---- | ----- |
+| Legal and store decisions in one list | `docs/release/legal-open-items.md` (L1 to L10, who decides each, where each is referenced). |
 | `/kullanim-kosullari` | no draft exists in the repository; not written and not routed. Needs the legal text first. |
 | Real contact channel for `/iletisim` and the KVKK application path | the channel is being set up; the pages say so and publish no address. |
 | Legal review of `/kvkk-aydinlatma` (company registration data, legal bases, processors, countries) | draft only, `noindex` until approved. |

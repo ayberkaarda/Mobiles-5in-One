@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 
 from app.cities.router import get_city, published_lastmod
+from app.core.client_ip import rate_limit_key
 from app.core.deps import (
     ClientIpDep,
     ClockDep,
@@ -98,7 +99,7 @@ async def download_pack(
     # so signing in or out does not reset it.
     anon_hash = hmac.new(
         settings.require_secret("log_hash_key"),
-        b"pack-anon:" + client_ip.encode(),
+        b"pack-anon:" + rate_limit_key(client_ip).encode(),
         hashlib.sha256,
     ).digest()
     identities = ["anon:" + anon_hash.hex()]

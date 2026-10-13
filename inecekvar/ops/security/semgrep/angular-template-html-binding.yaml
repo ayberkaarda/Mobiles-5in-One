@@ -1,0 +1,16 @@
+rules:
+  - id: iv-angular-template-html-binding
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      An Angular template binds markup ([innerHTML], [outerHTML], [srcdoc] or their attr. and
+      bind- forms). Bind text with interpolation instead; the project bans these bindings in
+      lint (spec item 16) and this rule repeats the ban as defence in depth.
+    metadata:
+      cwe: "CWE-79: Cross-site scripting"
+      spec-item: 16
+    paths:
+      include:
+        - "*.html"
+        - "*.ts"
+    pattern-regex: (?i)(\[(attr\.)?(innerHTML|outerHTML|srcdoc)\]|\bbind-(innerHTML|outerHTML|srcdoc))\s*=

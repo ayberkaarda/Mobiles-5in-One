@@ -2,7 +2,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from app.core.client_ip import resolve_client_ip
+from app.core.client_ip import rate_limit_key, resolve_client_ip
 from app.core.settings import Settings
 
 pytestmark = pytest.mark.anyio
@@ -21,6 +21,10 @@ pytestmark = pytest.mark.anyio
         ("127.0.0.1", {"X-Real-IP": "198.51.100.4:443"}, "127.0.0.1"),
         ("127.0.0.1", {"X-Real-IP": " 198.51.100.4 "}, "127.0.0.1"),
         ("invalid", {}, "0.0.0.0"),  # noqa: S104 (peer sentinel)
+        # Dual-stack bind: the IPv4 proxy arrives IPv4-mapped (phase 6 review F2).
+        ("::ffff:127.0.0.1", {"X-Real-IP": "198.51.100.7"}, "198.51.100.7"),
+        ("::ffff:7f00:1", {"X-Real-IP": "2001:db8::9"}, "2001:db8::9"),
+        ("::ffff:203.0.113.7", {"X-Real-IP": "198.51.100.7"}, "::ffff:203.0.113.7"),
     ],
 )
 def test_resolve_client_ip(
@@ -66,3 +70,10 @@ async def test_invalid_trusted_header_falls_back_to_peer(core_app: FastAPI) -> N
             "/v1/_test/ip", headers=[("X-Real-IP", "198.51.100.4"), ("X-Real-IP", "198.51.100.5")]
         )
         assert response.json()["ip"] == "127.0.0.1"
+
+
+def test_rate_limit_key_unwraps_mapped_and_groups_ipv6() -> None:
+    assert rate_limit_key("::ffff:198.51.100.7") == "198.51.100.7"
+    assert rate_limit_key("2001:db8:1:2::7") == "2001:db8:1:2::/64"
+    assert rate_limit_key("198.51.100.7") == "198.51.100.7"
+    assert rate_limit_key("not-an-ip") == "not-an-ip"

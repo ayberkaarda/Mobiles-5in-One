@@ -1,0 +1,15 @@
+rules:
+  - id: iv-angular-bypass-security-trust
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      DomSanitizer.bypassSecurityTrust* switches off Angular's sanitizer. The project bans it
+      in lint (spec item 16); this rule repeats the ban as defence in depth.
+    metadata:
+      cwe: "CWE-79: Cross-site scripting"
+      spec-item: 16
+    patterns:
+      - pattern: $SANITIZER.$METHOD(...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^bypassSecurityTrust(Html|Style|Script|Url|ResourceUrl)$

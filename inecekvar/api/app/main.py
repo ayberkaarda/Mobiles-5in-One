@@ -1,4 +1,8 @@
-"""ASGI entry point: `uv run uvicorn app.main:app --reload`.
+"""ASGI entry point: `uv run uvicorn app.main:app --reload --no-proxy-headers`.
+
+Always start uvicorn with `--no-proxy-headers` (and `--forwarded-allow-ips 127.0.0.1` kept
+explicit): its default rewrites the client address and scheme from `X-Forwarded-*` headers before
+the API middleware runs (docs/ops/env.md, ADR-0055 decision 1).
 
 `create_app` is the only composition root. It installs the core baseline (`install_core`:
 request id, access log, security headers, CORS, trusted client IP, body limits, problem
