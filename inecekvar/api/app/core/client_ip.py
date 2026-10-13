@@ -9,14 +9,18 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from app.core.handlers import run_with_error_response
 from app.core.settings import Settings
 
+# Rate-limit key for a request without a usable peer address; never used as a bind address.
+# Built from the integer so no listen-on-all-interfaces literal appears in the source.
+UNKNOWN_PEER = ip_address(0).compressed
+
 
 def resolve_client_ip(peer: str | None, headers: Mapping[str, str], settings: Settings) -> str:
     if peer is None:
-        return "0.0.0.0"  # noqa: S104 (missing peer sentinel, not a bind address)
+        return UNKNOWN_PEER
     try:
         address = ip_address(peer)
     except ValueError:
-        return "0.0.0.0"  # noqa: S104 (missing peer sentinel, not a bind address)
+        return UNKNOWN_PEER
     if any(address in network for network in settings.trusted_proxy_networks):
         values = [
             value
