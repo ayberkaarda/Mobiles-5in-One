@@ -67,7 +67,7 @@ Every row ran all 19 stored payloads (cut to the field's limit) unless a count i
 | PWA pack manager `/ayarlar/cevrimdisi` | city names (operator data) | live audit | pass |
 | API JSON (`/v1/lines`, edits, `/v1/me`) | every field | `application/json`, exact round trip | pass (`test_payloads_round_trip_as_json_text_or_are_refused`) |
 
-PWA CSP: the PWA build sets no Content-Security-Policy (neither a meta tag nor the Caddy site block), so on the PWA the "0 CSP violations" check holds vacuously and the defence is Angular's text binding alone. Recorded as finding 2 in `attack-report.md`.
+PWA CSP: the PWA build sets no Content-Security-Policy (neither a meta tag nor the Caddy site block), so on the PWA the "0 CSP violations" check holds vacuously and the defence is Angular's text binding alone. Recorded as finding 2 in `attack-report.md`. Package 6C (ADR-0055) closed it: the e2e static server now sends the CSP of the Caddy `(pwa_headers)` snippet, and the three PWA sweep tests passed again under that hash-only script policy (`mobile-e2e:e2e` 10 passed).
 
 ## Mutations (red, then restored)
 

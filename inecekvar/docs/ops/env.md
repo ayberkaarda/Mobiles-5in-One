@@ -54,7 +54,9 @@ The API bind address and port are uvicorn flags, not environment keys: `uv run u
 | `INECEKVAR_SMTP_USERNAME`, `INECEKVAR_SMTP_PASSWORD` | unset | SMTP login when the server needs one. |
 | `INECEKVAR_MAIL_FROM` | `İnecek Var <no-reply@inecekvar.app>` | Sender address. |
 | `INECEKVAR_MAGIC_LINK_BASE_URL` | `https://app.inecekvar.app/giris/baglanti` | Page that receives the magic-link token in the URL fragment. |
-| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` header is trusted (Caddy). |
+| `INECEKVAR_TRUSTED_PROXY_CIDRS` | `["127.0.0.1/32","::1/128"]` | Peers whose `X-Real-IP` and forwarded-proto headers are trusted (Caddy); in production the proxy address only. |
+| `INECEKVAR_REQUIRE_HTTPS` | unset: enforced in `production`, off in `local` and `test` | Refuse plain http with 403 `transport.https_required` unless the request came over TLS or a trusted proxy marks it https; `false` is refused in production (ADR-0055). |
+| `INECEKVAR_FORWARDED_PROTO_HEADER` | `X-Forwarded-Proto` | Header a trusted proxy uses to report the client's scheme (ADR-0055). |
 | `INECEKVAR_CLIENT_IP_HEADER` | `X-Real-IP` | The only header read for the client address. |
 | `INECEKVAR_HIBP_ENABLED` | `true` | Breached-password range check at registration. |
 | `INECEKVAR_LOG_LEVEL` | `INFO` | Log level of the JSON logs. |

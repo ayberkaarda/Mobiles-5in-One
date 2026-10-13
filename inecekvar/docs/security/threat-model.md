@@ -48,6 +48,7 @@ Controls and tests below are planned requirements, not completed implementation.
 - Control: Use a narrow plugin allowlist, foreground-only location and Keychain/Keystore refresh storage; disable cleartext transport and review selected plugin versions.
 - Planned test: Inspect native permissions and plugin inventory; deny location and background access; verify no refresh credentials appear in preferences or logs.
 - Attack suite (phase 6, ADR-0052): `api/tests/security/test_attack_suite.py::test_native_origins_cannot_use_or_obtain_cookie_sessions` (API side; device permissions stay a native check).
+- Native transport and backup (phase 6C, ADR-0055): no cleartext and no app-data backup in the Android shell, `apps/mobile/scripts/android-transport-check.mjs` on the sources and the built APKs; MobSF report `docs/security/scan-reports/mobsf-static.md`.
 - Phase: planned: phase 3.
 
 ## SSR cache poisoning
@@ -56,6 +57,7 @@ Controls and tests below are planned requirements, not completed implementation.
 - Control: Render notes as plain text, escape SVG text, permit only numeric server-built map geometry and use per-request CSP nonces. Normalize cache keys and trusted hosts; exclude personalized responses and keep API responses no-store.
 - Planned test: Render script and SVG payloads on SSR, web and PWA; vary host/query headers and users; verify escaped output, isolated cache entries, nonce handling and security headers.
 - Attack suite (phase 6, ADR-0052): `api/tests/security/test_attack_suite.py::test_api_answers_are_uncacheable_json_and_never_reflect_host_or_query`, `test_host_header_never_reaches_links_or_responses`; full injection sweep `apps/web-e2e/src/xss-sweep.spec.ts` and `apps/mobile-e2e/src/xss-sweep.spec.ts` (`docs/security/xss-sweep.md`).
+- Transport and PWA policy (phase 6C, ADR-0055): the PWA sends a hash-only script CSP from `ops/Caddyfile`, checked by `apps/mobile/scripts/csp-hash-check.mjs` and `apps/mobile-e2e/src/csp.spec.ts`; ZAP baselines of the web SSR and PWA sites in `docs/security/scan-reports/zap-scans.md`.
 - Phase: planned: phase 4; full injection sweep in phase 6.
 
 ## Account deletion
@@ -146,6 +148,7 @@ Controls and tests below are planned requirements, not completed implementation.
 - Control: Trust client-IP headers only from the reverse proxy; limit authentication by IP and normalized email; verify JWT signature, algorithm, expiry and identity before role checks.
 - Planned test: Spoof forwarding headers, alter role/subject/signature and submit expired tokens; verify quota enforcement and authentication rejection, including the sixth login attempt in 15 minutes.
 - Attack suite (phase 6, ADR-0052): `api/tests/security/test_attack_suite.py::test_tampered_access_tokens_are_refused`, `test_spoofed_forwarding_headers_do_not_reset_the_ip_limit`, `test_trusted_proxy_header_forms_of_one_address_share_a_window`, `test_ipv6_rotation_within_one_64_and_mapped_ipv4_share_a_window` (finding 1 of `docs/security/attack-report.md`, fixed), `test_email_spelling_variants_share_the_victim_window`, `test_step_up_code_guessing_is_rate_limited`.
+- Scheme spoofing (phase 6C, ADR-0055): a forwarded-proto header from a peer outside the trusted proxy networks is ignored and plain http is refused, `api/tests/core/test_https.py::test_spoofed_forwarded_proto_from_untrusted_peer_is_ignored`; NUL characters in URLs are refused before they reach a query, `api/tests/security/test_attack_suite.py::test_nul_in_path_or_query_is_refused_not_a_server_error`.
 - Phase: planned: phase 1.
 
 ## Secret exposure and recovery failure
