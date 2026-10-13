@@ -76,7 +76,10 @@ async def hard_delete_due(
                 continue
             try:
                 if subscriber_deleter is not None:
-                    for app_user_id in sorted({row.rc_app_user_id for row in subscriptions}):
+                    # The app identifies every signed-in user at RevenueCat by the account id,
+                    # so that subscriber exists for non-paying users too (404 counts as gone).
+                    app_user_ids = {str(identity)} | {row.rc_app_user_id for row in subscriptions}
+                    for app_user_id in sorted(app_user_ids):
                         await subscriber_deleter.delete_subscriber(app_user_id)
                 if store is not None:
                     for photo in photos:

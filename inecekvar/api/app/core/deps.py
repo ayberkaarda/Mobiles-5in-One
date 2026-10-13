@@ -19,6 +19,7 @@ from fastapi import Depends, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.billing.revenuecat import SubscriberDirectory
 from app.core.errors import (
     AUTH_FORBIDDEN,
     AUTH_REQUIRED,
@@ -59,11 +60,18 @@ class RateLimitDecision:
     retry_after_seconds: int
 
 
+MailCategory = Literal["security", "transactional"]
+
+
 @dataclass(frozen=True, slots=True)
 class OutgoingMail:
+    """`security`: sign-in links and account notices the recipient asked for just now;
+    `transactional`: every other message (ADR-0050 decides how suppression treats each)."""
+
     to: str
     subject: str
     text: str
+    category: MailCategory = "transactional"
 
 
 # --- Service interfaces ------------------------------------------------------------------------
@@ -123,6 +131,12 @@ class StepUpSource(Protocol):
         ...
 
 
+class JobQueue(Protocol):
+    async def enqueue(self, function: str, *args: str, job_id: str) -> None:
+        """Queue `function(*args)` for the worker; `job_id` deduplicates queued jobs."""
+        ...
+
+
 class SubscriberDeleter(Protocol):
     async def delete_subscriber(self, app_user_id: str) -> None:
         """Remove the subscriber at the billing provider (spec section 6.21); raises on failure."""
@@ -147,6 +161,11 @@ class Services:
     entitlements: EntitlementSource | None = None
     step_up: StepUpSource | None = None
     subscriber_deleter: SubscriberDeleter | None = None
+    # RevenueCat REST (reconciliation, transfers); None skips reconciliation.
+    revenuecat: SubscriberDirectory | None = None
+    # Background job trigger; None (or a failing queue) leaves stored webhook events to the
+    # worker's pending-event sweep.
+    job_queue: JobQueue | None = None
 
 
 # --- Basic dependencies ---------------------------------------------------------------------

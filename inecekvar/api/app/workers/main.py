@@ -2,11 +2,16 @@
 
 Schedules (docs/ops/background-jobs.md, Europe/Istanbul): photo processing every minute, trace
 retention purge and account hard delete hourly, the GeoJSON export every Monday at 03:00.
+Phase 5 (ADR-0050): the pending webhook sweep every five minutes; nightly the RevenueCat
+reconciliation (04:10), the expired entitlement sweep (04:40), the retention purge (04:50) and
+the pack download roll-up (05:00), each idempotent with a dry-run switch.
 The jobs reuse the API composition (`build_services`), so they read the same settings and
 fail closed the same way: no object store defers photo and export work, no subscriber
 deleter defers erasure of subscribers. Every job logs counts only.
 """
 
+import uuid
+from datetime import timedelta
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
@@ -14,13 +19,21 @@ import structlog
 from arq.connections import RedisSettings
 from arq.cron import CronJob, cron
 
+from app.billing.events import pending_revenuecat_events, process_revenuecat_event
+from app.billing.reconcile import reconcile_subscriptions
 from app.core.deps import Services
+from app.core.jobs import ArqJobQueue
 from app.core.logging import configure_logging
 from app.core.settings import load_settings
 from app.main import build_services, with_local_defaults
 from app.workers.deletion import hard_delete_due
 from app.workers.export import export_all_cities
 from app.workers.media import process_pending_photos
+from app.workers.nightly import (
+    purge_retention,
+    roll_up_pack_downloads,
+    sweep_expired_entitlements,
+)
 from app.workers.traces import purge_expired_traces
 
 type Context = dict[str, Any]
@@ -43,6 +56,8 @@ async def shutdown(ctx: Context) -> None:
     services = ctx.get("services")
     if isinstance(services, Services):
         await services.redis.aclose()
+        if isinstance(services.job_queue, ArqJobQueue):
+            await services.job_queue.close()
 
 
 async def photos_job(ctx: Context) -> int:
@@ -92,11 +107,96 @@ async def export_job(ctx: Context) -> int:
     return len(exports)
 
 
+async def revenuecat_event_job(ctx: Context, row_id: str) -> str | None:
+    """Enqueued by `POST /v1/webhooks/revenuecat` for one stored event."""
+    services = services_of(ctx)
+    outcome = await process_revenuecat_event(
+        services.session_factory,
+        uuid.UUID(row_id),
+        services.settings,
+        services.clock,
+        services.revenuecat,
+    )
+    return outcome.value if outcome is not None else None
+
+
+async def webhooks_pending_job(ctx: Context) -> int:
+    """Processes stored events whose enqueue was lost or whose processing failed (retry)."""
+    services = services_of(ctx)
+    before = services.clock.now() - timedelta(minutes=1)
+    count = 0
+    for row_id in await pending_revenuecat_events(services.session_factory, before):
+        outcome = await process_revenuecat_event(
+            services.session_factory,
+            row_id,
+            services.settings,
+            services.clock,
+            services.revenuecat,
+        )
+        count += outcome is not None
+    structlog.get_logger().info("worker.webhooks.pending", count=count)
+    return count
+
+
+def dry_run_of(services: Services, dry_run: bool | None) -> bool:
+    """An explicit job argument (`enqueue_job(name, dry_run=True)`) wins over the setting."""
+    return services.settings.jobs_dry_run if dry_run is None else dry_run
+
+
+async def reconcile_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    if services.revenuecat is None:
+        structlog.get_logger().warning("worker.reconcile.skipped_no_rest_key")
+        return 0
+    summary = await reconcile_subscriptions(
+        services.session_factory,
+        services.revenuecat,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.changed + summary.inserted
+
+
+async def entitlement_sweep_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    return await sweep_expired_entitlements(
+        services.session_factory, services.clock, dry_run=dry_run_of(services, dry_run)
+    )
+
+
+async def retention_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    summary = await purge_retention(
+        services.session_factory,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.webhook_events + summary.bounce_suppressions
+
+
+async def pack_rollup_job(ctx: Context, dry_run: bool | None = None) -> int:
+    services = services_of(ctx)
+    summary = await roll_up_pack_downloads(
+        services.session_factory,
+        services.settings,
+        services.clock,
+        dry_run=dry_run_of(services, dry_run),
+    )
+    return summary.rows_deleted
+
+
 CRON_JOBS: tuple[CronJob, ...] = (
     cron(photos_job, second=0),
     cron(traces_job, minute=5, second=0),
     cron(deletion_job, minute=20, second=0),
     cron(export_job, weekday="mon", hour=3, minute=0, second=0),
+    cron(webhooks_pending_job, minute=set(range(0, 60, 5)), second=30),
+    cron(reconcile_job, hour=4, minute=10, second=0),
+    cron(entitlement_sweep_job, hour=4, minute=40, second=0),
+    cron(retention_job, hour=4, minute=50, second=0),
+    cron(pack_rollup_job, hour=5, minute=0, second=0),
 )
 
 
@@ -109,7 +209,18 @@ def worker_settings() -> type[Any]:
     redis = RedisSettings.from_dsn(settings.redis_url.get_secret_value())
 
     class WorkerSettings:
-        functions: ClassVar[list[Any]] = [photos_job, traces_job, deletion_job, export_job]
+        functions: ClassVar[list[Any]] = [
+            photos_job,
+            traces_job,
+            deletion_job,
+            export_job,
+            revenuecat_event_job,
+            webhooks_pending_job,
+            reconcile_job,
+            entitlement_sweep_job,
+            retention_job,
+            pack_rollup_job,
+        ]
         cron_jobs: ClassVar[list[CronJob]] = list(CRON_JOBS)
         on_startup = startup
         on_shutdown = shutdown

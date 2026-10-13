@@ -22,11 +22,14 @@ from app.auth.hibp import HibpRangeClient
 from app.auth.mail import SmtpMailSender
 from app.auth.router import router as auth_router
 from app.auth.step_up import SessionStepUpSource
+from app.auth.suppression import SuppressionAwareMailSender
 from app.auth.totp_router import router as totp_router
 from app.billing.entitlements import SubscriptionEntitlements
+from app.billing.revenuecat import RevenueCatRestClient
 from app.cities.router import router as cities_router
 from app.core.deps import Services, SystemClock
 from app.core.health import router as health_router
+from app.core.jobs import ArqJobQueue
 from app.core.logging import configure_logging
 from app.core.ratelimit import RedisSlidingWindowLimiter
 from app.core.settings import Settings, load_settings
@@ -42,6 +45,7 @@ from app.moderation.router import router as moderation_router
 from app.planner.router import router as planner_router
 from app.stops.router import router as stops_router
 from app.traces.router import router as traces_router
+from app.webhooks.router import router as webhooks_router
 
 API_PREFIX = "/v1"
 
@@ -61,6 +65,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     planner_router,
     export_router,
     admin_router,
+    webhooks_router,
 )
 
 # Local development only (the compose defaults of .env.example); `Settings` rejects missing
@@ -127,19 +132,34 @@ def build_services(settings: Settings) -> Services:
     engine = create_engine(settings.database_url.get_secret_value())
     redis = Redis.from_url(settings.redis_url.get_secret_value())
     clock = SystemClock()
+    session_factory = create_session_factory(engine)
+    rate_limiter = RedisSlidingWindowLimiter(
+        redis, settings.rate_limit_rules, settings.require_secret("log_hash_key"), clock
+    )
+    # One REST client serves the reconciliation and the subscriber deletion of account erasure;
+    # without a key both stay unconfigured (reconciliation skipped, erasure of subscribers
+    # deferred).
+    revenuecat = RevenueCatRestClient(settings) if settings.revenuecat_api_key is not None else None
     return Services(
         settings=settings,
-        session_factory=create_session_factory(engine),
+        session_factory=session_factory,
         redis=redis,
-        rate_limiter=RedisSlidingWindowLimiter(
-            redis, settings.rate_limit_rules, settings.require_secret("log_hash_key"), clock
-        ),
+        rate_limiter=rate_limiter,
         authenticator=TokenSessionAuthenticator(settings, clock),
-        mail_sender=SmtpMailSender(settings),
+        mail_sender=SuppressionAwareMailSender(
+            SmtpMailSender(settings),
+            session_factory,
+            settings,
+            rate_limiter=rate_limiter,
+            clock=clock,
+        ),
         breach_checker=HibpRangeClient(settings),
         clock=clock,
         entitlements=SubscriptionEntitlements(),
         step_up=SessionStepUpSource(),
+        subscriber_deleter=revenuecat,
+        revenuecat=revenuecat,
+        job_queue=ArqJobQueue(settings.redis_url.get_secret_value()),
         object_store=(
             S3ObjectStore.from_settings(settings) if settings.s3_endpoint_url is not None else None
         ),

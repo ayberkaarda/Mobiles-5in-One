@@ -45,6 +45,9 @@ _DROP = frozenset(
         "code",
         "totp_code",
         "totp_secret_enc",
+        "signature",
+        "svix_signature",
+        "api_key",
     }
 )
 _COORDINATE_KEYS = frozenset({"lat", "lng", "lon", "latitude", "longitude"})

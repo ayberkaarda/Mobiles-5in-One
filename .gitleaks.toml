@@ -58,3 +58,12 @@ paths = [
   '''inecekvar/libs/data-access/src/lib/session\.store\.spec\.ts''',
 ]
 targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "The public example signing secret from the Svix documentation, present in one early commit of the phase 5 webhook test and since replaced by values built from parts"
+condition = "AND"
+commits = ['8197119dd6cb4c5f82abbdb4ebd500cb953aac58']
+paths = [
+  '''inecekvar/api/tests/webhooks/test_resend_webhook\.py''',
+]
+targetRules = ['generic-api-key']

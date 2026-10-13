@@ -18,6 +18,7 @@ from app.models.enums import (
     SubscriptionStatus,
     SuppressionReason,
     UserRole,
+    WebhookOutcome,
     WebhookProvider,
 )
 
@@ -33,6 +34,7 @@ TABLE_NAMES = {
     "line_versions",
     "lines",
     "magic_links",
+    "pack_download_stats",
     "pack_downloads",
     "photos",
     "refresh_tokens",
@@ -86,6 +88,7 @@ def test_named_constraints_and_indexes() -> None:
         ("photos", "moderation_state", ModerationState),
         ("subscriptions", "status", SubscriptionStatus),
         ("webhook_events", "provider", WebhookProvider),
+        ("webhook_events", "outcome", WebhookOutcome),
         ("email_suppressions", "reason", SuppressionReason),
     ],
 )

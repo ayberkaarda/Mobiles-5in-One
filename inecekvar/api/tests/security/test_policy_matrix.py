@@ -43,6 +43,7 @@ EXPECTED: dict[tuple[str, str], str] = {
     ("anonymous", "retire_line"): "deny",
     ("anonymous", "manage_users"): "deny",
     ("anonymous", "export_admin"): "deny",
+    ("anonymous", "manage_suppressions"): "deny",
     ("user", "propose_edit"): "deny",
     ("user", "edit_own_pending"): "allow-if:edit_author+edit_pending",
     ("user", "upload_trace"): "deny",
@@ -54,6 +55,7 @@ EXPECTED: dict[tuple[str, str], str] = {
     ("user", "retire_line"): "deny",
     ("user", "manage_users"): "deny",
     ("user", "export_admin"): "deny",
+    ("user", "manage_suppressions"): "deny",
     ("contributor", "propose_edit"): "allow-if:licence_accepted",
     ("contributor", "edit_own_pending"): "allow-if:edit_author+edit_pending",
     ("contributor", "upload_trace"): "allow-if:licence_accepted",
@@ -65,6 +67,7 @@ EXPECTED: dict[tuple[str, str], str] = {
     ("contributor", "retire_line"): "deny",
     ("contributor", "manage_users"): "deny",
     ("contributor", "export_admin"): "deny",
+    ("contributor", "manage_suppressions"): "deny",
     ("moderator", "propose_edit"): "allow-if:licence_accepted",
     ("moderator", "edit_own_pending"): "allow-if:edit_author+edit_pending",
     ("moderator", "upload_trace"): "allow-if:licence_accepted",
@@ -76,6 +79,7 @@ EXPECTED: dict[tuple[str, str], str] = {
     ("moderator", "retire_line"): "allow-if:totp_step_up",
     ("moderator", "manage_users"): "deny",
     ("moderator", "export_admin"): "deny",
+    ("moderator", "manage_suppressions"): "deny",
     ("admin", "propose_edit"): "allow-if:licence_accepted",
     ("admin", "edit_own_pending"): "allow-if:edit_author+edit_pending",
     ("admin", "upload_trace"): "allow-if:licence_accepted",
@@ -87,6 +91,7 @@ EXPECTED: dict[tuple[str, str], str] = {
     ("admin", "retire_line"): "allow-if:totp_step_up",
     ("admin", "manage_users"): "allow-if:totp_step_up",
     ("admin", "export_admin"): "allow-if:totp_step_up",
+    ("admin", "manage_suppressions"): "allow-if:totp_step_up",
 }
 
 NOW = datetime(2026, 10, 12, tzinfo=UTC)
@@ -120,7 +125,7 @@ def test_every_cell_matches_expected(role: Role, action: Action) -> None:
 
 def test_table_is_total() -> None:
     assert set(PERMISSIONS) == set(ROLES)
-    assert len(EXPECTED) == 55
+    assert len(EXPECTED) == 60
     for row in PERMISSIONS.values():
         assert set(row) == set(Action)
 

@@ -35,6 +35,7 @@ class Action(StrEnum):
     RETIRE_LINE = "retire_line"
     MANAGE_USERS = "manage_users"
     EXPORT_ADMIN = "export_admin"
+    MANAGE_SUPPRESSIONS = "manage_suppressions"
 
 
 ANONYMOUS: Final = "anonymous"
@@ -89,6 +90,7 @@ PERMISSIONS: Final[Mapping[Role, Mapping[Action, Rule]]] = MappingProxyType(
                 Action.RETIRE_LINE: Deny(),
                 Action.MANAGE_USERS: Deny(),
                 Action.EXPORT_ADMIN: Deny(),
+                Action.MANAGE_SUPPRESSIONS: Deny(),
             }
         ),
         UserRole.USER: MappingProxyType(
@@ -106,6 +108,7 @@ PERMISSIONS: Final[Mapping[Role, Mapping[Action, Rule]]] = MappingProxyType(
                 Action.RETIRE_LINE: Deny(),
                 Action.MANAGE_USERS: Deny(),
                 Action.EXPORT_ADMIN: Deny(),
+                Action.MANAGE_SUPPRESSIONS: Deny(),
             }
         ),
         UserRole.CONTRIBUTOR: MappingProxyType(
@@ -123,6 +126,7 @@ PERMISSIONS: Final[Mapping[Role, Mapping[Action, Rule]]] = MappingProxyType(
                 Action.RETIRE_LINE: Deny(),
                 Action.MANAGE_USERS: Deny(),
                 Action.EXPORT_ADMIN: Deny(),
+                Action.MANAGE_SUPPRESSIONS: Deny(),
             }
         ),
         UserRole.MODERATOR: MappingProxyType(
@@ -146,6 +150,7 @@ PERMISSIONS: Final[Mapping[Role, Mapping[Action, Rule]]] = MappingProxyType(
                 Action.RETIRE_LINE: AllowIf(frozenset({Condition.TOTP_STEP_UP})),
                 Action.MANAGE_USERS: Deny(),
                 Action.EXPORT_ADMIN: Deny(),
+                Action.MANAGE_SUPPRESSIONS: Deny(),
             }
         ),
         UserRole.ADMIN: MappingProxyType(
@@ -169,6 +174,7 @@ PERMISSIONS: Final[Mapping[Role, Mapping[Action, Rule]]] = MappingProxyType(
                 Action.RETIRE_LINE: AllowIf(frozenset({Condition.TOTP_STEP_UP})),
                 Action.MANAGE_USERS: AllowIf(frozenset({Condition.TOTP_STEP_UP})),
                 Action.EXPORT_ADMIN: AllowIf(frozenset({Condition.TOTP_STEP_UP})),
+                Action.MANAGE_SUPPRESSIONS: AllowIf(frozenset({Condition.TOTP_STEP_UP})),
             }
         ),
     }

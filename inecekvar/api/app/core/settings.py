@@ -46,6 +46,8 @@ RATE_LIMIT_RULES: dict[str, RateLimitRule] = {
     # anonymous hash (or signed-in user) per day.
     "media.presign": RateLimitRule(limit=20, window_seconds=24 * 60 * 60),
     "pack.download": RateLimitRule(limit=10, window_seconds=24 * 60 * 60),
+    # ADR-0050: security mail to an address that hard-bounced more than 30 days ago.
+    "mail.security_after_bounce": RateLimitRule(limit=3, window_seconds=24 * 60 * 60),
 }
 
 # Reputation below this value uses `edits.low_reputation` (spec section 6.5).
@@ -168,6 +170,25 @@ class Settings(BaseSettings):
     trace_retention_days: int = Field(default=30, ge=1, le=30)
     deletion_grace_days: int = Field(default=7, ge=1, le=30)
 
+    # --- Billing and provider webhooks (spec section 3 story 8, section 6.17) -----------------
+    # Without a secret the matching webhook route answers 503 and accepts nothing; without the
+    # REST key the nightly reconciliation is skipped and account erasure of subscribers defers.
+    revenuecat_webhook_secret: SecretStr | None = None
+    revenuecat_api_key: SecretStr | None = None
+    revenuecat_plus_entitlement: str = Field(default="plus", min_length=1, max_length=64)
+    revenuecat_plus_product_ids: tuple[str, ...] = ()
+    revenuecat_allow_sandbox: bool = False
+    revenuecat_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    resend_webhook_secret: SecretStr | None = None
+    max_webhook_body_bytes: int = Field(default=64 * 1024, ge=1024, le=1024 * 1024)
+
+    # --- Nightly jobs (docs/adr/0050) ---------------------------------------------------------
+    webhook_event_retention_days: int = Field(default=30, ge=7, le=365)
+    bounce_suppression_retention_days: int = Field(default=365, ge=30, le=3650)
+    pack_download_retention_days: int = Field(default=90, ge=30, le=730)
+    # Count what the nightly jobs would change without writing anything.
+    jobs_dry_run: bool = False
+
     # --- Logging (spec section 6.14) ---------------------------------------------------------
     # HMAC key for the email and identifier digests written to logs.
     log_hash_key: SecretStr | None = None
@@ -178,6 +199,20 @@ class Settings(BaseSettings):
     def _valid_totp_key(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None:
             _decode_totp_key(value)
+        return value
+
+    @field_validator("revenuecat_webhook_secret", "revenuecat_api_key")
+    @classmethod
+    def _long_provider_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value.get_secret_value()) < 32:
+            raise ValueError("RevenueCat secrets must be at least 32 characters")
+        return value
+
+    @field_validator("resend_webhook_secret")
+    @classmethod
+    def _svix_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None:
+            svix_key(value)
         return value
 
     @field_validator("trusted_proxy_cidrs")
@@ -278,6 +313,20 @@ class Settings(BaseSettings):
         if value is None:
             raise RuntimeError("INECEKVAR_" + name.upper() + " is not configured")
         return value.get_secret_value().encode()
+
+
+def svix_key(secret: SecretStr) -> bytes:
+    """The HMAC key of a Svix endpoint secret (`whsec_` + base64 of at least 24 bytes)."""
+    value = secret.get_secret_value()
+    if not value.startswith("whsec_"):
+        raise ValueError("the Resend webhook secret must start with whsec_")
+    try:
+        decoded = base64.b64decode(value.removeprefix("whsec_"), validate=True)
+    except ValueError:
+        raise ValueError("the Resend webhook secret is not valid base64") from None
+    if len(decoded) < 24:
+        raise ValueError("the Resend webhook secret is too short")
+    return decoded
 
 
 def _decode_totp_key(secret: SecretStr) -> bytes:

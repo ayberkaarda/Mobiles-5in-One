@@ -6,15 +6,18 @@ from typing import Literal
 
 import httpx
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.step_up import SessionStepUpSource
+from app.auth.suppression import suppress
 from app.core.deps import Services
 from app.core.ids import uuid7
+from app.models import AuditLog
 from app.models.accounts import User
 from app.models.contributions import Edit, Trace
-from app.models.enums import UserRole
+from app.models.enums import SuppressionReason, UserRole
+from app.models.ops import EmailSuppression
 from tests.security.conftest import create_account, sign_in
 from tests.support.app import FixedClock, build_test_app
 from tests.totp.test_totp_step_up import enrol, problem, verify
@@ -391,3 +394,38 @@ async def test_stepped_up_contributor_cannot_read_admin_users(
         response = await client.get("/v1/admin/users", headers=headers)
     problem(response, 403, "auth.forbidden")
     assert email not in response.text
+
+
+@pytest.mark.parametrize(("role", "fresh", "code"), ADMIN_IDOR_CASES)
+async def test_suppression_removal_idor_is_refused(
+    services: Services, clock: FixedClock, role: UserRole, fresh: bool, code: str
+) -> None:
+    services.step_up = SessionStepUpSource()
+    address = "victim.suppressed@example.com"
+    async with services.session_factory() as db:
+        await suppress(db, services.settings, [address], SuppressionReason.BOUNCE, clock.now())
+        await db.commit()
+    _, actor_email = await create_account(services, role)
+    transport = httpx.ASGITransport(app=build_test_app(services), client=("203.0.113.10", 50000))
+    async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
+        headers = await sign_in(client, actor_email)
+        output = await enrol(client, headers)
+        assert (
+            await verify(client, headers, output.secret, clock, "/v1/me/totp/confirm")
+        ).status_code == 200
+        if fresh:
+            clock.advance(seconds=30)
+            assert (await verify(client, headers, output.secret, clock)).status_code == 200
+        response = await client.request(
+            "DELETE", "/v1/admin/suppressions", headers=headers, json={"email": address}
+        )
+    problem(response, 403, code)
+    assert address not in response.text
+    async with services.session_factory() as db:
+        assert await db.scalar(select(EmailSuppression.id)) is not None
+        assert (
+            await db.scalar(
+                select(AuditLog.id).where(AuditLog.action == "admin.suppression_removed")
+            )
+            is None
+        )

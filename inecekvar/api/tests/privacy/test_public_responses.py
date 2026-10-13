@@ -111,6 +111,7 @@ PRIVATE_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("PATCH", "/v1/admin/users/{identity}/role"),
         ("POST", "/v1/admin/exports/{city}"),
         ("GET", "/v1/admin/audit-logs"),
+        ("DELETE", "/v1/admin/suppressions"),
         ("POST", "/v1/auth/csrf"),
         ("POST", "/v1/auth/logout"),
         ("POST", "/v1/auth/logout-all"),
@@ -138,6 +139,10 @@ PRIVATE_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/v1/traces/{identity}"),
         ("DELETE", "/v1/traces/{identity}"),
         ("POST", "/v1/media/presign"),
+        # Provider-authenticated (shared secret or Svix signature), no human role: ADR-0050,
+        # tests/webhooks and tests/security/test_webhook_routes.py.
+        ("POST", "/v1/webhooks/revenuecat"),
+        ("POST", "/v1/webhooks/resend"),
     }
 )
 
