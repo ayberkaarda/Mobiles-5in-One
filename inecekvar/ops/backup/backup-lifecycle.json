@@ -1,0 +1,20 @@
+{
+  "Rules": [
+    {
+      "ID": "inecekvar-dumps-expire-after-30-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "inecekvar/"
+      },
+      "Expiration": {
+        "Days": 30
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

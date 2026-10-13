@@ -1,0 +1,20 @@
+{
+  "Rules": [
+    {
+      "ID": "inecekvar-exports-noncurrent-versions-expire-after-30-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "exports/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}
