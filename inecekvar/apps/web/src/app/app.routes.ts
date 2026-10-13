@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { Home } from './home/home';
 import { durumResolver } from './pages/durum.page';
 import { contentRoutes } from './content/site/content.routes';
 import { adminRoute } from './admin-entry';
@@ -16,7 +17,9 @@ export const appRoutes: Route[] = [
     path: '',
     pathMatch: 'full',
     resolve: { page: homeResolver },
-    loadComponent: () => import('./home/home').then((m) => m.Home),
+    // Eager: a lazy home chunk is fetched only after main.js runs, one more round trip before
+    // the first paint on a slow connection (mobile Lighthouse performance 99 instead of 100).
+    component: Home,
   },
   {
     path: 'durum',

@@ -39,6 +39,40 @@ test('home content, metadata and structured data work without JavaScript', async
   await expect(page.getByRole('link', { name: /İstanbul/ })).toHaveAttribute('href', '/istanbul');
 });
 
+test('home has banner, main and footer landmarks and keyboard reachable links', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByRole('banner')).toHaveCount(1);
+  await expect(page.getByRole('main')).toHaveCount(1);
+  await expect(page.getByRole('contentinfo')).toHaveCount(1);
+  await expect(page.getByRole('main').locator('.lead')).toHaveText(
+    'Resmî verisi olmayan dolmuş, minibüs ve servis hatlarını mahallelinin birlikte haritaladığı, çevrimdışı da çalışan hat rehberi.',
+  );
+  const site = page.getByRole('navigation', { name: 'Site' });
+  await expect(site.getByRole('link')).toHaveText(['Rehberler', 'SSS', 'Açık veri']);
+  const footer = page.getByRole('contentinfo').getByRole('navigation', { name: 'Alt bağlantılar' });
+  const hrefs = await footer
+    .getByRole('link')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href')));
+  expect(hrefs).toEqual(['/rehber', '/sss', '/veri', '/hakkinda', '/gizlilik']);
+  for (const href of hrefs) {
+    expect((await page.request.get(href ?? '')).status(), href ?? '').toBe(200);
+  }
+  await expect(page.getByRole('heading', { level: 2, name: 'Nasıl çalışır' })).toBeVisible();
+  await expect(page.locator('.steps > li')).toHaveCount(3);
+  const primary = page.locator('a.btn.primary');
+  await expect(primary).toHaveAttribute('href', /^\/[a-z0-9-]+$/);
+  await expect(page.locator('a.btn.secondary')).toHaveText('Uygulamayı aç');
+  const sample = page.locator('.city', { has: page.getByRole('link', { name: /ÖRNEK/ }) });
+  await expect(sample.locator('.badge')).toHaveText('örnek veri');
+  await page.keyboard.press('Tab');
+  const skip = page.getByRole('link', { name: 'İçeriğe geç' });
+  await expect(skip).toBeFocused();
+  await expect(skip).toHaveAttribute('href', '#icerik');
+  await expect(page.locator('main#icerik')).toHaveCount(1);
+});
+
 test('missing page has 404, noindex and a keyboard reachable home link', async ({ page }) => {
   const response = await page.goto('/olmayan-sayfa');
   expect(response?.status()).toBe(404);

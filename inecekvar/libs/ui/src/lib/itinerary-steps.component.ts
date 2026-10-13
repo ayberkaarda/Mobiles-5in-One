@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { KeepCodesComponent } from './keep-codes.component';
 
 /** One step of a chosen itinerary, translated by the caller. */
 export interface ItineraryStep {
@@ -16,6 +17,7 @@ export interface ItineraryStep {
 @Component({
   selector: 'iv-itinerary-steps',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [KeepCodesComponent],
   template: `
     <ol class="steps" [attr.aria-label]="label()">
       @for (step of steps(); track $index) {
@@ -28,8 +30,8 @@ export interface ItineraryStep {
             }
           </span>
           <span class="text">
-            <span class="title">{{ step.title }}</span>
-            <span class="detail">{{ step.detail }}</span>
+            <span class="title"><iv-keep-codes [text]="step.title" /></span>
+            <span class="detail"><iv-keep-codes [text]="step.detail" /></span>
           </span>
         </li>
       }
@@ -81,7 +83,7 @@ export interface ItineraryStep {
       font-size: 14px;
       text-align: center;
       line-height: 1;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
     }
     .ring {
       width: 16px;

@@ -4,6 +4,7 @@ import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/
 import { LineDetail } from '@inecekvar/data-access';
 import { formatFare } from '@inecekvar/ui';
 import {
+  KeepCodesComponent,
   ModeChipComponent,
   RouteSketchComponent,
   StateComponent,
@@ -42,6 +43,7 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
     IonTitle,
     IonContent,
     MapComponent,
+    KeepCodesComponent,
     ModeChipComponent,
     RouteSketchComponent,
     StateComponent,

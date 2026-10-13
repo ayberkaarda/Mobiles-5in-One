@@ -33,7 +33,7 @@
       @if (aboutLine()) { @if (line(); as l) {
       <div class="target iv-panel iv-panel--sunk" data-target="line">
         <span class="plate">{{ l.code }}</span>
-        <span class="target-name">{{ l.name }}</span>
+        <span class="target-name"><iv-keep-codes [text]="l.name" /></span>
         <span class="iv-hint">{{ 'proposal.version' | t: { version: l.version_no } }}</span>
       </div>
       } @else if (target() === 'loading') {

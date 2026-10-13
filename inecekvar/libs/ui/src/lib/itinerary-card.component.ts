@@ -136,7 +136,7 @@ export interface ItinerarySummary {
       font-size: 15px;
       letter-spacing: 0.04em;
       line-height: 1;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
     }
     .walk {
       display: inline-flex;
