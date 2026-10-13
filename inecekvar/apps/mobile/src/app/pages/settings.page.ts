@@ -47,7 +47,7 @@ export type DeletionView = 'closed' | 'confirm' | 'done';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonHeader, IonToolbar, IonTitle, IonContent, RouterLink, TPipe, TpPipe],
   templateUrl: './settings.page.html',
-  styleUrl: './settings.page.scss',
+  styleUrls: ['../../../../../libs/ui/src/styles/forms.css', './settings.page.scss'],
 })
 export class SettingsPage {
   protected readonly theme = inject(ThemeService);

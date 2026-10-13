@@ -102,6 +102,7 @@ type View = 'verifying' | 'password' | 'missing' | 'failed';
       </div>
     </ion-content>
   `,
+  styleUrl: '../../../../../libs/ui/src/styles/forms.css',
   styles: `
     .working {
       margin-top: var(--iv-space-5);

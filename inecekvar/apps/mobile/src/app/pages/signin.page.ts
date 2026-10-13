@@ -171,6 +171,7 @@ type Mode = 'password' | 'link';
       </div>
     </ion-content>
   `,
+  styleUrl: '../../../../../libs/ui/src/styles/forms.css',
   styles: `
     .mode {
       margin: var(--iv-space-5) 0 var(--iv-space-4);

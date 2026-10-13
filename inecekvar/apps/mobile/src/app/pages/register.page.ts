@@ -133,6 +133,7 @@ import { Countdown } from '../shared/countdown';
       </div>
     </ion-content>
   `,
+  styleUrl: '../../../../../libs/ui/src/styles/forms.css',
   styles: `
     .form,
     .sent {

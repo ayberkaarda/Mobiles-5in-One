@@ -12,7 +12,11 @@ import { StripNode, StripSegment, stripLayout } from './route-strip';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (layout(); as strip) {
-      <div class="scroller" [class.long]="long()" [attr.tabindex]="long() ? 0 : null">
+      <div
+        class="scroller"
+        [class.long]="long()"
+        [attr.tabindex]="long() || strip.width > 400 ? 0 : null"
+      >
         <svg
           class="iv-strip"
           [attr.viewBox]="strip.viewBox"
@@ -116,13 +120,19 @@ import { StripNode, StripSegment, stripLayout } from './route-strip';
     svg {
       display: block;
       width: 100%;
-      max-width: 34rem;
+      max-width: 46rem;
       height: auto;
       overflow: visible;
     }
     .long svg {
       width: auto;
       max-width: none;
+    }
+    @media (max-width: 40rem) {
+      svg {
+        width: auto;
+        max-width: none;
+      }
     }
     .casing {
       fill: none;
@@ -195,7 +205,7 @@ export class RouteStripComponent {
   /** Text alternative of the whole drawing, translated by the caller. */
   readonly label = input.required<string>();
   /** Width the strip aims to fit before it scrolls. */
-  readonly fit = input<number>(340);
+  readonly fit = input<number>(300);
 
   /** Long strips keep their drawn size and scroll; short ones scale to the box. */
   protected readonly long = computed(() => this.nodes().length > 8);

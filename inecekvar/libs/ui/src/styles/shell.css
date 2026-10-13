@@ -241,16 +241,6 @@ ion-tab-button.tab-selected ion-label {
   box-shadow: 0 3px 0 var(--iv-stripe);
 }
 
-.iv-button--ghost {
-  background: transparent;
-  color: var(--iv-ink);
-  box-shadow: inset 0 0 0 2px var(--iv-ink);
-}
-
-.iv-button--ghost:active {
-  box-shadow: inset 0 0 0 2px var(--iv-ink);
-}
-
 .iv-button--signal {
   background: var(--iv-signal);
   color: var(--iv-signal-ink);
@@ -260,4 +250,25 @@ ion-tab-button.tab-selected ion-label {
   .iv-button {
     transition: none;
   }
+}
+
+/* Tab page heading on a route board: the question of the tab in sign yellow. */
+.iv-hero {
+  margin: 0 calc(-1 * var(--iv-space-2));
+  padding: 20px 16px 24px;
+  border-radius: var(--iv-radius-l);
+}
+
+.iv-hero .iv-kicker,
+.iv-hero .iv-lead {
+  color: var(--iv-board-muted);
+}
+
+.iv-hero .iv-kicker::before {
+  box-shadow: 0 0 0 2.5px var(--iv-board-ink);
+}
+
+.iv-hero .iv-heading {
+  color: var(--iv-board-sign);
+  text-shadow: var(--iv-board-glow);
 }
