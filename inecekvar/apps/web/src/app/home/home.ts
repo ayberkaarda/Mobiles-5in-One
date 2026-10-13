@@ -7,6 +7,7 @@ import { CityOut } from '../content/public-types';
 import { StatusPageComponent } from '../pages/status-page.component';
 import { breadcrumbList, JsonLdNode, organization, webSite } from '../seo/json-ld';
 import { PageSeo } from '../seo/seo';
+import { CitySceneComponent, PLACARD_STYLES, SIGN_TEXT_STYLES } from '@inecekvar/ui';
 import { HomeGuideComponent } from './home-guide.component';
 import { SiteFooterComponent } from './site-footer.component';
 import { SiteHeaderComponent } from './site-header.component';
@@ -33,6 +34,16 @@ export function featuredCity(cities: readonly CityOut[]): CityOut | null {
   return cities.find((city) => city.published_line_count > 0) ?? cities[0] ?? null;
 }
 
+/** Plate letters for a city card: the first letters of its first two words, [ÖRNEK] skipped. */
+export function cityInitials(name: string): string {
+  const words = name
+    .replace(/\[[^\]]*\]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  const letters = words.slice(0, 2).map((word) => Array.from(word)[0] ?? '');
+  return letters.join('').toLocaleUpperCase('tr-TR') || '·';
+}
+
 @Component({
   selector: 'iv-home',
   standalone: true,
@@ -42,6 +53,7 @@ export function featuredCity(cities: readonly CityOut[]): CityOut | null {
     SiteHeaderComponent,
     SiteFooterComponent,
     HomeGuideComponent,
+    CitySceneComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -50,39 +62,43 @@ export function featuredCity(cities: readonly CityOut[]): CityOut | null {
       <iv-site-header />
       <main id="icerik">
         <div class="hero">
-          <div class="copy">
-            <p class="kicker">Dolmuş · minibüs · servis</p>
-            <h1>İnecek Var</h1>
-            <p class="tagline">Dolmuş nereden geçer? <span class="answer">Mahalle bilir.</span></p>
-            <p class="lead">{{ description }}</p>
-            <div class="ctas">
-              @if (featured(page.cities); as city) {
-                <a class="btn primary" [routerLink]="['/', city.slug]">
-                  {{ city.is_sample ? 'Örnek şehri gez' : 'Hatlara göz at' }}
-                  <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M2 8h11M9 4l4 4-4 4" />
-                  </svg>
-                </a>
-              }
-              <a class="btn secondary" [href]="appUrl">Uygulamayı aç</a>
+          <div class="iv-wrap hero-grid">
+            <div class="copy">
+              <h1 class="title">İnecek Var</h1>
+              <p class="lead">{{ description }}</p>
+              <div class="ctas">
+                @if (featured(page.cities); as city) {
+                  <a class="btn primary iv-cta" [routerLink]="['/', city.slug]">
+                    {{ city.is_sample ? 'Örnek şehri gez' : 'Hatlara göz at' }}
+                  </a>
+                }
+                <a class="btn secondary iv-cta iv-cta--ghost" [href]="appUrl">Uygulamayı aç</a>
+              </div>
+              <p class="hint">
+                Uygulama tarayıcıda açılır ve ana ekrana eklenebilir; şehir paketiyle internetsiz de
+                çalışır.
+              </p>
             </div>
-            <p class="hint">
-              Uygulama tarayıcıda açılır ve ana ekrana eklenebilir; şehir paketiyle internetsiz de
-              çalışır.
-            </p>
+            <div class="windshield">
+              <span class="strap left" aria-hidden="true"></span>
+              <span class="strap right" aria-hidden="true"></span>
+              <p class="tagline iv-board">
+                <span class="row iv-flip">Dolmuş nereden geçer? </span
+                ><span class="row answer iv-flip iv-flip--1">Mahalle bilir.</span>
+              </p>
+            </div>
           </div>
-          <section class="cities" aria-labelledby="cities-title">
-            <h2 id="cities-title">Şehirler</h2>
-            <ul role="list">
-              @for (city of page.cities; track city.slug) {
-                <li class="city">
-                  <svg class="route" viewBox="0 0 280 56" aria-hidden="true">
-                    <path d="M12 40 C60 40 70 14 118 14 S190 42 268 18" />
-                    <circle cx="12" cy="40" r="6" />
-                    <circle cx="118" cy="14" r="6" />
-                    <circle cx="196" cy="32" r="6" />
-                    <circle cx="268" cy="18" r="6" />
-                  </svg>
+          <div class="street">
+            <iv-city-scene class="scene" />
+          </div>
+        </div>
+        <section class="iv-wrap cities" aria-labelledby="cities-title">
+          <h2 id="cities-title" class="iv-section-head">Şehirler</h2>
+          <ul role="list">
+            @for (city of page.cities; track city.slug) {
+              <li class="city iv-board">
+                <span class="plate iv-placard" aria-hidden="true">{{ initials(city.name) }}</span>
+                <span class="city-body">
                   <a class="city-name" [routerLink]="['/', city.slug]">{{ city.name }}</a>
                   <span class="facts">
                     <span class="count">{{ city.published_line_count }} yayımlanmış hat</span>
@@ -90,16 +106,16 @@ export function featuredCity(cities: readonly CityOut[]): CityOut | null {
                       <span class="count">Şehir paketi sürüm {{ city.pack_version }}</span>
                     }
                     @if (city.is_sample) {
-                      <span class="badge">örnek veri</span>
+                      <span class="badge iv-tape">örnek veri</span>
                     }
                   </span>
-                </li>
-              } @empty {
-                <li class="city empty">Henüz yayımlanmış bir şehir yok.</li>
-              }
-            </ul>
-          </section>
-        </div>
+                </span>
+              </li>
+            } @empty {
+              <li class="city empty">Henüz yayımlanmış bir şehir yok.</li>
+            }
+          </ul>
+        </section>
         <iv-home-guide />
       </main>
       <iv-site-footer />
@@ -109,184 +125,164 @@ export function featuredCity(cities: readonly CityOut[]): CityOut | null {
       <iv-status-page kind="unavailable" />
     }
   `,
-  styles: `
-    main {
-      display: block;
-    }
-    .hero {
-      display: grid;
-      gap: 2rem;
-      max-width: 68rem;
-      margin: 0 auto;
-      padding: 2.5rem 1rem 3rem;
-    }
-    @media (min-width: 52rem) {
+  styles: [
+    PLACARD_STYLES,
+    SIGN_TEXT_STYLES,
+    `
+      main {
+        display: block;
+      }
       .hero {
-        grid-template-columns: 1.15fr 1fr;
+        overflow: hidden;
+        padding-top: clamp(2rem, 5vw, 3.5rem);
+        background: linear-gradient(var(--iv-bg) 70%, var(--iv-bg-deep));
+      }
+      .hero-grid {
+        display: grid;
+        gap: 2rem;
         align-items: center;
-        gap: 3rem;
+      }
+      @media (min-width: 56rem) {
+        .hero-grid {
+          grid-template-columns: 1.1fr 1fr;
+          gap: 3rem;
+        }
+      }
+      .title {
+        margin: 0;
+        font-size: clamp(3.25rem, 11vw, 6.25rem);
+        line-height: 0.92;
+        letter-spacing: -0.045em;
+        color: var(--iv-ink);
+      }
+      .lead {
+        max-width: 33rem;
+        margin: 1.25rem 0 0;
+        font-size: 1.15rem;
+        line-height: 1.55;
+      }
+      .ctas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.75rem;
+      }
+      .hint {
+        max-width: 30rem;
+        margin: 1rem 0 0;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: var(--iv-ink-muted);
+      }
+      .windshield {
+        position: relative;
         padding-top: 2.25rem;
       }
-    }
-    .kicker {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin: 0 0 0.75rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .kicker::before {
-      content: '';
-      width: 1.5rem;
-      height: 0.3rem;
-      border-radius: 0.2rem;
-      background: var(--iv-color-turkuaz);
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(2.5rem, 7vw, 3.75rem);
-      line-height: 1;
-      letter-spacing: -0.02em;
-    }
-    .tagline {
-      margin: 0.75rem 0 0;
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: clamp(1.4rem, 3.6vw, 1.9rem);
-      line-height: 1.2;
-    }
-    .answer {
-      display: block;
-      width: fit-content;
-      text-decoration: underline;
-      text-decoration-color: var(--iv-color-dolmus-sarisi);
-      text-decoration-thickness: 0.28em;
-      text-underline-offset: 0.05em;
-      text-decoration-skip-ink: none;
-    }
-    .lead {
-      max-width: 34rem;
-      margin: 1rem 0 0;
-      font-size: 1.075rem;
-      line-height: 1.6;
-    }
-    .ctas {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1.75rem;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 48px;
-      padding: 0 1.4rem;
-      border-radius: 0.875rem;
-      font-weight: 600;
-      text-decoration: none;
-      color: var(--iv-color-lacivert);
-    }
-    .primary {
-      background: var(--iv-color-dolmus-sarisi);
-      box-shadow: 0 4px 0 var(--iv-color-lacivert);
-    }
-    .arrow {
-      width: 1rem;
-      height: 1rem;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-    .secondary {
-      background: #fff;
-      box-shadow: inset 0 0 0 2px var(--iv-color-lacivert);
-    }
-    .btn:focus-visible,
-    .city-name:focus-visible {
-      outline: 3px solid var(--iv-color-turkuaz);
-      outline-offset: 3px;
-    }
-    .hint {
-      max-width: 30rem;
-      margin: 1rem 0 0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: #4f5866;
-    }
-    .cities h2 {
-      margin: 0 0 0.75rem;
-      font-size: 1.1rem;
-    }
-    ul {
-      display: grid;
-      gap: 1rem;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .city {
-      display: grid;
-      gap: 0.6rem;
-      padding: 1.25rem;
-      background: #fff;
-      border: 1px solid rgba(20, 33, 61, 0.14);
-      border-top: 6px solid var(--iv-color-dolmus-sarisi);
-      border-radius: 1.25rem;
-      box-shadow: 0 6px 0 rgba(20, 33, 61, 0.14);
-    }
-    .route {
-      width: 100%;
-      height: auto;
-      padding: 0.5rem;
-      box-sizing: border-box;
-      border-radius: 0.75rem;
-      background: #f6ecd2;
-    }
-    .route path {
-      fill: none;
-      stroke: var(--iv-color-turkuaz);
-      stroke-width: 5;
-      stroke-linecap: round;
-    }
-    .route circle {
-      fill: var(--iv-color-krem);
-      stroke: var(--iv-color-lacivert);
-      stroke-width: 2.5;
-    }
-    .city-name {
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: 1.35rem;
-      color: var(--iv-color-lacivert);
-      text-underline-offset: 0.2em;
-      border-radius: 0.25rem;
-    }
-    .facts {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem 0.75rem;
-    }
-    .badge {
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      background: var(--iv-color-lacivert);
-      color: var(--iv-color-krem);
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-  `,
+      .strap {
+        position: absolute;
+        top: 0;
+        width: 0.5rem;
+        height: 2.6rem;
+        border-radius: 0.25rem;
+        background: var(--iv-ink-muted);
+      }
+      .left {
+        left: 18%;
+      }
+      .right {
+        right: 18%;
+      }
+      .tagline {
+        display: grid;
+        gap: 0.4rem;
+        margin: 0;
+        padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem) clamp(1.6rem, 3.5vw, 2.4rem);
+        border-radius: 1.25rem;
+        font-family: var(--iv-font-display);
+        font-weight: var(--iv-font-display-weight);
+        font-size: clamp(1.6rem, 4.4vw, 2.6rem);
+        line-height: 1.08;
+        letter-spacing: -0.01em;
+        color: var(--iv-board-ink);
+      }
+      .answer {
+        color: var(--iv-board-sign);
+        text-shadow: var(--iv-board-glow);
+      }
+      /* The road of the scene runs on across the full width of the page. */
+      .street {
+        --scene-w: min(64rem, calc(100vw - 2rem));
+        position: relative;
+        margin-top: 1.5rem;
+      }
+      .street::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(var(--scene-w) * 0.0584);
+        border-top: calc(var(--scene-w) * 0.0167) solid var(--iv-scene-curb);
+        background: var(--iv-scene-road);
+      }
+      .scene {
+        position: relative;
+        max-width: 64rem;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+      .cities {
+        padding-top: 3rem;
+      }
+      ul {
+        display: grid;
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      @media (min-width: 48rem) {
+        ul {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      .city {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem 1.25rem 1.6rem;
+      }
+      .city-body {
+        display: grid;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+      .city-name {
+        font-family: var(--iv-font-display);
+        font-weight: var(--iv-font-display-weight);
+        font-size: 1.45rem;
+        line-height: 1.15;
+        color: var(--iv-board-ink);
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.9rem;
+        color: var(--iv-board-muted);
+        font-size: 0.95rem;
+      }
+      .empty {
+        padding: 1.25rem;
+      }
+    `,
+  ],
 })
 export class Home extends PageView<HomeData> {
   protected readonly description = FACTS.description;
   protected readonly appUrl = this.config.appOrigin + '/';
   protected readonly featured = featuredCity;
+  protected readonly initials = cityInitials;
 
   constructor() {
     super();

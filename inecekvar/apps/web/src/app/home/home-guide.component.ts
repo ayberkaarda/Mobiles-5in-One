@@ -9,8 +9,8 @@ function guidePath(slug: string): string {
 }
 
 /**
- * The lower half of the home page: the three steps as stops on a turquoise line (the stop
- * sequence of a line page), then the offline pack and the contribution teasers.
+ * The lower half of the home page: the three steps as stops on the route rail (the same rail as
+ * the line diagram), then the offline pack and the contribution teasers.
  */
 @Component({
   selector: 'iv-home-guide',
@@ -20,29 +20,20 @@ function guidePath(slug: string): string {
   template: `
     <section class="band" aria-labelledby="steps-title">
       <div class="inner">
-        <h2 id="steps-title">Nasıl çalışır</h2>
+        <h2 id="steps-title" class="iv-section-head">Nasıl çalışır</h2>
         <ol class="steps" role="list">
           <li>
-            <span class="sign" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <circle cx="10.5" cy="10.5" r="6" />
-                <path d="M15 15l5 5" />
-              </svg>
-            </span>
+            <span class="stop" aria-hidden="true"></span>
             <h3>Hattını bul</h3>
             <p>Şehrini seç; hat kodunu, hat adını ya da bir durağı yaz.</p>
           </li>
           <li>
-            <span class="sign" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M5 19V5M5 5h11l-2 3.5L16 12H5" /></svg>
-            </span>
+            <span class="stop" aria-hidden="true"></span>
             <h3>Durakları ve ücreti gör</h3>
             <p>Durak sırası, ücret ve tarihi, çalışma saatleri ve ödeme tek sayfada.</p>
           </li>
           <li>
-            <span class="sign" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16zM14 7l3 3" /></svg>
-            </span>
+            <span class="stop" aria-hidden="true"></span>
             <h3>Eksik ya da yanlışsa düzelt</h3>
             <p>Önerin moderatör onayından sonra yayımlanır; her sürüm kayıtlı kalır.</p>
           </li>
@@ -50,7 +41,12 @@ function guidePath(slug: string): string {
       </div>
     </section>
     <div class="inner teasers">
-      <section class="teaser" aria-labelledby="offline-title">
+      <section class="teaser offline" aria-labelledby="offline-title">
+        <svg class="pack" viewBox="0 0 64 64" aria-hidden="true">
+          <rect x="16" y="6" width="32" height="52" rx="6" />
+          <rect class="screen" x="20" y="13" width="24" height="34" rx="2" />
+          <path class="arrow" d="M32 18 L32 36 M25 30 L32 37 L39 30" />
+        </svg>
         <h2 id="offline-title">İnternet yokken de</h2>
         <p>
           Şehir paketini bir kez indir; hat arama, hat ve durak sayfaları, ücret ve saatler
@@ -59,6 +55,7 @@ function guidePath(slug: string): string {
         <a [routerLink]="offlineGuide">Çevrimdışı şehir paketi rehberi</a>
       </section>
       <section class="teaser dark" aria-labelledby="contribute-title">
+        <span class="bell" aria-hidden="true">İNECEK VAR</span>
         <h2 id="contribute-title">Mahalle bilir, sen de ekle</h2>
         <p>
           Bindiğin hattın izini kaydet ya da eskiyen ücreti düzelt. İzin ilk ve son 200 metresi
@@ -73,67 +70,82 @@ function guidePath(slug: string): string {
       display: block;
     }
     .inner {
-      max-width: 68rem;
+      max-width: var(--iv-wide);
       margin: 0 auto;
       padding: 0 1rem;
     }
     .band {
-      padding: 2rem 0 2.75rem;
-      background: #f6ecd2;
-      border-block: 1px solid rgba(20, 33, 61, 0.14);
-    }
-    h2 {
-      margin: 0 0 1.25rem;
-      font-size: 1.6rem;
+      margin-top: 3.5rem;
+      padding: 2.5rem 0 3rem;
+      background: var(--iv-bg-deep);
     }
     .steps {
       position: relative;
       display: grid;
-      gap: 1.5rem;
+      gap: 1.75rem;
       margin: 0;
-      padding: 0;
+      padding: 0 0 0 2.5rem;
       list-style: none;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 0.6rem;
+      top: 0.5rem;
+      bottom: 0.5rem;
+      width: 6px;
+      background: var(--iv-rail);
+      box-shadow:
+        -3px 0 0 var(--iv-rail-casing),
+        3px 0 0 var(--iv-rail-casing);
     }
     @media (min-width: 52rem) {
       .steps {
         grid-template-columns: repeat(3, 1fr);
-        gap: 2rem;
+        gap: 2.5rem;
+        padding: 2.75rem 0 0;
       }
       .steps::before {
-        content: '';
-        position: absolute;
-        top: 1.6rem;
-        left: 2rem;
-        right: calc((100% - 4rem) / 3 - 1.6rem);
-        border-top: 4px solid var(--iv-color-turkuaz);
+        left: 0.75rem;
+        right: 30%;
+        top: 0.55rem;
+        bottom: auto;
+        width: auto;
+        height: 6px;
+        box-shadow:
+          0 -3px 0 var(--iv-rail-casing),
+          0 3px 0 var(--iv-rail-casing);
       }
     }
     li {
       position: relative;
     }
-    .sign {
-      display: inline-grid;
-      place-items: center;
-      width: 3.25rem;
-      height: 3.25rem;
-      border-radius: 0.75rem;
-      background: var(--iv-color-dolmus-sarisi);
-      border-bottom: 5px solid var(--iv-color-turkuaz);
-      box-shadow: 0 0 0 4px #f6ecd2;
-    }
-    svg {
+    .stop {
+      position: absolute;
+      left: -2.5rem;
+      top: 0.15rem;
       width: 1.6rem;
       height: 1.6rem;
-      fill: none;
-      stroke: var(--iv-color-lacivert);
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+      box-sizing: border-box;
+      border-radius: 50%;
+      background: var(--iv-stop-fill);
+      border: 4px solid var(--iv-rail-casing);
+    }
+    li:first-child .stop,
+    li:last-child .stop {
+      background: var(--iv-plate);
+    }
+    @media (min-width: 52rem) {
+      .stop {
+        left: 0;
+        top: -2.75rem;
+      }
     }
     h3 {
-      margin: 0.9rem 0 0.35rem;
+      margin: 0 0 0.35rem;
       font-family: var(--iv-font-display);
-      font-size: 1.15rem;
+      font-size: 1.2rem;
+      line-height: 1.2;
     }
     p {
       margin: 0;
@@ -142,7 +154,7 @@ function guidePath(slug: string): string {
     .teasers {
       display: grid;
       gap: 1.25rem;
-      padding-block: 2.75rem 3.25rem;
+      padding-block: 3rem 0;
     }
     @media (min-width: 52rem) {
       .teasers {
@@ -152,37 +164,67 @@ function guidePath(slug: string): string {
     .teaser {
       display: grid;
       align-content: start;
+      justify-items: start;
       gap: 0.75rem;
-      padding: 1.5rem;
-      background: #fff;
-      border: 1px solid rgba(20, 33, 61, 0.14);
+      padding: 1.75rem;
+      background: var(--iv-surface);
+      border: 1px solid var(--iv-line);
       border-radius: 1.25rem;
-      box-shadow: 0 6px 0 rgba(20, 33, 61, 0.14);
+      box-shadow: var(--iv-shadow-hard);
     }
     .teaser h2 {
       margin: 0;
-      font-size: 1.3rem;
+      font-size: 1.45rem;
+      line-height: 1.15;
+    }
+    .pack {
+      width: 3.5rem;
+      height: 3.5rem;
+    }
+    .pack rect {
+      fill: var(--iv-board);
+    }
+    .pack .screen {
+      fill: var(--iv-plate);
+    }
+    .pack .arrow {
+      fill: none;
+      stroke: var(--iv-plate-ink);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .dark {
-      background: var(--iv-color-lacivert);
-      color: var(--iv-color-krem);
-      box-shadow: 0 6px 0 var(--iv-color-dolmus-sarisi);
+      background: var(--iv-board);
+      color: var(--iv-board-ink);
+      border-color: var(--iv-board-edge);
+      box-shadow:
+        inset 0 -5px 0 var(--iv-stripe),
+        var(--iv-shadow-board);
+    }
+    .bell {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.25rem;
+      padding: 0 1rem;
+      border-radius: 999px;
+      background: var(--iv-signal);
+      color: var(--iv-signal-ink);
+      font-family: var(--iv-font-display);
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
     }
     a {
-      justify-self: start;
       display: inline-flex;
       align-items: center;
       min-height: 44px;
-      font-weight: 600;
+      font-weight: 650;
       color: inherit;
       text-underline-offset: 0.25em;
       text-decoration-thickness: 2px;
-      text-decoration-color: var(--iv-color-turkuaz);
+      text-decoration-color: var(--iv-stripe);
       border-radius: 0.25rem;
-    }
-    a:focus-visible {
-      outline: 3px solid var(--iv-color-turkuaz);
-      outline-offset: 2px;
     }
   `,
 })

@@ -21,7 +21,7 @@ import { FACTS } from '../../content/facts';
             <rect x="128" y="396" width="48" height="48" rx="12" fill="#FFF8E7" />
             <rect x="336" y="396" width="48" height="48" rx="12" fill="#FFF8E7" />
             <rect x="64" y="104" width="384" height="304" rx="64" fill="#F2B705" />
-            <path d="M232 232H280V328H232Z" fill="#14213D" />
+            <rect x="232" y="232" width="48" height="96" fill="#14213D" />
             <circle cx="256" cy="180" r="26" fill="none" stroke="#14213D" stroke-width="12" />
             <rect x="96" y="352" width="320" height="20" rx="10" fill="#2AB7CA" />
           </svg>
@@ -46,36 +46,32 @@ import { FACTS } from '../../content/facts';
       z-index: 2;
       padding: 0.75rem 1rem;
       border-radius: 0.5rem;
-      background: var(--iv-color-dolmus-sarisi);
-      color: var(--iv-color-lacivert);
+      background: var(--iv-accent);
+      color: var(--iv-accent-ink);
       font-weight: 600;
     }
     .skip:focus {
       top: 0.75rem;
     }
     .bar {
-      background: var(--iv-color-lacivert);
-      border-bottom: 4px solid var(--iv-color-turkuaz);
-      color: var(--iv-color-krem);
+      background: var(--iv-board);
+      border-bottom: 4px solid var(--iv-stripe);
+      color: var(--iv-board-ink);
     }
     .inner {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 0.5rem 1.5rem;
-      max-width: 68rem;
+      gap: 0.25rem 1.5rem;
+      max-width: var(--iv-wide);
       margin: 0 auto;
-      padding: 0.75rem 1rem;
+      padding: 0.6rem 1rem;
     }
     a {
       color: inherit;
       text-decoration: none;
       border-radius: 0.5rem;
-    }
-    a:focus-visible {
-      outline: 3px solid var(--iv-color-turkuaz);
-      outline-offset: 3px;
     }
     .brand {
       display: inline-flex;
@@ -84,29 +80,32 @@ import { FACTS } from '../../content/facts';
       min-height: 48px;
     }
     .mark {
-      width: 2.5rem;
-      height: 2.5rem;
+      width: 2.4rem;
+      height: 2.4rem;
     }
     .word {
       font-family: var(--iv-font-display);
       font-weight: var(--iv-font-display-weight);
-      font-size: 1.25rem;
-      letter-spacing: 0.06em;
+      font-size: 1.2rem;
+      letter-spacing: 0.08em;
+      color: var(--iv-board-sign);
     }
     nav {
       display: flex;
       flex-wrap: wrap;
       gap: 0.25rem;
+      margin-right: -0.5rem;
     }
     nav a {
       display: inline-flex;
       align-items: center;
       min-height: 44px;
       padding: 0 0.75rem;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 0.98rem;
     }
     nav a:hover {
-      color: var(--iv-color-dolmus-sarisi);
+      color: var(--iv-board-sign);
     }
   `,
 })

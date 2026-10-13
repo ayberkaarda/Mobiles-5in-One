@@ -179,15 +179,36 @@ type Stage = 'sign-in' | 'confirm' | 'done' | 'ended';
     input[type='email'],
     input[type='password'] {
       font: inherit;
-      padding: 0.5rem;
+      min-height: 2.9rem;
+      padding: 0 0.75rem;
+      border: 1.5px solid var(--iv-line-strong);
+      border-radius: 0.6rem;
+      background: var(--iv-surface);
+      color: var(--iv-ink);
+    }
+    input:focus-visible {
+      outline: 3px solid var(--iv-stripe);
+      outline-offset: 1px;
     }
     button {
       font: inherit;
-      padding: 0.5rem 1rem;
-      min-height: 2.75rem;
+      font-weight: 650;
+      padding: 0.5rem 1.2rem;
+      min-height: 2.9rem;
+      border: 0;
+      border-radius: 0.75rem;
+      background: var(--iv-accent);
+      color: var(--iv-accent-ink);
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
     .danger {
       font-weight: 700;
+      background: var(--iv-signal);
+      color: var(--iv-signal-ink);
     }
     .check,
     .actions {
@@ -197,7 +218,7 @@ type Stage = 'sign-in' | 'confirm' | 'done' | 'ended';
       align-items: center;
     }
     .note {
-      border-left: 0.25rem solid var(--iv-color-dolmus-sarisi);
+      border-left: 0.25rem solid var(--iv-accent);
       padding: 0.5rem 0.75rem;
     }
     .error {

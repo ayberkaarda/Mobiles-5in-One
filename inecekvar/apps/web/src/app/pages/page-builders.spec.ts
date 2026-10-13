@@ -1,4 +1,4 @@
-import { homeJsonLd, homeSeo } from '../home/home';
+import { cityInitials, homeJsonLd, homeSeo } from '../home/home';
 import { cityData, lineData, pairData, stopData } from '../content/test-data';
 import { LineListData, RouteData } from '../content/page-data';
 import { JsonLdNode, serializeJsonLd } from '../seo/json-ld';
@@ -192,4 +192,13 @@ describe('route page builders', () => {
       expect(routeSeo(data).path).toBe('/ornek-sehir/rota/ilk-uzun-durak-son-uzun-durak');
     },
   );
+});
+
+describe('cityInitials', () => {
+  it('takes the first letters of the first two words and skips bracketed labels', () => {
+    expect(cityInitials('[ÖRNEK] Test Şehri')).toBe('TŞ');
+    expect(cityInitials('İstanbul')).toBe('İ');
+    expect(cityInitials('izmir körfez')).toBe('İK');
+    expect(cityInitials('[ÖRNEK]')).toBe('·');
+  });
 });

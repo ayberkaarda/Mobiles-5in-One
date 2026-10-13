@@ -72,11 +72,13 @@ import { ROLE_LABELS } from '../admin-text';
     <iv-admin-dialogs />
   `,
   styles: `
+    /* The admin area keeps the light route-board look in every system scheme. */
     .iv-admin {
       display: block;
       min-height: 100vh;
       background: var(--iv-color-krem);
       color: var(--iv-color-lacivert);
+      color-scheme: light;
     }
     .iv-admin-bar {
       display: flex;
@@ -85,6 +87,7 @@ import { ROLE_LABELS } from '../admin-text';
       align-items: center;
       padding: 0.75rem 1rem;
       background: var(--iv-color-lacivert);
+      border-bottom: 4px solid var(--iv-color-turkuaz);
       color: var(--iv-color-krem);
     }
     .iv-admin-bar a {

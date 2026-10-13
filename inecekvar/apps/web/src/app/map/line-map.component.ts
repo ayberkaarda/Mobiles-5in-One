@@ -46,20 +46,30 @@ import type { MapHandle } from './map-library';
   `,
   styles: `
     .iv-line-map button {
+      width: 100%;
+      min-height: 48px;
       font: inherit;
-      color: var(--iv-color-lacivert);
-      background: var(--iv-color-dolmus-sarisi);
+      font-weight: 650;
+      color: var(--iv-board-sign);
+      background: var(--iv-board);
       border: 0;
-      border-radius: 0.25rem;
+      border-radius: 0.875rem;
+      box-shadow: inset 0 -3px 0 var(--iv-stripe);
       padding: 0.75rem 1rem;
       cursor: pointer;
+    }
+    .iv-line-map p {
+      margin: 0.5rem 0 0;
+      font-size: 0.85rem;
+      color: var(--iv-ink-muted);
     }
     .iv-line-map button:focus-visible {
       outline: 2px solid currentColor;
       outline-offset: 4px;
     }
     .iv-line-map-surface {
-      height: 24rem;
+      height: 20rem;
+      border-radius: 0.9rem;
       position: relative;
       overflow: hidden;
     }
