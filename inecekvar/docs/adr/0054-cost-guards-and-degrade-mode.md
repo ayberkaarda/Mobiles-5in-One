@@ -100,6 +100,19 @@ host, no provider account and no error reporting SDK (ADR-0005).
     `test_only_the_current_hour_counts_for_the_load`, `test_forced_degrade_is_an_alert_line`,
     `test_one_hour_of_load_ends_after_one_cool_down`,
     `test_planner_counts_only_computed_plans_in_the_hour_bucket`.
+11. **Review amendment: the scrubber covers every value type and secret key families.** The
+    review showed `bytes`, sets, exception objects and other values passed through `clean()`
+    untouched and were then `repr()`ed by the renderer, and names such as `new_password`,
+    `passwd` or `access_key_id` were not dropped. Now bytes are decoded, sets and tuples are
+    lists, exceptions read `Type: message`, any other object is `str()`ed, the text rules run on
+    every string leaf (including a new `name=value` / `"name": "value"` rule for the secret
+    families), and keys are dropped by substring (`password`, `passwd`, `pwd`, `secret`,
+    `token`, `credential`, the `*_key` secret names; a bare `key` stays). No current call site
+    logged such values (latent), so this closes the gap before one does. Tests:
+    `test_secret_key_families_are_dropped_by_substring`,
+    `test_bytes_sets_exceptions_and_other_objects_are_scrubbed`,
+    `test_secret_pairs_inside_text_are_redacted`,
+    `test_exception_and_bytes_never_reach_the_production_stream`.
 
 ## Evidence
 

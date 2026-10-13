@@ -76,6 +76,32 @@ _DROP = frozenset(
         "dsn",
     }
 )
+# Phase 6 review F5: any key containing one of these is dropped too (`new_password`,
+# `current_password`, `passwd`, `pwd`, `secret_key`, `access_key_id`, `refresh_token_raw`, ...).
+# A bare `key` is not a secret family (object keys such as `newest_key` are logged on purpose).
+_DROP_SUBSTRINGS = (
+    "password",
+    "passwd",
+    "pwd",
+    "secret",
+    "token",
+    "credential",
+    "apikey",
+    "api_key",
+    "api-key",
+    "access_key",
+    "private_key",
+    "signing_key",
+    "encryption_key",
+    "hash_key",
+)
+# The same families as `name=value` or `"name": "value"` inside text (a message, an exception,
+# decoded bytes): the value is replaced, the name stays.
+_SECRET_PAIR = re.compile(
+    r"([\"']?\b[\w-]*(?:password|passwd|pwd|secret|token|credential|api_?key|access_key"
+    r"|private_key)[\w-]*\b[\"']?\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|[^\s,;&}\]]+)",
+    re.I,
+)
 _COORDINATE_KEYS = frozenset({"lat", "lng", "lon", "latitude", "longitude"})
 # Collections under these keys are dropped whole; a number under the same key (a count) stays.
 _GEOMETRY_KEYS = frozenset(
@@ -109,6 +135,7 @@ class Scrubber:
         value = _HEADER_VALUE.sub(r"\1: [redacted]", value)
         value = _CREDENTIAL.sub(r"\1 [redacted]", value)
         value = _JWT.sub("[redacted-jwt]", value)
+        value = _SECRET_PAIR.sub(r"\1[redacted]", value)
         value = _COORDINATE.sub(lambda match: match[1] + f"{float(match[2]):.3f}", value)
         value = _DECIMAL_PAIR.sub(_round_pair, value)
         return _EMAIL.sub(lambda match: self.email(match[0]), value)
@@ -119,7 +146,7 @@ class Scrubber:
             for name, item in value.items():
                 label = str(name)
                 lower = label.lower()
-                if lower in _DROP:
+                if lower in _DROP or any(part in lower for part in _DROP_SUBSTRINGS):
                     continue
                 if lower in _GEOMETRY_KEYS and isinstance(item, (dict, list, tuple)):
                     continue
@@ -128,16 +155,25 @@ class Scrubber:
                 else:
                     result[self.text(label)] = self.clean(item, lower)
             return result
-        if isinstance(value, (list, tuple)):
-            if len(value) == 2 and all(type(item) is float for item in value):
+        if isinstance(value, (list, tuple, set, frozenset)):
+            items = list(value)
+            if len(items) == 2 and all(type(item) is float for item in items):
                 # A pair of floats is treated as a coordinate: three decimals at most.
-                return [round(cast(float, item), 3) for item in value]
-            return [self.clean(item, key) for item in value]
+                return [round(cast(float, item), 3) for item in items]
+            return [self.clean(item, key) for item in items]
         if isinstance(value, float) and key in _COORDINATE_KEYS:
             return round(value, 3)
         if isinstance(value, str):
             return self.text(value)
-        return value
+        if value is None or isinstance(value, (bool, int, float)):
+            return value
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            # Bytes would be rendered with repr(); decode them so the text rules apply.
+            return self.text(bytes(value).decode("utf-8", errors="replace"))
+        if isinstance(value, BaseException):
+            return self.text(f"{type(value).__name__}: {value}")
+        # Any other object (an id, a date, a model) is logged as its text, scrubbed.
+        return self.text(str(value))
 
 
 def mask_sensitive(settings: Settings) -> Processor:

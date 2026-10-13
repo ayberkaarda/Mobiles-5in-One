@@ -40,6 +40,9 @@ rendering, for structlog and stdlib (uvicorn) records alike:
 | Coordinate keys `lat`, `lng`, `lon`, `latitude`, `longitude` | `41.0123456` | `41.012` |
 | Any pair of floats | `[41.0123456, 29.0987654]` | `[41.012, 29.099]` |
 | Long decimal pairs in text | `at 41.0123456, 29.0987654` | `at 41.012, 29.099` |
+| Secret key families by substring (review F5): any key containing `password`, `passwd`, `pwd`, `secret`, `token`, `credential`, `apikey`, `api_key`, `access_key`, `private_key`, `signing_key`, `encryption_key` or `hash_key` (a bare `key` such as `newest_key` stays) | `{"new_password": "..."}`, `{"access_key_id": "..."}` | key removed |
+| The same families as a pair inside text | `retry with api_key=abc`, `"token": "abc"` | `api_key=[redacted]`, `"token": [redacted]` |
+| Bytes, sets, tuples, exceptions and other objects (review F5) | `b'{"email": ...}'`, `{"a@b.example"}`, `ValueError("... a@b.example")` | bytes decoded as UTF-8, sets and tuples treated as lists, exceptions as `Type: message`, any other object as `str()`; the text rules run on every string leaf |
 
 Tests: `tests/core/test_logging.py`, `tests/core/test_log_scrub.py`, and the combined production
 stream scan `tests/security/test_dump_and_log_scan.py::test_combined_session_log_has_no_email_token_coordinate_or_secret`

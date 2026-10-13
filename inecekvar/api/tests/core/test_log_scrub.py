@@ -71,6 +71,84 @@ def test_scrub_rules(settings: Settings, sample: dict[str, object], expected: ob
     assert mask_sensitive(settings)(None, "info", sample) == expected
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "new_password",
+        "current_password",
+        "passwd",
+        "pwd",
+        "secret_key",
+        "access_key_id",
+        "aws_secret_access_key",
+        "refresh_token_raw",
+        "X-Api-Key",
+        "db_credentials",
+    ],
+)
+def test_secret_key_families_are_dropped_by_substring(settings: Settings, name: str) -> None:
+    sample = {name: OPAQUE, "newest_key": "inecekvar/inecekvar-20261012T020000Z.dump.age"}
+    assert mask_sensitive(settings)(None, "info", sample) == {
+        "newest_key": "inecekvar/inecekvar-20261012T020000Z.dump.age"
+    }
+
+
+def test_bytes_sets_exceptions_and_other_objects_are_scrubbed(settings: Settings) -> None:
+    class Opaque:
+        def __str__(self) -> str:
+            return "holder a.person@example.com " + JWT
+
+    payload = json.dumps({"email": "a.person@example.com", "token": OPAQUE}).encode()
+    sample = {
+        "payload": payload,
+        "buffer": bytearray(b"mail a.person@example.com"),
+        "error": ValueError("lookup for a.person@example.com failed with " + JWT),
+        "emails": {"a.person@example.com"},
+        "frozen": frozenset({"Bearer " + OPAQUE}),
+        "nested": ({"note": "password=" + OPAQUE},),
+        "thing": Opaque(),
+        "count": 3,
+        "ok": True,
+        "missing": None,
+    }
+    cleaned = mask_sensitive(settings)(None, "info", sample)
+    rendered = json.dumps(cleaned)
+    assert "@" not in rendered
+    assert OPAQUE not in rendered
+    assert JWT not in rendered
+    assert cleaned["error"].startswith("ValueError: lookup for email_hash=")
+    assert isinstance(cleaned["emails"], list)
+    assert cleaned["frozen"] == ["Bearer [redacted]"]
+    assert cleaned["nested"] == [{"note": "password=[redacted]"}]
+    assert '"token": [redacted]' in cleaned["payload"]
+    assert (cleaned["count"], cleaned["ok"], cleaned["missing"]) == (3, True, None)
+
+
+def test_secret_pairs_inside_text_are_redacted(settings: Settings) -> None:
+    sample = {
+        "detail": "retry with api_key=" + OPAQUE + "&x=1, client_secret: '" + OPAQUE + "'",
+        "other": "token count 3, points 12",
+    }
+    cleaned = mask_sensitive(settings)(None, "info", sample)
+    assert OPAQUE not in json.dumps(cleaned)
+    assert cleaned["other"] == "token count 3, points 12"
+
+
+def test_exception_and_bytes_never_reach_the_production_stream(log_stream: io.StringIO) -> None:
+    structlog.get_logger().warning(
+        "probe",
+        error=RuntimeError("upstream said a.person@example.com " + JWT),
+        payload=("password=" + OPAQUE).encode(),
+        emails={"b.person@example.com"},
+        new_password=OPAQUE,
+    )
+    captured = log_stream.getvalue()
+    assert "@" not in captured
+    assert OPAQUE not in captured
+    assert JWT not in captured
+    assert "new_password" not in captured
+
+
 def test_scrub_applies_to_production_log_lines(log_stream: io.StringIO) -> None:
     structlog.get_logger().warning(
         "probe",
