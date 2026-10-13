@@ -26,7 +26,12 @@ export interface StopSequenceItem {
   template: `
     <ol class="seq" [attr.aria-label]="label() || null">
       @for (stop of stops(); track stop.slug; let first = $first, last = $last) {
-        <li [class.terminal]="first || last" [class.first]="first" [class.last]="last">
+        <li
+          [class.terminal]="first || last"
+          [class.first]="first"
+          [class.last]="last"
+          [class.ticked]="!!stop.tick"
+        >
           @if (stop.link) {
             <a class="row" [routerLink]="stop.link" [queryParams]="stop.query">
               <ng-container *ngTemplateOutlet="body; context: { $implicit: stop }" />
@@ -35,6 +40,9 @@ export interface StopSequenceItem {
             <button type="button" class="row" (click)="selected.emit(stop.slug)">
               <ng-container *ngTemplateOutlet="body; context: { $implicit: stop }" />
             </button>
+          }
+          @if (stop.tick) {
+            <span class="tick" aria-hidden="true">{{ stop.tick }}</span>
           }
         </li>
       }
@@ -47,9 +55,6 @@ export interface StopSequenceItem {
           <span class="note">{{ stop.note }}</span>
         }
       </span>
-      @if (stop.tick) {
-        <span class="tick" aria-hidden="true">{{ stop.tick }}</span>
-      }
     </ng-template>
   `,
   styles: `
@@ -143,8 +148,15 @@ export interface StopSequenceItem {
       font-size: 12px;
       color: var(--iv-ink-muted);
     }
+    .ticked .row {
+      padding-right: 46px;
+    }
     .tick {
-      flex: none;
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
       min-width: 26px;
       padding: 3px 6px;
       border-radius: 6px;

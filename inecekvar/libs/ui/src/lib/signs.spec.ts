@@ -81,6 +81,8 @@ describe('sign components', () => {
     expect(list?.getAttribute('aria-label')).toBe('Duraklar');
     const links = Array.from(list?.querySelectorAll('li a') ?? []);
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['/x/durak/a', '/x/durak/b']);
+    // The stop number sits beside the link, so the link is named by the stop alone.
+    expect(links.map((a) => squash(a.textContent))).toEqual(['A', 'B']);
     expect(list?.querySelector('button')).toBeNull();
     expect(squash(list?.querySelector('.tick')?.textContent)).toBe('1');
   });
