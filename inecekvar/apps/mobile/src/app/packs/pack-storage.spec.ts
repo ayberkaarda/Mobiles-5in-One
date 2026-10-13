@@ -14,7 +14,12 @@ import {
   IndexLock,
   INSTALL_CACHE_PREFIX,
 } from './cache-pack-storage';
-import { createRangeReader, FilesystemPackStorage, toBase64 } from './filesystem-pack-storage';
+import {
+  createRangeReader,
+  FilesystemPackStorage,
+  isMissingFile,
+  toBase64,
+} from './filesystem-pack-storage';
 import {
   choosePackStorage,
   fileInfo,
@@ -585,6 +590,44 @@ describe('Filesystem specifics', () => {
     fs.files.delete('packs/index.json');
     const again = new FilesystemPackStorage(fs, fs.readRange, Directory.Data);
     expect((await again.list()).map((m) => m.installId)).toEqual([v1.manifest.installId]);
+  });
+
+  it('treats the Capacitor 8 missing-file error as an empty index on the first install', async () => {
+    const fs = new FakeFilesystem();
+    // Capacitor Filesystem 8 on Android and iOS: code OS-PLUG-FILE-0008 and this message.
+    fs.faults.readFail = (path) =>
+      fs.files.has(path)
+        ? null
+        : Object.assign(
+            new Error(
+              `'readFile' failed because file at '/data/user/0/app/files/${path}' does not exist.`,
+            ),
+            { code: 'OS-PLUG-FILE-0008' },
+          );
+    const storage = new FilesystemPackStorage(fs, fs.readRange, Directory.Data);
+    expect(await storage.list()).toEqual([]);
+    const v1 = await packFiles(1);
+    await storage.install(v1.manifest, v1.files);
+    expect((await storage.list()).map((m) => m.installId)).toEqual([v1.manifest.installId]);
+  });
+
+  it('recognises missing files in every reported form and nothing else', () => {
+    const missing = [
+      Object.assign(new Error('x'), { code: 'OS-PLUG-FILE-0008' }),
+      Object.assign(new Error('x'), { code: 'ENOENT' }),
+      new Error("'readFile' failed because file at '/data/packs/index.json' does not exist."),
+      new Error("'readFile' failed because file does not exist."),
+      new Error('File does not exist'),
+    ];
+    for (const error of missing) expect(isMissingFile(error), error.message).toBe(true);
+    for (const error of [
+      new Error('index I/O failure'),
+      Object.assign(new Error('Unable to do file operation, user denied permission request.'), {
+        code: 'OS-PLUG-FILE-0007',
+      }),
+    ]) {
+      expect(isMissingFile(error), error.message).toBe(false);
+    }
   });
 
   it('maps native out-of-space messages to quota', () => {

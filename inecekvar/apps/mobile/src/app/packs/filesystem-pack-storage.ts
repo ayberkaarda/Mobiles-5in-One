@@ -337,11 +337,18 @@ export function fromBase64(text: string): Uint8Array {
   return bytes;
 }
 
-function isMissingFile(error: unknown): boolean {
+/**
+ * True when a read failed because the file is not there. Capacitor Filesystem 8 reports this on
+ * Android and iOS as code `OS-PLUG-FILE-0008` ("'readFile' failed because file at '…' does not
+ * exist."); older versions and the web implementation use the other forms.
+ */
+export function isMissingFile(error: unknown): boolean {
   const value = error as { code?: string; message?: string } | null;
   return (
     value?.code === 'ENOENT' ||
-    /^(File does not exist|File not found|No such file)/i.test(value?.message ?? '')
+    value?.code === 'OS-PLUG-FILE-0008' ||
+    /^(File does not exist|File not found|No such file)/i.test(value?.message ?? '') ||
+    /failed because file .*does not exist\.$/i.test(value?.message ?? '')
   );
 }
 
