@@ -15,7 +15,8 @@ import { StripNode, StripSegment, stripLayout } from './route-strip';
       <div
         class="scroller"
         [class.long]="long()"
-        [attr.tabindex]="long() || strip.width > 400 ? 0 : null"
+        [class.wide]="strip.width > 420"
+        [attr.tabindex]="long() || strip.width > 420 ? 0 : null"
       >
         <svg
           class="iv-strip"
@@ -128,8 +129,9 @@ import { StripNode, StripSegment, stripLayout } from './route-strip';
       width: auto;
       max-width: none;
     }
+    /* Wide strips (drawn for a desktop column) keep their size on a phone and scroll. */
     @media (max-width: 40rem) {
-      svg {
+      .wide svg {
         width: auto;
         max-width: none;
       }
