@@ -76,3 +76,12 @@ paths = [
   '''inecekvar/api/tests/security/test_dump_and_log_scan\.py''',
 ]
 targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "A dummy bootstrap password literal in one early phase 6 test commit, since replaced by a value built at run time"
+condition = "AND"
+commits = ['4da3e9100b234453997d8a5c2b9545bb0d1779b5']
+paths = [
+  '''inecekvar/api/tests/ops/test_bootstrap\.py''',
+]
+targetRules = ['generic-api-key']
