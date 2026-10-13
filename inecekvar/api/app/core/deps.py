@@ -20,6 +20,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.billing.revenuecat import SubscriberDirectory
+from app.core.client_ip import rate_limit_key
 from app.core.errors import (
     AUTH_FORBIDDEN,
     AUTH_REQUIRED,
@@ -355,6 +356,6 @@ def rate_limit(rule: str) -> Callable[[RateLimiter, str], Awaitable[None]]:
     """
 
     async def dependency(limiter: RateLimiterDep, client_ip: ClientIpDep) -> None:
-        await enforce_rate_limit(limiter, rule, "ip:" + client_ip)
+        await enforce_rate_limit(limiter, rule, "ip:" + rate_limit_key(client_ip))
 
     return dependency

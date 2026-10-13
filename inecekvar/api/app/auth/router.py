@@ -41,6 +41,7 @@ from app.auth.sessions import (
     roll_session,
 )
 from app.auth.step_up import revoke_session_step_up
+from app.core.client_ip import rate_limit_key
 from app.core.deps import (
     BreachCheckerDep,
     ClientIpDep,
@@ -128,7 +129,7 @@ async def magic_link_verify(
     if body.password is not None:
         # A registration link verifies a password: bound by the login rule per client IP
         # before any hashing, so a link holder cannot drive unlimited Argon2 work.
-        await enforce_rate_limit(limiter, "auth.login", "verify-ip:" + client_ip)
+        await enforce_rate_limit(limiter, "auth.login", "verify-ip:" + rate_limit_key(client_ip))
     now = clock.now()
     user = await verify_link(db, settings, body.token, body.password, now)
     output = await issue_session(db, settings, request, response, user, body.mode, now)

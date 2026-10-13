@@ -1,7 +1,7 @@
 """Resolve the direct peer or one explicitly trusted proxy header."""
 
 from collections.abc import Mapping
-from ipaddress import ip_address
+from ipaddress import IPv6Address, ip_address, ip_network
 
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -32,6 +32,24 @@ def resolve_client_ip(peer: str | None, headers: Mapping[str, str], settings: Se
                 return ip_address(values[0]).compressed
             except ValueError:
                 return address.compressed
+    return address.compressed
+
+
+def rate_limit_key(client_ip: str) -> str:
+    """The network a per-IP quota counts (attack suite finding, ADR-0052).
+
+    One subscriber holds a whole IPv6 /64, so per-address windows let a client rotate
+    addresses inside its own prefix; an IPv4-mapped IPv6 address is the same client as the
+    plain IPv4 address. IPv4 addresses count as they are.
+    """
+    try:
+        address = ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    if isinstance(address, IPv6Address):
+        if address.ipv4_mapped is not None:
+            return address.ipv4_mapped.compressed
+        return ip_network(address.compressed + "/64", strict=False).compressed
     return address.compressed
 
 
