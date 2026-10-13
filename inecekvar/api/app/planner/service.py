@@ -12,6 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import Services
 from app.geo import point_coordinates
 from app.models import City, Line, LineVersion, Stop
+from app.planner.degrade import (
+    DEGRADED_CACHE_TTL_SECONDS,
+    DEGRADED_MAX_TRANSFERS,
+    DEGRADED_TIMEOUT_SECONDS,
+    count_planner_call,
+    degrade_active,
+)
 from app.planner.graph import Network, RouteLine, StopNode, build_network, haversine
 from app.planner.schemas import (
     ItineraryOutput,
@@ -160,12 +167,21 @@ class PlannerService:
     async def search(
         self, services: Services, db: AsyncSession, city: City, body: PlanInput
     ) -> tuple[PlanOutput, bool]:
+        now = services.clock.now()
+        await count_planner_call(services.redis, now)
+        # The degrade flag (ADR-0054) forces one transfer, a short budget and a long cache life.
+        forced = await degrade_active(services.redis, now)
+        transfers = (
+            min(DEGRADED_MAX_TRANSFERS, body.max_transfers) if forced else body.max_transfers
+        )
         origin = cell(body.origin.lng, body.origin.lat)
         destination = cell(body.destination.lng, body.destination.lat)
         key = (
             f"plan:v1:{city.slug}:{city.pack_version}:{cell_key(origin)}:"
-            f"{cell_key(destination)}:{body.max_transfers}"
+            f"{cell_key(destination)}:{transfers}"
         )
+        if forced:
+            key += ":degraded"
         cached = await services.redis.get(key)
         if cached is not None:
             return PlanOutput.model_validate_json(cached), True
@@ -192,16 +208,28 @@ class PlannerService:
                 )
             )
 
-        degraded = False
-        try:
-            result = await run(body.max_transfers, services.settings.planner_timeout_seconds)
-        except PlannerTimeout:
-            degraded = True
+        degraded = forced
+        if forced:
+            seconds = min(DEGRADED_TIMEOUT_SECONDS, services.settings.planner_timeout_seconds)
             try:
-                result = await run(min(1, body.max_transfers), 1.0)
+                result = await run(transfers, seconds)
             except PlannerTimeout:
                 result = PlanResult(())
+        else:
+            try:
+                result = await run(transfers, services.settings.planner_timeout_seconds)
+            except PlannerTimeout:
+                degraded = True
+                try:
+                    result = await run(min(1, transfers), 1.0)
+                except PlannerTimeout:
+                    result = PlanResult(())
         output = response(city.slug, stored, result, degraded)
-        ttl = 60 if degraded else services.settings.planner_cache_ttl_seconds
+        if forced:
+            ttl = max(DEGRADED_CACHE_TTL_SECONDS, services.settings.planner_cache_ttl_seconds)
+        elif degraded:
+            ttl = 60
+        else:
+            ttl = services.settings.planner_cache_ttl_seconds
         await services.redis.set(key, output.model_dump_json(), ex=ttl)
         return output, False
