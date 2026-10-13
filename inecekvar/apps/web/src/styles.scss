@@ -1,7 +1,116 @@
-/* Brand tokens and shared base rules from libs/ui. */
+/* Brand tokens, the route-board semantic tokens (light, and the night bus under the system dark
+   scheme), the shared base and sign rules from libs/ui, and the page frame of the public site.
+   Only DM Sans 700 is self-hosted, for display lettering; body text uses the system stack
+   (ADR-0059 records the Lighthouse numbers behind this choice). */
+@use '@fontsource/dm-sans/latin-700.css';
+@use '@fontsource/dm-sans/latin-ext-700.css';
 @use '../../../libs/ui/src/styles/tokens.css';
+@use '../../../libs/ui/src/styles/semantic';
 @use '../../../libs/ui/src/styles/base.css';
+@use '../../../libs/ui/src/styles/signs.css';
+
+:root {
+  @include semantic.scale;
+  @include semantic.light;
+  --iv-font-body:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
+  --iv-measure: 68ch;
+  --iv-wide: 72rem;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include semantic.dark;
+    --iv-color-background: var(--iv-bg);
+    --iv-color-text: var(--iv-ink);
+  }
+}
 
 body {
   margin: 0;
+  background: var(--iv-bg);
+  color: var(--iv-ink);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--iv-stripe);
+  outline-offset: 3px;
+  border-radius: 0.25rem;
+}
+
+/* Page frame of the public pages: one centred column, a readable measure for prose. */
+.iv-wrap {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--iv-wide);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.iv-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  padding: 1.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--iv-ink-muted);
+}
+
+.iv-crumbs a {
+  color: var(--iv-ink-muted);
+}
+
+.iv-crumbs span[aria-hidden] {
+  opacity: 0.6;
+}
+
+/* Calls to action shared by the public pages. */
+.iv-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.35rem;
+  border-radius: 0.875rem;
+  background: var(--iv-accent);
+  color: var(--iv-accent-ink);
+  box-shadow: 0 4px 0 var(--iv-board-edge);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.iv-cta--ghost {
+  background: transparent;
+  color: var(--iv-ink);
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.iv-cta--board {
+  background: var(--iv-board);
+  color: var(--iv-board-sign);
+  box-shadow: inset 0 -3px 0 var(--iv-stripe);
+}
+
+.iv-section-head {
+  margin: 0 0 1rem;
+  font-size: clamp(1.4rem, 3vw, 1.85rem);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+/* Short pages keep the footer road near the bottom of the window. */
+main#icerik {
+  min-height: 55vh;
 }

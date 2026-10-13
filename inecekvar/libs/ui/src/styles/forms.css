@@ -12,16 +12,14 @@
 }
 
 .iv-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: var(--iv-font-body-weight-600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--iv-ink-muted);
+  color: var(--iv-ink);
 }
 
 .iv-input {
   width: 100%;
-  min-height: 46px;
+  min-height: 50px;
   padding: 0 12px;
   border: 1.5px solid var(--iv-line-strong);
   border-radius: var(--iv-radius-s);
@@ -76,11 +74,11 @@ select.iv-input {
 .iv-button--ghost {
   background: transparent;
   color: var(--iv-ink);
-  box-shadow: inset 0 0 0 1.5px var(--iv-ink);
+  box-shadow: inset 0 0 0 2px var(--iv-ink);
 }
 
 .iv-button--ghost:active {
-  box-shadow: inset 0 0 0 1.5px var(--iv-ink);
+  box-shadow: inset 0 0 0 2px var(--iv-ink);
 }
 
 .iv-button--danger {
@@ -131,8 +129,9 @@ select.iv-input {
 }
 
 .iv-segmented button[aria-pressed='true'] {
-  background: var(--iv-ink);
-  color: var(--iv-bg);
+  background: var(--iv-board);
+  color: var(--iv-board-sign);
+  box-shadow: inset 0 -3px 0 var(--iv-stripe);
 }
 
 .iv-chip-toggle {
@@ -151,7 +150,7 @@ select.iv-input {
 }
 
 .iv-chip-toggle[aria-pressed='true'] {
-  border-color: var(--iv-ink);
-  background: var(--iv-ink);
-  color: var(--iv-bg);
+  border-color: var(--iv-board);
+  background: var(--iv-board);
+  color: var(--iv-board-sign);
 }

@@ -38,16 +38,17 @@
       (action)="retry()"
     />
     } @case ('ready') { @if (data(); as line) {
-    <header class="hero">
-      <span class="plate" aria-hidden="true">{{ line.code }}</span>
-      <div class="hero-body">
-        <h1 class="name">
-          <span class="iv-visually-hidden">{{ line.code }} </span
-          ><iv-keep-codes [text]="line.name" />
-        </h1>
-        <iv-mode-chip [mode]="mode()" [label]="modeLabel()" />
-      </div>
+    <iv-destination-sign
+      class="hero"
+      [code]="line.code"
+      [mode]="modeLabel()"
+      [from]="ends()?.from ?? ''"
+      [to]="ends()?.to ?? ''"
+      [fromLabel]="'line.from' | t"
+      [toLabel]="'line.to' | t"
+    >
       <button
+        slot="action"
         type="button"
         class="star"
         [class.on]="favorite()"
@@ -59,8 +60,41 @@
           <path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z" />
         </svg>
       </button>
-    </header>
+      <h1 class="name">
+        <span class="iv-visually-hidden">{{ line.code }} </span><iv-keep-codes [text]="line.name" />
+      </h1>
+    </iv-destination-sign>
 
+    <div class="view-switch" role="group" [attr.aria-label]="'line.viewLabel' | t">
+      <button
+        type="button"
+        [class.on]="display() === 'diagram'"
+        [attr.aria-pressed]="display() === 'diagram'"
+        (click)="display.set('diagram')"
+      >
+        {{ 'line.viewDiagram' | t }}
+      </button>
+      <button
+        type="button"
+        class="map-toggle"
+        [class.on]="display() === 'map'"
+        [attr.aria-pressed]="display() === 'map'"
+        (click)="display.set('map')"
+      >
+        {{ 'line.viewMap' | t }}
+      </button>
+    </div>
+
+    @if (display() === 'diagram') {
+    <div class="diagram">
+      @if (stripNodes().length > 1) {
+      <iv-route-strip [nodes]="stripNodes()" [label]="diagramLabel()" />
+      <p class="iv-note diagram-note">{{ 'line.diagramNote' | t }}</p>
+      } @else {
+      <p class="iv-note">{{ 'line.stopsEmpty' | t }}</p>
+      }
+    </div>
+    } @else {
     <div class="map">
       @defer (on immediate) {
       <iv-map
@@ -78,13 +112,10 @@
       />
       }
     </div>
+    }
 
     <section class="facts">
-      <div class="fact">
-        <h2>{{ 'line.fareTitle' | t }}</h2>
-        <p class="fare-tag iv-fare">{{ fare() }}</p>
-        <p class="sub">{{ fareNote() }}</p>
-      </div>
+      <iv-ticket class="fare" [stub]="'line.fareTitle' | t" [amount]="fare()" [note]="fareNote()" />
       <div class="fact">
         <h2>{{ 'line.hoursTitle' | t }}</h2>
         <p class="value">{{ line.hours_text || ('line.hoursUnknown' | t) }}</p>
@@ -102,7 +133,7 @@
         }
       </div>
       @if (line.hail_notes) {
-      <div class="fact">
+      <div class="fact hail">
         <h2>{{ 'line.hailTitle' | t }}</h2>
         <p class="value notes">{{ line.hail_notes }}</p>
       </div>
@@ -115,7 +146,11 @@
         <small>{{ 'line.stops' | tp: line.stops.length }}</small>
       </h2>
       @if (stopItems().length > 0) {
-      <iv-stop-sequence [stops]="stopItems()" (selected)="openStop($event)" />
+      <iv-stop-sequence
+        [stops]="stopItems()"
+        [label]="'line.stopsTitle' | t"
+        (selected)="openStop($event)"
+      />
       } @else {
       <p class="iv-note">{{ 'line.stopsEmpty' | t }}</p>
       }

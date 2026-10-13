@@ -36,12 +36,13 @@
 }
 
 .live {
-  padding: var(--iv-space-4);
+  padding: var(--iv-space-4) var(--iv-space-4) calc(var(--iv-space-4) + 6px);
   border-radius: var(--iv-radius-l);
-  background: var(--iv-chrome);
-  color: var(--iv-chrome-ink);
-  box-shadow: 0 4px 0 var(--iv-press);
-  border-bottom: 8px solid var(--iv-stripe);
+  background: var(--iv-board);
+  color: var(--iv-board-ink);
+  box-shadow:
+    inset 0 -6px 0 var(--iv-stripe),
+    var(--iv-shadow-board);
 }
 
 .status {
@@ -49,23 +50,38 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--iv-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--iv-board-sign);
+  text-shadow: var(--iv-board-glow);
 }
 
 .pulse {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--iv-danger);
-  box-shadow: 0 0 0 4px rgba(214, 69, 65, 0.35);
+  background: var(--iv-signal);
+  box-shadow: 0 0 0 4px rgba(215, 38, 61, 0.35);
+  animation: iv-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes iv-pulse {
+  50% {
+    box-shadow: 0 0 0 8px rgba(215, 38, 61, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
 }
 
 .live--paused .pulse {
   background: var(--iv-accent);
   box-shadow: none;
+  animation: none;
 }
 
 .stats {
@@ -83,7 +99,8 @@
 .stats dd {
   margin: 2px 0 0;
   font-family: var(--iv-font-display);
-  font-size: 26px;
+  font-size: 28px;
+  color: var(--iv-board-sign);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -94,6 +111,7 @@
 
 .stats--small dd {
   font-size: 18px;
+  color: var(--iv-ink);
 }
 
 .meta {

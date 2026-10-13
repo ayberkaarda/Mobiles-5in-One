@@ -134,6 +134,7 @@ export function subjectOf(edit: Edit): string | null {
       </div>
     </ion-content>
   `,
+  styleUrl: '../../../../../libs/ui/src/styles/forms.css',
   styles: `
     .sent {
       margin-top: var(--iv-space-3);

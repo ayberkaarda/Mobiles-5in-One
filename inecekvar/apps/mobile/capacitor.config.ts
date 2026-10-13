@@ -8,6 +8,10 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
   },
+  plugins: {
+    // The app chrome is lacivert in both schemes: light status and navigation bar icons.
+    SystemBars: { style: 'DARK' },
+  },
 };
 
 export default config;

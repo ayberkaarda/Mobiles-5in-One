@@ -4,6 +4,10 @@
 
 Slogan: "Dolmuş nereden geçer? Mahalle bilir."
 
+<img src="docs/screenshots/web/home.png" alt="Inecek Var web ana sayfası: ad, hat tabelası gibi slogan, dolmuşlu sokak çizimi, etiketli örnek şehir ve hat çizgisi üzerinde üç adım, yerel derleme, örnek veri" width="100%">
+
+Yerel derlemeden, örnek veriyle web ana sayfası. [Hat sayfası](docs/screenshots/web/line.png), bir [rehber](docs/screenshots/web/guide.png) ve [koyu ana sayfa](docs/screenshots/web/home-dark.png) `docs/screenshots/web` içinde.
+
 ## Ürün özeti
 
 İnecek Var, resmî verisi çoğu zaman bulunmayan dolmuş, minibüs ve servis hatlarını mahallelinin birlikte haritaladığı bir hat rehberi. Yolcular hat, durak, ücret ve saatlere bakabilir, aktarmalı A→B rota planlayabilir ve çevrimdışı şehir paketleri indirebilir. Katkıcılar yolculuğu GPS izi olarak kaydeder, hat önerir ya da düzenler; moderatörler inceleyip yayınlar. Ad, yolcuların dolmuşu durdurmak için bağırdığı sözden geliyor. Dil sokak ağzına yakın, esprili ve net.

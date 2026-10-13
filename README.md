@@ -45,10 +45,10 @@ One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. E
       <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: web home page with the tagline, the labelled sample city and the three steps, and the Android line page, local stack, sample data" width="100%"><br>
-      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android app: search screen with the labelled sample city and its lines, emulator" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/02-city-pack.png" alt="Inecek Var Android app: offline cities screen with the sample city pack installed, its version and size, emulator" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android app: A to B planner with both stops filled and the result with the line, estimated time and fare, sample data, emulator" width="32%"><br>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: web home page with the destination-sign tagline and the street scene, and the Android line page with the destination sign, the stop diagram and the fare ticket, local stack, sample data" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android app: search screen with the Nereye inecek var? board, the labelled sample city and the shortcuts, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android app: line page with the destination sign, the stop diagram and the fare ticket, sample data, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android app: A to B planner result with two transfers drawn as a stop diagram with the line placards, sample data, emulator" width="32%"><br>
       <sub><b>Inecek Var</b>: web home page and Android line screens (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>

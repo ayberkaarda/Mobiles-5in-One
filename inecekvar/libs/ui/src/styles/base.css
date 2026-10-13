@@ -1,4 +1,4 @@
-/* Shared base rules on top of tokens.css; both apps import tokens.css first, then this file. */
+/* Shared base rules on top of tokens.css and the semantic tokens; both apps load this file. */
 body {
   font-family: var(--iv-font-body);
   color: var(--iv-color-text);
@@ -10,8 +10,21 @@ h2,
 .iv-display {
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
+  text-wrap: balance;
 }
 
 .iv-fare {
   font-variant-numeric: var(--iv-font-fare-numeric);
+}
+
+.iv-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

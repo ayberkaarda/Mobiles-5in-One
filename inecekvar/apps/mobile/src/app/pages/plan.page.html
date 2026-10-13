@@ -6,9 +6,11 @@
 
 <ion-content>
   <div class="iv-page">
-    <p class="iv-kicker">{{ 'plan.kicker' | t }}</p>
-    <h1 class="iv-heading">{{ 'plan.heading' | t }}</h1>
-    <p class="iv-lead">{{ 'plan.lead' | t }}</p>
+    <header class="iv-hero iv-board">
+      <p class="iv-kicker">{{ 'plan.kicker' | t }}</p>
+      <h1 class="iv-heading">{{ 'plan.heading' | t }}</h1>
+      <p class="iv-lead">{{ 'plan.lead' | t }}</p>
+    </header>
 
     <iv-city-picker class="city" />
 
@@ -158,6 +160,15 @@
         </li>
         }
       </ul>
+      @if (strip(); as diagram) {
+      <div class="itinerary-strip">
+        <iv-route-strip
+          [nodes]="diagram.nodes"
+          [segments]="diagram.segments"
+          [label]="diagram.label"
+        />
+      </div>
+      }
       <p class="iv-note estimate">{{ 'planner.estimateNote' | t }}</p>
       } @case ('empty') {
       <iv-state [heading]="'planner.emptyTitle' | t" [message]="'planner.emptyBody' | t" />
@@ -214,7 +225,14 @@
       } }
     </section>
 
+    @if (steps().length > 0) {
+    <section class="iv-section">
+      <h2 class="iv-section-title steps-title">{{ 'planner.stepsTitle' | t }}</h2>
+      <iv-itinerary-steps [steps]="steps()" [label]="'planner.stepsTitle' | t" />
+    </section>
+    }
     <section class="iv-section map-section">
+      @if (pickEnd() !== null || showMap()) {
       <h2 class="iv-section-title">
         {{ (planner.selectedItinerary() ? 'planner.mapTitleRoute' : 'planner.mapTitlePick') | t }}
       </h2>
@@ -233,9 +251,14 @@
         [label]="'planner.mapLabel' | t"
         (picked)="planner.pickOnMap($event)"
       />
-      } @if (steps().length > 0) {
-      <h2 class="iv-section-title steps-title">{{ 'planner.stepsTitle' | t }}</h2>
-      <iv-itinerary-steps [steps]="steps()" [label]="'planner.stepsTitle' | t" />
+      } } @else {
+      <button
+        type="button"
+        class="iv-button iv-button--board iv-button--block"
+        (click)="showMap.set(true)"
+      >
+        {{ 'planner.mapShow' | t }}
+      </button>
       }
     </section>
     }

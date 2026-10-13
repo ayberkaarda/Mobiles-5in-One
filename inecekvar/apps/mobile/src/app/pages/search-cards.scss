@@ -1,0 +1,139 @@
+/* Quick action tiles and the offline pack card of the Ara tab. */
+.quick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--iv-space-2);
+  margin-top: var(--iv-space-5);
+}
+
+.tile {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 104px;
+  padding: 12px 10px;
+  border: 1px solid var(--iv-line);
+  border-radius: var(--iv-radius-m);
+  background: var(--iv-surface);
+  box-shadow: var(--iv-shadow-hard);
+  color: var(--iv-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tile:active {
+  transform: translateY(2px);
+}
+
+.tile:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.tile svg {
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--iv-accent);
+  fill: none;
+  stroke: var(--iv-accent-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  box-shadow: inset 0 -3px 0 var(--iv-stripe);
+}
+
+.tile-text {
+  display: grid;
+  gap: 2px;
+}
+
+.tile-title {
+  font-size: 14px;
+  font-weight: var(--iv-font-body-weight-600);
+  line-height: 1.2;
+}
+
+.tile-hint {
+  font-size: 12px;
+  color: var(--iv-ink-muted);
+}
+
+.tile:focus-visible {
+  outline: none;
+  box-shadow: var(--iv-focus);
+}
+
+.pack[data-pack] {
+  overflow: hidden;
+  border-radius: var(--iv-radius-l);
+  background: var(--iv-surface);
+  border: 1px solid var(--iv-line);
+  box-shadow: var(--iv-shadow-hard);
+}
+
+.pack-art {
+  background: var(--iv-bg-deep);
+  padding-top: 14px;
+}
+
+.pack-body {
+  padding: var(--iv-space-4);
+}
+
+.pack h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.pack p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--iv-ink-muted);
+}
+
+.pack-action {
+  margin-top: var(--iv-space-4);
+  text-decoration: none;
+}
+
+.pack[data-pack='installed'] {
+  display: flex;
+  gap: var(--iv-space-3);
+  padding: var(--iv-space-4);
+  background: var(--iv-surface-sunk);
+  box-shadow: none;
+  border-left: 6px solid var(--iv-success);
+}
+
+.pack[data-pack='installed'] .pack-body {
+  padding: 0;
+}
+
+.pack[data-pack='installed'] h2 {
+  font-size: 16px;
+}
+
+.pack-link {
+  display: inline-block;
+  margin-top: var(--iv-space-2);
+  color: var(--iv-ink);
+  font-weight: var(--iv-font-body-weight-600);
+}
+
+.pack-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--iv-success);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

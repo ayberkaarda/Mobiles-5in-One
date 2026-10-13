@@ -3,6 +3,7 @@ import { LineMode } from '@inecekvar/domain';
 import { FareChipComponent } from './fare-chip.component';
 import { KeepCodesComponent } from './keep-codes.component';
 import { ModeChipComponent } from './mode-chip.component';
+import { PLACARD_STYLES } from './sign-styles';
 
 /** Labels the card needs; the caller passes translated strings. */
 export interface LineCardLabels {
@@ -15,21 +16,30 @@ export interface LineCardLabels {
 }
 
 /**
- * One line in a list. The code sits on a yellow dolmuş window placard with the turquoise
- * minibüs stripe; name, mode, fare and a meta line follow. The star toggles a favourite.
+ * One line in a list, drawn as a route board: the yellow code placard bolted to a lacivert sign
+ * with the line name in krem lettering, the mode and fare beneath, and the turquoise minibüs
+ * stripe along the foot. The board is one button that opens the line; the star toggles a
+ * favourite. Optional start and end stops read like a destination sign.
  */
 @Component({
   selector: 'iv-line-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FareChipComponent, KeepCodesComponent, ModeChipComponent],
   template: `
-    <article class="card">
+    <article class="card iv-board">
       <button type="button" class="main" (click)="opened.emit()">
-        <span class="plate" aria-hidden="true">{{ code() }}</span>
+        <span class="plate iv-placard" aria-hidden="true">{{ code() }}</span>
         <span class="body">
           <span class="name">
             <span class="iv-visually-hidden">{{ code() }} </span><iv-keep-codes [text]="name()" />
           </span>
+          @if (from() && to()) {
+            <span class="ends">
+              <span class="end">{{ from() }}</span>
+              <svg viewBox="0 0 16 8" aria-hidden="true"><path d="M1 4h13M10 1l3 3-3 3" /></svg>
+              <span class="end">{{ to() }}</span>
+            </span>
+          }
           <span class="chips">
             <iv-mode-chip [mode]="mode()" [label]="labels().mode" />
             @if (fareMinor() !== undefined) {
@@ -67,108 +77,129 @@ export interface LineCardLabels {
       }
     </article>
   `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .card {
-      position: relative;
-      display: flex;
-      align-items: stretch;
-      background: var(--iv-surface);
-      border: 1px solid var(--iv-line);
-      border-radius: var(--iv-radius-m);
-      box-shadow: var(--iv-shadow-hard);
-    }
-    .main {
-      flex: 1;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      min-width: 0;
-      padding: 14px 4px 14px 14px;
-      border: 0;
-      background: none;
-      color: inherit;
-      font: inherit;
-      text-align: left;
-      cursor: pointer;
-      border-radius: var(--iv-radius-m);
-    }
-    .main:focus-visible,
-    .star:focus-visible {
-      outline: none;
-      box-shadow: var(--iv-focus);
-    }
-    .plate {
-      flex: none;
-      min-width: 76px;
-      padding: 9px 8px 7px;
-      border-radius: var(--iv-radius-s);
-      background: var(--iv-plate);
-      color: var(--iv-plate-ink);
-      border-bottom: 4px solid var(--iv-stripe);
-      font-family: var(--iv-font-display);
-      font-weight: var(--iv-font-display-weight);
-      font-size: 17px;
-      letter-spacing: 0.04em;
-      text-align: center;
-      line-height: 1;
-      white-space: nowrap;
-    }
-    .body {
-      display: grid;
-      gap: 8px;
-      min-width: 0;
-    }
-    .name {
-      font-weight: var(--iv-font-body-weight-600);
-      font-size: 16px;
-      line-height: 1.3;
-      color: var(--iv-ink);
-      overflow-wrap: anywhere;
-    }
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .meta-part {
-      white-space: nowrap;
-    }
-    .meta-part:not(:last-child)::after {
-      content: '·';
-      margin: 0 5px;
-    }
-    .meta {
-      display: flex;
-      flex-wrap: wrap;
-      font-size: 13px;
-      color: var(--iv-ink-muted);
-      font-variant-numeric: tabular-nums;
-    }
-    .star {
-      flex: none;
-      width: 48px;
-      border: 0;
-      background: none;
-      color: var(--iv-ink-muted);
-      cursor: pointer;
-      border-radius: var(--iv-radius-m);
-    }
-    .star path {
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linejoin: round;
-    }
-    .star.on {
-      color: var(--iv-accent);
-    }
-    .star.on path {
-      fill: currentColor;
-    }
-  `,
+  styles: [
+    PLACARD_STYLES,
+    `
+      :host {
+        display: block;
+      }
+      .card {
+        --iv-ink: var(--iv-board-ink);
+        --iv-ink-muted: var(--iv-board-muted);
+        --iv-line-strong: rgba(255, 248, 231, 0.34);
+        --iv-tag: var(--iv-plate);
+        --iv-tag-ink: var(--iv-plate-ink);
+        --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
+        display: flex;
+        align-items: stretch;
+        transition: transform 120ms var(--iv-ease-out);
+      }
+      .card:active {
+        transform: translateY(2px);
+      }
+      .main {
+        flex: 1;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        min-width: 0;
+        min-height: 76px;
+        padding: 14px 4px 18px 14px;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        border-radius: var(--iv-radius-m);
+      }
+      .main:focus-visible,
+      .star:focus-visible {
+        outline: none;
+        box-shadow: var(--iv-focus);
+      }
+      .plate {
+        flex: none;
+        margin-top: 2px;
+        white-space: nowrap;
+      }
+      .body {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+      }
+      .name {
+        font-family: var(--iv-font-display);
+        font-weight: var(--iv-font-display-weight);
+        font-size: 17px;
+        line-height: 1.25;
+        letter-spacing: -0.005em;
+        color: var(--iv-board-ink);
+        overflow-wrap: anywhere;
+      }
+      .ends {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 6px;
+        font-size: 13px;
+        font-weight: var(--iv-font-body-weight-600);
+        color: var(--iv-board-sign);
+      }
+      .ends svg {
+        width: 16px;
+        height: 8px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .meta-part {
+        white-space: nowrap;
+      }
+      .meta-part:not(:last-child)::after {
+        content: '·';
+        margin: 0 5px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 13px;
+        color: var(--iv-board-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .star {
+        flex: none;
+        width: 52px;
+        border: 0;
+        background: none;
+        color: var(--iv-board-muted);
+        cursor: pointer;
+        border-radius: var(--iv-radius-m);
+      }
+      .star path {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linejoin: round;
+      }
+      .star.on {
+        color: var(--iv-board-sign);
+      }
+      .star.on path {
+        fill: currentColor;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          transition: none;
+        }
+      }
+    `,
+  ],
 })
 export class LineCardComponent {
   readonly code = input.required<string>();
@@ -181,6 +212,9 @@ export class LineCardComponent {
   readonly locale = input<string>('tr-TR');
   /** Secondary facts such as stop count and hours; each part wraps as a whole. */
   readonly meta = input<readonly string[]>([]);
+  /** First and last stop, shown as a destination line when both are known. */
+  readonly from = input<string>('');
+  readonly to = input<string>('');
   /** `null` hides the star; `true`/`false` shows it pressed or not. */
   readonly favorite = input<boolean | null>(null);
 

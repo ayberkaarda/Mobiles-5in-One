@@ -8,6 +8,9 @@ import { modeLabel } from '../content/public-types';
 import { breadcrumbList, JsonLdNode } from '../seo/json-ld';
 import { pagePath, PageSeo } from '../seo/seo';
 import { StatusPageComponent } from './status-page.component';
+import { SiteFooterComponent } from '../home/site-footer.component';
+import { SiteHeaderComponent } from '../home/site-header.component';
+import { RouteBoardComponent } from './route-board.component';
 
 export function lineListSeo({ city, page, hasNext }: LineListData): PageSeo {
   return {
@@ -30,43 +33,66 @@ export function lineListJsonLd(origin: string, { city }: LineListData): JsonLdNo
 @Component({
   selector: 'iv-line-list-page',
   standalone: true,
-  imports: [RouterLink, StatusPageComponent],
+  imports: [
+    RouterLink,
+    StatusPageComponent,
+    SiteHeaderComponent,
+    SiteFooterComponent,
+    RouteBoardComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let page = data();
     @if (page.state === 'ok') {
-      <main>
+      <iv-site-header />
+      <main id="icerik" class="iv-wrap">
+        <p class="iv-crumbs">
+          <a [routerLink]="['/', page.city.slug]">{{ page.city.name }}</a>
+          <span aria-hidden="true">/</span>
+          <span>Hatlar</span>
+        </p>
         <h1>{{ page.city.name }} hat listesi</h1>
         @if (page.city.is_sample) {
-          <p>Bu şehirdeki veriler örnek veridir.</p>
+          <p class="notice">
+            <span class="iv-tape">örnek veri</span> Bu şehirdeki veriler örnek veridir.
+          </p>
         }
         @if (page.lines.length === 0) {
           <p>Bu şehirde henüz yayımlanmış hat yok.</p>
         }
-        <ol [attr.start]="(page.page - 1) * 50 + 1">
+        <ol class="boards" [attr.start]="(page.page - 1) * 50 + 1">
           @for (line of page.lines; track line.slug) {
             <li>
-              <a [routerLink]="['/', page.city.slug, 'hat', line.slug]"
-                >{{ line.code }} {{ line.name }}</a
-              >
-              · {{ mode(line.mode) }}
+              <iv-route-board
+                [code]="line.code"
+                [name]="line.name"
+                [meta]="mode(line.mode)"
+                [link]="['/', page.city.slug, 'hat', line.slug]"
+              />
             </li>
           }
         </ol>
-        <nav aria-label="Hat listesi sayfaları">
+        <nav class="pages" aria-label="Hat listesi sayfaları">
           @if (page.page > 1) {
-            <a rel="prev" [href]="pageLink('/' + page.city.slug + '/hatlar', page.page - 1)"
+            <a
+              class="iv-cta iv-cta--ghost"
+              rel="prev"
+              [href]="pageLink('/' + page.city.slug + '/hatlar', page.page - 1)"
               >Önceki sayfa</a
             >
           }
           <span>Sayfa {{ page.page }}</span>
           @if (page.hasNext && page.page < 9999) {
-            <a rel="next" [href]="pageLink('/' + page.city.slug + '/hatlar', page.page + 1)"
+            <a
+              class="iv-cta iv-cta--ghost"
+              rel="next"
+              [href]="pageLink('/' + page.city.slug + '/hatlar', page.page + 1)"
               >Sonraki sayfa</a
             >
           }
         </nav>
       </main>
+      <iv-site-footer />
     } @else if (page.state === 'not_found') {
       <iv-status-page kind="not-found" />
     } @else {
@@ -74,20 +100,38 @@ export function lineListJsonLd(origin: string, { city }: LineListData): JsonLdNo
     }
   `,
   styles: `
-    main {
-      max-width: 56rem;
-      margin: auto;
-      padding: 2rem 1rem;
+    h1 {
+      margin: 1rem 0 0;
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
     }
-    li {
-      padding: 0.75rem 0;
-    }
-    nav {
+    .notice {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 1.5rem;
+      gap: 0.5rem;
+      color: var(--iv-ink-muted);
+    }
+    .boards {
+      display: grid;
+      gap: 0.85rem;
+      margin: 1.75rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    @media (min-width: 44rem) {
+      .boards {
+        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+      }
+    }
+    .pages {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem 1.5rem;
       margin-top: 2rem;
+      color: var(--iv-ink-muted);
     }
   `,
 })

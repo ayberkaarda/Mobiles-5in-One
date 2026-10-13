@@ -1,49 +1,10 @@
 /*
- * Semantic theme on top of tokens.css (derived from brand/tokens.json).
- * Light: krem paper, white cards, lacivert chrome. Dark: night lacivert, the same yellow signs.
+ * Ionic mapping of the semantic tokens (_semantic.scss, included by the app stylesheet before
+ * this file). Light: krem street, lacivert chrome and route boards. Dark: the night bus.
  * Dark mode is the `ion-palette-dark` class on <html>, set by the app from the user's choice or
- * the system preference. Load order: tokens.css, Ionic dark.class.css, then this file.
+ * the system preference. Load order: tokens.css, Ionic dark.class.css, semantic tokens, this file.
  */
 :root {
-  --iv-bg: var(--iv-color-krem);
-  --iv-surface: #ffffff;
-  --iv-surface-sunk: #f6ecd2;
-  --iv-ink: var(--iv-color-lacivert);
-  /* Yol Grisi darkened so muted text keeps 4.5:1 on krem and white. */
-  --iv-ink-muted: #4f5866;
-  --iv-line: rgba(20, 33, 61, 0.14);
-  --iv-line-strong: rgba(20, 33, 61, 0.32);
-  --iv-chrome: var(--iv-color-lacivert);
-  --iv-chrome-ink: var(--iv-color-krem);
-  --iv-chrome-ink-muted: rgba(255, 248, 231, 0.68);
-  --iv-accent: var(--iv-color-dolmus-sarisi);
-  --iv-accent-ink: var(--iv-color-lacivert);
-  --iv-stripe: var(--iv-color-turkuaz);
-  --iv-plate: var(--iv-color-dolmus-sarisi);
-  --iv-plate-ink: var(--iv-color-lacivert);
-  --iv-tag: var(--iv-color-lacivert);
-  --iv-tag-ink: var(--iv-color-krem);
-  --iv-danger: var(--iv-color-fren-kirmizisi);
-  --iv-success: var(--iv-color-onay-yesili);
-  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.26);
-  --iv-mode-minibus-bg: rgba(42, 183, 202, 0.22);
-  --iv-mode-servis-bg: rgba(20, 33, 61, 0.08);
-  --iv-shadow-hard: 0 3px 0 rgba(20, 33, 61, 0.14);
-  --iv-press: var(--iv-color-lacivert);
-  --iv-focus: 0 0 0 3px rgba(42, 183, 202, 0.55);
-
-  --iv-radius-s: 8px;
-  --iv-radius-m: 14px;
-  --iv-radius-l: 20px;
-  --iv-radius-pill: 999px;
-  --iv-space-1: 4px;
-  --iv-space-2: 8px;
-  --iv-space-3: 12px;
-  --iv-space-4: 16px;
-  --iv-space-5: 24px;
-  --iv-space-6: 32px;
-  --iv-gutter: 16px;
-
   --ion-toolbar-background: var(--iv-chrome);
   --ion-toolbar-color: var(--iv-chrome-ink);
   --ion-toolbar-border-color: var(--iv-stripe);
@@ -56,28 +17,10 @@
 }
 
 :root.ion-palette-dark {
-  --iv-bg: #0b1428;
-  --iv-surface: #16233f;
-  --iv-surface-sunk: #101b33;
-  --iv-ink: var(--iv-color-krem);
-  --iv-ink-muted: #b9bfcb;
-  --iv-line: rgba(255, 248, 231, 0.12);
-  --iv-line-strong: rgba(255, 248, 231, 0.3);
-  --iv-chrome: #060d1d;
-  --iv-tag: var(--iv-color-krem);
-  --iv-tag-ink: var(--iv-color-lacivert);
-  --iv-danger: #ff6b7d;
-  --iv-success: #5cc98b;
-  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.2);
-  --iv-mode-minibus-bg: rgba(42, 183, 202, 0.22);
-  --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
-  --iv-shadow-hard: 0 3px 0 rgba(0, 0, 0, 0.4);
-  --iv-press: rgba(0, 0, 0, 0.55);
-
   --iv-color-background: var(--iv-bg);
   --iv-color-text: var(--iv-ink);
-  --ion-background-color: #0b1428;
-  --ion-background-color-rgb: 11, 20, 40;
+  --ion-background-color: #0a1226;
+  --ion-background-color-rgb: 10, 18, 38;
   --ion-text-color: #fff8e7;
   --ion-text-color-rgb: 255, 248, 231;
   --ion-toolbar-background: var(--iv-chrome);
@@ -94,12 +37,12 @@
   --ion-color-primary-contrast-rgb: 20, 33, 61;
   --ion-color-primary-shade: #d5a104;
   --ion-color-primary-tint: #f3be1e;
-  --ion-color-secondary: #2ab7ca;
-  --ion-color-secondary-rgb: 42, 183, 202;
+  --ion-color-secondary: #3cc8da;
+  --ion-color-secondary-rgb: 60, 200, 218;
   --ion-color-secondary-contrast: #14213d;
   --ion-color-secondary-contrast-rgb: 20, 33, 61;
-  --ion-color-secondary-shade: #25a1b2;
-  --ion-color-secondary-tint: #3fbecf;
+  --ion-color-secondary-shade: #35b0c0;
+  --ion-color-secondary-tint: #50cede;
   --ion-color-success: #5cc98b;
   --ion-color-success-rgb: 92, 201, 139;
   --ion-color-success-contrast: #14213d;
@@ -112,24 +55,24 @@
   --ion-color-danger-contrast-rgb: 20, 33, 61;
   --ion-color-danger-shade: #e05e6e;
   --ion-color-danger-tint: #ff7a8a;
-  --ion-color-medium: #b9bfcb;
-  --ion-color-medium-rgb: 185, 191, 203;
+  --ion-color-medium: #b6bdcb;
+  --ion-color-medium-rgb: 182, 189, 203;
   --ion-color-medium-contrast: #14213d;
   --ion-color-medium-contrast-rgb: 20, 33, 61;
-  --ion-color-medium-shade: #a3a8b3;
-  --ion-color-medium-tint: #c0c5d0;
+  --ion-color-medium-shade: #a0a6b3;
+  --ion-color-medium-tint: #bdc4d0;
   --ion-color-dark: #fff8e7;
   --ion-color-dark-rgb: 255, 248, 231;
   --ion-color-dark-contrast: #14213d;
   --ion-color-dark-contrast-rgb: 20, 33, 61;
   --ion-color-dark-shade: #e0dacb;
   --ion-color-dark-tint: #fff9e9;
-  --ion-color-light: #16233f;
-  --ion-color-light-rgb: 22, 35, 63;
+  --ion-color-light: #121d38;
+  --ion-color-light-rgb: 18, 29, 56;
   --ion-color-light-contrast: #fff8e7;
   --ion-color-light-contrast-rgb: 255, 248, 231;
-  --ion-color-light-shade: #131f37;
-  --ion-color-light-tint: #2d3952;
+  --ion-color-light-shade: #101a31;
+  --ion-color-light-tint: #2a344c;
 }
 
 body {

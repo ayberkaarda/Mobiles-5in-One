@@ -1,6 +1,7 @@
 /*
  * App shell rules shared by the mobile pages: lacivert chrome with the turquoise minibüs stripe,
- * the tab bar indicator, page rhythm and the panel and button primitives. Load after theme.css.
+ * the tab bar with its lit sign for the current tab, page rhythm and the panel and button
+ * primitives. Load after theme.css.
  */
 ion-header {
   box-shadow: none;
@@ -17,7 +18,7 @@ ion-header ion-title {
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
   font-size: 20px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
 }
 
 ion-content {
@@ -27,38 +28,42 @@ ion-content {
 
 ion-tab-bar {
   --border: 0;
-  height: 64px;
-  border-top: 0;
+  height: calc(66px + var(--ion-safe-area-bottom, 0px));
+  padding-top: 4px;
+  border-top: 3px solid var(--iv-stripe);
 }
 
 ion-tab-button {
   --ripple-color: var(--iv-accent);
-  position: relative;
+  --padding-top: 2px;
   font-family: var(--iv-font-body);
   font-weight: var(--iv-font-body-weight-500);
-  letter-spacing: 0.01em;
+}
+
+ion-tab-button ion-icon {
+  box-sizing: content-box;
+  width: 22px;
+  height: 22px;
+  padding: 4px 15px;
+  border-radius: 9px;
+  font-size: 22px;
+  transition:
+    background-color 160ms var(--iv-ease-out),
+    box-shadow 160ms var(--iv-ease-out);
 }
 
 ion-tab-button ion-label {
-  font-size: 12px;
+  font-size: 11.5px;
+  letter-spacing: 0;
   margin-top: 3px;
+  overflow: visible;
 }
 
-ion-tab-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 0;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
+/* The current tab lights up like a placard behind its icon. */
+ion-tab-button.tab-selected ion-icon {
   background: var(--iv-accent);
-  transform: translateX(-50%);
-  transition: width 160ms ease-out;
-}
-
-ion-tab-button.tab-selected::before {
-  width: 32px;
+  color: var(--iv-accent-ink);
+  box-shadow: inset 0 -3px 0 var(--iv-stripe);
 }
 
 ion-tab-button.tab-selected ion-label {
@@ -66,53 +71,57 @@ ion-tab-button.tab-selected ion-label {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ion-tab-button::before {
+  ion-tab-button ion-icon {
     transition: none;
   }
 }
 
 .iv-page {
   padding: var(--iv-space-5) max(var(--iv-gutter), var(--ion-safe-area-right, 0px))
-    var(--iv-space-6) max(var(--iv-gutter), var(--ion-safe-area-left, 0px));
+    var(--iv-space-7) max(var(--iv-gutter), var(--ion-safe-area-left, 0px));
   max-width: 640px;
   margin: 0 auto;
 }
 
+/* A small stop-sign marker before a short context line; sentence case, not an eyebrow. */
 .iv-kicker {
   display: inline-flex;
   align-items: center;
   gap: var(--iv-space-2);
   margin: 0 0 var(--iv-space-2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--iv-font-body-weight-600);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--iv-ink-muted);
 }
 
 .iv-kicker::before {
   content: '';
-  width: 18px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--iv-stripe);
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--iv-accent);
+  box-shadow: 0 0 0 2.5px var(--iv-ink);
 }
 
 .iv-heading {
   margin: 0;
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
-  font-size: 30px;
-  line-height: 1.1;
-  letter-spacing: -0.015em;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
   color: var(--iv-ink);
+  text-wrap: balance;
 }
 
 .iv-lead {
   margin: var(--iv-space-2) 0 0;
+  max-width: 34em;
   font-size: 15px;
   line-height: 1.5;
   color: var(--iv-ink-muted);
+  text-wrap: pretty;
 }
 
 .iv-section {
@@ -127,7 +136,8 @@ ion-tab-button.tab-selected ion-label {
   margin: 0 0 var(--iv-space-3);
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
-  font-size: 18px;
+  font-size: 19px;
+  letter-spacing: -0.01em;
   color: var(--iv-ink);
 }
 
@@ -135,8 +145,10 @@ ion-tab-button.tab-selected ion-label {
   font-family: var(--iv-font-body);
   font-weight: var(--iv-font-body-weight-500);
   font-size: 13px;
+  letter-spacing: 0;
   color: var(--iv-ink-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .iv-stack {
@@ -169,7 +181,7 @@ ion-tab-button.tab-selected ion-label {
   align-items: center;
   justify-content: center;
   gap: var(--iv-space-2);
-  min-height: 48px;
+  min-height: 50px;
   padding: 0 var(--iv-space-5);
   border: 0;
   border-radius: var(--iv-radius-m);
@@ -179,7 +191,9 @@ ion-tab-button.tab-selected ion-label {
   font: inherit;
   font-weight: var(--iv-font-body-weight-600);
   font-size: 16px;
+  text-decoration: none;
   cursor: pointer;
+  transition: transform 90ms ease-out;
 }
 
 .iv-button:active {
@@ -206,14 +220,40 @@ ion-tab-button.tab-selected ion-label {
   width: 100%;
 }
 
-.iv-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
+.iv-button--board {
+  background: var(--iv-board);
+  color: var(--iv-board-sign);
+  box-shadow: 0 3px 0 var(--iv-stripe);
+}
+
+.iv-button--signal {
+  background: var(--iv-signal);
+  color: var(--iv-signal-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-button {
+    transition: none;
+  }
+}
+
+/* Tab page heading on a route board: the question of the tab in sign yellow. */
+.iv-hero {
+  margin: 0 calc(-1 * var(--iv-space-2));
+  padding: 20px 16px 24px;
+  border-radius: var(--iv-radius-l);
+}
+
+.iv-hero .iv-kicker,
+.iv-hero .iv-lead {
+  color: var(--iv-board-muted);
+}
+
+.iv-hero .iv-kicker::before {
+  box-shadow: 0 0 0 2.5px var(--iv-board-ink);
+}
+
+.iv-hero .iv-heading {
+  color: var(--iv-board-sign);
+  text-shadow: var(--iv-board-glow);
 }

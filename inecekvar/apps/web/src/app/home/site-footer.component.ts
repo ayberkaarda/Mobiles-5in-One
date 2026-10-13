@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FACTS } from '../../content/facts';
 
-/** Footer of the home page: the name, the tagline and the internal content links. */
+/**
+ * Footer of the public pages: a stretch of road with lane marks, then the name, the tagline and
+ * the internal content links.
+ */
 @Component({
   selector: 'iv-site-footer',
   standalone: true,
@@ -10,6 +13,7 @@ import { FACTS } from '../../content/facts';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <footer class="foot">
+      <div class="road" aria-hidden="true"></div>
       <div class="inner">
         <p class="name">
           <span class="word">{{ name }}</span>
@@ -30,11 +34,23 @@ import { FACTS } from '../../content/facts';
   styles: `
     :host {
       display: block;
+      margin-top: 4rem;
     }
     .foot {
-      background: var(--iv-color-lacivert);
-      border-top: 4px solid var(--iv-color-dolmus-sarisi);
-      color: var(--iv-color-krem);
+      background: var(--iv-board);
+      color: var(--iv-board-ink);
+    }
+    .road {
+      height: 2.75rem;
+      background:
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 248, 231, 0.55) 0 2.25rem,
+            transparent 2.25rem 4.5rem
+          )
+          center / 100% 4px no-repeat,
+        var(--iv-scene-road);
+      border-top: 0.6rem solid var(--iv-scene-curb);
     }
     .inner {
       display: flex;
@@ -42,22 +58,26 @@ import { FACTS } from '../../content/facts';
       align-items: flex-start;
       justify-content: space-between;
       gap: 1rem 2rem;
-      max-width: 68rem;
+      max-width: var(--iv-wide);
       margin: 0 auto;
-      padding: 1.75rem 1rem 2rem;
+      padding: 1.75rem 1rem 2.5rem;
     }
     .name {
       display: grid;
-      gap: 0.25rem;
+      justify-items: start;
+      gap: 0.35rem;
       margin: 0;
     }
     .word {
       font-family: var(--iv-font-display);
       font-weight: var(--iv-font-display-weight);
-      font-size: 1.125rem;
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
+      color: var(--iv-board-sign);
     }
     .line {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      color: var(--iv-board-muted);
     }
     ul {
       display: flex;
@@ -77,11 +97,7 @@ import { FACTS } from '../../content/facts';
       border-radius: 0.5rem;
     }
     a:hover {
-      color: var(--iv-color-dolmus-sarisi);
-    }
-    a:focus-visible {
-      outline: 3px solid var(--iv-color-turkuaz);
-      outline-offset: 2px;
+      color: var(--iv-board-sign);
     }
   `,
 })

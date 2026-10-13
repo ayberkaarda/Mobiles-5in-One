@@ -131,7 +131,7 @@ export function proposalFailure(error: unknown): TranslationKey {
     TPipe,
   ],
   templateUrl: './proposal.page.html',
-  styleUrl: './proposal.page.scss',
+  styleUrls: ['../../../../../libs/ui/src/styles/forms.css', './proposal.page.scss'],
 })
 export class ProposalPage {
   private readonly route = inject(ActivatedRoute);

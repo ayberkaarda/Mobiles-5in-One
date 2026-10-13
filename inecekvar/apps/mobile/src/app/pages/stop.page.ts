@@ -1,8 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { StopDetail } from '@inecekvar/data-access';
-import { RouteSketchComponent, StateComponent } from '@inecekvar/ui';
+import { RouteSketchComponent, StateComponent, StopSignComponent } from '@inecekvar/ui';
 import { CityStore } from '../city/city.store';
 import { TPipe, TpPipe } from '../i18n/i18n';
 import { MapComponent } from '../map/map.component';
@@ -28,6 +35,7 @@ import { detailFailure, detailRouteParams } from './detail-route';
     MapComponent,
     RouteSketchComponent,
     StateComponent,
+    StopSignComponent,
     TPipe,
     TpPipe,
   ],
@@ -75,25 +83,37 @@ import { detailFailure, detailRouteParams } from './detail-route';
           }
           @case ('ready') {
             @if (data(); as stop) {
-              <p class="iv-kicker">
-                {{ (stop.kind === 'informal' ? 'stop.kindInformal' : 'stop.kindFormal') | t }}
-              </p>
-              <h1 class="iv-heading">{{ stop.name }}</h1>
-              <div class="map">
-                @defer (on immediate) {
-                  <iv-map
-                    [stops]="points()"
-                    [city]="params()?.city ?? null"
-                    [label]="'stop.mapLabel' | t: { name: stop.name }"
-                  />
-                } @placeholder {
-                  <iv-route-sketch
-                    class="sketch"
-                    [stops]="points()"
-                    [label]="'stop.mapLabel' | t: { name: stop.name }"
-                  />
-                }
-              </div>
+              <iv-stop-sign class="hero">
+                <p class="iv-kicker">
+                  {{ (stop.kind === 'informal' ? 'stop.kindInformal' : 'stop.kindFormal') | t }}
+                </p>
+                <h1 class="iv-heading">{{ stop.name }}</h1>
+              </iv-stop-sign>
+              @if (!showMap()) {
+                <button
+                  type="button"
+                  class="iv-button iv-button--board iv-button--block map-open"
+                  (click)="showMap.set(true)"
+                >
+                  {{ 'planner.mapShow' | t }}
+                </button>
+              } @else {
+                <div class="map">
+                  @defer (on immediate) {
+                    <iv-map
+                      [stops]="points()"
+                      [city]="params()?.city ?? null"
+                      [label]="'stop.mapLabel' | t: { name: stop.name }"
+                    />
+                  } @placeholder {
+                    <iv-route-sketch
+                      class="sketch"
+                      [stops]="points()"
+                      [label]="'stop.mapLabel' | t: { name: stop.name }"
+                    />
+                  }
+                </div>
+              }
               <section class="iv-section">
                 <h2 class="iv-section-title">
                   {{ 'stop.linesTitle' | t }}
@@ -119,8 +139,23 @@ import { detailFailure, detailRouteParams } from './detail-route';
     </ion-content>
   `,
   styles: `
-    .map {
-      margin-top: var(--iv-space-5);
+    .hero {
+      margin: 0 calc(-1 * var(--iv-space-2));
+    }
+    .hero .iv-kicker {
+      color: var(--iv-board-muted);
+    }
+    .hero .iv-kicker::before {
+      box-shadow: 0 0 0 2.5px var(--iv-board-ink);
+    }
+    .hero .iv-heading {
+      font-size: 28px;
+      color: var(--iv-board-sign);
+      text-shadow: var(--iv-board-glow);
+    }
+    .map,
+    .map-open {
+      margin-top: var(--iv-space-4);
     }
     .sketch {
       height: 220px;
@@ -158,6 +193,9 @@ export class StopPage {
     if (error) return detailFailure(error, this.connectivity);
     return this.data() ? 'ready' : 'loading';
   });
+
+  /** A lone stop on an empty map says little; the map opens on request. */
+  protected readonly showMap = signal(false);
 
   protected readonly points = computed(() => {
     const stop = this.data();

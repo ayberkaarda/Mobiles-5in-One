@@ -90,10 +90,17 @@ describe('ContentPage guides', () => {
     const fixture = render(GUIDES[0]?.path ?? '/');
     await fixture.whenStable();
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('a')];
+    const element = fixture.nativeElement as HTMLElement;
     for (const link of links) {
-      expect(link.getAttribute('href')).toMatch(/^(\/|https:\/\/app\.inecekvar\.app)/);
+      const href = link.getAttribute('href') ?? '';
+      expect(href).toMatch(/^(\/|#|https:\/\/app\.inecekvar\.app)/);
       expect(link.textContent?.trim().length).toBeGreaterThan(0);
+      // In-page links (skip link, table of contents) must land on an element of the page.
+      if (href.startsWith('#')) {
+        expect(element.querySelector(href), href).not.toBeNull();
+      }
     }
+    expect(element.querySelectorAll('nav[aria-label="İçindekiler"] a').length).toBeGreaterThan(2);
   });
 });
 

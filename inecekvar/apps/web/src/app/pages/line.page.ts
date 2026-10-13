@@ -3,12 +3,21 @@ import { RouterLink } from '@angular/router';
 import { cityCrumbs, stopNode } from '../content/page-breadcrumbs';
 import { LineData } from '../content/page-data';
 import { formatFare, formatTurkishDate } from '../content/format';
-import { projectLine } from '../content/line-geometry';
 import { buildLineSummary } from '../content/line-summary';
 import { lineDescription, lineSubject } from '../content/page-text';
 import { PageView } from '../content/page-view';
 import { modeLabel, paymentLabel } from '../content/public-types';
 import { LineMapComponent } from '../map/line-map.component';
+import { SiteFooterComponent } from '../home/site-footer.component';
+import { SiteHeaderComponent } from '../home/site-header.component';
+import {
+  DestinationSignComponent,
+  KeepCodesComponent,
+  RouteStripComponent,
+  StopSequenceComponent,
+  StopSequenceItem,
+  StripNode,
+} from '@inecekvar/ui';
 import { breadcrumbList, busTrip, JsonLdNode, organization } from '../seo/json-ld';
 import { PageSeo } from '../seo/seo';
 import { StatusPageComponent } from './status-page.component';
@@ -69,97 +78,125 @@ export function lineAppLinks(
 @Component({
   selector: 'iv-line-page',
   standalone: true,
-  imports: [RouterLink, StatusPageComponent, LineMapComponent],
+  imports: [
+    RouterLink,
+    StatusPageComponent,
+    LineMapComponent,
+    SiteHeaderComponent,
+    SiteFooterComponent,
+    DestinationSignComponent,
+    RouteStripComponent,
+    StopSequenceComponent,
+    KeepCodesComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let page = data();
     @if (page.state === 'ok') {
-      <main>
-        <h1>{{ page.line.name }} {{ mode(page.line.mode) }} hattı</h1>
-        <p class="code">{{ page.line.code }}</p>
-        <p class="summary">{{ summary() }}</p>
-        @if (sketch(); as drawing) {
-          <svg
-            [attr.viewBox]="drawing.viewBox"
-            role="img"
-            [attr.aria-label]="'Güzergâh çizimi: ' + page.line.name"
-          >
-            <path
-              [attr.d]="drawing.pathD"
-              fill="none"
-              stroke="var(--iv-color-lacivert)"
-              stroke-width="9"
-            />
-            <path
-              [attr.d]="drawing.pathD"
-              fill="none"
-              stroke="var(--iv-color-turkuaz)"
-              stroke-width="5"
-            />
-            @for (stop of drawing.stops; track $index) {
-              <circle
-                [attr.cx]="stop.cx"
-                [attr.cy]="stop.cy"
-                r="6"
-                fill="var(--iv-color-krem)"
-                stroke="var(--iv-color-lacivert)"
-                stroke-width="2"
-              />
+      <iv-site-header />
+      <main id="icerik" class="iv-wrap">
+        <p class="iv-crumbs">
+          <a [routerLink]="['/', page.city.slug]">{{ page.city.name }}</a>
+          <span aria-hidden="true">/</span>
+          <a [routerLink]="['/', page.city.slug, 'hatlar']">Hatlar</a>
+        </p>
+        <div class="layout">
+          <div class="main-col">
+            <iv-destination-sign
+              class="sign"
+              [code]="page.line.code"
+              [mode]="mode(page.line.mode)"
+              [from]="ends()?.from ?? ''"
+              [to]="ends()?.to ?? ''"
+              fromLabel="Kalkış"
+              toLabel="Son durak"
+            >
+              <h1><iv-keep-codes [text]="page.line.name" /> {{ mode(page.line.mode) }} hattı</h1>
+            </iv-destination-sign>
+            <p class="code">Hat kodu: {{ page.line.code }}</p>
+            <p class="summary">{{ summary() }}</p>
+            @if (page.city.is_sample) {
+              <p class="sample">
+                <span class="iv-tape">örnek veri</span> Bu şehirdeki veriler örnek veridir.
+              </p>
             }
-          </svg>
-        } @else {
-          <p>Güzergâh çizimi henüz yok.</p>
-        }
-        <iv-line-map [line]="page.line" [city]="page.city.slug" />
-        <section>
-          <h2>Duraklar</h2>
-          <ol>
-            @for (stop of page.line.stops; track $index) {
-              <li>
-                <a [routerLink]="['/', page.city.slug, 'durak', stop.slug]">{{ stop.name }}</a>
-              </li>
-            }
-          </ol>
-        </section>
-        <dl>
-          <dt>Ücret</dt>
-          <dd>
-            @if (fare(page.line.fare_minor); as price) {
-              {{ price }}
-              @if (page.line.fare_updated_at; as updated) {
-                <span> · son güncelleme: {{ date(updated) }}</span>
+            <section class="diagram" aria-labelledby="diagram-title">
+              <h2 id="diagram-title">Hat şeması</h2>
+              @if (strip().length > 1) {
+                <iv-route-strip [nodes]="strip()" [label]="diagramLabel()" [fit]="560" />
+                <p class="note">Şema durak sırasını gösterir, mesafeyi değil.</p>
+              } @else {
+                <p>Güzergâh çizimi henüz yok.</p>
               }
-            } @else {
-              Henüz paylaşılmadı
-            }
-          </dd>
-          <dt>Çalışma saatleri</dt>
-          <dd class="plain">{{ page.line.hours_text || 'Henüz paylaşılmadı' }}</dd>
-          @if (payments()) {
-            <dt>Ödeme</dt>
-            <dd>{{ payments() }}</dd>
-          }
-          <dt>Nasıl durdurulur</dt>
-          <dd class="plain">{{ page.line.hail_notes || 'Henüz paylaşılmadı' }}</dd>
-          <dt>Son doğrulama</dt>
-          <dd>
-            {{
-              page.line.last_verified_at ? date(page.line.last_verified_at) : 'Henüz doğrulanmadı'
-            }}
-          </dd>
-          <dt>Katkıcı sayısı</dt>
-          <dd>{{ page.line.contributor_count }}</dd>
-          <dt>Sürüm</dt>
-          <dd>{{ page.line.version_no }} · {{ date(page.line.published_at) }}</dd>
-        </dl>
-        <section class="actions" aria-label="Hat bağlantıları">
-          <a rel="nofollow" [href]="links().contribute">Bu hattı düzelt</a>
-          <a rel="nofollow" [href]="links().open">Uygulamada aç</a>
-        </section>
-        @if (page.city.is_sample) {
-          <p>Bu şehirdeki veriler örnek veridir.</p>
-        }
+            </section>
+          </div>
+          <aside class="side" aria-label="Hat bilgileri">
+            <dl class="facts">
+              <div class="fare">
+                <dt>Ücret</dt>
+                <dd>
+                  @if (fare(page.line.fare_minor); as price) {
+                    <span class="amount">{{ price }}</span>
+                    @if (page.line.fare_updated_at; as updated) {
+                      <span class="when"> · son güncelleme: {{ date(updated) }}</span>
+                    }
+                  } @else {
+                    Henüz paylaşılmadı
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Çalışma saatleri</dt>
+                <dd class="plain">{{ page.line.hours_text || 'Henüz paylaşılmadı' }}</dd>
+              </div>
+              @if (payments()) {
+                <div>
+                  <dt>Ödeme</dt>
+                  <dd>{{ payments() }}</dd>
+                </div>
+              }
+              <div class="hail">
+                <dt>Nasıl durdurulur</dt>
+                <dd class="plain">{{ page.line.hail_notes || 'Henüz paylaşılmadı' }}</dd>
+              </div>
+              <div>
+                <dt>Son doğrulama</dt>
+                <dd>
+                  {{
+                    page.line.last_verified_at
+                      ? date(page.line.last_verified_at)
+                      : 'Henüz doğrulanmadı'
+                  }}
+                </dd>
+              </div>
+              <div class="small">
+                <dt>Katkıcı sayısı</dt>
+                <dd>{{ page.line.contributor_count }}</dd>
+              </div>
+              <div class="small">
+                <dt>Sürüm</dt>
+                <dd>{{ page.line.version_no }} · {{ date(page.line.published_at) }}</dd>
+              </div>
+            </dl>
+            <section class="actions" aria-label="Hat bağlantıları">
+              <a class="iv-cta iv-cta--ghost" rel="nofollow" [href]="links().contribute"
+                >Bu hattı düzelt</a
+              >
+              <a class="iv-cta" rel="nofollow" [href]="links().open">Uygulamada aç</a>
+            </section>
+            <section class="map" aria-label="Harita">
+              <iv-line-map [line]="page.line" [city]="page.city.slug" />
+            </section>
+          </aside>
+          <section class="stops" aria-labelledby="stops-title">
+            <h2 id="stops-title">
+              Duraklar <small>{{ page.line.stops.length }} durak</small>
+            </h2>
+            <iv-stop-sequence [stops]="stopItems()" label="Duraklar, sırasıyla" />
+          </section>
+        </div>
       </main>
+      <iv-site-footer />
     } @else if (page.state === 'not_found') {
       <iv-status-page kind="not-found" />
     } @else {
@@ -167,52 +204,188 @@ export function lineAppLinks(
     }
   `,
   styles: `
-    main {
-      max-width: 56rem;
-      margin: auto;
-      padding: 2rem 1rem;
+    .layout {
+      display: grid;
+      gap: 2rem;
+      padding-top: 1rem;
+    }
+    .layout > * {
+      min-width: 0;
+    }
+    @media (min-width: 60rem) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr) 21.5rem;
+        gap: 3rem;
+        align-items: start;
+      }
+      .main-col {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .side {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        position: sticky;
+        top: 1.5rem;
+      }
+      .stops {
+        grid-column: 1;
+        grid-row: 2;
+      }
+    }
+    .sign {
+      margin: 0 -0.5rem;
+    }
+    h1 {
+      margin: 1rem 0 0;
+      font-size: clamp(1.7rem, 4.2vw, 2.6rem);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: var(--iv-board-ink);
+      overflow-wrap: anywhere;
     }
     .code {
-      font-weight: var(--iv-font-body-weight-600);
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
     }
     .summary {
-      font-size: 1.125rem;
-      line-height: 1.7;
+      max-width: var(--iv-measure);
+      margin: 1.5rem 0 0;
+      font-size: 1.2rem;
+      line-height: 1.6;
     }
-    svg {
-      display: block;
-      width: 100%;
-      max-height: 24rem;
-      background: var(--iv-color-krem);
-      margin: 1.5rem 0;
+    .sample {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      color: var(--iv-ink-muted);
     }
-    section,
-    dl {
-      margin-top: 2rem;
+    h2 {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin: 0 0 0.75rem;
+      font-size: 1.45rem;
+      letter-spacing: -0.01em;
     }
-    li {
-      padding: 0.5rem 0;
+    h2 small {
+      font-family: var(--iv-font-body);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--iv-ink-muted);
+    }
+    .diagram {
+      margin-top: 2.25rem;
+      padding: 1.25rem 1rem 0.75rem;
+      border-radius: 1.25rem;
+      background: var(--iv-surface);
+      border: 1px solid var(--iv-line);
+    }
+    .note {
+      margin: 0.25rem 0 0;
+      font-size: 0.85rem;
+      color: var(--iv-ink-muted);
+    }
+    .stops {
+      margin-top: 0.25rem;
+    }
+    .facts {
+      display: grid;
+      gap: 0.6rem;
+      margin: 0;
+    }
+    .facts > div {
+      padding: 0.85rem 1rem;
+      border-radius: 0.9rem;
+      background: var(--iv-surface);
+      border: 1px solid var(--iv-line);
     }
     dt {
-      font-weight: var(--iv-font-body-weight-600);
-      margin-top: 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--iv-ink-muted);
     }
     dd {
-      margin: 0.25rem 0 0;
+      margin: 0.15rem 0 0;
+      font-weight: 500;
+    }
+    .facts > .fare {
+      --cut: 4.25rem;
+      position: relative;
+      padding: 1rem 1rem 1rem calc(var(--cut) + 1rem);
+      border: 0;
+      background: var(--iv-ticket);
+      color: var(--iv-ticket-ink);
+      -webkit-mask:
+        radial-gradient(circle at var(--cut) 0, transparent 8px, #000 8.5px) top / 100% 51%
+          no-repeat,
+        radial-gradient(circle at var(--cut) 100%, transparent 8px, #000 8.5px) bottom / 100% 51%
+          no-repeat;
+      mask:
+        radial-gradient(circle at var(--cut) 0, transparent 8px, #000 8.5px) top / 100% 51%
+          no-repeat,
+        radial-gradient(circle at var(--cut) 100%, transparent 8px, #000 8.5px) bottom / 100% 51%
+          no-repeat;
+    }
+    .fare::before {
+      content: '';
+      position: absolute;
+      left: var(--cut);
+      top: 0.75rem;
+      bottom: 0.75rem;
+      border-left: 2px dashed rgba(20, 33, 61, 0.45);
+    }
+    .fare dt {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--cut);
+      display: grid;
+      place-items: center;
+      color: inherit;
+      font-family: var(--iv-font-display);
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+    .amount {
+      display: block;
+      font-family: var(--iv-font-display);
+      font-weight: 700;
+      font-size: 2rem;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .when {
+      font-size: 0.9rem;
+    }
+    .facts > .hail {
+      border-left: 5px solid var(--iv-signal);
+    }
+    .facts > .small {
+      padding-block: 0.55rem;
+      font-size: 0.95rem;
     }
     .plain {
       white-space: pre-line;
       overflow-wrap: anywhere;
     }
     .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
     }
-    .actions a {
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--iv-color-lacivert);
-      border-radius: 0.25rem;
+    .map {
+      margin-top: 1.25rem;
     }
   `,
 })
@@ -220,11 +393,37 @@ export class LinePage extends PageView<LineData> {
   protected readonly mode = modeLabel;
   protected readonly date = formatTurkishDate;
   protected readonly fare = formatFare;
-  protected readonly sketch = computed(() => {
+  protected readonly ends = computed(() => {
+    const page = this.data();
+    if (page.state !== 'ok') return null;
+    const stops = page.line.stops;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    return stops.length >= 2 && first && last ? { from: first.name, to: last.name } : null;
+  });
+  protected readonly strip = computed<StripNode[]>(() => {
     const page = this.data();
     return page.state === 'ok'
-      ? projectLine(page.line.geometry.coordinates, page.line.stops)
-      : null;
+      ? page.line.stops.map((stop, index) => ({ name: stop.name, tick: String(index + 1) }))
+      : [];
+  });
+  protected readonly diagramLabel = computed(() => {
+    const page = this.data();
+    const ends = this.ends();
+    return page.state === 'ok' && ends
+      ? `${page.line.code} hat şeması: ${page.line.stops.length} durak, ${ends.from} → ${ends.to}`
+      : '';
+  });
+  protected readonly stopItems = computed<StopSequenceItem[]>(() => {
+    const page = this.data();
+    if (page.state !== 'ok') return [];
+    return page.line.stops.map((stop, index) => ({
+      slug: stop.slug,
+      name: stop.name,
+      link: ['/', page.city.slug, 'durak', stop.slug],
+      note: stop.kind === 'informal' ? 'İşaretsiz durak' : undefined,
+      tick: String(index + 1),
+    }));
   });
   protected readonly summary = computed(() => {
     const page = this.data();

@@ -1,15 +1,25 @@
 /* Ionic core and the optional utility sheets the app uses, the Ionic dark palette (class
    variant, toggled by ThemeService), then the libs/ui design system: brand tokens, fonts,
-   semantic theme, base rules and shell rules. */
+   semantic tokens (light, and dark under the class), Ionic mapping, base rules, shell rules.
+   The form rules (forms.css) load with the lazy pages that use them. */
 @use '@ionic/angular/css/core.css';
 @use '@ionic/angular/css/normalize.css';
 @use '@ionic/angular/css/structure.css';
 @use '@ionic/angular/css/typography.css';
-@use '@ionic/angular/css/padding.css';
 @use '@ionic/angular/css/palettes/dark.class.css';
 @use '../../../libs/ui/src/styles/tokens.css';
 @use '../../../libs/ui/src/styles/fonts';
+@use '../../../libs/ui/src/styles/semantic';
 @use '../../../libs/ui/src/styles/theme.css';
 @use '../../../libs/ui/src/styles/base.css';
+@use '../../../libs/ui/src/styles/signs.css';
 @use '../../../libs/ui/src/styles/shell.css';
-@use '../../../libs/ui/src/styles/forms.css';
+
+:root {
+  @include semantic.scale;
+  @include semantic.light;
+}
+
+:root.ion-palette-dark {
+  @include semantic.dark;
+}

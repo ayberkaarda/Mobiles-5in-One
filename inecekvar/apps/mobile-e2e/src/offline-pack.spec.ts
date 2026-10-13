@@ -180,6 +180,9 @@ test('installs the sample city pack and works offline after a reload', async ({
   await expect(page).toHaveURL(/\/hat\/ornek-hat-2\?city=ornek-test-sehri/);
   await expect(page.locator('iv-line-page h1')).toContainText('ORN-2');
   await expect(page.locator('iv-line-page .from-pack')).toContainText('şehir paketinden');
+  // The strip diagram is the default view; the map opens with the Harita switch.
+  await expect(page.locator('iv-line-page iv-route-strip circle.node')).toHaveCount(5);
+  await page.getByRole('button', { name: 'Harita', exact: true }).click();
   const map = page.locator('iv-line-page iv-map');
   await expect(map).toHaveAttribute('data-status', /^(ready|no-basemap)$/, { timeout: 30_000 });
   await expect(page.locator('iv-line-page iv-map canvas.maplibregl-canvas')).toBeVisible();
@@ -245,6 +248,8 @@ test('recovers map warmup for a pack installed before service worker control', a
   await context.setOffline(true);
   await page.goto(`/hat/ornek-hat-2?city=${CITY}`);
   await expect(page.locator('iv-line-page .from-pack')).toContainText('şehir paketinden');
+  await expect(page.locator('iv-line-page iv-route-strip circle.node')).toHaveCount(5);
+  await page.getByRole('button', { name: 'Harita', exact: true }).click();
   await expect(page.locator('iv-line-page iv-map canvas.maplibregl-canvas')).toBeVisible();
   await expect(page.locator('iv-line-page iv-map')).toHaveAttribute(
     'data-status',

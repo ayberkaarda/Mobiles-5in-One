@@ -45,10 +45,10 @@ Her proje için bir kart. Kadro'nun, Askıda'nın, Cetele'nin ve Inecek Var'ın 
       <sub><b>Cetele</b>: web ana sayfası ve Android müşteri listesi (yerel sunucu, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: slogan, etiketli örnek şehir ve üç adımla web ana sayfası ve Android hat sayfası, yerel yığın, örnek veri" width="100%"><br>
-      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android uygulaması: etiketli örnek şehir ve hatlarıyla arama ekranı, emülatör" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/02-city-pack.png" alt="Inecek Var Android uygulaması: örnek şehir paketi kurulu, sürümü ve boyutuyla çevrimdışı şehirler ekranı, emülatör" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android uygulaması: iki durağı dolu A'dan B'ye planlayıcı ve hat, tahmini süre ve ücretle sonuç, örnek veri, emülatör" width="32%"><br>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tabela gibi slogan ve sokak çizimiyle web ana sayfası ve hat tabelası, durak şeması ve ücret biletiyle Android hat sayfası, yerel yığın, örnek veri" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android uygulaması: Nereye inecek var? tabelası, etiketli örnek şehir ve kısayollarla arama ekranı, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android uygulaması: hat tabelası, durak şeması ve ücret biletiyle hat sayfası, örnek veri, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android uygulaması: iki aktarmalı A'dan B'ye sonucu, hat plakalarıyla durak şeması olarak, örnek veri, emülatör" width="32%"><br>
       <sub><b>Inecek Var</b>: web ana sayfası ve Android hat ekranları (yerel yığın, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>

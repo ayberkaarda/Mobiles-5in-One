@@ -47,7 +47,7 @@ const PERIOD_KEYS: Record<PlusOffer['period'], TranslationKey> = {
     TPipe,
   ],
   templateUrl: './plus.page.html',
-  styleUrl: './plus.page.scss',
+  styleUrls: ['../../../../../libs/ui/src/styles/forms.css', './plus.page.scss'],
 })
 export class PlusPage {
   protected readonly plus = inject(PlusStore);

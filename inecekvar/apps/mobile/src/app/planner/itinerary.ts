@@ -1,6 +1,12 @@
 import { PlanResult } from '@inecekvar/data-access';
 import { formatFareMinor } from '@inecekvar/domain';
-import { ItineraryLegView, ItineraryStep, ItinerarySummary } from '@inecekvar/ui';
+import {
+  ItineraryLegView,
+  ItineraryStep,
+  ItinerarySummary,
+  StripNode,
+  StripSegment,
+} from '@inecekvar/ui';
 import { PluralKey, TranslationKey, TranslationParams } from '../i18n/translation';
 import { Place } from './plan-form';
 
@@ -126,6 +132,52 @@ export function steps(itinerary: Itinerary, t: Translate): ItineraryStep[] {
         : t('planner.fromStop', { stop: leg.from_stop.name });
     return { kind: 'walk', title, detail };
   });
+}
+
+/**
+ * The itinerary as a strip diagram: the start, every boarding, transfer and alighting stop and
+ * the destination as nodes; rides with their line placard and stop count, walks dotted with
+ * their distance. Start and destination use the place labels the person chose.
+ */
+export function itineraryStrip(
+  itinerary: Itinerary,
+  t: Translate,
+  origin: string,
+  destination: string,
+): { nodes: StripNode[]; segments: StripSegment[] } {
+  const legs = visibleLegs(itinerary);
+  const nodes: StripNode[] = [];
+  const segments: StripSegment[] = [];
+  legs.forEach((leg, index) => {
+    const last = index === legs.length - 1;
+    if (isRide(leg)) {
+      if (index === 0) nodes.push({ name: leg.board_stop.name, kind: 'terminal' });
+      segments.push({
+        kind: 'ride',
+        code: leg.line_code,
+        label: plural(t, 'planner.stripStops', leg.stop_count),
+      });
+      nodes.push({ name: leg.alight_stop.name, kind: last ? 'terminal' : 'transfer' });
+    } else {
+      if (index === 0) {
+        nodes.push(
+          leg.from_stop
+            ? { name: leg.from_stop.name, kind: 'terminal' }
+            : { name: origin, kind: 'place' },
+        );
+      }
+      segments.push({
+        kind: 'walk',
+        label: t('planner.walkShort', { metres: num(t, roundMetres(leg.metres)) }),
+      });
+      nodes.push(
+        leg.to_stop
+          ? { name: leg.to_stop.name, kind: last ? 'terminal' : 'transfer' }
+          : { name: destination, kind: 'place' },
+      );
+    }
+  });
+  return { nodes, segments };
 }
 
 export type LngLatPair = [number, number];

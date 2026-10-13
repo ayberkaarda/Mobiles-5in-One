@@ -74,7 +74,7 @@ const LINE_ACTIONS: readonly { kind: string; label: TranslationKey }[] = [
     TpPipe,
   ],
   templateUrl: './contribute.page.html',
-  styleUrl: './contribute.page.scss',
+  styleUrls: ['../../../../../libs/ui/src/styles/forms.css', './contribute.page.scss'],
 })
 export class ContributePage {
   protected readonly session = inject(SessionStore);

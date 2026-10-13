@@ -7,68 +7,99 @@
 </ion-header>
 
 <ion-content>
-  <div class="iv-page">
-    <p class="iv-kicker">{{ 'search.kicker' | t }}</p>
-    <h1 class="iv-heading">{{ 'search.heading' | t }}</h1>
-    <p class="iv-lead">{{ 'search.lead' | t }}</p>
+  <div class="iv-page ara">
+    <section class="hero iv-board">
+      <p class="tagline">{{ 'search.kicker' | t }}</p>
+      <h1 class="title">{{ 'search.heading' | t }}</h1>
+      @if (search.view() !== 'no-city') {
+      <ion-searchbar
+        class="search"
+        mode="md"
+        [value]="search.query()"
+        [placeholder]="'search.placeholder' | t"
+        [debounce]="0"
+        (ionInput)="search.setQuery($event.detail.value)"
+      />
+      <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
+        @for (filter of filters; track filter.value) {
+        <button
+          type="button"
+          class="filter"
+          [class.on]="search.mode() === filter.value"
+          [attr.aria-pressed]="search.mode() === filter.value"
+          (click)="search.mode.set(filter.value)"
+        >
+          {{ filter.label | t }}
+        </button>
+        }
+      </div>
+      } @else {
+      <p class="lead">{{ 'search.lead' | t }}</p>
+      }
+    </section>
 
     <iv-city-picker class="city" />
     @if (cities.selected()?.is_sample) {
-    <p class="iv-note sample">{{ 'city.sampleNote' | t }}</p>
+    <p class="sample">
+      <span class="iv-tape" aria-hidden="true">{{ 'search.sampleTape' | t }}</span>
+      <span class="sample-text">{{ 'city.sampleNote' | t }}</span>
+    </p>
     } @if (search.view() === 'no-city') {
     <section class="iv-section">
       <iv-state
+        art="street"
         [heading]="'city.noneTitle' | t"
         [message]="'city.noneBody' | t"
         [actionLabel]="'city.choose' | t"
         (action)="openPicker()"
-      />
+      >
+        <p class="first-run-note">{{ 'search.firstRunPacks' | t }}</p>
+      </iv-state>
     </section>
     } @else {
-    <ion-searchbar
-      class="search"
-      mode="md"
-      [value]="search.query()"
-      [placeholder]="'search.placeholder' | t"
-      [debounce]="0"
-      (ionInput)="search.setQuery($event.detail.value)"
-    />
-
-    <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
-      @for (filter of filters; track filter.value) {
+    <nav class="quick" [attr.aria-label]="'search.quickLabel' | t">
       <button
         type="button"
-        class="filter"
-        [class.on]="search.mode() === filter.value"
-        [attr.aria-pressed]="search.mode() === filter.value"
-        (click)="search.mode.set(filter.value)"
+        class="tile locate"
+        [disabled]="search.nearby().kind === 'locating' || search.nearby().kind === 'loading'"
+        (click)="search.findNearby()"
       >
-        {{ filter.label | t }}
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          <circle cx="12" cy="12" r="7.5" />
+        </svg>
+        <span class="tile-text">
+          <span class="tile-title">{{ 'nearby.action' | t }}</span>
+          <span class="tile-hint">{{ 'search.quickNearbyHint' | t }}</span>
+        </span>
       </button>
-      }
-    </div>
+      <a class="tile" routerLink="/planla">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="6" cy="6" r="2.5" />
+          <circle cx="18" cy="18" r="2.5" />
+          <path d="M8.5 6H15a3 3 0 010 6H9a3 3 0 000 6h6.5" />
+        </svg>
+        <span class="tile-text">
+          <span class="tile-title">{{ 'search.quickPlan' | t }}</span>
+          <span class="tile-hint">{{ 'search.quickPlanHint' | t }}</span>
+        </span>
+      </a>
+      <a class="tile" routerLink="/ayarlar/cevrimdisi">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+        </svg>
+        <span class="tile-text">
+          <span class="tile-title">{{ 'search.quickPack' | t }}</span>
+          <span class="tile-hint">{{ 'search.quickPackHint' | t }}</span>
+        </span>
+      </a>
+    </nav>
 
     <section class="nearby" [attr.aria-label]="'nearby.title' | t">
-      <div class="nearby-head">
-        <div>
-          <h2>{{ 'nearby.title' | t }}</h2>
-          <p>{{ 'nearby.body' | t }}</p>
-        </div>
-        <button
-          type="button"
-          class="locate"
-          [disabled]="search.nearby().kind === 'locating' || search.nearby().kind === 'loading'"
-          (click)="search.findNearby()"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3.5" />
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-            <circle cx="12" cy="12" r="7.5" />
-          </svg>
-          {{ 'nearby.action' | t }}
-        </button>
-      </div>
-      @switch (search.nearby().kind) { @case ('locating') {
+      @switch (search.nearby().kind) { @case ('idle') {
+      <p class="nearby-msg privacy">{{ 'nearby.body' | t }}</p>
+      } @case ('locating') {
       <p class="nearby-msg" role="status">{{ 'nearby.locating' | t }}</p>
       } @case ('loading') {
       <p class="nearby-msg" role="status">{{ 'nearby.loading' | t }}</p>
@@ -78,14 +109,25 @@
       <p class="nearby-msg warn" role="alert">{{ 'nearby.unavailable' | t }}</p>
       } @case ('error') {
       <p class="nearby-msg warn" role="alert">{{ 'nearby.error' | t }}</p>
-      } @case ('ready') { @if (nearbyItems().length > 0) {
+      } @case ('ready') {
+      <h2 class="iv-section-title">{{ 'nearby.title' | t }}</h2>
+      @if (nearbyItems().length > 0) {
       <iv-line-list class="nearby-list" [lines]="nearbyItems()" />
       } @else {
       <p class="nearby-msg">{{ 'nearby.empty' | t }}</p>
       } } }
     </section>
 
-    @if (offlineWithPack()) {
+    @if (pack(); as pack) { @if (pack.state !== 'installed') {
+    <section class="iv-section pack" [attr.data-pack]="pack.state">
+      <iv-city-scene class="pack-art" [still]="true" />
+      <div class="pack-body">
+        <h2>{{ pack.title | t }}</h2>
+        <p>{{ pack.body | t }}</p>
+        <a class="iv-button pack-action" routerLink="/ayarlar/cevrimdisi">{{ pack.action | t }}</a>
+      </div>
+    </section>
+    } } @if (offlineWithPack()) {
     <iv-notice class="offline-note" tone="offline" [message]="'search.offlinePackNote' | t" />
     }
     <section class="iv-section results" aria-live="polite">
@@ -146,21 +188,17 @@
       </ul>
       } } }
     </section>
-    } @if (pack(); as pack) {
+    } @if (pack(); as pack) { @if (pack.state === 'installed') {
     <section class="iv-section pack" [attr.data-pack]="pack.state">
       <svg class="pack-icon" viewBox="0 0 24 24" aria-hidden="true">
-        @if (pack.state === 'installed') {
         <path d="M5 12.5l4.5 4.5L19 7.5" />
-        } @else {
-        <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
-        }
       </svg>
-      <div>
+      <div class="pack-body">
         <h2>{{ pack.title | t }}</h2>
         <p>{{ pack.body | t }}</p>
-        <a class="pack-action" routerLink="/ayarlar/cevrimdisi">{{ pack.action | t }}</a>
+        <a class="pack-link" routerLink="/ayarlar/cevrimdisi">{{ pack.action | t }}</a>
       </div>
     </section>
-    }
+    } }
   </div>
 </ion-content>

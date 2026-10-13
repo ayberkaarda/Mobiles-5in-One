@@ -32,9 +32,11 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
     </ion-header>
     <ion-content>
       <div class="iv-page">
-        <p class="iv-kicker">{{ 'favorites.kicker' | t }}</p>
-        <h1 class="iv-heading">{{ 'favorites.heading' | t }}</h1>
-        <p class="iv-lead">{{ 'favorites.lead' | t }}</p>
+        <header class="iv-hero iv-board">
+          <p class="iv-kicker">{{ 'favorites.kicker' | t }}</p>
+          <h1 class="iv-heading">{{ 'favorites.heading' | t }}</h1>
+          <p class="iv-lead">{{ 'favorites.lead' | t }}</p>
+        </header>
         @if (favorites.storageError()) {
           <p class="note note--warn" role="alert">{{ 'favorites.storageError' | t }}</p>
         }

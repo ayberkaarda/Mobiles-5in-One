@@ -74,7 +74,7 @@ describe('tab pages', () => {
   beforeEach(() => localStorage.clear());
 
   it.each([
-    [SearchPage, 'Hat nereden geçer?'],
+    [SearchPage, 'Nereye inecek var?'],
     [PlanPage, 'Nereden nereye?'],
     [FavoritesPage, 'Favoriler'],
     [ContributePage, 'Bu hat değişti mi? Söyle.'],
@@ -255,10 +255,16 @@ describe('line page', () => {
     const { root, catalog } = await openDetail('/hat/ornek-hat-1?city=ornek-test-sehri');
     expect(catalog.line.calls[0]?.slice(0, 2)).toEqual(['ornek-hat-1', 'ornek-test-sehri']);
     expect(text(root, 'h1')).toBe('ORN-1 [ÖRNEK] Hat ORN-1');
-    expect(text(root, 'iv-mode-chip')).toBe('Dolmuş');
-    expect(root.querySelector('iv-route-sketch path.route')).not.toBeNull();
-    expect(text(root, '.fare-tag')).toBe('₺25,00');
-    expect(text(root, '.facts .sub')).toBe('Son güncelleme: 1 Ekim 2026');
+    expect(text(root, '.hero .mode')).toBe('Dolmuş');
+    expect(
+      Array.from(root.querySelectorAll('.hero .ends .stop')).map((n) => n.textContent?.trim()),
+    ).toEqual(['[ÖRNEK] Durak 1-1', '[ÖRNEK] Durak 1-5']);
+    // The strip diagram comes first: one dot per stop on a cased rail; the map waits for a tap.
+    expect(root.querySelectorAll('iv-route-strip circle.node')).toHaveLength(5);
+    expect(root.querySelector('iv-route-strip path.casing')).not.toBeNull();
+    expect(root.querySelector('iv-map, iv-route-sketch')).toBeNull();
+    expect(text(root, '.facts .iv-ticket__amount')).toBe('₺25,00');
+    expect(text(root, '.facts .iv-ticket__note')).toBe('Son güncelleme: 1 Ekim 2026');
     expect(text(root, '.facts')).toContain('[ÖRNEK] 06:00-23:00');
     expect(text(root, '.pay')).toBe('Nakit');
     expect(
@@ -266,6 +272,20 @@ describe('line page', () => {
     ).toEqual([1, 2, 3, 4, 5].map((c) => `[ÖRNEK] Durak 1-${c}`));
     expect(text(root, '.trust')).toContain('Henüz doğrulanmadı');
     expect(text(root, '.trust')).toContain('0 katkıcı');
+  });
+
+  it('opens the map view on request and returns to the diagram', async () => {
+    const { root, harness } = await openDetail('/hat/ornek-hat-1?city=ornek-test-sehri');
+    const toggle = root.querySelector<HTMLButtonElement>('.view-switch .map-toggle');
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+    toggle?.click();
+    await settle(harness.fixture);
+    expect(toggle?.getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelector('.map iv-map, .map iv-route-sketch')).not.toBeNull();
+    expect(root.querySelector('iv-route-strip')).toBeNull();
+    root.querySelector<HTMLButtonElement>('.view-switch button')?.click();
+    await settle(harness.fixture);
+    expect(root.querySelectorAll('iv-route-strip circle.node')).toHaveLength(5);
   });
 
   it('toggles the favourite, opens a stop and routes the change report to Katkı', async () => {
