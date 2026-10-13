@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
+import { EMPTY } from 'rxjs';
 import {
   API_BASE_URL,
   AUTH_STRATEGY,
@@ -11,6 +13,7 @@ import { appConfig } from '../app.config';
 import { PREFERENCE_STORE } from '../city/city.store';
 import { TRACE_CLEANUP_KEY, TRACE_DRAFT_KEY } from '../contribute/trace-draft';
 import { MemoryPreferences, settle } from '../testing/catalog.fixtures';
+import { LanguageService } from './language.service';
 import { bootstrapSession } from './session-bootstrap';
 
 function fakeSession() {
@@ -99,5 +102,15 @@ describe('environment and app wiring', () => {
     });
     expect(TestBed.inject(API_BASE_URL)).toBe('/api/v1');
     expect(TestBed.inject(AUTH_STRATEGY).mode).toBe('cookie');
+  });
+
+  it('lets the language initializer end quietly when its translation service is already gone', async () => {
+    const transloco = { load: vi.fn(() => EMPTY), setActiveLang: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [{ provide: TranslocoService, useValue: transloco }],
+    });
+    const language = TestBed.inject(LanguageService);
+    await expect(language.init()).resolves.toBeUndefined();
+    expect(transloco.setActiveLang).not.toHaveBeenCalled();
   });
 });
