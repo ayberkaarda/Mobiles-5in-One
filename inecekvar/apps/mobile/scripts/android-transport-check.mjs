@@ -5,6 +5,7 @@
 //
 //   node apps/mobile/scripts/android-transport-check.mjs            # source files
 //   node apps/mobile/scripts/android-transport-check.mjs --apk app-debug.apk
+//   node apps/mobile/scripts/android-transport-check.mjs --apk app-release-unsigned.apk --release
 //
 // The source check reads `android/app/src/main` and any `src/release` overlay. A `src/debug`
 // overlay may only open cleartext for loopback hosts (localhost, 127.0.0.1, 10.0.2.2). With
@@ -160,6 +161,9 @@ function checkApk(apk) {
   if (value('allowBackup') !== 'false') problems.push(`${label}: allowBackup is not false`);
   if (value('networkSecurityConfig') === null) problems.push(`${label}: no networkSecurityConfig`);
   const debuggable = value('debuggable');
+  if (process.argv.includes('--release') && debuggable === 'true') {
+    problems.push(`${label}: debuggable in a release build`);
+  }
   console.log(
     `${label}: usesCleartextTraffic=${value('usesCleartextTraffic')} allowBackup=${value('allowBackup')} ` +
       `networkSecurityConfig=${value('networkSecurityConfig')} debuggable=${debuggable ?? 'absent'}`,
