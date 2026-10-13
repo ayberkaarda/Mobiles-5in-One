@@ -2,9 +2,9 @@
 // ADR-0052). The database and MinIO passwords are the compose development defaults. The TOTP
 // encryption key is created per run in playwright.config.ts and handed to uvicorn only.
 //
-// IV_E2E_STACK picks the stack: `iv4e` (phase 4 moderation run, the default) or `iv6b` (the
-// phase 6 attack and XSS sweep, its own compose project and ports so it can run beside another
-// stack). All ports are on 127.0.0.1 and outside 57277-57776.
+// IV_E2E_STACK picks the stack: `iv4e` (phase 4 moderation run, the default), `iv6b` (the phase 6
+// attack and XSS sweep) or `iv6g` (the phase 6 gate run); each has its own compose project and
+// ports so it can run beside another stack. All ports are on 127.0.0.1 and outside 57277-57776.
 const STACKS = {
   iv4e: {
     project: 'iv4e',
@@ -34,6 +34,22 @@ const STACKS = {
       INECEKVAR_MINIO_CONSOLE_PORT: '57954',
       INECEKVAR_MAIL_SMTP_PORT: '57955',
       INECEKVAR_MAIL_UI_PORT: '57956',
+    },
+  },
+  // Phase 6 gate run (ADR-0058): its own compose project on 58951-58959.
+  iv6g: {
+    project: 'iv6g',
+    apiPort: 58957,
+    proxyPort: 58958,
+    ssrPort: 58959,
+    mailUi: 'http://127.0.0.1:58956',
+    composePorts: {
+      INECEKVAR_PG_PORT: '58951',
+      INECEKVAR_REDIS_PORT: '58952',
+      INECEKVAR_MINIO_PORT: '58953',
+      INECEKVAR_MINIO_CONSOLE_PORT: '58954',
+      INECEKVAR_MAIL_SMTP_PORT: '58955',
+      INECEKVAR_MAIL_UI_PORT: '58956',
     },
   },
 };
