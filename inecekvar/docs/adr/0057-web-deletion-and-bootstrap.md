@@ -61,6 +61,15 @@ a tiles path the code never reads.
    web and Caddy keys documented in `docs/ops/env.md`; the cost note's cache rule now matches
    `*.pmtiles` at the root of the tiles host, as `export/router.py` and `basemapUrlFor` build it.
 
+7. **Review amendment: the address can stay off the command line** (phase 6 review F15).
+   `admin --email-stdin` reads the address from the first stdin line (the password, with
+   `--password-stdin`, from the second); without `--email` or `--email-stdin` the command reads
+   `INECEKVAR_BOOTSTRAP_EMAIL`. Every stdin line is bounded (`STDIN_LINE_MAX`, 1024 characters;
+   longer is refused with exit 2), and `--email` and `--email-stdin` exclude each other. Tests:
+   `test_address_from_stdin_or_environment_stays_off_the_command_line`,
+   `test_stdin_lines_are_bounded_and_checked`, `test_email_and_email_stdin_are_exclusive`; red with
+   the change reverted.
+
 ## Evidence
 
 | # | Check | Command | Result |

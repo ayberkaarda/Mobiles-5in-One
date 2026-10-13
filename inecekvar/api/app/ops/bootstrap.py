@@ -1,7 +1,7 @@
 """First-run tools for a fresh database (release checklist section 7, ADR-0057).
 
-    uv run python -m app.ops.bootstrap admin --email ADDRESS [--password-stdin]
-        [--force-additional]
+    uv run python -m app.ops.bootstrap admin (--email ADDRESS | --email-stdin)
+        [--password-stdin] [--force-additional]
     uv run python -m app.ops.bootstrap city --slug SLUG --name NAME
         --bbox MIN_LON,MIN_LAT,MAX_LON,MAX_LAT [--timezone Europe/Istanbul]
 
@@ -13,6 +13,12 @@ exists unless `--force-additional` is given; promoting an account that is alread
 nothing. The account is marked email-verified, earlier step-ups are revoked, and TOTP is not
 touched: an admin without TOTP is refused every step-up action with
 `auth.totp_enrolment_required` until the enrolment on the admin UI (ADR-0037).
+
+The address can stay out of the shell history and the process list too (phase 6 review F15):
+`--email-stdin` reads it from the first line of stdin (the password, with `--password-stdin`,
+then comes from the second line), and without `--email` or `--email-stdin` the command reads
+`INECEKVAR_BOOTSTRAP_EMAIL`. Every stdin line is read with a bound of `STDIN_LINE_MAX`
+characters; a longer line is refused.
 
 `city` creates an empty, non-sample city (no stops, no lines). The same slug with the same name,
 bounding box and time zone is a no-op; a different one, or the sample city's slug, is refused.
@@ -32,6 +38,7 @@ import hashlib
 import hmac
 import json
 import math
+import os
 import re
 import sys
 from collections.abc import Callable, Sequence
@@ -151,11 +158,23 @@ def parse_email(value: str) -> str:
     return address
 
 
+# A bound for every stdin line (address or password); the registration policy is far shorter.
+STDIN_LINE_MAX = 1024
+TOO_LONG = f"refused: stdin line longer than {STDIN_LINE_MAX} characters"
+BOOTSTRAP_EMAIL_ENV = "INECEKVAR_BOOTSTRAP_EMAIL"
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(prog="python -m app.ops.bootstrap")
     commands = root.add_subparsers(dest="command", required=True)
     admin = commands.add_parser("admin", help="create or promote the first admin")
-    admin.add_argument("--email", type=parse_email, required=True)
+    source = admin.add_mutually_exclusive_group()
+    source.add_argument("--email", type=parse_email)
+    source.add_argument(
+        "--email-stdin",
+        action="store_true",
+        help="read the address from the first line of stdin (a password from the second)",
+    )
     admin.add_argument(
         "--password-stdin",
         action="store_true",
@@ -337,9 +356,40 @@ def main(
         print("settings invalid: " + ", ".join(fields), file=sys.stderr)
         return 1
     password: str | None = None
+    source = stdin or sys.stdin
+
+    def read_line() -> str | None:
+        """One bounded line of stdin without its end; None when it is too long."""
+        line = source.readline(STDIN_LINE_MAX + 2).rstrip("\r\n")
+        return None if len(line) > STDIN_LINE_MAX else line
+
+    if args.command == "admin":
+        raw: str | None
+        if args.email_stdin:
+            raw = read_line()
+            if raw is None:
+                print(
+                    f"refused: stdin line longer than {STDIN_LINE_MAX} characters", file=sys.stderr
+                )
+                return 2
+        elif args.email is None:
+            raw = os.environ.get(BOOTSTRAP_EMAIL_ENV, "")
+        else:
+            raw = args.email
+        try:
+            args.email = parse_email(raw or "")
+        except argparse.ArgumentTypeError:
+            print(
+                "refused: no valid address (--email, --email-stdin or " + BOOTSTRAP_EMAIL_ENV + ")",
+                file=sys.stderr,
+            )
+            return 2
     if args.command == "admin" and args.password_stdin:
-        line = (stdin or sys.stdin).readline()
-        password = line.rstrip("\r\n")
+        line = read_line()
+        if line is None:
+            print(TOO_LONG, file=sys.stderr)
+            return 2
+        password = line
         if not password:
             print("refused: --password-stdin given but stdin was empty", file=sys.stderr)
             return 2

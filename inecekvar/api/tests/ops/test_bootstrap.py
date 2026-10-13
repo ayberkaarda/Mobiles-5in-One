@@ -201,6 +201,64 @@ async def test_admin_refusals_leave_the_database_unchanged(
     assert await audit_rows(session_factory, "ops.bootstrap_admin") == []
 
 
+async def test_address_from_stdin_or_environment_stays_off_the_command_line(
+    migrated_url: str,
+    session_factory: async_sessionmaker[AsyncSession],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    code, out, err = await invoke(
+        migrated_url,
+        ["admin", "--email-stdin", "--password-stdin"],
+        EMAIL + "\n" + ADMIN_PASSWORD + "\n",
+        capsys,
+    )
+    assert code == 0, err
+    assert json.loads(out)["outcome"] == "created"
+    async with session_factory() as db:
+        user = (await db.scalars(select(User))).one()
+        assert (user.email, user.role) == (EMAIL.lower(), "admin")
+    # The environment key is the other way; the command line holds no address at all.
+    monkeypatch.setenv(bootstrap.BOOTSTRAP_EMAIL_ENV, EMAIL)
+    code, out, err = await invoke(migrated_url, ["admin"], capsys=capsys)
+    assert code == 0, err
+    assert json.loads(out)["outcome"] == "unchanged"
+    monkeypatch.delenv(bootstrap.BOOTSTRAP_EMAIL_ENV)
+    code, _, err = await invoke(migrated_url, ["admin"], capsys=capsys)
+    assert code == 2
+    assert "no valid address" in err
+
+
+@pytest.mark.parametrize(
+    ("argv", "stdin", "message"),
+    [
+        (["admin", "--email-stdin"], "x" * 1025 + "@example.com\n", "longer than 1024"),
+        (["admin", "--email-stdin", "--password-stdin"], EMAIL + "\n" + "p" * 2000, "longer"),
+        (["admin", "--email-stdin"], "not-an-address\n", "no valid address"),
+        (["admin", "--email-stdin"], "", "no valid address"),
+    ],
+)
+async def test_stdin_lines_are_bounded_and_checked(
+    migrated_url: str,
+    session_factory: async_sessionmaker[AsyncSession],
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+    stdin: str,
+    message: str,
+) -> None:
+    code, out, err = await invoke(migrated_url, argv, stdin, capsys)
+    assert code == 2
+    assert message in err
+    assert out == ""
+    assert await audit_rows(session_factory, "ops.bootstrap_admin") == []
+
+
+def test_email_and_email_stdin_are_exclusive() -> None:
+    with pytest.raises(SystemExit) as exit_info:
+        bootstrap.parser().parse_args(["admin", "--email", "a@example.com", "--email-stdin"])
+    assert exit_info.value.code == 2
+
+
 async def test_city_is_created_once_and_idempotent(
     migrated_url: str,
     session_factory: async_sessionmaker[AsyncSession],
