@@ -29,6 +29,11 @@ apps/mobile/android/app/build/
 apps/mobile/android/build/
 apps/mobile/android/.gradle/
 apps/mobile/android/local.properties
+# Release signing properties (docs/release/signing.md); gradle.properties stays tracked.
+apps/mobile/android/key.properties
+apps/mobile/android/keystore.properties
+apps/mobile/android/**/*-signing.properties
+apps/mobile/android/**/signing*.properties
 apps/mobile/android/app/src/main/assets/public/
 apps/mobile/android/capacitor-cordova-android-plugins/
 
