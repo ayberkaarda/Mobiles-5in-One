@@ -323,20 +323,79 @@ check_fingerprint() {
   return 1
 }
 
-# check_deletion_replay FILE: FILE holds "<user id> <state>" lines from the replay step, state
-# one of: carried (already in the dump), replayed (re-applied and verified), absent (no such
-# account in the dump, nothing to erase), missing (recorded after the dump, not re-applied) or
-# unverified (re-applied but the immediate effects are not all present).
+# check_deletion_replay STATE LIST [STATUS]: STATE holds "<user id> <state>" lines from the replay
+# step, LIST is the replay list it was given and STATUS the exit status of replay-deletions.sh.
+# States: carried (already in the dump), replayed (re-applied and verified), absent (no such
+# account in the dump, nothing to erase), cancelled (the user cancelled after the request: not
+# re-applied, or the carried request was cancelled on the restored database), missing (recorded
+# after the dump, not re-applied) or unverified (re-applied but the effects are not all present).
+# Phase 6 review F4: a non-zero STATUS fails, the number of state lines must equal the number of
+# list lines (a replay killed half-way leaves fewer), and an empty list is a skip, never a pass.
 check_deletion_replay() {
-  local carried replayed absent bad
-  carried="$(grep -c ' carried$' "$1" || true)"
-  replayed="$(grep -c ' replayed$' "$1" || true)"
-  absent="$(grep -c ' absent$' "$1" || true)"
-  bad="$(grep -cv ' \(carried\|replayed\|absent\)$' "$1" || true)"
-  if [ "${bad}" = "0" ]; then
-    check_record deletions_after_dump_reapplied pass "replayed ${replayed}, carried ${carried}, absent ${absent}"
+  local state="$1" list="$2" status="${3:-0}" expected lines carried replayed absent cancelled bad
+  expected="$(tr -d '\r' <"${list}" | grep -c '[^[:space:]]' || true)"
+  lines="$(grep -c . "${state}" || true)"
+  if [ "${expected}" = "0" ] && [ "${lines}" = "0" ] && [ "${status}" = "0" ]; then
+    check_record deletions_after_dump_reapplied skip "empty replay list: no request recorded after the dump"
     return 0
   fi
-  check_record deletions_after_dump_reapplied FAIL "${bad} not re-applied: $(grep -v ' \(carried\|replayed\|absent\)$' "$1" | tr '\n' ' ')"
+  carried="$(grep -c ' carried$' "${state}" || true)"
+  replayed="$(grep -c ' replayed$' "${state}" || true)"
+  absent="$(grep -c ' absent$' "${state}" || true)"
+  cancelled="$(grep -c ' cancelled$' "${state}" || true)"
+  bad="$(grep -cv ' \(carried\|replayed\|absent\|cancelled\)$' "${state}" || true)"
+  if [ "${status}" != "0" ]; then
+    check_record deletions_after_dump_reapplied FAIL "replay-deletions.sh exited ${status}; ${lines} of ${expected} requests have a state"
+    return 1
+  fi
+  if [ "${lines}" != "${expected}" ]; then
+    check_record deletions_after_dump_reapplied FAIL "${lines} of ${expected} requests have a state line"
+    return 1
+  fi
+  if [ "${bad}" = "0" ]; then
+    check_record deletions_after_dump_reapplied pass "replayed ${replayed}, carried ${carried}, absent ${absent}, cancelled ${cancelled} of ${expected}"
+    return 0
+  fi
+  check_record deletions_after_dump_reapplied FAIL "${bad} not re-applied: $(grep -v ' \(carried\|replayed\|absent\|cancelled\)$' "${state}" | tr '\n' ' ')"
   return 1
+}
+
+# iso_epoch TIME: seconds since the epoch of an ISO 8601 time (GNU date, as on the backup host,
+# the CI runner and Git Bash); fails on an unreadable time.
+iso_epoch() {
+  # GNU date reads an empty string as midnight today; an empty time is unreadable here.
+  [ -n "$1" ] || return 1
+  date -u -d "$1" +%s 2>/dev/null
+}
+
+# dump_time_problem KEY LAST_MODIFIED NOW_EPOCH MAX_SKEW_HOURS FUTURE_MINUTES: prints nothing and
+# returns 0 when the stamp in the dump name is plausible; otherwise prints the reason and returns
+# 1: the stamp lies more than FUTURE_MINUTES in the future (a planted dump that would sort
+# newest), or differs from LAST_MODIFIED by more than MAX_SKEW_HOURS (an old name overwritten
+# later), or one of the two times cannot be read (phase 6 review F6, ADR-0053 decision 11).
+dump_time_problem() {
+  local stamp stamp_epoch modified_epoch skew
+  stamp="$(dump_stamp_iso "$1")" || {
+    echo "the name of $1 holds no dump time"
+    return 1
+  }
+  stamp_epoch="$(iso_epoch "${stamp}")" || {
+    echo "the dump time ${stamp} of $1 is not a valid time"
+    return 1
+  }
+  modified_epoch="$(iso_epoch "$2")" || {
+    echo "the LastModified time '$2' of $1 cannot be read"
+    return 1
+  }
+  if [ "${stamp_epoch}" -gt $(($3 + $5 * 60)) ]; then
+    echo "the dump time ${stamp} of $1 lies in the future"
+    return 1
+  fi
+  skew=$((modified_epoch - stamp_epoch))
+  [ "${skew}" -ge 0 ] || skew=$((-skew))
+  if [ "${skew}" -gt $(($4 * 3600)) ]; then
+    echo "$1 was last modified $2, ${skew} s away from its dump time ${stamp} (more than $4 h: overwritten?)"
+    return 1
+  fi
+  return 0
 }

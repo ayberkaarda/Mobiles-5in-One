@@ -4,6 +4,7 @@ from datetime import timedelta
 import httpx
 import pytest
 from sqlalchemy import select, text
+from structlog.testing import capture_logs
 
 from app.core.deps import OutgoingMail, Services
 from app.core.ids import uuid7
@@ -54,7 +55,17 @@ async def test_login_during_grace_cancels_deletion(
     identity, email = await create_account(services)
     await schedule(client, await sign_in(client, email))
     clock.advance(days=6)
-    assert (await login(client, services, email, mode)).status_code == 200
+    with capture_logs() as logs:
+        assert (await login(client, services, email, mode)).status_code == 200
+    cancelled = [line for line in logs if line["event"] == "auth.account.delete_cancelled"]
+    assert cancelled == [
+        {
+            "event": "auth.account.delete_cancelled",
+            "log_level": "info",
+            "user_id": str(identity),
+            "cancelled_at": clock.now().isoformat(),
+        }
+    ]
     async with services.session_factory() as db:
         user = await db.get(User, identity)
         assert user is not None

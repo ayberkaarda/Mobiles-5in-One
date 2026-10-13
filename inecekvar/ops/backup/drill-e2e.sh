@@ -16,8 +16,9 @@
 #      identity and must answer ok
 #   8. negative checks: the writer cannot list, read or delete, the reader cannot write, the
 #      verifier cannot read, the stored object is an age file, another identity cannot decrypt
-#   9. drill-post-dump.sql: a deletion request recorded after the dump and a hard delete; the
-#      requests made since the dump time are exported as the replay list
+#   9. drill-post-dump.sql: a deletion request recorded after the dump, a request cancelled
+#      after the dump and a hard delete; the requests and the cancellations made since the dump
+#      time are exported as the replay and cancellations lists
 #  10. restore-drill.sh with the read-only identity, the source fingerprint and the replay list
 #  11. remove the compose project (containers, network, volumes) and the key files, also on
 #      failure or interrupt
@@ -280,11 +281,21 @@ FROM public.deletion_requests
 WHERE created_at >= :'since'::timestamptz
 ORDER BY created_at;
 SQL
-tr -d '\r' <"${work_dir}/deletions.txt" >"${work_dir}/deletions.lf"
-mv "${work_dir}/deletions.lf" "${work_dir}/deletions.txt"
+psql_at "${source_db}" inecekvar inecekvar -v "since=${dump_time}" >"${work_dir}/cancellations.txt" <<'SQL' || fail "cannot export the cancellations list"
+SELECT user_id || ' ' || to_char(cancelled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+FROM public.deletion_requests
+WHERE state = 'cancelled' AND cancelled_at >= :'since'::timestamptz
+ORDER BY cancelled_at;
+SQL
+for list in deletions cancellations; do
+  tr -d '\r' <"${work_dir}/${list}.txt" >"${work_dir}/${list}.lf"
+  mv "${work_dir}/${list}.lf" "${work_dir}/${list}.txt"
+done
 grep -q '^01990000-0000-7000-8000-00000000d005 ' "${work_dir}/deletions.txt" ||
   fail "the replay list misses the request recorded after the dump"
-echo "after the dump: d005 asked for deletion, d004 hard-deleted; replay list $(grep -c . "${work_dir}/deletions.txt") request(s) since ${dump_time}"
+grep -q '^01990000-0000-7000-8000-00000000d003 ' "${work_dir}/cancellations.txt" ||
+  fail "the cancellations list misses the cancellation recorded after the dump"
+echo "after the dump: d005 asked for deletion, d003 asked and cancelled, d004 hard-deleted; replay list $(grep -c . "${work_dir}/deletions.txt") request(s), cancellations list $(grep -c . "${work_dir}/cancellations.txt") since ${dump_time}"
 
 if [ "${mutation}" = "corrupt-dump" ]; then
   mc_as a cat "a/${bucket}/${object}" >"${work_dir}/corrupt.age" || fail "mutation corrupt-dump: download failed"
@@ -309,6 +320,7 @@ if [ "${mutation}" = "skip-replay" ]; then
 fi
 INECEKVAR_RESTORE_AGE_IDENTITY_FILE="${identity}" INECEKVAR_DRILL_EXPECTED="${work_dir}/expected.txt" \
   INECEKVAR_DRILL_DELETIONS="${work_dir}/deletions.txt" INECEKVAR_DRILL_REPLAY="${replay}" \
+  INECEKVAR_DRILL_CANCELLATIONS="${work_dir}/cancellations.txt" \
   INECEKVAR_DRILL_PG_IMAGE="${pg_image}" \
   INECEKVAR_DRILL_REQUIRED_TABLES="alembic_version cities stops lines line_versions line_stops users favorites traces edits deletion_requests audit_logs sessions refresh_tokens" \
   bash "${script_dir}/restore-drill.sh" || fail "restore-drill.sh failed"

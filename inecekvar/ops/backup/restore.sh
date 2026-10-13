@@ -4,7 +4,10 @@
 #
 #   1. pick the object: INECEKVAR_RESTORE_OBJECT, or the newest
 #      <prefix>inecekvar-*.dump.age listed by the read-only restore identity (names carry a UTC
-#      timestamp, so the newest sorts last)
+#      timestamp, so the newest sorts last); refuse it when its name stamp lies in the future or
+#      far from its LastModified time (a planted or overwritten dump, ADR-0053 decision 11),
+#      print it with its LastModified time and, unless the target is the drill container, ask
+#      for confirmation (or take --yes)
 #   2. download it and its .sha256 sidecar, refuse a checksum mismatch or a file that is not age
 #   3. refuse a target database that already holds tables in schema public
 #   4. age -d with the identity | pg_restore --no-owner --exit-on-error (the plain dump never
@@ -14,7 +17,9 @@
 # The restored database holds every account as of the dump. Deletion requests recorded after
 # the dump must be replayed before the worker starts: replay-deletions.sh and the runbook.
 #
-# Usage: ops/backup/restore.sh [--help]
+# Usage: ops/backup/restore.sh [--yes] [--help]
+#   --yes   restore without the interactive confirmation (needed when the target is not the
+#           drill container and stdin is not a terminal)
 #
 # Required environment:
 #   INECEKVAR_BACKUP_S3_ENDPOINT           S3 API endpoint (rules as in backup.sh)
@@ -37,6 +42,9 @@
 #   INECEKVAR_BACKUP_MC_IMAGE, INECEKVAR_BACKUP_DOCKER_NETWORK, INECEKVAR_BACKUP_AGE_BIN: as
 #   backup.sh
 #   INECEKVAR_RESTORE_PICKED_FILE  file to receive the restored object key (used by the drill)
+#   INECEKVAR_RESTORE_MAX_SKEW_HOURS  largest allowed distance between the name stamp and the
+#                                  LastModified time, default 6
+#   INECEKVAR_RESTORE_FUTURE_MINUTES  clock tolerance for a name stamp ahead of now, default 10
 #
 # No shell tracing; credentials and the identity are never printed. Exit codes: 0 restored,
 # 1 a step failed, 2 usage or configuration error.
@@ -53,11 +61,16 @@ usage() {
   sed -n '2,/^set -euo pipefail$/p' "$0" | sed -e '$d' -e 's/^# \{0,1\}//'
 }
 
+assume_yes=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h | --help)
       usage
       exit 0
+      ;;
+    --yes)
+      assume_yes=1
+      shift
       ;;
     *) die_config "unknown argument: $1 (see --help)" ;;
   esac
@@ -79,6 +92,8 @@ pg_database="${INECEKVAR_RESTORE_PG_DATABASE}"
 pg_user="${INECEKVAR_RESTORE_PG_USER:-inecekvar}"
 object="${INECEKVAR_RESTORE_OBJECT:-}"
 picked_file="${INECEKVAR_RESTORE_PICKED_FILE:-}"
+max_skew_hours="${INECEKVAR_RESTORE_MAX_SKEW_HOURS:-6}"
+future_minutes="${INECEKVAR_RESTORE_FUTURE_MINUTES:-10}"
 
 check_endpoint INECEKVAR_BACKUP_S3_ENDPOINT "${endpoint}" "${network}"
 check_bucket "${bucket}"
@@ -102,6 +117,18 @@ fi
 if [ -n "${object}" ] && ! [[ "${object}" =~ ^([A-Za-z0-9._-]+/)*${INECEKVAR_OPS_DUMP_RE}$ ]]; then
   die_config "INECEKVAR_RESTORE_OBJECT is not a dump key (<prefix>inecekvar-<YYYYMMDDTHHMMSSZ>.dump.age)"
 fi
+[[ "${max_skew_hours}" =~ ^[0-9]{1,3}$ ]] && [ "${max_skew_hours}" -ge 1 ] ||
+  die_config "INECEKVAR_RESTORE_MAX_SKEW_HOURS must be a whole number of hours from 1 to 999"
+[[ "${future_minutes}" =~ ^[0-9]{1,3}$ ]] ||
+  die_config "INECEKVAR_RESTORE_FUTURE_MINUTES must be a whole number of minutes from 0 to 999"
+# Only the restore drill's own throwaway container restores without a confirmation.
+drill_target=0
+case "${pg_container}" in
+  inecekvar-restore-drill-*) drill_target=1 ;;
+esac
+if [ "${drill_target}" = "0" ] && [ "${assume_yes}" = "0" ] && [ ! -t 0 ]; then
+  die_config "the target ${pg_database} is not the drill container: pass --yes, or run from a terminal to confirm the chosen dump"
+fi
 require_tool "${age_bin}"
 if [ -n "${pg_container}" ]; then
   check_container_name INECEKVAR_RESTORE_PG_CONTAINER "${pg_container}"
@@ -117,7 +144,7 @@ encrypted="${work_dir}/dump.age"
 cleanup() {
   local status=$?
   rm -f "${encrypted}" "${work_dir}/dump.sha256" "${work_dir}/listing.json" "${work_dir}/identity.txt" \
-    "${work_dir}/restore.err"
+    "${work_dir}/restore.err" "${work_dir}/stat.json"
   rmdir "${work_dir}" 2>/dev/null || true
   exit "${status}"
 }
@@ -145,6 +172,20 @@ if [ -z "${object}" ]; then
   echo "dumps listed: ${count}, newest: ${object}"
 else
   echo "requested: ${object}"
+fi
+mc_read stat --json "r/${bucket}/${object}" >"${work_dir}/stat.json" ||
+  fail "cannot read the metadata of ${object} with the restore identity"
+modified="$(grep -Eo '"lastModified" *: *"[^"]*"' "${work_dir}/stat.json" | head -n 1 | sed -e 's/.*: *"//' -e 's/"$//')"
+echo "chosen: ${object}, LastModified ${modified:-unknown}"
+if problem="$(dump_time_problem "${object}" "${modified}" "$(date -u +%s)" "${max_skew_hours}" "${future_minutes}")"; then
+  echo "dump time: name stamp and LastModified agree"
+else
+  fail "${problem}; investigate the bucket (planted or overwritten dump?) and set INECEKVAR_RESTORE_OBJECT to a dump you trust"
+fi
+if [ "${drill_target}" = "0" ] && [ "${assume_yes}" = "0" ]; then
+  printf 'Restore %s into database %s? Type the database name to continue: ' "${object}" "${pg_database}"
+  read -r answer || answer=""
+  [ "${answer}" = "${pg_database}" ] || fail "not confirmed; nothing was restored"
 fi
 if [ -n "${picked_file}" ]; then printf '%s\n' "${object}" >"${picked_file}"; fi
 

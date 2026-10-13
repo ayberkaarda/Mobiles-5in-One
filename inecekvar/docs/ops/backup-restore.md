@@ -73,7 +73,7 @@ Other copies: photos and exports live in versioned buckets (`inecekvar-media`, `
    INECEKVAR_RESTORE_PG_DATABASE=inecekvar_restored \
    bash ops/backup/restore.sh          # newest dump; INECEKVAR_RESTORE_OBJECT=<key> picks another
    ```
-   It refuses a checksum mismatch, a file that is not age, a wrong identity ("age could not decrypt ... wrong identity?") and a non-empty target. Note the dump time in the object name (`inecekvar-YYYYMMDDTHHMMSSZ`): everything after it is missing.
+   It prints the chosen key with its `LastModified` time and asks you to type the target database name before it restores (`--yes` skips the question; without a terminal and without `--yes` it refuses to start; only the drill's own throwaway container needs neither). It refuses a dump whose name stamp lies more than `INECEKVAR_RESTORE_FUTURE_MINUTES` (10) in the future or more than `INECEKVAR_RESTORE_MAX_SKEW_HOURS` (6) away from its `LastModified` time (a planted or overwritten dump: investigate, then set `INECEKVAR_RESTORE_OBJECT` to a dump you trust), a checksum mismatch, a file that is not age, a wrong identity ("age could not decrypt ... wrong identity?") and a non-empty target. The backup host holds the public recipient and the writer key, so it can upload a dump that decrypts correctly; the stamp checks, the `backup.verify` change alert and the confirmation are what stand between such a dump and the new primary (ADR-0053 decision 11). Note the dump time in the object name (`inecekvar-YYYYMMDDTHHMMSSZ`): everything after it is missing.
 5. **Check.** `bash ops/backup/restore-drill.sh` runs the same checks on a throwaway copy (Alembic head, published line geometry and stops, TOTP ciphertext, required tables); in an incident run the queries of `drill-checks.sql` against the restored database as well.
 6. **Replay deletions** (next section). Mandatory before step 7.
 7. **Migrate if needed** (`uv run alembic upgrade head` when the code is newer than the dump), point `INECEKVAR_DATABASE_URL` at the restored database, start the API, then the worker.
@@ -91,22 +91,24 @@ Other copies: photos and exports live in versioned buckets (`inecekvar-media`, `
 | --- | --- | --- |
 | Requested before the dump, hard delete after it | user deactivated, `deletion_requests` row `scheduled` | the hourly `deletion.hard_delete` completes it on schedule; `replay-deletions.sh` counts the requests already due |
 | Requested after the dump | user active, no request, traces and favorites back | must be replayed: `replay-deletions.sh` with `INECEKVAR_REPLAY_APPLY=1` |
-| Cancelled after the dump (login in grace) | still `scheduled` | the restored request would erase an account the user kept: review before starting the worker (below) |
+| Requested and cancelled after the dump | user active, no request | the replay list holds the request: give the cancellation in the cancellations list, or the replay re-deactivates an account the user kept |
+| Requested before, cancelled after the dump (login in grace) | still `scheduled` | the restored request would erase an account the user kept: the cancellations list re-applies the cancellation (`replay-cancellation.sql`) |
 
 **Replay procedure.**
 
 1. Build the replay list: one line `<account id> <requested at, UTC ISO 8601>` per deletion request made at or after the dump time. Sources, in order of preference:
    - the old primary, if it is still readable: `SELECT user_id || ' ' || to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') FROM deletion_requests WHERE created_at >= '<dump time>' ORDER BY created_at;`
    - otherwise the API logs: every request logs `auth.account.delete_requested` with `user_id` and its timestamp (log retention 30 days covers the 24-hour window); the `audit_logs` rows `account.delete_requested` are in the database and therefore lost with it.
+   Build the cancellations list the same way: one line `<account id> <cancelled at, UTC ISO 8601>` per cancellation at or after the dump time, from the old primary (`SELECT user_id || ' ' || to_char(cancelled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') FROM deletion_requests WHERE state = 'cancelled' AND cancelled_at >= '<dump time>' ORDER BY cancelled_at;`) or from the API log event `auth.account.delete_cancelled` (`user_id` and `cancelled_at`, no personal data; logged since the phase 6 review). Per account the latest event wins, so a request made again after a cancellation is still replayed.
 2. Run the replay against the restored database:
    ```
-   INECEKVAR_REPLAY_DELETIONS_FILE=replay.txt INECEKVAR_RESTORE_PG_DATABASE=inecekvar_restored \
-   INECEKVAR_REPLAY_APPLY=1 bash ops/backup/replay-deletions.sh
+   INECEKVAR_REPLAY_DELETIONS_FILE=replay.txt INECEKVAR_REPLAY_CANCELLATIONS_FILE=cancellations.txt \
+   INECEKVAR_RESTORE_PG_DATABASE=inecekvar_restored INECEKVAR_REPLAY_APPLY=1 bash ops/backup/replay-deletions.sh
    ```
-   Per account it prints `absent` (registered after the dump: nothing to erase), `carried` (the dump already has the request) or `replayed` (re-applied and verified: deactivated, scheduled 7 days after the original request, sessions and refresh tokens revoked, step-ups, favorites and traces deleted, pending edits withdrawn, an `account.delete_replayed` audit row without personal data). Without `INECEKVAR_REPLAY_APPLY=1` it only flags and exits 1. It is idempotent.
-3. Cancellations after the dump: compare the `scheduled` requests of the restored database with the old primary or with the log events of logins that cancelled (`account.delete_cancelled` audit rows are lost with the primary). Where a user cancelled, set the request to `cancelled` and clear `deactivated_at` by hand, with an audit note, before starting the worker. If no source exists, the residual risk is that an account cancelled within the last 24 hours is erased; record it in the incident.
+   Per account it prints `absent` (registered after the dump: nothing to erase), `carried` (the dump already has the request) or `replayed` (re-applied and verified: deactivated, scheduled 7 days after the original request, sessions and refresh tokens revoked, step-ups, favorites and traces deleted, pending edits withdrawn, an `account.delete_replayed` audit row without personal data), or `cancelled` (the account's latest event is a cancellation: not re-applied; a request the dump carries is cancelled with an `account.delete_cancel_replayed` audit row). Cancellations of accounts that are not in the replay list are printed with `(cancellation)`. Without `INECEKVAR_REPLAY_APPLY=1` it only flags and exits 1. It is idempotent.
+3. **Residual, stated honestly:** the cancellations list is only as complete as its source. If the old primary is gone and the log lines of the window are lost, a user who cancelled after the dump is deactivated again by the restore (request carried) or by the replay (request after the dump) and erased 7 days after the original request unless they sign in again during the grace period. Record any missing source in the incident.
 
-**What the drill proves.** `drill-e2e.sh` seeds `d004` (request before the dump, hard-deleted on the source after it) and records a deletion request for `d005` after the dump. The restore check `scheduled_deletions_keep_immediate_effects` verifies `d004`'s carried request keeps its effects; `deletions_after_dump_reapplied` replays `d005` and verifies the effects, and the negative run `skip-replay` shows the drill fails with `d005 missing` when the replay is skipped.
+**What the drill proves.** `drill-e2e.sh` seeds `d004` (request before the dump, hard-deleted on the source after it), records a deletion request for `d005` after the dump, and a request plus its cancellation for `d003` after the dump. The restore check `scheduled_deletions_keep_immediate_effects` verifies `d004`'s carried request keeps its effects; `deletions_after_dump_reapplied` replays `d005`, leaves `d003` alone (`cancelled`) and requires one state line per list line; a failing `replay-deletions.sh` fails the check and an empty list is a `skip`, never a pass (ADR-0053 decision 11). The negative run `skip-replay` shows the drill fails when the replay is skipped, and `checks.test.sh` kills a replay half-way (a database stand-in that dies on the second account) and shows the check records FAIL. Not exercised against a database: re-applying the cancellation of a request the dump carries (`replay-cancellation.sql`; covered by the fake-database case in `checks.test.sh` only).
 
 ## Drills
 
@@ -124,6 +126,7 @@ Other copies: photos and exports live in versioned buckets (`inecekvar-media`, `
 | Date | Who | Dump | Duration | Result |
 | --- | --- | --- | --- | --- |
 | 2026-10-13 | workstation, `drill-e2e.sh` | scratch | 34 s end to end | passed (ADR-0053) |
+| 2026-10-13 | workstation, `drill-e2e.sh` after the phase 6 review fixes (stamp check, cancellations list, strict replay check) | scratch | about 40 s end to end | passed; the six negative runs each failed on their check (ADR-0053 decision 11) |
 
 ## Monitoring
 

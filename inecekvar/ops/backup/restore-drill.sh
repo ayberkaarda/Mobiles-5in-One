@@ -15,7 +15,9 @@
 #                                          the source fingerprint (INECEKVAR_DRILL_EXPECTED)
 #        deletions_after_dump_reapplied    replay-deletions.sh with INECEKVAR_DRILL_DELETIONS:
 #                                          every request recorded after the dump is re-applied
-#                                          and verified, or the drill fails with it flagged
+#                                          and verified (or cancelled), one state line per list
+#                                          line; a failing replay fails the drill, an empty list
+#                                          is a skip
 #   4. print the table; any FAIL fails the drill
 #   5. remove the container by its exact name (also on failure or interrupt)
 #
@@ -29,6 +31,8 @@
 #                                    comparison row says skip and the RESULT line says so.
 #   INECEKVAR_DRILL_DELETIONS        deletion requests recorded after the dump (format of
 #                                    replay-deletions.sh). Without it the replay row says skip.
+#   INECEKVAR_DRILL_CANCELLATIONS    deletion cancellations recorded after the dump (format of
+#                                    replay-deletions.sh), optional
 #   INECEKVAR_DRILL_REPLAY           1 (default) re-applies missing requests; 0 only flags them
 #   INECEKVAR_DRILL_REQUIRED_TABLES  space-separated, default
 #                                    "alembic_version cities stops lines line_versions line_stops users"
@@ -65,6 +69,7 @@ done
 require_env INECEKVAR_BACKUP_S3_ENDPOINT INECEKVAR_RESTORE_S3_READ_ACCESS_KEY INECEKVAR_RESTORE_S3_READ_SECRET_KEY
 expected="${INECEKVAR_DRILL_EXPECTED:-}"
 deletions="${INECEKVAR_DRILL_DELETIONS:-}"
+cancellations="${INECEKVAR_DRILL_CANCELLATIONS:-}"
 replay="${INECEKVAR_DRILL_REPLAY:-1}"
 required_tables="${INECEKVAR_DRILL_REQUIRED_TABLES:-alembic_version cities stops lines line_versions line_stops users}"
 expected_head="${INECEKVAR_DRILL_EXPECTED_HEAD:-}"
@@ -74,6 +79,9 @@ if [ -n "${expected}" ] && [ ! -s "${expected}" ]; then
 fi
 if [ -n "${deletions}" ] && [ ! -f "${deletions}" ]; then
   die_config "INECEKVAR_DRILL_DELETIONS is not a file"
+fi
+if [ -n "${cancellations}" ] && [ ! -f "${cancellations}" ]; then
+  die_config "INECEKVAR_DRILL_CANCELLATIONS is not a file"
 fi
 for table in ${required_tables}; do
   check_identifier INECEKVAR_DRILL_REQUIRED_TABLES "${table}"
@@ -153,12 +161,18 @@ fi
 
 if [ -n "${deletions}" ]; then
   echo "dump time: $(dump_stamp_iso "${object}")"
+  # The exit status is part of the check: a replay that dies half-way must fail the drill even
+  # when the lines it wrote before dying are all good (phase 6 review F4).
+  set +e
   INECEKVAR_REPLAY_DELETIONS_FILE="${deletions}" INECEKVAR_REPLAY_APPLY="${replay}" \
+    INECEKVAR_REPLAY_CANCELLATIONS_FILE="${cancellations}" \
     INECEKVAR_REPLAY_STATE_FILE="${work_dir}/replay.txt" \
     INECEKVAR_RESTORE_PG_CONTAINER="${db_container}" INECEKVAR_RESTORE_PG_USER="${db_user}" \
-    INECEKVAR_RESTORE_PG_DATABASE=restored bash "${script_dir}/replay-deletions.sh" || true
-  [ -f "${work_dir}/replay.txt" ] || printf 'replay-deletions.sh unverified\n' >"${work_dir}/replay.txt"
-  check_deletion_replay "${work_dir}/replay.txt" || true
+    INECEKVAR_RESTORE_PG_DATABASE=restored bash "${script_dir}/replay-deletions.sh"
+  replay_status=$?
+  set -e
+  [ -f "${work_dir}/replay.txt" ] || : >"${work_dir}/replay.txt"
+  check_deletion_replay "${work_dir}/replay.txt" "${deletions}" "${replay_status}" || true
 else
   check_record deletions_after_dump_reapplied skip "INECEKVAR_DRILL_DELETIONS not set"
 fi

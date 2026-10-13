@@ -7,6 +7,7 @@
 --   d004 is erased as the hourly hard delete would after its grace: the user row and its request
 --        disappear from the source. The dump still holds the due request, which the restored
 --        worker completes; the drill checks that request keeps its immediate effects.
+--   d003 asks for deletion and cancels it (below).
 BEGIN;
 UPDATE public.users SET deactivated_at = now(), updated_at = now()
 WHERE id = '01990000-0000-7000-8000-00000000d005';
@@ -22,6 +23,13 @@ UPDATE public.edits SET state = 'withdrawn', updated_at = now()
 WHERE author_id = '01990000-0000-7000-8000-00000000d005' AND state = 'pending';
 INSERT INTO public.audit_logs (id, actor_id, action, target_type, target_id)
 VALUES (gen_random_uuid(), NULL, 'account.delete_requested', 'user', '01990000-0000-7000-8000-00000000d005');
+
+-- d003 asks for deletion and then cancels by signing in during the grace period, both after the
+-- dump: the dump still has d003 active, the replay list holds its request and the cancellations
+-- list its cancellation, so the replay must leave d003 alone (state "cancelled").
+INSERT INTO public.deletion_requests (id, user_id, state, scheduled_for, created_at, updated_at, cancelled_at)
+VALUES (gen_random_uuid(), '01990000-0000-7000-8000-00000000d003', 'cancelled', now() + interval '7 days', now(),
+        now() + interval '1 second', now() + interval '1 second');
 
 UPDATE public.audit_logs SET target_id = NULL
 WHERE target_type = 'user' AND target_id = '01990000-0000-7000-8000-00000000d004';
