@@ -38,10 +38,11 @@ public sealed class AdminAuthorizationTests
         [
             (HttpMethod.Get, "/queue?type=invalid", null, false, HttpStatusCode.BadRequest),
             (HttpMethod.Post, "/decisions", new AdminDecisionRequest("bad", user, "bad", null), false, HttpStatusCode.BadRequest),
-            (HttpMethod.Post, "/step-up", new StepUpRequest("000000", "bad"), false, HttpStatusCode.BadRequest),
+            (HttpMethod.Post, "/step-up", new StepUpRequest("000000", "bad", "bad", "bad"), false, HttpStatusCode.BadRequest),
             (HttpMethod.Get, "/users?q=bad", null, true, HttpStatusCode.BadRequest),
             (HttpMethod.Post, $"/users/{user}/role", new AdminRoleRequest("bad"), true, HttpStatusCode.BadRequest),
             (HttpMethod.Post, $"/users/{user}/suspend", new AdminSuspendRequest(null, "bad"), true, HttpStatusCode.BadRequest),
+            (HttpMethod.Post, $"/users/{user}/unsuspend", new AdminUnsuspendRequest("bad"), true, HttpStatusCode.BadRequest),
             (HttpMethod.Get, "/audit?cursor=invalid", null, true, HttpStatusCode.BadRequest),
             (HttpMethod.Post, "/care-places/csv/preview", new { }, true, HttpStatusCode.UnsupportedMediaType),
             (HttpMethod.Post, "/care-places/csv/commit", new { }, true, HttpStatusCode.UnsupportedMediaType),

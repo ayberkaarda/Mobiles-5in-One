@@ -53,7 +53,8 @@ internal sealed class AdminTestRig : IAsyncDisposable
     };
 
     public TotpService Totp(PatikaDbContext db) => new(db, Protection, Factory.Services.GetRequiredService<EmailCodeHasher>(),
-        Factory.Services.GetRequiredService<IAccessTokenIssuer>(), Options.Create(new JwtSettings()), Clock);
+        Factory.Services.GetRequiredService<IAccessTokenIssuer>(), Options.Create(new JwtSettings()), Clock,
+        Factory.Services.GetRequiredService<Patika.Api.Security.RateLimiting.TotpRateLimiter>());
 
     public AdminHandlers Handlers(PatikaDbContext db) => new(db, Totp(db), Factory.Services.GetRequiredService<EmailCodeHasher>(),
         Factory.Services.GetRequiredService<AdminPhotoUrls>(), Clock);
@@ -72,10 +73,10 @@ internal sealed class AdminTestRig : IAsyncDisposable
         return http;
     }
 
-    public async Task<string> StepAsync(PatikaDbContext db, User user, Guid? session = null)
+    public async Task<string> StepAsync(PatikaDbContext db, User user, string action, object target, Guid? session = null)
     {
         Clock.Now = Clock.Now.AddSeconds(30);
-        var result = await Totp(db).StepUpAsync(Http(user, session).User, new StepUpRequest(Code, "Review for safety"), TestContext.Current.CancellationToken);
+        var result = await Totp(db).StepUpAsync(Http(user, session).User, new StepUpRequest(Code, "Review for safety", action, target.ToString()!), TestContext.Current.CancellationToken);
         return ((Microsoft.AspNetCore.Http.HttpResults.Ok<StepUpResponse>)result).Value!.StepUpToken;
     }
 

@@ -60,7 +60,7 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         var restore = new AdminDecisionRequest("urgent", target, "Restored", null);
         Assert.Equal(403, Status(await h.DecideAsync(rig.Http(moderator), restore, Ct)));
         var http = rig.Http(moderator);
-        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, moderator);
+        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, moderator, StepUpActions.RestoreUrgent, target);
         Assert.Equal(204, Status(await h.DecideAsync(http, restore, Ct)));
         var audit = await db.AuditLogs.OrderByDescending(x => x.CreatedAt).FirstAsync(x => x.TargetId == target, Ct);
         Assert.Contains("Review for safety", audit.DetailsJson);
@@ -103,7 +103,7 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         var h = rig.Handlers(db);
         Assert.Equal(409, Status(await h.RoleAsync(rig.Http(admin), admin.Id, new AdminRoleRequest("User"), Ct)));
         var http = rig.Http(admin);
-        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin);
+        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin, StepUpActions.RoleChange, target.Id);
         Assert.Equal(409, Status(await h.RoleAsync(http, target.Id, new AdminRoleRequest("Moderator"), Ct)));
         var exact = Assert.IsType<Ok<List<AdminUser>>>(await h.UsersAsync(target.Email, Ct)).Value!;
         Assert.Single(exact);
@@ -134,7 +134,7 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         var http = rig.Http(admin);
         if (scenario != "missing")
         {
-            var code = await rig.StepAsync(db, scenario == "other_user" ? other : admin,
+            var code = await rig.StepAsync(db, scenario == "other_user" ? other : admin, StepUpActions.Suspend, target.Id,
                 scenario == "other_session" ? Guid.NewGuid() : null);
             http.Request.Headers["X-Step-Up"] = code;
         }
@@ -142,26 +142,6 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         var request = new AdminSuspendRequest(null, "Reviewed for safety");
         if (scenario == "reused") Assert.Equal(204, Status(await rig.Handlers(db).SuspendAsync(http, target.Id, request, Ct)));
         Assert.Equal(403, Status(await rig.Handlers(db).SuspendAsync(http, target.Id, request, Ct)));
-    }
-
-    [Fact]
-    public async Task AnAdmittedRequestCannotRemoveTheLastAdminAfterTheCallerIsDemoted()
-    {
-        await using var rig = new AdminTestRig(database);
-        await using var db = database.CreateContext();
-        await db.Users.Where(u => u.Role == UserRole.Admin).ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, UserRole.User), Ct);
-        var caller = rig.User(UserRole.Admin);
-        var lastAdmin = rig.User(UserRole.Admin);
-        db.Users.AddRange(caller, lastAdmin);
-        await db.SaveChangesAsync(Ct);
-        var admitted = rig.Http(caller);
-        admitted.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, caller);
-        caller.Role = UserRole.User;
-        await db.SaveChangesAsync(Ct);
-        var response = await rig.Handlers(db).RoleAsync(admitted, lastAdmin.Id, new AdminRoleRequest("User"), Ct);
-        Assert.Equal(409, Status(response));
-        Assert.Contains("last_admin_protected", Assert.IsType<ProblemHttpResult>(response).ProblemDetails.Extensions["code"]!.ToString());
-        Assert.Equal(UserRole.Admin, (await db.Users.FindAsync([lastAdmin.Id], Ct))!.Role);
     }
 
     [Fact]
@@ -187,10 +167,10 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         var preview = Assert.IsType<Ok<CarePlacePreview>>(await rig.Handlers(db).CsvAsync(http, false, Ct)).Value!;
         Assert.Equal(before, await db.CarePlaces.CountAsync(Ct));
         Form(preview.PreviewHash);
-        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin);
+        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin, StepUpActions.CsvCommit, preview.PreviewHash);
         var first = Assert.IsType<Ok<CarePlaceCommit>>(await rig.Handlers(db).CsvAsync(http, true, Ct)).Value!;
         Assert.Equal(1, first.Inserted);
-        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin);
+        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, admin, StepUpActions.CsvCommit, preview.PreviewHash);
         var second = Assert.IsType<Ok<CarePlaceCommit>>(await rig.Handlers(db).CsvAsync(http, true, Ct)).Value!;
         Assert.True(second.AlreadyCommitted);
         Assert.Equal(before + 1, await db.CarePlaces.CountAsync(Ct));
@@ -199,26 +179,7 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         Assert.Equal("+90 212 123 45 67", place.Phone);
     }
 
-    [Fact]
-    public async Task SuspendedAdminsDoNotCountTowardsTheLastActiveAdmin()
-    {
-        await using var rig = new AdminTestRig(database);
-        await using var db = database.CreateContext();
-        await db.Users.Where(u => u.Role == UserRole.Admin).ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, UserRole.User), Ct);
-        var caller = rig.User(UserRole.Admin);
-        var target = rig.User(UserRole.Admin);
-        db.Users.AddRange(caller, target);
-        await db.SaveChangesAsync(Ct);
-        var http = rig.Http(caller);
-        http.Request.Headers["X-Step-Up"] = await rig.StepAsync(db, caller);
-        caller.SuspendedUntil = rig.Clock.Now.AddDays(1);
-        await db.SaveChangesAsync(Ct);
-        var response = await rig.Handlers(db).RoleAsync(http, target.Id, new AdminRoleRequest("User"), Ct);
-        Assert.Equal(409, Status(response));
-        Assert.Contains("last_admin_protected", Assert.IsType<ProblemHttpResult>(response).ProblemDetails.Extensions["code"]!.ToString());
-    }
-
-    private static async Task<Guid> TargetAsync(PatikaDbContext db, Guid author, string type)
+    internal static async Task<Guid> TargetAsync(PatikaDbContext db, Guid author, string type)
     {
         Entity entity;
         if (type is "adoption" or "photo")
@@ -260,7 +221,7 @@ public sealed class AdminPersistenceTests(FeaturePostgisFixture database) : ICla
         return entity.Id;
     }
 
-    private static int? Status(IResult result) => (result as IStatusCodeHttpResult)?.StatusCode;
+    internal static int? Status(IResult result) => (result as IStatusCodeHttpResult)?.StatusCode;
     private sealed class FailAfterSave : SaveChangesInterceptor
     {
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) =>
