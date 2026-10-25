@@ -1,12 +1,14 @@
 @page "/hesap-silme"
 @model Patika.Web.Pages.Legal.HesapSilmeModel
-<link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
 <div class="doc">
     <partial name="_LegalTabs" model="@("/hesap-silme")" />
     <div class="delete">
         <div class="delete__main">
             <h1 class="doc-title doc-title--page">Patika hesabını sil</h1>
-            <p class="delete__lede">Hesabını Patika uygulamasından silebilirsin. Hesabın hemen kapanır; 7 gün boyunca yeniden giriş yaparak vazgeçebilirsin. 7 gün dolunca hesabın ve kişisel verilerin kalıcı olarak silinir.</p>
+            <p class="delete__lede">Hesabını Patika uygulamasından silebilirsin. Hesabın hemen kapanır; 7 gün boyunca yeniden giriş yaparak vazgeçebilirsin, ama takiplerin ve açık sahiplendirme ilanların geri gelmez. 7 gün dolunca hesabın ve kişisel verilerin kalıcı olarak silinir.</p>
 
             <section class="delete__app" aria-labelledby="uygulamadan">
                 <h2 id="uygulamadan">Uygulamadan</h2>
@@ -21,8 +23,8 @@
             <section aria-labelledby="sure">
                 <h2 id="sure" class="delete__h2">Silme nasıl ilerler?</h2>
                 <ol class="timeline">
-                    <li class="timeline__step timeline__step--now"><strong>Hemen:</strong> hesabın kapanır, tüm oturumların sonlanır, e-posta adresine bir onay e-postası gelir.</li>
-                    <li class="timeline__step timeline__step--grace"><strong>7 gün içinde:</strong> yeniden giriş yaparsan silme iptal olur ve her şey olduğu gibi kalır.</li>
+                    <li class="timeline__step timeline__step--now"><strong>Hemen:</strong> hesabın kapanır ve tüm oturumların sonlanır. Takip ettiğin hayvanlar ve bildirim cihaz kayıtların silinir, yayında ya da onay bekleyen sahiplendirme ilanların kapatılır. E-posta adresine bir onay e-postası gelir.</li>
+                    <li class="timeline__step timeline__step--grace"><strong>7 gün içinde:</strong> yeniden giriş yaparsan silme iptal olur ve hesabın yeniden açılır. Silinen takipler ve kapatılan ilanlar geri gelmez; ilanı yeniden açman, hayvanları yeniden takip etmen gerekir. Bildirimler için uygulama, giriş yaptığında cihazını yeniden kaydeder.</li>
                     <li class="timeline__step timeline__step--final"><strong>7 gün sonra:</strong> hesabın ve kişisel verilerin kalıcı olarak silinir.</li>
                 </ol>
             </section>

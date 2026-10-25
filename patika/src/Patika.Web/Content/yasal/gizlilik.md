@@ -27,9 +27,13 @@ Sürüm 0.1 (taslak). Yürürlük tarihi [YÜRÜRLÜK TARİHİ]. Bu politika Pat
 
 ## Konumunuzu nasıl koruyoruz? {#konum}
 
-Uygulama konumunuzu yalnızca siz bir istasyon eklerken, besleme kaydederken veya acil yardım çağrısı açarken ve yalnızca uygulama açıkken kullanır. Bu konum kaydın yeri olarak saklanır; profilinize yazılmaz.
+Uygulama konumunuzu yalnızca uygulama açıkken, o anda ve sizin başlattığınız bir işlem için telefonunuzda alır; arka planda konum alınmaz ve konumunuz profilinize yazılmaz. Kullanıldığı yerler:
 
-Web sitesinde istasyon konumları yaklaşık 100 metreye yuvarlanmış olarak gösterilir. Acil yardım çağrılarının ve hayvanların konumu, gönüllülerin ev bölgeleri sitede hiçbir zaman yayımlanmaz. Sunucu kayıtlarında koordinatlar yuvarlanır.
+- **Haritayı size göre ortalamak:** konum düğmesine dokunduğunuzda harita konumunuza ortalanır. Sunucudan istasyonlar istenirken konumunuz gönderilmez; yalnızca çevrenizdeki yaklaşık 1 km'lik (0,01 derecelik) harita kareleri istenir.
+- **Yakındaki acil çağrıları ve bakım yerlerini görmek:** o anki konumunuz bu tek arama için sunucuya gönderilir ve saklanmaz.
+- **Kayıt oluşturmak:** bir istasyon eklerken, besleme kaydederken veya acil yardım çağrısı açarken seçtiğiniz yer o kaydın yeri olarak saklanır.
+
+Web sitesinde istasyonların koordinatları gösterilmez; yalnızca bulundukları ilçe görünür. Acil yardım çağrılarının ve hayvanların konumu, gönüllülerin ev bölgeleri sitede hiçbir zaman yayımlanmaz. Sunucu kayıtlarında koordinatlar yuvarlanır.
 
 ## Fotoğraflarınıza ne oluyor? {#fotograflar}
 
@@ -45,7 +49,7 @@ Sahiplendirme başvurusu yaptığınızda başvuru mesajınız ilan sahibine ile
 
 ## Verilerinizi nasıl silersiniz? {#silme}
 
-Uygulamada Profil > Ayarlar > Hesabımı sil yolunu izleyin. Hesabınız hemen kapanır; 7 gün içinde yeniden giriş yaparsanız silme iptal olur. 7 gün sonra hesabınız ve kişisel verileriniz kalıcı olarak silinir. Ayrıntılar ve uygulamanız yoksa izleyeceğiniz yol [hesap silme sayfasında](/hesap-silme).
+Uygulamada Profil > Ayarlar > Hesabımı sil yolunu izleyin. Hesabınız hemen kapanır; 7 gün içinde yeniden giriş yaparsanız silme iptal olur ve hesabınız yeniden açılır; ancak takipleriniz ve bildirim cihaz kayıtlarınız silme isteğiyle birlikte silinir, açık sahiplendirme ilanlarınız kapatılır ve bunlar geri getirilmez. 7 gün sonra hesabınız ve kişisel verileriniz kalıcı olarak silinir. Ayrıntılar ve uygulamanız yoksa izleyeceğiniz yol [hesap silme sayfasında](/hesap-silme).
 
 ## Çocuklar {#cocuklar}
 

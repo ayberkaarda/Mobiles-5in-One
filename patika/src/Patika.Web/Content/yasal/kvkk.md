@@ -23,7 +23,7 @@ Patika yalnızca uygulamanın çalışması için gereken verileri işler:
 - **Doğrulama kodları ve oturum bilgileri:** e-posta doğrulama ve şifre sıfırlama için gönderilen 6 haneli kodlar yalnızca anahtarlı bir özet olarak, 15 dakika geçerli tutulur. Oturum yenileme anahtarları da yalnızca özet olarak saklanır.
 - **Paylaştığınız içerik:** eklediğiniz istasyonlar, hayvan kayıtları, besleme ve görülme kayıtları, notlar, sahiplendirme ilanları ve başvuruları, acil yardım çağrıları, bildirimler (şikâyetler) ve fotoğraflar.
 - **Fotoğraflar:** fotoğrafların konum (GPS), cihaz ve zaman bilgisi dahil tüm meta verileri telefonunuzda silinir; sunucuya yalnızca görüntünün kendisi ulaşır.
-- **Konum:** yalnızca bir istasyon eklerken, besleme kaydederken veya acil yardım çağrısı açarken o kaydın yeri olarak işlenir. Konumunuz profilinizde saklanmaz ve arka planda konum alınmaz. Acil bildirimleri açarsanız seçtiğiniz yaklaşık ev bölgesi, yaklaşık 100 metreye yuvarlanmış olarak saklanır; bildirimleri kapattığınızda silinir.
+- **Konum:** yalnızca uygulama açıkken, o anda ve sizin başlattığınız bir işlem için telefonunuzda alınır: haritayı size göre ortalamak (sunucuya konumunuz değil, yaklaşık 1 km'lik harita kareleri gönderilir), yakındaki acil çağrıları ve bakım yerlerini aramak (o anki konum bu arama için gönderilir, saklanmaz) ve bir istasyon eklerken, besleme kaydederken veya acil yardım çağrısı açarken o kaydın yeri olarak saklanmak. Konumunuz profilinizde saklanmaz ve arka planda konum alınmaz. Acil bildirimleri açarsanız seçtiğiniz yaklaşık ev bölgesi, yaklaşık 100 metreye yuvarlanmış olarak saklanır; bildirimleri kapattığınızda silinir.
 - **Bildirim için cihaz bilgisi:** acil yardım bildirimleri için cihazınızın bildirim belirteci ve uygulama kurulum kimliği.
 - **Güvenlik kayıtları:** kötüye kullanımı önlemek için istek sayıları, moderasyon kararları ve yönetim işlemlerinin denetim kaydı. Sunucu kayıtlarında şifre, anahtar ve oturum bilgileri maskelenir, koordinatlar yuvarlanır.
 
@@ -47,12 +47,12 @@ Kişisel verileriniz satılmaz ve reklam amacıyla paylaşılmaz. Hizmetin çal�
 
 [YURT DIŞINA AKTARIM DURUMU VE KVKK MADDE 9 KAPSAMINDAKİ DAYANAK]
 
-Herkese açık sayfalarda gönüllülerin adı, e-postası veya kimliği gösterilmez. İstasyon konumları yaklaşık 100 metreye yuvarlanır; acil yardım çağrılarının ve hayvanların konumu web sitesinde yayımlanmaz.
+Herkese açık sayfalarda gönüllülerin adı, e-postası veya kimliği gösterilmez. İstasyonların koordinatları gösterilmez, yalnızca ilçeleri görünür; acil yardım çağrılarının ve hayvanların konumu web sitesinde yayımlanmaz.
 
 ## 5. Ne kadar süre saklıyoruz? {#sure}
 
 - **Hesap verileri:** hesabınız açık kaldığı sürece.
-- **Hesap silme:** hesabınızı sildiğinizde hesabınız hemen kapanır. 7 gün içinde yeniden giriş yapmazsanız hesabınız ve kişisel verileriniz kalıcı olarak silinir. Besleme ve görülme kayıtlarınız istasyon geçmişi korunsun diye silinmez; sizinle bağlantısı kesilir, not ve fotoğrafları silinir. Eklediğiniz istasyonlar ve hayvan kayıtları haritada kalır, fotoğrafları silinir.
+- **Hesap silme:** hesabınızı sildiğinizde hesabınız hemen kapanır; takipleriniz ve bildirim cihaz kayıtlarınız hemen silinir, açık sahiplendirme ilanlarınız kapatılır. 7 gün içinde yeniden giriş yaparsanız hesabınız yeniden açılır, ancak bunlar geri getirilmez. 7 gün içinde yeniden giriş yapmazsanız hesabınız ve kişisel verileriniz kalıcı olarak silinir. Besleme ve görülme kayıtlarınız istasyon geçmişi korunsun diye silinmez; sizinle bağlantısı kesilir, not ve fotoğrafları silinir. Eklediğiniz istasyonlar ve hayvan kayıtları haritada kalır, fotoğrafları silinir.
 - **Doğrulanmamış hesaplar:** e-postası 7 gün içinde doğrulanmayan kayıtlar silinir.
 - **Doğrulama kodları:** 15 dakika geçerlidir.
 - **Sahiplendirme ilanları:** yayımdan 60 gün sonra ya da hayvan yuvasına kavuştuğunda kapanır.

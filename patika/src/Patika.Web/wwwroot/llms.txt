@@ -3,7 +3,7 @@
 > Patika, sokak kedileri ve köpekleri için mahalle gönüllülerini buluşturan bir uygulama (önce Android, İstanbul'da başlıyor). Gönüllüler mama ve su istasyonlarını haritada görür, beslediklerinde "Beslendi" der; sahiplendirme ilanları, acil yardım çağrıları ve bakım yerleri de aynı yerde. Bu site herkese açık sahiplendirme ilanlarını, ilçe istasyon özetlerini, bakım yerlerini, haftalık etki sayılarını ve rehber yazılarını yayımlar.
 
 Notlar:
-- Site Türkçedir. Gönüllülerin adı, e-postası veya kimliği hiçbir sayfada yer almaz; istasyon konumları yaklaşık 100 metreye yuvarlanır.
+- Site Türkçedir. Gönüllülerin adı, e-postası veya kimliği hiçbir sayfada yer almaz; istasyonların koordinatları yayımlanmaz, yalnızca ilçeleri görünür.
 - Sahiplendirme ilanları moderasyondan geçer ve 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır.
 - Rehberler genel bilgi verir, veteriner muayenesinin yerini tutmaz.
 

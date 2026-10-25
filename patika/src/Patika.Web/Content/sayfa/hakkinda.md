@@ -22,7 +22,7 @@ Her mahallede sokak hayvanlarını besleyen, su bırakan, yaralı bir hayvanı v
 
 ## Gizliliği nasıl koruyoruz? {#gizlilik}
 
-Patika'yı gönüllüler için güvenli tutmak en baştan verdiğimiz bir karar. Konumun profilinde saklanmaz. Fotoğraflarının konum bilgisi telefonda silinir, sunucuya hiç gelmez. Web sitesinde gönüllülerin adı ya da kimliği gösterilmez ve istasyon konumları yaklaşık 100 metreye yuvarlanır. Ayrıntılar [gizlilik politikasında](/gizlilik).
+Patika'yı gönüllüler için güvenli tutmak en baştan verdiğimiz bir karar. Konumun profilinde saklanmaz. Fotoğraflarının konum bilgisi telefonda silinir, sunucuya hiç gelmez. Web sitesinde gönüllülerin adı ya da kimliği gösterilmez ve istasyonların koordinatları gösterilmez, yalnızca ilçeleri görünür. Ayrıntılar [gizlilik politikasında](/gizlilik).
 
 ## Rakamlar nereden geliyor? {#rakamlar}
 

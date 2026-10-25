@@ -12,7 +12,7 @@ faq:
   - q: Uygulama hangi telefonlarda çalışıyor?
     a: Patika önce Android için hazırlanıyor. Google Play'de yayımlandığında ana sayfadan duyuracağız; iPhone sürümü daha sonra gelecek.
   - q: Konumum saklanıyor mu?
-    a: Hayır, konumun profilinde saklanmaz ve uygulama arka planda konum almaz. Konum yalnızca istasyon eklerken, besleme kaydederken ya da acil yardım çağrısı açarken o kaydın yeri olarak kullanılır. Acil bildirimleri açarsan seçtiğin yaklaşık ev bölgesi yuvarlanarak saklanır; bildirimleri kapatınca silinir.
+    a: Hayır, konumun profilinde saklanmaz ve uygulama arka planda konum almaz. Konum yalnızca uygulama açıkken ve senin başlattığın bir iş için alınır: haritayı sana göre ortalamak (sunucuya konumun değil, yaklaşık 1 km'lik harita kareleri gider), yakındaki acil çağrıları ve bakım yerlerini aramak (o anki konum bu arama için gönderilir, saklanmaz) ve istasyon eklerken, besleme kaydederken ya da acil yardım çağrısı açarken o kaydın yeri olarak. Acil bildirimleri açarsan seçtiğin yaklaşık ev bölgesi yuvarlanarak saklanır; bildirimleri kapatınca silinir.
   - q: Fotoğraflarımdaki konum bilgisi ne oluyor?
     a: Fotoğraflarının konum, zaman ve cihaz bilgisi yüklenmeden önce telefonunda silinir; sunucuya yalnızca görüntünün kendisi ulaşır.
   - q: Beslediğimi başkaları görebilir mi?
@@ -24,6 +24,6 @@ faq:
   - q: Bakım yerleri listesindeki bilgiler doğru mu?
     a: Listeyi güncel tutmaya çalışıyoruz; doğrulanmış yerler ayrıca işaretlidir. Yine de çalışma saatleri değişebilir, yola çıkmadan önce telefonla teyit etmeni öneririz.
   - q: Hesabımı nasıl silerim?
-    a: Uygulamada Profil, ardından Ayarlar ve Hesabımı sil. Hesabın hemen kapanır, 7 gün içinde yeniden giriş yaparsan silme iptal olur, 7 gün sonra kalıcı olarak silinir. Uygulaman yoksa hesap silme sayfasındaki yolu izle.
+    a: Uygulamada Profil, ardından Ayarlar ve Hesabımı sil. Hesabın hemen kapanır, 7 gün içinde yeniden giriş yaparsan silme iptal olur (takiplerin ve kapatılan ilanların geri gelmez), 7 gün sonra kalıcı olarak silinir. Uygulaman yoksa hesap silme sayfasındaki yolu izle.
 ---
 Aradığın cevabı bulamadıysan [iletişim sayfasından](/iletisim) bize ulaşabilir, sokak hayvanlarına yardım konusunda [rehber yazılarına](/rehber) göz atabilirsin.
