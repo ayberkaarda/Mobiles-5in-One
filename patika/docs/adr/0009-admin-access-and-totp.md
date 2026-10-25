@@ -18,17 +18,27 @@ spaces and dashes are ignored when they are typed.
 Serialize verification on the user row. Persist the greatest accepted TOTP step and reject older
 or equal steps. Five failures within fifteen minutes lock all verification paths for fifteen
 minutes, across contexts and API instances. Successful verification does not clear the failure
-budget. The existing per-IP auth limiter also covers TOTP routes.
+budget. Attempts during a lockout are audited as `totp.failure_locked` without counting; refused MFA
+challenges (used, expired, stale session version, suspended or demoted user) are audited as
+`totp.mfa_rejected`. TOTP routes (`/auth/mfa`, `/me/totp/*`, `/admin/step-up`) have their own per-user
+budget of 20 verifications per 15 minutes, keyed by the bearer subject or, on `/auth/mfa`, by the user
+the challenge belongs to, plus a loose ceiling of 100 per 15 minutes per client IP. They no longer
+share the 5-per-15-minutes login bucket. The Patika.Web BFF calls the API server-side from one
+address, so that ceiling is shared by every admin unless the API trusts the Web host as a proxy
+(`Network:KnownProxies`) and Web forwards the browser address in `X-Forwarded-For`; without that,
+the per-user budget and the persisted lockout are the effective controls.
 
 Use opaque 256-bit MFA and step-up tokens, storing SHA-256 digests in `admin_access_tokens`.
 Both expire in five minutes and carry user, session id and session version bindings. MFA tokens
 reserve a session family without issuing a refresh token; completion consumes the challenge and
 creates the refresh token atomically. Step-up tokens are conditionally consumed inside the action
 transaction, so a failed action rolls consumption back. Each successful sensitive action needs
-a distinct token. The token's reason is retained in the step-up audit and in the action audit,
-separate from the content moderation reason. An MFA sign-in issues `amr` with the first factor
-(`pwd`, `fed` or `email`) plus `mfa`, so existing recent sign-in checks keep working for elevated
-users. Refresh retains only `mfa` and the original authentication time, never a new time, so a
+a distinct token. `POST /admin/step-up {code, reason, action, targetId}` binds the token to one action
+(`RoleChange`, `Suspend`, `Unsuspend`, `CsvCommit`, `RestoreUrgent`) and one target (user id, urgent
+post id or CSV preview hash); a token is refused for any other action or target. The token's
+reason is retained in the step-up audit and in the action audit, separate from the content
+moderation reason. An MFA sign-in issues `amr` with the first factor (`pwd`, `fed` or `email`)
+plus `mfa`, so existing recent sign-in checks keep working for elevated users. Refresh retains only `mfa` and the original authentication time, never a new time, so a
 refreshed token keeps admin access but never passes a recent sign-in check.
 
 `Admin.Moderate` requires Moderator/Admin plus `amr=mfa`; `Admin.Manage` requires Admin plus MFA.
@@ -36,16 +46,37 @@ Bearer authentication already reads the current user and role from the database 
 Demotion therefore takes effect on the next request without waiting for the session-version cache.
 Role changes, suspensions and TOTP disable also increment the session version and revoke refresh
 families. Elevated roles cannot disable TOTP. Promotion requires confirmed TOTP on the target.
-The last-admin rule counts only active admins (not suspended, not deactivated).
+The last-admin rule counts only active admins (not suspended, not deactivated) and also refuses
+account deletion by the last active admin (409 `last_admin_protected`), under the same advisory lock.
+Authorization runs before that lock, so every admin write (decisions, role, suspend, unsuspend, CSV
+commit, urgent restore) re-reads and locks the caller row inside its transaction and checks the
+current role for the route policy, suspension, deactivation and session version against the token
+before it consumes a step-up token or changes anything; otherwise it answers 403
+`admin_access_revoked` and writes nothing. `POST /admin/users/{id}/unsuspend {reason}` (Admin.Manage
+and step-up) ends a suspension and is audited as `user.unsuspend`; `suspend` refuses an `until` in the
+past or earlier than a running suspension with 400, so shortening never lifts one silently.
 
 Administrative writes serialize with a PostgreSQL transaction advisory lock, including last-admin
 checks and CSV file-hash idempotency. Content changes, moderation decisions and audit entries commit
 together. Audit entries have the same SaveChanges append-only guard as moderation decisions; there
 is no admin update/delete endpoint. Existing account-deletion foreign keys may anonymize actor ids.
 
-Report Approved maps Pending to Reviewed; Rejected maps Pending to Dismissed. Adoption/photo review
-only accepts pending records. Urgent Hidden/Restored toggles visibility independently of its help
-state. The urgent queue deliberately ignores the public hidden filter and includes the last 30 days.
+Decision transitions (anything else is 409 `transition_invalid`; Rejected and Hidden need a reason):
+
+| Target | From | Decision | To |
+| --- | --- | --- | --- |
+| adoption | Pending | Approved / Rejected | Published / Rejected |
+| adoption | Published | Rejected (takedown) | Rejected |
+| photo | Pending | Approved / Rejected | Approved / Rejected |
+| photo | Approved | Rejected (takedown) | Rejected |
+| report | Pending | Approved / Rejected | Reviewed / Dismissed |
+| urgent | visible | Hidden | hidden |
+| urgent | hidden | Restored (step-up) | visible |
+
+The takedown rows let a confirmed report remove live content; the audit records the previous state.
+Rejected content never returns to Published through moderation. Urgent Hidden/Restored toggles
+visibility independently of its help state. The urgent queue deliberately ignores the public hidden
+filter and includes the last 30 days.
 Queues and audit pages use descending `(created_at, id)` cursors with 25 items, fetching one lookahead.
 
 The worker deletes raw `incoming/` objects after producing sanitized renditions. Pending photos
@@ -64,5 +95,28 @@ hashes deduplicate commits. The old direct CSV import route is removed to preven
 
 Normal users retain the existing 200 sign-in flow. Elevated users without TOTP can sign in and enrol
 but receive `mfa_required` from admin routes. Administrative and authentication responses are no-store.
-Suspension without an `until` has no automatic end. Imports and role checks favor simple serialized
+Suspension without an `until` has no automatic end; it ends through unsuspend. Imports and role checks favor simple serialized
 writes over maximum throughput. No authenticator package is added.
+
+Account purge clears the TOTP secret, enrolment, step and lockout counters and the suspension, and
+deletes the user's recovery codes and admin access tokens. The hourly maintenance job deletes admin
+access tokens (MFA challenges and step-up tokens) that expired more than a day ago.
+
+## Known limits
+
+Accepted for now; phase 6 hardening revisits them.
+
+- The append-only audit guard is EF SaveChanges-level only. `ExecuteUpdate`/`ExecuteDelete` or raw SQL
+  on `audit_logs` would bypass it; no code path does today. DB-level enforcement (trigger or a
+  restricted runtime role) is phase 6 hardening.
+- One advisory lock serializes every admin write, so a large CSV commit delays moderation decisions.
+- Role changes, suspensions, unsuspensions and CSV commits also write `ModerationDecision` rows
+  (target types `user` and `care_place_import`); queries over decisions must filter by target type.
+- Queue author ids are opaque, so an admin cannot go from a queue item to the author's account.
+- No email is sent on TOTP enrolment/disable, role change or suspension, and there is no admin
+  "reset TOTP" action; a privileged user who loses the authenticator and the recovery codes needs
+  demotion, re-enrolment and re-promotion. The last admin has only direct database access.
+- `/auth/mfa` and `/me/totp/*` are not attached to the `Permission.AuthSession` matrix entry; that
+  permission is allowed for every role, so behaviour is the same.
+- A correct password for an enrolled Moderator/Admin returns 202 instead of 200, which tells the
+  password holder the account is elevated.

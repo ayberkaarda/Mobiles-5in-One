@@ -35,10 +35,18 @@ The system includes the .NET MAUI mobile client, Minimal API, Razor Pages site a
 - Moderation privilege escalation or unauthorized care-place changes.
 - MFA replay and parallel guesses: user-row locking, monotonic accepted steps, persisted five-failure
   lockout across all TOTP paths, and single-use recovery-code hashes. MFA and step-up challenge hashes
-  expire in five minutes and bind to the user and session; action transactions consume step-up once.
+  expire in five minutes and bind to the user and session; a step-up token also binds to one action and
+  one target id, and action transactions consume it once. TOTP routes have a per-user budget (20 per
+  15 minutes) apart from the per-IP login bucket, so admins behind the Web BFF do not share one bucket.
 - Stolen privileged password: enrolled Moderator/Admin sign-in returns only a challenge; admin policies
   require MFA. Unenrolled elevated users can only enrol. Current DB role is checked on every bearer
-  request; role changes/suspensions revoke refresh families and increment session versions.
+  request; role changes/suspensions revoke refresh families and increment session versions. Each admin
+  write re-reads the caller under the admin advisory lock, so a request admitted before a demotion,
+  suspension or sign-out cannot write afterwards. The last active admin cannot be demoted, suspended
+  or self-deleted.
+- Credential-stuffing role disclosure: a correct password for an enrolled Moderator/Admin returns 202
+  instead of 200, which reveals elevation to whoever holds the password. Accepted; the second factor
+  still stands.
 - Administrative repudiation and CSV tampering: entity change, moderation decision and audit commit
   atomically; SaveChanges refuses audit modifications/deletions. Step-up reasons are preserved in audit.
   CSV commit revalidates the byte hash, rejects erroneous/formula cells, and deduplicates exact files.
