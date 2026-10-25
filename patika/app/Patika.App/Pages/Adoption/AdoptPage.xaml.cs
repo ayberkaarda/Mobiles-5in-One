@@ -1,4 +1,4 @@
-namespace Patika.App.Pages;
+namespace Patika.App.Pages.Adoption;
 
 public partial class AdoptPage : ContentPage
 {

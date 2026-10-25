@@ -1,4 +1,4 @@
-namespace Patika.App.Pages;
+namespace Patika.App.Pages.Urgent;
 
 public partial class UrgentPage : ContentPage
 {

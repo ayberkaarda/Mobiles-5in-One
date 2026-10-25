@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             x:Class="Patika.App.Pages.Account.SignUpPage"
+             x:DataType="vm:SignUpViewModel"
+             Shell.NavBarIsVisible="True"
+             Shell.TabBarIsVisible="False"
+             Title="Kayıt ol">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label Text="Gönüllü ol" Style="{StaticResource Display}" SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="E-postana bir doğrulama kodu göndereceğiz." Style="{StaticResource Lede}" />
+            <Label Text="Adın" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource Field}">
+                <Entry Text="{Binding DisplayName}" AutomationId="NameEntry" SemanticProperties.Description="Adın" />
+            </Border>
+            <Label Text="E-posta" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource Field}">
+                <Entry Text="{Binding Email}" Keyboard="Email" AutomationId="EmailEntry" SemanticProperties.Description="E-posta" />
+            </Border>
+            <Label Text="Şifre (en az 10 karakter)" Style="{StaticResource FieldLabel}" />
+            <Border Style="{StaticResource Field}">
+                <Entry Text="{Binding Password}" IsPassword="True" AutomationId="PasswordEntry" SemanticProperties.Description="Şifre" />
+            </Border>
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+            <Button Text="Kayıt ol" Command="{Binding RegisterCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="RegisterButton" HeightRequest="56" CornerRadius="28" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Tekir}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

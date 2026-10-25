@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Patika.App.Pages.ProfilePage"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             x:Class="Patika.App.Pages.Account.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
              Title="Profil">
     <ScrollView>
         <VerticalStackLayout Padding="20,28,20,32" Spacing="24">
@@ -11,7 +13,7 @@
                 </Border>
                 <VerticalStackLayout VerticalOptions="Center">
                     <HorizontalStackLayout Spacing="8">
-                        <Label Text="Elif" SemanticProperties.HeadingLevel="Level1" Style="{StaticResource Display}" />
+                        <Label Text="{Binding DisplayName}" SemanticProperties.HeadingLevel="Level1" Style="{StaticResource Display}" />
                         <Label Style="{StaticResource Sample}" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <Label Text="Moda gönüllüsü, Mart 2026’dan beri" Style="{StaticResource Muted}" />
@@ -54,6 +56,9 @@
                 </VerticalStackLayout>
             </Border>
 
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextColor="{StaticResource AcilDeep}" />
+            <Button Text="Çıkış yap" Style="{StaticResource QuietButton}" HorizontalOptions="Start"
+                    Command="{Binding SignOutCommand}" AutomationId="SignOutButton" />
             <Button Text="Hesabımı sil" Style="{StaticResource QuietButton}" HorizontalOptions="Start" />
         </VerticalStackLayout>
     </ScrollView>

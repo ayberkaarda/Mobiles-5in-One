@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:drawing="clr-namespace:Patika.App.Drawing"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Map"
+             x:Class="Patika.App.Pages.Map.MapPage"
+             x:DataType="vm:MapViewModel"
+             BackgroundColor="{StaticResource Kum}"
+             Title="Harita">
+    <ContentPage.Resources>
+        <drawing:NeighbourhoodMap x:Key="MapArt" />
+    </ContentPage.Resources>
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <!-- Background art until package B draws the real map with pins and clusters. -->
+        <GraphicsView Grid.RowSpan="4" Drawable="{StaticResource MapArt}" Opacity="0.5"
+                      SemanticProperties.Description="Mahalle haritası çizimi [ÖRNEK]" />
+
+        <Border Grid.Row="0" Style="{StaticResource OfflineBanner}" IsVisible="{Binding IsOffline}" AutomationId="OfflineBanner">
+            <VerticalStackLayout>
+                <Label Text="Çevrimdışısın" FontFamily="NunitoExtraBold" TextColor="{StaticResource Kar}" />
+                <Label Text="Son baktığın bölge gösteriliyor. Kayıtların telefonda bekliyor." FontSize="{StaticResource FontSizeSmall}" TextColor="{StaticResource Cizgi}" />
+            </VerticalStackLayout>
+        </Border>
+
+        <HorizontalStackLayout Grid.Row="1" Padding="16,16,16,0" Spacing="8">
+            <Border Style="{StaticResource Chip}" Padding="10,8,16,8">
+                <HorizontalStackLayout Spacing="10">
+                    <Image Source="patika_mark.png" HeightRequest="26" WidthRequest="26" />
+                    <Label Text="Moda, Kadıköy" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+            <Button Text="Yakınım" Style="{StaticResource QuietButton}" Command="{Binding LocateCommand}" HeightRequest="44" Padding="16,0"
+                    SemanticProperties.Hint="Konumunu yalnızca bu arama için kullanır" />
+        </HorizontalStackLayout>
+
+        <Border Grid.Row="3" Style="{StaticResource Sheet}" MaximumHeightRequest="520">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
+                <BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center" />
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                    <Label Text="İstasyonlar" Style="{StaticResource Title}" SemanticProperties.HeadingLevel="Level2" />
+                    <Label Grid.Column="1" Text="{Binding Summary}" Style="{StaticResource Muted}" VerticalOptions="Center" AutomationId="MapSummary" />
+                </Grid>
+                <VerticalStackLayout Grid.Row="2" Spacing="6">
+                    <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                    <Button IsVisible="{Binding HasPending}" Style="{StaticResource QuietButton}" Command="{Binding OpenOutboxCommand}"
+                            Text="{Binding OutboxText}" LineBreakMode="WordWrap" MinimumHeightRequest="52" HeightRequest="-1"
+                            AutomationId="OutboxButton" />
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Tekir}" />
+                </VerticalStackLayout>
+                <RefreshView Grid.Row="3" Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy, Mode=OneWay}">
+                    <CollectionView ItemsSource="{Binding Stations}" SelectionMode="None" AutomationId="StationList">
+                        <CollectionView.EmptyView>
+                            <Label Text="Bu bölgede istasyon yok." Style="{StaticResource Muted}" Margin="0,12" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StationRow">
+                                <Grid Padding="0,12" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenStationCommand, Source={RelativeSource AncestorType={x:Type vm:MapViewModel}}, x:DataType=vm:MapViewModel}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="{Binding Title}" FontFamily="NunitoExtraBold" />
+                                    <Label Grid.Row="1" Text="{Binding Detail}" Style="{StaticResource Muted}" />
+                                    <Label Grid.RowSpan="2" Grid.Column="1" Text="›" FontSize="{StaticResource FontSizeH4}" VerticalOptions="Center"
+                                           IsVisible="{Binding IsCluster, Converter={StaticResource Not}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </RefreshView>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

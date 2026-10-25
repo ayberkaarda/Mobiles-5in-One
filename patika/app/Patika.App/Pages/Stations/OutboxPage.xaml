@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
+             x:Class="Patika.App.Pages.Stations.OutboxPage"
+             x:DataType="vm:OutboxViewModel"
+             Shell.NavBarIsVisible="True"
+             Title="Giden kutusu">
+    <ScrollView>
+        <VerticalStackLayout Padding="20,24" Spacing="12">
+            <Label Text="Gönderilmeyi bekleyenler" Style="{StaticResource Title}" SemanticProperties.HeadingLevel="Level1" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:OutboxRow">
+                        <Grid ColumnDefinitions="56,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" Padding="0,12">
+                            <Label Text="{Binding Time}" FontFamily="NunitoExtraBold" />
+                            <Label Grid.Column="1" Text="{Binding Title}" FontFamily="NunitoSansBold" />
+                            <Label Grid.Column="2" Text="{Binding State}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansBold"
+                                   TextColor="{StaticResource TekirDeep}" />
+                            <Label Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Reason}" IsVisible="{Binding IsStuck}"
+                                   Style="{StaticResource Muted}" TextColor="{StaticResource AcilDeep}" />
+                        </Grid>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+            <Label Text="{Binding Summary}" AutomationId="OutboxSummary" />
+            <Button Text="Şimdi yeniden dene" Style="{StaticResource QuietButton}" Command="{Binding RetryNowCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Gönderilemeyenleri temizle" Style="{StaticResource LinkButton}" Command="{Binding DismissStuckCommand}"
+                    IsVisible="{Binding HasStuck}" HorizontalOptions="Start" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

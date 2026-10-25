@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             x:Class="Patika.App.Pages.Account.VerifyPage"
+             x:DataType="vm:VerifyViewModel"
+             Shell.NavBarIsVisible="True"
+             Shell.TabBarIsVisible="False"
+             Title="E-posta doğrulama">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label Text="E-postanı kontrol et" Style="{StaticResource Display}" SemanticProperties.HeadingLevel="Level1" />
+            <Label Style="{StaticResource Lede}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Kodu şu adrese gönderdik: " />
+                        <Span Text="{Binding Email}" FontFamily="NunitoSansBold" TextColor="{StaticResource Kaldirim}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+            <Label Text="Doğrulama kodu" Style="{StaticResource FieldLabel}" />
+            <!-- One field for the six digits for now; the six-box entry is package D's. -->
+            <Border Style="{StaticResource Field}">
+                <Entry Text="{Binding Code}" AutomationId="CodeEntry" MaxLength="6" Keyboard="Numeric"
+                       FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" CharacterSpacing="8"
+                       SemanticProperties.Description="Doğrulama kodu" ReturnCommand="{Binding VerifyCommand}" />
+            </Border>
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+            <Label Text="{Binding Notice}" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" />
+            <Button Text="Doğrula" Command="{Binding VerifyCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="VerifyButton" HeightRequest="56" CornerRadius="28" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Tekir}" />
+            <Button Text="Kodu yeniden gönder" Style="{StaticResource LinkButton}" Command="{Binding ResendCommand}" HorizontalOptions="Start" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             x:Class="Patika.App.Pages.Account.SignInPage"
+             x:DataType="vm:SignInViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="Giriş">
+    <ScrollView>
+        <VerticalStackLayout>
+            <Grid BackgroundColor="{StaticResource Tekir}" HeightRequest="236" Padding="24,28">
+                <Image Source="patika_mark.png" HeightRequest="120" WidthRequest="120" HorizontalOptions="End" VerticalOptions="Start" Opacity="0.9" />
+                <VerticalStackLayout VerticalOptions="End">
+                    <Label Text="patika" FontFamily="NunitoExtraBold" FontSize="44" SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="Mahallenin patilerini birlikte koruyalım." FontFamily="NunitoSansBold" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <VerticalStackLayout Padding="24,24,24,24" Spacing="14">
+                <Label Text="{Binding Notice}" IsVisible="{Binding HasNotice}" Style="{StaticResource ErrorText}" />
+                <Label Text="E-posta" Style="{StaticResource FieldLabel}" />
+                <Border Style="{StaticResource Field}">
+                    <Entry Text="{Binding Email}" Keyboard="Email" AutomationId="EmailEntry" Placeholder="ornek@eposta.com"
+                           SemanticProperties.Description="E-posta" />
+                </Border>
+                <Label Text="Şifre" Style="{StaticResource FieldLabel}" />
+                <Border Style="{StaticResource Field}">
+                    <Entry Text="{Binding Password}" IsPassword="True" AutomationId="PasswordEntry" SemanticProperties.Description="Şifre"
+                           ReturnCommand="{Binding SignInCommand}" />
+                </Border>
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                <Button Text="Giriş yap" Command="{Binding SignInCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="SignInButton" HeightRequest="56" CornerRadius="28" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Tekir}" />
+                <Button Text="Hesabın yok mu? Kayıt ol" Style="{StaticResource LinkButton}" Command="{Binding SignUpCommand}" AutomationId="SignUpLink" />
+                <Button Text="Giriş yapmadan haritaya bak" Style="{StaticResource LinkButton}" Command="{Binding BrowseAsGuestCommand}" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

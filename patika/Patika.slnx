@@ -8,6 +8,7 @@
     <Project Path="src/Patika.Worker/Patika.Worker.csproj" />
   </Folder>
   <Folder Name="/app/">
+    <Project Path="app/Patika.App.Core/Patika.App.Core.csproj" />
     <Project Path="app/Patika.App/Patika.App.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -15,5 +16,6 @@
     <Project Path="tests/Patika.Api.Tests/Patika.Api.Tests.csproj" />
     <Project Path="tests/Patika.SecurityTests/Patika.SecurityTests.csproj" />
     <Project Path="tests/Patika.Worker.Tests/Patika.Worker.Tests.csproj" />
+    <Project Path="tests/Patika.App.Tests/Patika.App.Tests.csproj" />
   </Folder>
 </Solution>

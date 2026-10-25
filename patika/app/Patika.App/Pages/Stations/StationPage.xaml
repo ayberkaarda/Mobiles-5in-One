@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
+             x:Class="Patika.App.Pages.Stations.StationPage"
+             x:DataType="vm:StationViewModel"
+             Shell.NavBarIsVisible="True"
+             Title="İstasyon">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,24" Spacing="12">
+                <Label Text="{Binding Name}" Style="{StaticResource Display}" SemanticProperties.HeadingLevel="Level1" AutomationId="StationName" />
+                <Label Text="{Binding Detail}" Style="{StaticResource Lede}" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                <Border Style="{StaticResource Panel}" IsVisible="{Binding Outcome, Converter={StaticResource HasText}}">
+                    <Label Text="{Binding Outcome}" FontFamily="NunitoSansBold" TextColor="{StaticResource NaneDeep}" AutomationId="StationOutcome" />
+                </Border>
+                <Label Text="Son beslemeler" Style="{StaticResource Title}" SemanticProperties.HeadingLevel="Level2" Margin="0,12,0,0" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentFeedings}" Spacing="6">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Label Text="{Binding .}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                    <BindableLayout.EmptyView>
+                        <Label Text="Henüz besleme kaydı yok." Style="{StaticResource Muted}" />
+                    </BindableLayout.EmptyView>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Border Grid.Row="1" Style="{StaticResource Sheet}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Button Text="Beslendi" Style="{StaticResource FedButton}" Command="{Binding FedCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="FedButton" />
+                <Button Grid.Column="1" Text="Mama bitti" Style="{StaticResource QuietButton}" Command="{Binding EmptyCommand}" IsEnabled="{Binding IsNotBusy}" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>
