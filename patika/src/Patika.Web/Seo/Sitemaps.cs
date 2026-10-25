@@ -10,78 +10,106 @@ namespace Patika.Web.Seo;
 
 public sealed record SitemapUrl(string Path, DateTimeOffset? LastModified);
 
-/// <summary>All public URLs, split into the files the sitemap index lists.</summary>
-public sealed record SitemapSnapshot(
-    IReadOnlyList<SitemapUrl> Static, IReadOnlyList<SitemapUrl> Adoptions, IReadOnlyList<SitemapUrl> Districts, IReadOnlyList<SitemapUrl> CarePlaces)
+/// <summary>
+/// All public URLs, already split into the files the sitemap index lists ("static", "adoptions-N",
+/// "districts", "care-places-N"). The chunks are filled while the rows are read, so nothing is copied
+/// again per request.
+/// </summary>
+public sealed class SitemapSnapshot
 {
     public const int ChunkSize = 10000;
 
-    /// <summary>File name (without .xml) to its URLs; empty data sets get no file except static.</summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<SitemapUrl>> Files()
+    private readonly Dictionary<string, IReadOnlyList<SitemapUrl>> files = new(StringComparer.Ordinal);
+
+    public SitemapSnapshot(IReadOnlyList<SitemapUrl> staticUrls, IReadOnlyList<List<SitemapUrl>> adoptions,
+        IReadOnlyList<SitemapUrl> districts, IReadOnlyList<List<SitemapUrl>> carePlaces)
     {
-        var files = new Dictionary<string, IReadOnlyList<SitemapUrl>>(StringComparer.Ordinal) { ["static"] = Static };
-        AddChunks(files, "adoptions", Adoptions);
-        if (Districts.Count > 0) files["districts"] = Districts;
-        AddChunks(files, "care-places", CarePlaces);
-        return files;
+        files["static"] = staticUrls;
+        for (var i = 0; i < adoptions.Count; i++) files[$"adoptions-{i + 1}"] = adoptions[i];
+        if (districts.Count > 0) files["districts"] = districts;
+        for (var i = 0; i < carePlaces.Count; i++) files[$"care-places-{i + 1}"] = carePlaces[i];
     }
 
-    private static void AddChunks(Dictionary<string, IReadOnlyList<SitemapUrl>> files, string name, IReadOnlyList<SitemapUrl> urls)
-    {
-        for (var index = 0; index * ChunkSize < urls.Count; index++)
-        {
-            files[$"{name}-{index + 1}"] = urls.Skip(index * ChunkSize).Take(ChunkSize).ToArray();
-        }
-    }
+    /// <summary>File name (without .xml) to its URLs; empty data sets get no file except static.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<SitemapUrl>> Files() => files;
 }
 
 /// <summary>
 /// Builds the sitemap snapshot from <see cref="ISitemapQueries"/> (paged by 10,000) plus the static
-/// pages and guides, and keeps it in memory for ten minutes so the index and its files agree.
+/// pages and guides, and keeps it in memory for ten minutes so the index and its files agree. One
+/// rebuild runs at a time; requests that arrive meanwhile wait for it and reuse its result. The whole
+/// snapshot is held in memory, which suits the current scale (tens of thousands of URLs, a few MB);
+/// see docs/public-web-data.md.
 /// </summary>
 public sealed class SitemapService(IServiceScopeFactory scopes, IMemoryCache cache, DocumentStore documents, TimeProvider clock)
 {
     private const string CacheKey = "seo:sitemap";
     private static readonly TimeZoneInfo Istanbul = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+    private readonly SemaphoreSlim rebuild = new(1, 1);
 
-    public Task<SitemapSnapshot> GetAsync(CancellationToken ct) =>
-        cache.GetOrCreateAsync(CacheKey, async entry =>
+    public async Task<SitemapSnapshot> GetAsync(CancellationToken ct)
+    {
+        if (cache.TryGetValue(CacheKey, out SitemapSnapshot? snapshot) && snapshot is not null) return snapshot;
+        await rebuild.WaitAsync(ct);
+        try
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
-            return await BuildAsync(ct);
-        })!;
+            if (cache.TryGetValue(CacheKey, out snapshot) && snapshot is not null) return snapshot;
+            snapshot = await BuildAsync(ct);
+            cache.Set(CacheKey, snapshot, TimeSpan.FromMinutes(10));
+            return snapshot;
+        }
+        finally
+        {
+            rebuild.Release();
+        }
+    }
+
+    private static void Add(List<List<SitemapUrl>> chunks, SitemapUrl url)
+    {
+        if (chunks.Count == 0 || chunks[^1].Count == SitemapSnapshot.ChunkSize) chunks.Add([]);
+        chunks[^1].Add(url);
+    }
 
     private async Task<SitemapSnapshot> BuildAsync(CancellationToken ct)
     {
         await using var scope = scopes.CreateAsyncScope();
         var queries = scope.ServiceProvider.GetRequiredService<ISitemapQueries>();
-        var adoptions = new List<SitemapUrl>();
+        var adoptions = new List<List<SitemapUrl>>();
         var districts = new List<SitemapUrl>();
-        var carePlaces = new List<SitemapUrl>();
+        var carePlaces = new List<List<SitemapUrl>>();
+        DateTimeOffset? latestAdoption = null, latestPlace = null, latestAny = null;
+        static DateTimeOffset? Max(DateTimeOffset? a, DateTimeOffset? b) => a is null ? b : b is null ? a : a > b ? a : b;
         for (var page = 1; ; page++)
         {
             var rows = await queries.ListAsync(page, ct);
             foreach (var row in rows)
             {
                 var url = new SitemapUrl(row.Url, row.LastModified);
-                if (row.Url.StartsWith(Routes.Adoptions + "/", StringComparison.Ordinal)) adoptions.Add(url);
+                latestAny = Max(latestAny, row.LastModified);
+                if (row.Url.StartsWith(Routes.Adoptions + "/", StringComparison.Ordinal))
+                {
+                    Add(adoptions, url);
+                    latestAdoption = Max(latestAdoption, row.LastModified);
+                }
                 else if (row.Url.StartsWith("/istasyonlar/", StringComparison.Ordinal)) districts.Add(url);
-                else if (row.Url.StartsWith("/bakim-yeri/", StringComparison.Ordinal)) carePlaces.Add(url);
+                else if (row.Url.StartsWith("/bakim-yeri/", StringComparison.Ordinal))
+                {
+                    Add(carePlaces, url);
+                    latestPlace = Max(latestPlace, row.LastModified);
+                }
             }
             if (rows.Count < SitemapSnapshot.ChunkSize) break;
         }
 
-        static DateTimeOffset? Latest(IEnumerable<SitemapUrl> urls) => urls.Max(u => u.LastModified);
         var guides = documents.List("rehber");
         var pages = documents.List("sayfa").Concat(documents.List("yasal")).ToArray();
-        var all = adoptions.Concat(districts).Concat(carePlaces).ToArray();
         DateTimeOffset? Day(DateOnly date) => new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
         var staticUrls = new List<SitemapUrl>
         {
-            new("/", Latest(all)),
-            new(Routes.Adoptions, Latest(adoptions)),
-            new(Routes.CarePlaces, Latest(carePlaces)),
+            new("/", latestAny),
+            new(Routes.Adoptions, latestAdoption),
+            new(Routes.CarePlaces, latestPlace),
             new(Routes.Impact, StartOfIstanbulWeek(clock.GetUtcNow())),
             new(Routes.Guides, guides.Count == 0 ? null : Day(guides.Max(g => g.Updated))),
         };

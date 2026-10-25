@@ -34,7 +34,7 @@ public static class SeoEndpoints
 
         endpoints.MapGet("/sitemap.xml", async (SitemapService sitemaps, SiteUrls urls, CancellationToken ct) =>
                 Results.Text(SitemapXml.Index(urls, (await sitemaps.GetAsync(ct)).Files()), XmlType, Encoding.UTF8))
-            .CacheOutput(policy => policy.Expire(TimeSpan.FromMinutes(10)).Tag("public-data"));
+            .CacheOutput(policy => policy.NoCache()); // SitemapService keeps the only copy: at most 10 minutes stale
 
         endpoints.MapGet("/sitemaps/{file}", async (string file, SitemapService sitemaps, SiteUrls urls, CancellationToken ct) =>
             {
@@ -45,7 +45,7 @@ public static class SeoEndpoints
                     ? Results.Text(SitemapXml.UrlSet(urls, entries), XmlType, Encoding.UTF8)
                     : Results.NotFound();
             })
-            .CacheOutput(policy => policy.Expire(TimeSpan.FromMinutes(10)).Tag("public-data"));
+            .CacheOutput(policy => policy.NoCache()); // SitemapService keeps the only copy: at most 10 minutes stale
 
         // The app (ProfileViewModels.KvkkUrl) and the footer link here; the canonical page is /kvkk.
         endpoints.MapGet("/kvkk-aydinlatma", () => Results.Redirect(Routes.Kvkk, permanent: true));
