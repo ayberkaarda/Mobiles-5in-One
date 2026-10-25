@@ -71,7 +71,7 @@
                                         <Button Grid.Column="1" Text="Ara" IsVisible="{Binding HasPhone}" Style="{StaticResource QuietButton}"
                                                 HeightRequest="44" CornerRadius="22" Padding="16,0" FontSize="15"
                                                 SemanticProperties.Description="{Binding CallDescription}"
-                                                Command="{Binding BindingContext.CallCommand, Source={x:Reference Root}, x:DataType=ContentPage}"
+                                                Command="{Binding CallCommand, Source={RelativeSource AncestorType={x:Type vm:UrgentDetailViewModel}}, x:DataType=vm:UrgentDetailViewModel}"
                                                 CommandParameter="{Binding .}" />
                                     </Grid>
                                     <BoxView HeightRequest="1" />

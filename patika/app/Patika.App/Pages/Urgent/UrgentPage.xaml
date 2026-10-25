@@ -57,7 +57,7 @@
                                 <VerticalStackLayout>
                                     <Grid ColumnDefinitions="56,*" ColumnSpacing="12" Padding="0,14" SemanticProperties.Description="{Binding Description}">
                                         <Grid.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding BindingContext.OpenCommand, Source={x:Reference Root}, x:DataType=ContentPage}"
+                                            <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:UrgentListViewModel}}, x:DataType=vm:UrgentListViewModel}"
                                                                   CommandParameter="{Binding .}" />
                                         </Grid.GestureRecognizers>
                                         <Border WidthRequest="56" HeightRequest="56" StrokeShape="RoundRectangle 12" StrokeThickness="0"
@@ -117,7 +117,7 @@
                                         <Button Grid.Column="1" Text="Ara" IsVisible="{Binding HasPhone}" HeightRequest="44" CornerRadius="22" Padding="16,0"
                                                 BackgroundColor="Transparent" BorderColor="{StaticResource Kar}" BorderWidth="2" TextColor="{StaticResource Kar}"
                                                 FontSize="15" SemanticProperties.Description="{Binding CallDescription}"
-                                                Command="{Binding BindingContext.CallCommand, Source={x:Reference Root}, x:DataType=ContentPage}"
+                                                Command="{Binding CallCommand, Source={RelativeSource AncestorType={x:Type vm:UrgentListViewModel}}, x:DataType=vm:UrgentListViewModel}"
                                                 CommandParameter="{Binding .}" />
                                     </Grid>
                                     <BoxView HeightRequest="1" Color="{StaticResource KaldirimSoft}" />
