@@ -7,7 +7,11 @@ Legend: **Allow** = generally permitted; **Own** = only the caller's resource or
 | Endpoint/action | Guest | User | Trusted | Moderator | Admin |
 | --- | --- | --- | --- | --- | --- |
 | `POST auth/register`, `login`, `apple`, `refresh`, `logout`, `verify-email`, `forgot`, `reset` | Allow | Allow | Allow | Allow | Allow |
+| `POST /v1/auth/verify-email/resend` | Allow | Allow | Allow | Allow | Allow |
 | `GET me`, `PATCH me`, `DELETE me`, `PUT me/device-token`, `PUT me/urgent-settings` | — | Own | Own | Own | Own |
+| `GET /v1/me/follows` | â€” | Own | Own | Own | Own |
+| `GET /v1/me/adoption-requests` | â€” | Own | Own | Own | Own |
+| `GET /v1/me/urgent-posts` | â€” | Own | Own | Own | Own |
 | `GET stations` | Public | Public | Public | Public | Public |
 | `POST stations` | — | Allow | Allow | Allow | Allow |
 | `GET stations/{id}` | Public | Public | Public | Public | Public |

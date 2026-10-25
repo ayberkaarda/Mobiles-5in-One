@@ -130,7 +130,7 @@ patika/
 
 ### API (`/v1`, JSON, RFC 9457)
 
-`POST auth/register · POST auth/login · POST auth/apple · POST auth/refresh · POST auth/logout · POST auth/verify-email · POST auth/forgot · POST auth/reset · GET me · PATCH me · DELETE me · PUT me/device-token · PUT me/urgent-settings`
+`POST auth/register · POST auth/login · POST auth/apple · POST auth/refresh · POST auth/logout · POST auth/verify-email {email, code} · POST auth/verify-email/resend · POST auth/forgot · POST auth/reset {email, code, newPassword} (6-digit codes expire after 15 min and are burned after 5 wrong attempts) · GET me · PATCH me · DELETE me · PUT me/device-token · PUT me/urgent-settings · GET me/follows · GET me/adoption-requests · GET me/urgent-posts`
 `GET stations?bbox=&kind=&species=&needsRefill= (max 500, paged) · POST stations · GET|PATCH stations/{id} · POST stations/{id}/feedings · POST stations/{id}/needs-refill`
 `GET animals?bbox= · POST animals · GET|PATCH animals/{id} · POST animals/{id}/photos · POST animals/{id}/sightings · PUT animals/{id}/follow · DELETE animals/{id}/follow`
 `GET adoptions?district=&species= · POST animals/{id}/adoption · GET adoptions/{id} · PATCH adoptions/{id} (owner close) · POST adoptions/{id}/requests · GET adoptions/{id}/requests (owner) · PATCH adoptions/{id}/requests/{rid}`
