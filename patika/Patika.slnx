@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Patika.Domain/Patika.Domain.csproj" />
+    <Project Path="src/Patika.Contracts/Patika.Contracts.csproj" />
+    <Project Path="src/Patika.Infrastructure/Patika.Infrastructure.csproj" />
+    <Project Path="src/Patika.Api/Patika.Api.csproj" />
+    <Project Path="src/Patika.Web/Patika.Web.csproj" />
+    <Project Path="src/Patika.Worker/Patika.Worker.csproj" />
+  </Folder>
+  <Folder Name="/app/">
+    <Project Path="app/Patika.App/Patika.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Patika.Domain.Tests/Patika.Domain.Tests.csproj" />
+    <Project Path="tests/Patika.Api.Tests/Patika.Api.Tests.csproj" />
+  </Folder>
+</Solution>
