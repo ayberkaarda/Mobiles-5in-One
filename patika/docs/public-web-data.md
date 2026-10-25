@@ -79,3 +79,32 @@ are applied separately with the migration role, before either app is deployed.
 - The migration backfills set-based: a base slug per row, `row_number()` per base in id order for the
   `-2`, `-3` suffixes, then repeated duplicate-only passes until nothing collides. Deterministic.
 - Old closed adoption posts keep `ClosedReason = null` (unknown); the migration does not guess.
+
+## Caching
+
+The web app and the API are separate processes, so a moderation decision, a closed post or an expired
+one cannot evict the web's output cache (the `public-data` tag has no consumer). Short lifetimes bound
+how long withdrawn content stays visible instead:
+
+| Response | Lifetime | Worst-case staleness |
+| --- | --- | --- |
+| Adoption detail `/sahiplendirme/{slug}` | 60 s (`CachePolicies.AdoptionDetail`) | 60 s after withdrawal or expiry |
+| Adoption list, home, province and district pages, care place list and detail | 2 min (`CachePolicies.Listing`) | 2 min |
+| Other pages (impact, guides, legal) | 5 min (base policy) | 5 min |
+| Sitemap index and files | not output-cached; one in-memory snapshot for 10 min | 10 min (a URL can stay listed that long; the page itself 404s after at most 60 s) |
+| robots.txt | 1 h | static per environment |
+
+Every entry varies by the full query string. Lower the lifetimes in `Program.cs` if moderation ever
+needs to be faster than this; an eviction hook would need a shared cache (for example Redis) first.
+
+The sitemap snapshot is rebuilt by one request at a time (`SitemapService` holds a lock; requests that
+arrive during a rebuild wait and reuse it) and is held whole in memory, already split into its
+10,000-URL files. That suits the current scale, tens of thousands of public URLs (a few MB). Past a few
+hundred thousand URLs, stream each sitemap file from the query instead of holding the snapshot.
+
+## Release checklist
+
+- Android App Links: copy `src/Patika.Web/wwwroot/.well-known/assetlinks.json.example` to `assetlinks.json`
+  and replace the placeholder with the SHA-256 fingerprint of the release signing certificate (Play
+  Console, App signing) before enabling App Links. Only the `.example` file is in the repository and it
+  is not served (unknown file type), so no unverifiable association is published by accident.
