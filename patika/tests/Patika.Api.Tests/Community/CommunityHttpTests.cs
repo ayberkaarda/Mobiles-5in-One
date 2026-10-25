@@ -23,6 +23,18 @@ public sealed class CommunityHttpTests
     [InlineData("/v1/stations?bbox=28.96,41,28.98,41.02&zoom=23")]
     [InlineData("/v1/animals/10000000-0000-0000-0000-000000000001/sightings?pageSize=501")]
     [InlineData("/v1/stations/10000000-0000-0000-0000-000000000001/feedings?page=0")]
+    [InlineData("/v1/stations?bbox=28.96,41,28.98,41.02&page=0")]
+    [InlineData("/v1/stations?bbox=28.96,41,28.98,41.02&pageSize=501")]
+    [InlineData("/v1/animals?bbox=28.96,41,28.98,41.02&page=0")]
+    [InlineData("/v1/animals?bbox=28.96,41,28.98,41.02&pageSize=501")]
+    [InlineData("/v1/stations/10000000-0000-0000-0000-000000000001/feedings?pageSize=501")]
+    [InlineData("/v1/animals/10000000-0000-0000-0000-000000000001/photos?page=0")]
+    [InlineData("/v1/animals/10000000-0000-0000-0000-000000000001/photos?pageSize=501")]
+    [InlineData("/v1/animals/10000000-0000-0000-0000-000000000001/sightings?page=0")]
+    [InlineData("/v1/adoptions?page=0")]
+    [InlineData("/v1/adoptions?pageSize=501")]
+    [InlineData("/v1/care-places?page=0")]
+    [InlineData("/v1/care-places?pageSize=501")]
     public async Task InvalidQueriesReturnValidationProblemsBeforeDatabaseAccess(string path)
     {
         await using var app = CreateApp();
@@ -60,7 +72,7 @@ public sealed class CommunityHttpTests
         await using var app = CreateApp();
         await app.StartAsync(TestContext.Current.CancellationToken);
         var endpoints = ((IEndpointRouteBuilder)app).DataSources.SelectMany(x => x.Endpoints).ToArray();
-        Assert.Equal(17, endpoints.Length);
+        Assert.Equal(27, endpoints.Length);
         foreach (var endpoint in endpoints)
         {
             var policy = endpoint.Metadata.GetOrderedMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>();
@@ -70,18 +82,20 @@ public sealed class CommunityHttpTests
         }
     }
 
-    private static WebApplication CreateApp()
+    internal static WebApplication CreateApp(string? connectionString = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseTestServer();
         builder.AddPatikaApi();
         builder.Services.AddDbContext<PatikaDbContext>(options => options.UseNpgsql(
-            "Host=127.0.0.1;Port=1;Database=community;Timeout=1", pg => pg.UseNetTopologySuite()));
+            connectionString ?? "Host=127.0.0.1;Port=1;Database=community;Timeout=1", pg => pg.UseNetTopologySuite()));
         var app = builder.Build();
         app.UsePatikaApi();
         var v1 = app.MapGroup("/v1");
         v1.MapStationEndpoints();
         v1.MapAnimalEndpoints();
+        Patika.Api.Features.Adoptions.AdoptionEndpoints.MapAdoptionEndpoints(v1);
+        Patika.Api.Features.CarePlaces.CarePlaceEndpoints.MapCarePlaceEndpoints(v1);
         return app;
     }
 }

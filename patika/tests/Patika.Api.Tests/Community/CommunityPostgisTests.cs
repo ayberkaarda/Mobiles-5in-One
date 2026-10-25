@@ -16,10 +16,9 @@ namespace Patika.Api.Tests.Community;
 
 public sealed class CommunityPostgisTests
 {
-    public static bool PostgisEnabled => Environment.GetEnvironmentVariable("PATIKA_COMMUNITY_POSTGIS") == "1";
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    [Fact(SkipUnless = nameof(PostgisEnabled), Skip = "Set PATIKA_COMMUNITY_POSTGIS=1 with Docker available.")]
+    [Fact]
     public async Task GridClusteringFiltersAndPaginatesInPostgis()
     {
         await using var database = new PostgisFixture();
@@ -54,7 +53,7 @@ public sealed class CommunityPostgisTests
         Assert.Empty((await CommunityMap.StationsAsync(db, query, Ct)).Items);
     }
 
-    [Fact(SkipUnless = nameof(PostgisEnabled), Skip = "Set PATIKA_COMMUNITY_POSTGIS=1 with Docker available.")]
+    [Fact]
     public async Task ConcurrentFeedingsEnforceCooldownAndClearRefillAtomically()
     {
         await using var database = new PostgisFixture();
@@ -87,7 +86,7 @@ public sealed class CommunityPostgisTests
         Assert.Equal(clock.Now, saved.LastFedAt);
     }
 
-    [Fact(SkipUnless = nameof(PostgisEnabled), Skip = "Set PATIKA_COMMUNITY_POSTGIS=1 with Docker available.")]
+    [Fact]
     public async Task FollowsAreIdempotentAndIsolatedAndPhotosRemainPending()
     {
         await using var database = new PostgisFixture();

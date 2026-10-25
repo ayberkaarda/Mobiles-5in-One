@@ -16,18 +16,18 @@ public sealed record FeedingResponse(Guid Id, DateTimeOffset At, string? PhotoKe
 public sealed record AnimalResponse(Guid Id, Guid? StationId, CoordinateDto Location, string Species, string? Name, string Sex, bool Sterilized, bool Vaccinated, bool EarTagged, string Status);
 public sealed record AnimalPhotoResponse(Guid Id, string Key);
 public sealed record SightingResponse(Guid Id, DateTimeOffset At, string? Note);
-public sealed class MapQuery
+public sealed class MapQuery(string Bbox = "", int Zoom = 14, int Page = 1, int PageSize = 100, string? Kind = null, string? Species = null, bool? NeedsRefill = null)
 {
-    public string Bbox { get; set; } = "";
-    public int Zoom { get; set; } = 14;
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 100;
-    public string? Kind { get; set; }
-    public string? Species { get; set; }
-    public bool? NeedsRefill { get; set; }
+    public string Bbox { get; set; } = Bbox;
+    public int Zoom { get; set; } = Zoom;
+    public int Page { get; set; } = Page;
+    public int PageSize { get; set; } = PageSize;
+    public string? Kind { get; set; } = Kind;
+    public string? Species { get; set; } = Species;
+    public bool? NeedsRefill { get; set; } = NeedsRefill;
 }
-public sealed class PageQuery
+public sealed class PageQuery(int Page = 1, int PageSize = 10)
 {
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 10;
+    public int Page { get; set; } = Page;
+    public int PageSize { get; set; } = PageSize;
 }
