@@ -16,7 +16,7 @@ The read side lives in `src/Patika.Web/Services/PublicQueries`. Every query retu
 | Care places | Name, kind, address, phone, HTTPS website, hours, 24h flag, verified flag, district. `IsSample` rows only when `Web:ShowSamples=true` (Development default). |
 | Impact | Four completed ISO weeks in Europe/Istanbul: feedings, new stations, adoptions (closed as `Adopted`, counted by `AdoptedAt`), urgent posts created that week and now `Handled`. `ImpactQueries.MethodNote` states this definition on the page. |
 | Sitemap | Site-relative paths with lastmod, in chunks of 10,000: public adoption slugs, district pages with an active station or open post, care place slugs. |
-| Photos | Station photos and animal photos with `ModerationState.Approved`, always as processed `media/` renditions via `IPhotoUrlResolver`. |
+| Photos | Only animal photos with `ModerationState.Approved`, always as processed `media/` renditions via `IPhotoUrlResolver`. |
 
 ## What it never exposes
 
@@ -25,8 +25,10 @@ The read side lives in `src/Patika.Web/Services/PublicQueries`. Every query retu
   an entity type or an identity-like property.
 - Precise locations: station coordinates are rounded to 3 decimals (about 100 m). Urgent post
   locations, user urgent home areas and animal positions are not part of any public record.
+- Station and feeding photos: they are not moderated, so `StationRow` has no photo field at all.
 - Hidden urgent posts (`HiddenAt` set), pending/rejected/closed/expired adoption posts, unapproved
-  photos, feeding notes and sightings.
+  photos, feeding notes and sightings. (The API still shows a hidden urgent post to its owner, flagged
+  `Hidden`, and lets the owner or a moderator close it; public GET, nearby and report stay filtered.)
 
 ## Database role
 
@@ -71,6 +73,9 @@ are applied separately with the migration role, before either app is deployed.
   then `-2`, `-3`, ... on collision (UUIDv7 ids share their leading hex for hours). Set once at
   creation and never changed by later edits.
 - Care place: `{name}-{district slug if linked}`, numeric suffix on collision, also fixed after creation.
-- Both are unique indexes. The migration backfills existing rows in id order, so the result is
-  deterministic.
+- Both are unique indexes. Creation picks the slug check-then-insert; if a concurrent insert takes it
+  first (unique violation on the slug index) the save is retried with fresh slugs, at most 3 attempts,
+  then the API answers 409 `slug_conflict`.
+- The migration backfills set-based: a base slug per row, `row_number()` per base in id order for the
+  `-2`, `-3` suffixes, then repeated duplicate-only passes until nothing collides. Deterministic.
 - Old closed adoption posts keep `ClosedReason = null` (unknown); the migration does not guess.
