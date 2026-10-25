@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
+using Patika.Web.Seo;
 using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
@@ -34,6 +35,7 @@ builder.Services.AddScoped<IPlaceQueries, PlaceQueries>();
 builder.Services.AddScoped<ICarePlaceQueries, CarePlaceQueries>();
 builder.Services.AddScoped<IImpactQueries, ImpactQueries>();
 builder.Services.AddScoped<ISitemapQueries, SitemapQueries>();
+builder.Services.AddSeo(builder.Configuration);
 
 var app = builder.Build();
 if (!app.Environment.IsDevelopment())
@@ -58,6 +60,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseOutputCache();
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).CacheOutput(policy => policy.NoCache());
+app.MapSeo();
 app.MapRazorPages();
 app.Run();
 

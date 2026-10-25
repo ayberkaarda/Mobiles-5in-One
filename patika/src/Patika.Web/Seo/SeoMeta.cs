@@ -16,4 +16,10 @@ public sealed record SeoMeta(string Title, string Description, string CanonicalP
 
     /// <summary>Schema.org objects, serialized as one JSON-LD script each.</summary>
     public IReadOnlyList<object> JsonLd { get; init; } = [];
+
+    /// <summary>Open Graph type: "website" by default, "article" for guides.</summary>
+    public string OgType { get; init; } = "website";
+
+    /// <summary>Alt text for the Open Graph image; null uses the default image's description.</summary>
+    public string? ImageAlt { get; init; }
 }

@@ -1,17 +1,64 @@
 @using Patika.Web.Seo
+@inject SiteUrls Urls
 @{
     var seo = ViewData[SeoMeta.Key] as SeoMeta;
+    var title = seo?.Title ?? ViewData["Title"] as string ?? "Patika";
+    var description = seo?.Description ?? ViewData["Description"] as string;
+    // Canonical never carries the query string; pages that set no SeoMeta get their own path.
+    var canonical = Urls.Absolute(seo?.CanonicalPath ?? Context.Request.Path.Value);
+    var customImage = seo?.ImagePath is { Length: > 0 };
+    var image = Urls.Absolute(customImage ? seo!.ImagePath : SiteUrls.DefaultOgImage);
+    var imageAlt = seo?.ImageAlt ?? (customImage ? title : "Patika: mahallenin patilerini birlikte koruyalım");
+    var isHome = Context.Request.Path.Value is null or "" or "/";
+    var jsonLd = new List<object>(seo?.JsonLd ?? []);
+    if (isHome)
+    {
+        jsonLd.Insert(0, JsonLd.WebSite(Urls));
+        jsonLd.Insert(0, JsonLd.Organization(Urls));
+    }
 }
-<title>@(seo?.Title ?? ViewData["Title"] ?? "Patika")</title>
-@if ((seo?.Description ?? ViewData["Description"] as string) is string description)
+<title>@title</title>
+@if (description is not null)
 {
     <meta name="description" content="@description" />
 }
-@if (seo is not null)
+<link rel="canonical" href="@canonical" />
+@if (seo?.NoIndex == true)
 {
-    <link rel="canonical" href="@seo.CanonicalPath" />
-    @if (seo.NoIndex)
-    {
-        <meta name="robots" content="noindex" />
-    }
+    <meta name="robots" content="noindex, follow" />
+}
+else
+{
+    <link rel="alternate" hreflang="tr" href="@canonical" />
+    <link rel="alternate" hreflang="x-default" href="@canonical" />
+}
+<meta property="og:site_name" content="Patika" />
+<meta property="og:locale" content="tr_TR" />
+<meta property="og:type" content="@(seo?.OgType ?? "website")" />
+<meta property="og:title" content="@title" />
+@if (description is not null)
+{
+    <meta property="og:description" content="@description" />
+}
+<meta property="og:url" content="@canonical" />
+<meta property="og:image" content="@image" />
+@if (!customImage)
+{
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+}
+<meta property="og:image:alt" content="@imageAlt" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="@title" />
+@if (description is not null)
+{
+    <meta name="twitter:description" content="@description" />
+}
+<meta name="twitter:image" content="@image" />
+<meta name="twitter:image:alt" content="@imageAlt" />
+@foreach (var item in jsonLd)
+{
+    @* Written raw: the script tag helper would re-encode the type attribute. JsonLd.Serialize leaves no '<'. *@
+    @Html.Raw("<script type=\"application/ld+json\">" + JsonLd.Serialize(item) + "</script>\n")
 }
