@@ -3,11 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@(ViewData["Title"] ?? "Patika")</title>
-    @if (ViewData["Description"] is string description)
-    {
-        <meta name="description" content="@description" />
-    }
+    <partial name="_SeoHead" />
     <meta name="theme-color" content="#F28C28" />
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="~/img/patika-icon-192.png" />

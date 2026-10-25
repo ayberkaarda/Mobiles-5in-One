@@ -1,0 +1,17 @@
+@using Patika.Web.Seo
+@{
+    var seo = ViewData[SeoMeta.Key] as SeoMeta;
+}
+<title>@(seo?.Title ?? ViewData["Title"] ?? "Patika")</title>
+@if ((seo?.Description ?? ViewData["Description"] as string) is string description)
+{
+    <meta name="description" content="@description" />
+}
+@if (seo is not null)
+{
+    <link rel="canonical" href="@seo.CanonicalPath" />
+    @if (seo.NoIndex)
+    {
+        <meta name="robots" content="noindex" />
+    }
+}
