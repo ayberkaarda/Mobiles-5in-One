@@ -66,20 +66,26 @@ Severity columns: C critical, H high, M moderate or medium, L low, as each tool 
 
 ## 3. Fixes made
 
-1. **npm overrides** in `inecekvar/pnpm-workspace.yaml` (`overrides`), lockfile updated with
-   `pnpm install --lockfile-only` (36 lines, only these packages moved):
-   - `undici` 7.29.0 to 7.29.1 (nx): GHSA-w293-vg96-wgc3 (High, TLS validation bypass in
-     BalancedPool), GHSA-rfgv-xxqx-mfg5 (High) and eight moderate or low advisories.
-   - `webpack-dev-middleware` 8.0.3 to 8.3.0 (@nx/angular > @angular-devkit/build-angular
-     22.1.9): GHSA-g84c-rxfj-3j2c (High, path traversal).
-   - `piscina` 5.2.0 to 5.3.2 (@angular/build 22.1.9 and build-angular 22.1.9, pulled in by
-     @nx/angular): GHSA-67c8-pqhq-4rmx (Critical). The project's own builder, @angular/build
-     22.2.2, already used 5.3.2.
+1. **Dependency overrides** in `inecekvar/pnpm-workspace.yaml` (`overrides`), with the lockfile
+   updated using `pnpm install --lockfile-only`:
+   - `undici` 7.30.1 (nx): GHSA-w293-vg96-wgc3, GHSA-rfgv-xxqx-mfg5,
+     GHSA-xjj6-f33q-929c and lower advisories.
+   - `webpack-dev-middleware` 8.3.0 (@nx/angular > @angular-devkit/build-angular):
+     GHSA-g84c-rxfj-3j2c.
+   - `piscina` 5.3.2 (@nx/angular > @angular/build and build-angular): GHSA-67c8-pqhq-4rmx.
+   - `vite` 8.3.5 and 8.1.6 (@angular/build 22.2.2 and 22.1.9): GHSA-587h-7wmj-h5pm
+     and five lower advisories.
+   - `zod` 4.6.7 (@angular/cli and @angular/forms): GHSA-mrhx-c7xc-m3w5.
+   - `body-parser` 2.4.0 and 1.20.9 (Express 5 and webpack-dev-server's Express 4):
+     GHSA-27r3-jxmh-p828.
+   - `serialize-javascript` 7.1.4 (copy-webpack-plugin): GHSA-m5mm-p8h7-m29v.
+   - `fast-uri` 3.1.9 (ajv): GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr and two lower
+     advisories.
+   - API dependency pins: Pillow 13.0.0 and certifi 2026.10.23, to use patched releases.
 
-   Each override moves the vulnerable version inside its major, published at least five weeks
-   before this run. Verification: `pnpm install --frozen-lockfile`, then
-   `pnpm nx run-many -t lint test build` succeeded for 5 projects (tests 4, 110, 39, 774 and 460
-   passed). Remove an entry once its parent depends on the patched release.
+   Each npm override moves the vulnerable version to a patched release in its major. The
+   GHSA-vfj7-8cjw-p6xm braces exemption is now reported unused by osv-scanner and remains kept.
+   Remove an override once its parent depends on the patched release.
 2. **bandit B104** (`api/app/core/client_ip.py`): the missing-peer rate-limit key was the literal
    `"0.0.0.0"` with a ruff `noqa`. It is now `UNKNOWN_PEER = ip_address(0).compressed` (same
    value, no listen-on-all literal, no suppression comment). Tests:
