@@ -1,8 +1,13 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Patika.Web.Pages;
 using Patika.Web.Pages.BakimYeri;
 using Patika.Web.Routing;
+using Patika.Web.Services;
+using Patika.Web.Services.PublicQueries;
 using Xunit;
 
 namespace Patika.Web.Tests.Pages;
@@ -76,6 +81,11 @@ public sealed class PublicPagesTests(PageFixture site) : IClassFixture<PageFixtu
     [InlineData("/sahiplendirme?tur=kus")]
     [InlineData("/sahiplendirme?sayfa=9")]
     [InlineData("/sahiplendirme?sayfa=0")]
+    [InlineData("/sahiplendirme?sayfa=-1")]
+    [InlineData("/sahiplendirme?sayfa=abc")]
+    [InlineData("/sahiplendirme?sayfa=007")]
+    [InlineData("/sahiplendirme?sayfa=99999999999")]
+    [InlineData("/sahiplendirme?sayfa=1.5")]
     [InlineData("/bakim-yerleri?tur=otel")]
     [InlineData("/bakim-yerleri?acik24=evet")]
     public async Task UnknownSlugsAndFilterValuesAreRealNotFounds(string path)
@@ -217,6 +227,41 @@ public sealed class PublicPagesTests(PageFixture site) : IClassFixture<PageFixtu
     }
 
     [Fact]
+    public void PagesWithWithdrawableRowsUseShortCacheLifetimes()
+    {
+        var endpoints = site.Factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToArray();
+        string? Policy(string pattern) => endpoints.Single(e => e.RoutePattern.RawText?.TrimStart('/') == pattern)
+            .Metadata.GetMetadata<OutputCacheAttribute>()?.PolicyName;
+        Assert.Equal(CachePolicies.AdoptionDetail, Policy("sahiplendirme/{slug}"));
+        foreach (var pattern in new[] { "sahiplendirme", "istasyonlar/{il}", "istasyonlar/{il}/{ilce}", "bakim-yerleri", "bakim-yeri/{slug}" })
+        {
+            Assert.Equal(CachePolicies.Listing, Policy(pattern));
+        }
+    }
+
+    [Fact]
+    public async Task SmallPanelsAreBoundedAndTheDistrictListIsOneCall()
+    {
+        await using var scope = site.Factory.Services.CreateAsyncScope();
+        var carePlaces = scope.ServiceProvider.GetRequiredService<ICarePlaceQueries>();
+        Assert.True((await carePlaces.ListAsync(ct: Ct)).Count > 1);
+        Assert.Single(await carePlaces.ListAsync(limit: 1, ct: Ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => carePlaces.ListAsync(limit: 0, ct: Ct));
+        var districts = await scope.ServiceProvider.GetRequiredService<IPlaceQueries>().ListDistrictsAsync(Ct);
+        Assert.Equal(39, districts.Count);
+        Assert.Equal(1, districts.Single(d => d.Slug == "uskudar").OpenAdoptions);
+        Assert.Equal(2, districts.Single(d => d.Slug == "kadikoy").ActiveStations);
+    }
+
+    [Fact]
+    public async Task PageStylesheetsGoInTheHead()
+    {
+        var (_, html) = await GetAsync(Routes.Guides);
+        var stylesheet = html.IndexOf("/css/content.css", StringComparison.Ordinal);
+        Assert.InRange(stylesheet, 0, html.IndexOf("</head>", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void TurkishWordingHelpers()
     {
         Assert.Equal("Kadıköy’de", PublicText.In("Kadıköy"));
@@ -239,7 +284,16 @@ public sealed class PublicPagesTests(PageFixture site) : IClassFixture<PageFixtu
         var hours = OpeningHours.Parse("""{"mon":"09:00-18:00","tue":"9.00 - 18.00","sat":["10:00-13:00","14:00-17:00"],"sun":"closed"}""", false);
         Assert.Equal(["Mo-Tu 09:00-18:00", "Sa 10:00-13:00", "Sa 14:00-17:00"], hours.Schema);
         Assert.Equal("Pazartesi–Salı", hours.Lines[0].Days);
-        Assert.Equal("Kapalı", hours.Lines[1].Hours);
+        Assert.Equal(new OpeningHours.Line("Çarşamba–Cuma", "Bilinmiyor"), hours.Lines[1]);
+        Assert.Equal(new OpeningHours.Line("Pazar", "Kapalı"), hours.Lines[^1]);
+
+        // Only an explicit "closed" or "kapali" closes a day; a missing or unreadable day stays unknown.
+        var partial = OpeningHours.Parse("""{"mon":"09:00-18:00","tue":"sometimes","wed":"KAPALI"}""", false);
+        Assert.Equal(
+            new OpeningHours.Line[] { new("Pazartesi", "09:00–18:00"), new("Salı", "Bilinmiyor"), new("Çarşamba", "Kapalı"), new("Perşembe–Pazar", "Bilinmiyor") },
+            partial.Lines);
+        Assert.Equal(["Mo 09:00-18:00"], partial.Schema);
+        Assert.DoesNotContain(OpeningHours.Parse("""{"mon":"09:00-18:00"}""", false).Lines, l => l.Hours == "Kapalı");
         Assert.Empty(OpeningHours.Parse("{}", false).Lines);
         Assert.Empty(OpeningHours.Parse("not json", false).Lines);
         Assert.Empty(OpeningHours.Parse("""{"mon":"24:30-25:00"}""", false).Lines);
