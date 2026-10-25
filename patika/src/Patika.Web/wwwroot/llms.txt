@@ -1,0 +1,37 @@
+# Patika
+
+> Patika, sokak kedileri ve köpekleri için mahalle gönüllülerini buluşturan bir uygulama (önce Android, İstanbul'da başlıyor). Gönüllüler mama ve su istasyonlarını haritada görür, beslediklerinde "Beslendi" der; sahiplendirme ilanları, acil yardım çağrıları ve bakım yerleri de aynı yerde. Bu site herkese açık sahiplendirme ilanlarını, ilçe istasyon özetlerini, bakım yerlerini, haftalık etki sayılarını ve rehber yazılarını yayımlar.
+
+Notlar:
+- Site Türkçedir. Gönüllülerin adı, e-postası veya kimliği hiçbir sayfada yer almaz; istasyon konumları yaklaşık 100 metreye yuvarlanır.
+- Sahiplendirme ilanları moderasyondan geçer ve 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır.
+- Rehberler genel bilgi verir, veteriner muayenesinin yerini tutmaz.
+
+## Rehberler
+
+- [Sokak kedileri ve köpekleri nasıl güvenle beslenir?](https://patika.app/rehber/sokak-kedisi-nasil-beslenir): ne verilir, hangi yiyecekler zararlı, su, saat ve yer seçimi
+- [Yaralı bir kedi veya köpek bulursam ne yapmalıyım?](https://patika.app/rehber/yarali-kedi-veya-kopek-bulursam): ilk dakikalar, taşıma, İstanbul'da veteriner ve belediye birimleri, acil yardım çağrısı
+- [Sokak hayvanı sahiplenmek nasıl işler?](https://patika.app/rehber/sahiplenme-nasil-isler): hazırlık, ilan sahibine sorulacaklar, ilk günler
+- [Yazın su, kışın barınak](https://patika.app/rehber/yazin-su-kisin-barinak): sıcak çarpması, kış barınağı, mevsim tehlikeleri
+- [Kısırlaştırma ve belediye programları](https://patika.app/rehber/kisirlastirma-ve-belediye-programlari): faydaları, 5199 sayılı Kanun'un genel çerçevesi, ameliyat sonrası bakım
+
+## Herkese açık veriler
+
+- [Sahiplendirme ilanları](https://patika.app/sahiplendirme): yuva arayan kediler ve köpekler, ilçe ve türe göre
+- [Bakım yerleri](https://patika.app/bakim-yerleri): veteriner klinikleri, geçici bakımevleri, belediye birimleri, 24 saat açık olanlar
+- [Etki](https://patika.app/etki): son dört haftanın besleme, yeni istasyon, sahiplendirme ve acil yardım sayıları ile hesaplama yöntemi
+- [İstanbul ilçeleri](https://patika.app/istasyonlar/istanbul): ilçe başına aktif istasyon ve besleme özetleri
+
+## Patika hakkında
+
+- [Hakkında](https://patika.app/hakkinda)
+- [Sık sorulan sorular](https://patika.app/sss)
+- [Gizlilik politikası](https://patika.app/gizlilik)
+- [KVKK aydınlatma metni](https://patika.app/kvkk)
+- [Hesap silme](https://patika.app/hesap-silme)
+
+## Optional
+
+- [Site haritası](https://patika.app/sitemap.xml)
+- [Kullanım koşulları](https://patika.app/kosullar)
+- [İletişim](https://patika.app/iletisim)
