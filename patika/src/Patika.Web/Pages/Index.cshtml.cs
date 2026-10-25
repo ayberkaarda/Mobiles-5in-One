@@ -1,12 +1,17 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.OutputCaching;
+using Patika.Web.Routing;
+using Patika.Web.Services;
+using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages;
 
 /// <summary>
-/// Home page. Until the API is wired in, every animal, place and number shown here is
-/// sample content and is marked [ÖRNEK] on the page.
+/// Home page. The morning-round story and the map are an illustration (marked [ÖRNEK]); the adoption
+/// tags, care places and the impact sentence come from the public queries.
 /// </summary>
-public sealed class IndexModel : PageModel
+[OutputCache(PolicyName = CachePolicies.Listing)]
+public sealed class IndexModel(IAdoptionQueries adoptions, ICarePlaceQueries carePlaces, IImpactQueries impact, TimeProvider clock)
+    : PublicPageModel(clock)
 {
     public IReadOnlyList<RoundStop> Round { get; } =
     [
@@ -20,22 +25,20 @@ public sealed class IndexModel : PageModel
             "Topallayan bir köpek. Acil yardım çağrısı 2 km içindeki gönüllülere gider; en yakın 24 saat açık veteriner aynı ekranda.")
     ];
 
-    public IReadOnlyList<AdoptionTag> Adoptions { get; } =
-    [
-        new("Pamuk", "Dişi kedi, yaklaşık 2 yaşında", "Moda, Kadıköy", Sterilized: true, Vaccinated: true, EarTagged: true, Species.Cat),
-        new("Zeytin", "Erkek kedi, 8 aylık", "Yeldeğirmeni, Kadıköy", Sterilized: false, Vaccinated: true, EarTagged: false, Species.Cat),
-        new("Karabaş", "Erkek köpek, yaklaşık 4 yaşında", "Caferağa, Kadıköy", Sterilized: true, Vaccinated: true, EarTagged: true, Species.Dog)
-    ];
+    public IReadOnlyList<AdoptionCard> Adoptions { get; private set; } = [];
+    public IReadOnlyList<CarePlaceView> CarePlaces { get; private set; } = [];
+    public ImpactWeek LastWeek { get; private set; } = null!;
 
-    public IReadOnlyList<CarePlace> CarePlaces { get; } =
-    [
-        new("Kuşdili Veteriner Kliniği", "650 m", OpenAllDay: true),
-        new("Mahalle Geçici Bakımevi", "2,1 km", OpenAllDay: false),
-        new("Yoğurtçu Hayvan Hastanesi", "3,4 km", OpenAllDay: true)
-    ];
-
-    public void OnGet()
+    public async Task OnGetAsync(CancellationToken ct)
     {
+        Adoptions = await adoptions.ListAsync(pageSize: 3, ct: ct);
+        var open = await carePlaces.ListAsync(open24h: true, limit: 3, ct: ct);
+        CarePlaces = open.Count == 3 ? open : [.. open, .. await carePlaces.ListAsync(open24h: false, limit: 3 - open.Count, ct: ct)];
+        LastWeek = (await impact.GetAsync(ct)).LastWeek;
+
+        Seo("Patika: sokak hayvanları için mahalle gönüllüleri",
+            "Mama istasyonları haritası, besleme takibi, sahiplendirme, acil yardım ve en yakın veteriner. Mahallenin patilerini birlikte koruyalım.",
+            Routes.Home);
     }
 }
 
@@ -47,16 +50,4 @@ public enum StopKind
     Urgent
 }
 
-public enum Species
-{
-    Cat,
-    Dog
-}
-
 public sealed record RoundStop(string Time, string Place, StopKind Kind, string Text);
-
-public sealed record AdoptionTag(
-    string Name, string Summary, string District,
-    bool Sterilized, bool Vaccinated, bool EarTagged, Species Species);
-
-public sealed record CarePlace(string Name, string Distance, bool OpenAllDay);

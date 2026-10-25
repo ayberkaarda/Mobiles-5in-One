@@ -10,6 +10,35 @@ public sealed class PlaceQueries(PatikaDbContext db, IAdoptionQueries adoptions,
     public async Task<IReadOnlyList<ProvinceSummary>> ListProvincesAsync(CancellationToken ct = default) =>
         await db.Provinces.OrderBy(p => p.Name).Select(p => new ProvinceSummary(p.Name, p.Slug)).ToListAsync(ct);
 
+    public async Task<ProvinceDetail?> GetProvinceAsync(string provinceSlug, CancellationToken ct = default)
+    {
+        var province = await db.Provinces.Where(p => p.Slug == provinceSlug).Select(p => new { p.Id, p.Name, p.Slug }).SingleOrDefaultAsync(ct);
+        if (province is null) return null;
+        var rows = await Districts(db.Districts.Where(d => d.ProvinceId == province.Id)).ToListAsync(ct);
+        return new ProvinceDetail(province.Name, province.Slug, Sorted(rows, activeFirst: true));
+    }
+
+    public async Task<IReadOnlyList<DistrictListItem>> ListDistrictsAsync(CancellationToken ct = default) =>
+        Sorted(await Districts(db.Districts).ToListAsync(ct), activeFirst: false);
+
+    /// <summary>One statement: each district with its active station and open adoption counts.</summary>
+    private IQueryable<DistrictListItem> Districts(IQueryable<District> districts)
+    {
+        var now = clock.GetUtcNow();
+        return districts.Select(d => new DistrictListItem(d.Name, d.Slug,
+            db.Stations.Count(s => s.DistrictId == d.Id && s.Status != StationStatus.Removed),
+            db.AdoptionPosts.Count(p => p.DistrictId == d.Id && p.State == AdoptionPostState.Published && p.ClosesAt > now
+                && db.Animals.Any(a => a.Id == p.AnimalId && a.Status != AnimalStatus.Adopted))));
+    }
+
+    private static DistrictListItem[] Sorted(IEnumerable<DistrictListItem> rows, bool activeFirst)
+    {
+        var turkish = StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), ignoreCase: true);
+        return activeFirst
+            ? rows.OrderByDescending(d => d.ActiveStations + d.OpenAdoptions > 0).ThenBy(d => d.Name, turkish).ToArray()
+            : rows.OrderBy(d => d.Name, turkish).ToArray();
+    }
+
     public async Task<DistrictSummary?> GetDistrictAsync(string provinceSlug, string districtSlug, CancellationToken ct = default)
     {
         var district = await (from d in db.Districts
@@ -24,11 +53,12 @@ public sealed class PlaceQueries(PatikaDbContext db, IAdoptionQueries adoptions,
         var since = now.AddDays(-7);
         var stations = await db.Stations.Where(s => s.DistrictId == district.Id && s.Status != StationStatus.Removed)
             .OrderBy(s => s.Name).ThenBy(s => s.Id)
-            .Select(s => new { s.Name, s.Kind, s.Species, s.LastFedAt, s.Location }).ToListAsync(ct);
+            .Select(s => new { s.Name, s.Kind, s.Species, s.LastFedAt, s.Location, s.Status, s.FeedingsCount }).ToListAsync(ct);
         var stationRows = stations.Select(s => new StationRow(string.IsNullOrWhiteSpace(s.Name) ? "İsimsiz istasyon" : s.Name,
             s.Kind, s.Species, s.LastFedAt is null ? LastFedBucket.Never : s.LastFedAt >= today ? LastFedBucket.Today
                 : s.LastFedAt >= monday ? LastFedBucket.ThisWeek : LastFedBucket.Older,
-            Math.Round(s.Location.Latitude, 3), Math.Round(s.Location.Longitude, 3))).ToArray();
+            Math.Round(s.Location.Latitude, 3), Math.Round(s.Location.Longitude, 3))
+        { NeedsRefill = s.Status == StationStatus.NeedsRefill, TotalFeedings = s.FeedingsCount }).ToArray();
         var feedingCount = await db.Feedings.CountAsync(f => f.At >= since && f.At <= now
             && db.Stations.Any(s => s.Id == f.StationId && s.DistrictId == district.Id), ct);
         var adoptionCount = await db.AdoptionPosts.CountAsync(p => p.DistrictId == district.Id

@@ -1,0 +1,26 @@
+@page "/rehber"
+@model Patika.Web.Pages.Rehber.IndexModel
+@using Patika.Web.Routing
+@using Patika.Web.Seo.Documents
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
+<div class="doc">
+    <nav class="doc-crumbs" aria-label="Konum"><a href="/">Ana sayfa</a> / <span aria-current="page">Rehber</span></nav>
+    <header class="doc-head">
+        <p class="doc-eyebrow">Rehber</p>
+        <h1 class="doc-title">Sokak hayvanlarına nasıl yardım edilir?</h1>
+        <p class="doc-lede">Mahallede beslemeden yaralı bir hayvana yardıma, sahiplenmeden kışın barınağa kadar en çok sorulan soruların kısa ve uygulanabilir cevapları. Her yazı önce cevabı verir, sonra ayrıntıya iner.</p>
+    </header>
+    <ul class="guide-list">
+        @foreach (var guide in Model.Guides)
+        {
+            <li class="guide-card">
+                <h2 class="guide-card__title"><a href="@Routes.Guide(guide.Slug)">@guide.Title</a></h2>
+                <p class="guide-card__text">@guide.Description</p>
+                <p class="guide-card__meta">Güncelleme <time datetime="@TurkishDate.Iso(guide.Updated)">@TurkishDate.Format(guide.Updated)</time> · @guide.ReadingMinutes dakika</p>
+            </li>
+        }
+    </ul>
+    <p class="doc-note">Rehberler genel bilgi verir; veteriner muayenesinin ve belediyenin resmi duyurularının yerini tutmaz.</p>
+</div>

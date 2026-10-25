@@ -1,0 +1,9 @@
+@page "/{doc:regex(^(hakkinda|sss|iletisim)$)}"
+@model Patika.Web.Pages.Content.DocModel
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
+<div class="doc">
+    <nav class="doc-crumbs" aria-label="Konum"><a href="/">Ana sayfa</a> / <span aria-current="page">@(Model.Doc.ShortTitle ?? Model.Doc.Title)</span></nav>
+    <partial name="_Doc" model="Model.Doc" />
+</div>

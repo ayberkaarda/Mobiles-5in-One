@@ -1,0 +1,86 @@
+@page "/bakim-yeri/{slug}"
+@using Patika.Web.Routing
+@model Patika.Web.Pages.BakimYeri.IndexModel
+@{
+    var place = Model.Place;
+}
+<div class="page">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="detail detail--place">
+        <div class="detail__body">
+            <div class="badges badges--large">
+                @if (place.Open24h)
+                {
+                    <span class="badge badge--solid">24 saat açık</span>
+                }
+                <span class="badge">@PublicText.Capitalize(PublicText.CareKindLong(place.Kind))</span>
+                @if (place.Verified)
+                {
+                    <span class="badge">Bilgiler doğrulandı</span>
+                }
+            </div>
+            <h1 class="page-title">@place.Name</h1>
+            <p class="lede lede--flush">@Model.Lede</p>
+            <dl class="facts">
+                <dt>Adres</dt>
+                <dd>@place.Address@(place.DistrictName is null || place.Address.Contains(place.DistrictName, StringComparison.OrdinalIgnoreCase) ? "" : ", " + place.DistrictName)</dd>
+                <dt>Telefon</dt>
+                <dd>
+                    @if (Model.Tel is not null)
+                    {
+                        <a class="strong-num" href="@Model.Tel">@place.Phone</a>
+                    }
+                    else
+                    {
+                        @:Telefon bilgisi yok
+                    }
+                </dd>
+                <dt>Saatler</dt>
+                <dd>
+                    @if (Model.Hours.Lines.Count == 0)
+                    {
+                        @:Saat bilgisi yok; gitmeden önce ara.
+                    }
+                    else
+                    {
+                        <ul class="hours">
+                            @foreach (var line in Model.Hours.Lines)
+                            {
+                                <li>@line.Days, @line.Hours</li>
+                            }
+                        </ul>
+                    }
+                </dd>
+                @if (place.Website is not null)
+                {
+                    <dt>İnternet sitesi</dt>
+                    <dd><a href="@place.Website" rel="noopener nofollow">@place.Website.Replace("https://", "", StringComparison.OrdinalIgnoreCase).TrimEnd('/')</a></dd>
+                }
+            </dl>
+            <div class="actions">
+                @if (Model.Tel is not null)
+                {
+                    <a class="button" href="@Model.Tel">Ara</a>
+                }
+                <a class="button button--ghost" href="@Model.MapLink" rel="noopener">Haritada aç</a>
+                <a class="link-strong" href="@(Routes.Home)#uygulama">Yanlış bilgiyi bildir</a>
+            </div>
+        </div>
+        <svg class="art art--place" viewBox="0 0 420 320" aria-hidden="true" focusable="false">
+            <rect width="420" height="320" fill="#F2EEE8"></rect>
+            <g fill="none" stroke="#FBFAF8" stroke-linecap="round"><path d="M-20 240C120 210 260 170 440 110" stroke-width="26"></path><path d="M120 -20C130 100 150 220 170 340" stroke-width="20"></path><path d="M310 -20C315 100 330 220 350 340" stroke-width="18"></path></g>
+            <path d="M210 182C210 182 190 160 190 146A20 20 0 0 1 230 146C230 160 210 182 210 182Z" fill="#2A7353" stroke="#FFFFFF" stroke-width="3"></path>
+            <circle cx="210" cy="146" r="7" fill="#FFFFFF"></circle>
+        </svg>
+    </div>
+
+    @if (Model.Nearby.Count > 0)
+    {
+        <section class="related" aria-labelledby="yakin">
+            <h2 id="yakin" class="block-title">@(place.DistrictName is null ? "Diğer bakım yerleri" : "Yakındaki diğer bakım yerleri")</h2>
+            <div class="related__list">
+                <partial name="_PlaceList" model="Model.Nearby" />
+            </div>
+        </section>
+    }
+</div>

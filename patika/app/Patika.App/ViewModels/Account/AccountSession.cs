@@ -11,7 +11,7 @@ public static class AccountText
     public static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
 
     public const string DeletionCancelledTitle = "Hesabın açık";
-    public const string DeletionCancelled = "Hesabını silme isteğin iptal edildi. Her şey olduğu gibi duruyor.";
+    public const string DeletionCancelled = "Hesabını silme isteğin iptal edildi. Hesabın açık; takiplerini ve kapanan ilanlarını yeniden eklemen gerekebilir.";
     public const string PasswordChanged = "Şifren değişti. Yeni şifrenle giriş yap.";
     public const string CodeInvalid = "Kod hatalı ya da süresi dolmuş. Yeni kod iste.";
     public const string CodeFormat = "E-postadaki 6 haneli kodu yaz.";

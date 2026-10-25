@@ -1,0 +1,17 @@
+@model string
+@{
+    var tabs = new[] { ("/gizlilik", "Gizlilik politikası"), ("/kvkk", "KVKK aydınlatma metni"), ("/kosullar", "Kullanım koşulları"), ("/hesap-silme", "Hesap silme") };
+}
+<nav class="legal-tabs" aria-label="Yasal sayfalar">
+    @foreach (var (path, label) in tabs)
+    {
+        if (path == Model)
+        {
+            <a href="@path" aria-current="page">@label</a>
+        }
+        else
+        {
+            <a href="@path">@label</a>
+        }
+    }
+</nav>

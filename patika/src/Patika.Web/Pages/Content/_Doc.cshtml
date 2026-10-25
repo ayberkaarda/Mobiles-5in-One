@@ -1,0 +1,45 @@
+@model Patika.Web.Seo.Documents.ContentDoc
+@using Patika.Domain
+@using Patika.Web.Seo.Documents
+@* Shared body for legal and site pages: title, meta line, Markdown body, optional FAQ, table of contents. *@
+@{
+    var toc = Model.Headings.Where(h => h.Level == 2).Select(h => (Id: h.Id, Text: h.Text))
+        .Concat(Model.Faq.Select(f => (Id: Slug.From(f.Question), Text: f.Question))).ToArray();
+}
+<div class="doc-layout doc-layout--title-inside">
+    <article class="doc-body doc-body--compact">
+        <h1 class="doc-title doc-title--page">@Model.Title</h1>
+        <p class="doc-meta">Son güncelleme <time datetime="@TurkishDate.Iso(Model.Updated)">@TurkishDate.Format(Model.Updated)</time>.</p>
+        @if (ViewData["Draft"] is true)
+        {
+            <p class="doc-draft" role="note"><strong>Taslak: hukuki inceleme bekliyor.</strong> Köşeli parantezli alanlar hukuk onayından sonra doldurulacak; metin bu hâliyle bağlayıcı değildir.</p>
+        }
+        @if (Model.Answer is not null)
+        {
+            <p class="doc-answer">@Html.Raw(MarkdownLite.Inline(Model.Answer))</p>
+        }
+        @if (Model.Faq.Count > 0)
+        {
+            <section class="doc-faq" aria-label="Sorular ve cevaplar">
+                @foreach (var item in Model.Faq)
+                {
+                    <h2 id="@Slug.From(item.Question)">@item.Question</h2>
+                    <p>@Html.Raw(MarkdownLite.Inline(item.Answer))</p>
+                }
+            </section>
+        }
+        @Html.Raw(Model.Html)
+    </article>
+    @if (toc.Length > 1)
+    {
+        <aside class="doc-toc" aria-label="Bu metinde">
+            <p class="doc-toc__title">Bu metinde</p>
+            <ol>
+                @foreach (var entry in toc)
+                {
+                    <li><a href="#@entry.Id">@entry.Text</a></li>
+                }
+            </ol>
+        </aside>
+    }
+</div>

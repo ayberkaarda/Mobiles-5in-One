@@ -1,0 +1,67 @@
+@page "/rehber/{slug}"
+@model Patika.Web.Pages.Rehber.GuideModel
+@using Patika.Web.Routing
+@using Patika.Web.Seo.Documents
+@{
+    var guide = Model.Guide;
+}
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
+<div class="doc">
+    <nav class="doc-crumbs" aria-label="Konum"><a href="/">Ana sayfa</a> / <a href="@Routes.Guides">Rehber</a> / <span aria-current="page">@(guide.ShortTitle ?? guide.Title)</span></nav>
+    <header class="doc-head">
+        <p class="doc-eyebrow">Rehber</p>
+        <h1 class="doc-title">@guide.Title</h1>
+        <p class="doc-meta">Son güncelleme <time datetime="@TurkishDate.Iso(guide.Updated)">@TurkishDate.Format(guide.Updated)</time>. Okuma süresi @guide.ReadingMinutes dakika.</p>
+    </header>
+
+    <div class="doc-layout">
+        <article class="doc-body">
+            @if (guide.Answer is not null)
+            {
+                <p class="doc-answer"><strong>Kısaca:</strong> @Html.Raw(MarkdownLite.Inline(guide.Answer))</p>
+            }
+            @Html.Raw(guide.Html)
+            @if (guide.Faq.Count > 0)
+            {
+                <section class="doc-faq" aria-labelledby="sss">
+                    <h2 id="sss">Sık sorulanlar</h2>
+                    @foreach (var item in guide.Faq)
+                    {
+                        <h3>@item.Question</h3>
+                        <p>@Html.Raw(MarkdownLite.Inline(item.Answer))</p>
+                    }
+                </section>
+            }
+            <p class="doc-note">Bu yazı genel bilgi verir, veteriner muayenesinin yerini tutmaz.</p>
+            @if (Model.Others.Count > 0)
+            {
+                <nav class="doc-more" aria-labelledby="diger-rehberler">
+                    <h2 id="diger-rehberler" class="doc-more__title">Diğer rehberler</h2>
+                    <ul>
+                        @foreach (var other in Model.Others)
+                        {
+                            <li><a href="@Routes.Guide(other.Slug)">@other.Title</a></li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </article>
+
+        <aside class="doc-toc" aria-label="Bu yazıda">
+            <p class="doc-toc__title">Bu yazıda</p>
+            <ol>
+                @foreach (var heading in guide.Headings.Where(h => h.Level == 2))
+                {
+                    <li><a href="#@heading.Id">@heading.Text</a></li>
+                }
+                @if (guide.Faq.Count > 0)
+                {
+                    <li><a href="#sss">Sık sorulanlar</a></li>
+                }
+            </ol>
+            <a class="doc-toc__cta" href="@Routes.CarePlaces">24 saat açık klinikler</a>
+        </aside>
+    </div>
+</div>

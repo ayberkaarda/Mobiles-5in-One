@@ -1,0 +1,19 @@
+@using Patika.Web.Routing
+@using Patika.Web.Services.PublicQueries
+@model IEnumerable<CarePlaceView>
+<ul class="place-list">
+    @foreach (var place in Model)
+    {
+        <li>
+            <a href="@Routes.CarePlace(place.Slug)">@place.Name</a>
+            @if (place.Open24h)
+            {
+                <span class="place-list__open">24 saat açık</span>
+            }
+            else
+            {
+                <span class="place-list__kind">@PublicText.CareKind(place.Kind)</span>
+            }
+        </li>
+    }
+</ul>

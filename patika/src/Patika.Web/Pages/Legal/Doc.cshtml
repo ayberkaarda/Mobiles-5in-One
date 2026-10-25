@@ -1,0 +1,12 @@
+@page "/{doc:regex(^(gizlilik|kvkk|kosullar)$)}"
+@model Patika.Web.Pages.Legal.DocModel
+@{
+    ViewData["Draft"] = true;
+}
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
+<div class="doc">
+    <partial name="_LegalTabs" model="@("/" + Model.Doc.Slug)" />
+    <partial name="/Pages/Content/_Doc.cshtml" model="Model.Doc" />
+</div>

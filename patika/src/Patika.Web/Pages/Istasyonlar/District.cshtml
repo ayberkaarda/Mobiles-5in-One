@@ -1,0 +1,115 @@
+@page "/istasyonlar/{il}/{ilce}"
+@using Patika.Web.Routing
+@using Patika.Web.Services.PublicQueries
+@model Patika.Web.Pages.Istasyonlar.DistrictModel
+@{
+    var d = Model.District;
+    var where = PublicText.In(d.Name);
+}
+<div class="page page--loose">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+
+    <div class="page-head page-head--art">
+        <div class="page-head__text">
+            <h1 class="page-title">@where mama ve su istasyonları</h1>
+            <p class="lede">@(d.ActiveStations > 0 ? $"{where} gönüllüler sokak kedileri ve köpekleri için mama ve su istasyonlarına bakıyor." : "Gönüllüler bir istasyon eklediğinde burada görünür.") Bu sayfa her istasyonun son besleme zamanını ve toplam kaydını gösterir; kimin beslediği hiçbir zaman gösterilmez.</p>
+        </div>
+        @if (d.ActiveStations > 0)
+        {
+        <svg class="art art--wide" viewBox="0 0 560 360" aria-hidden="true" focusable="false">
+            <rect width="560" height="360" fill="#F2EEE8"></rect>
+            <g fill="none" stroke="#FBFAF8" stroke-linecap="round"><path d="M-20 280C160 240 340 190 580 120" stroke-width="30"></path><path d="M140 -20C160 120 190 250 220 380" stroke-width="22"></path><path d="M400 -20C405 120 420 250 450 380" stroke-width="22"></path><path d="M-20 90L580 60" stroke-width="16"></path></g>
+            <circle cx="120" cy="220" r="15" fill="#F28C28" stroke="#FFFFFF" stroke-width="4"></circle>
+            <circle cx="260" cy="150" r="15" fill="#7BC8A4" stroke="#FFFFFF" stroke-width="4"></circle>
+            <circle cx="330" cy="250" r="15" fill="#FFFFFF" stroke="#F28C28" stroke-width="3" stroke-dasharray="5 4"></circle>
+            <circle cx="470" cy="160" r="24" fill="#3D3A36" stroke="#FFFFFF" stroke-width="4"></circle>
+            <text x="470" y="166" fill="#FBFAF8" font-size="16" font-weight="800" text-anchor="middle" font-family="Nunito, sans-serif">@PublicText.Number(d.ActiveStations)</text>
+        </svg>
+        }
+    </div>
+
+    <p class="stat-sentence">
+        @if (d.ActiveStations == 0)
+        {
+            @:@where henüz kayıtlı istasyon yok.
+        }
+        else
+        {
+            @:@where <span class="num">@PublicText.Number(d.ActiveStations)</span> istasyon var. Son 7 günde <span class="num">@PublicText.Number(d.FeedingsLastSevenDays)</span> besleme kaydedildi@(Model.NeedsRefill > 0 ? ";" : ".")
+            @if (Model.NeedsRefill > 0)
+            {
+                @:<span class="num">@PublicText.Number(Model.NeedsRefill)</span> istasyonda mama bitti.
+            }
+        }
+    </p>
+
+    <section aria-labelledby="ist-baslik">
+        <h2 id="ist-baslik" class="block-title">İstasyonlar</h2>
+        @if (d.Stations.Count == 0)
+        {
+            <p class="empty">Bu ilçede henüz istasyon yok. Bir mama ya da su kabı bıraktıysan Patika uygulamasından haritaya ekleyebilirsin.</p>
+        }
+        else
+        {
+            <div class="table-box" role="region" aria-labelledby="ist-baslik" tabindex="0">
+                <table class="table table--wide">
+                    <thead>
+                        <tr>
+                            <th scope="col">İstasyon</th>
+                            <th scope="col">Ne var</th>
+                            <th scope="col">Kimler için</th>
+                            <th scope="col">Son besleme</th>
+                            <th scope="col" class="num">Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in d.Stations)
+                        {
+                            <tr>
+                                <th scope="row" class="@(s.Name == "İsimsiz istasyon" ? "is-muted" : null)">@s.Name</th>
+                                <td>@PublicText.StationKind(s.Kind)</td>
+                                <td>@PublicText.Species(s.Species)</td>
+                                <td>
+                                    @if (s.NeedsRefill)
+                                    {
+                                        <span class="badge badge--empty">Mama bitti</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="@(s.LastFed == LastFedBucket.Today ? "is-fresh" : null)">@PublicText.LastFed(s.LastFed)</span>
+                                    }
+                                </td>
+                                <td class="num">@PublicText.Number(s.TotalFeedings)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">Konumlar uygulamada, harita üzerinde gösterilir. Toplam, istasyona kaydedilen tüm beslemelerin sayısıdır.</p>
+        }
+    </section>
+
+    <div class="split">
+        <section aria-labelledby="bakim-baslik">
+            <h2 id="bakim-baslik" class="block-title">@PublicText.InRelative(d.Name) bakım yerleri</h2>
+            @if (d.CarePlaces.Count == 0)
+            {
+                <p class="empty">Bu ilçe için kayıtlı bakım yeri yok. <a href="@Routes.CarePlaces">Tüm bakım yerlerine bak</a>.</p>
+            }
+            else
+            {
+                <partial name="_PlaceList" model="d.CarePlaces" />
+            }
+        </section>
+        <section aria-labelledby="yuva-baslik">
+            <h2 id="yuva-baslik" class="block-title">@where yuva arayanlar</h2>
+            <ul class="chips">
+                @foreach (var card in d.Adoptions)
+                {
+                    <li><a class="name-chip" href="@Routes.Adoption(card.Slug)">@PublicText.AnimalName(card)</a></li>
+                }
+                <li><a class="chips__more" href="@(d.Adoptions.Count == 0 ? Routes.Adoptions : Routes.Adoptions + "?ilce=" + Uri.EscapeDataString(d.Slug))">@(d.Adoptions.Count == 0 ? "Şu an açık ilan yok; tüm ilanlara bak" : "Tüm ilanlar")</a></li>
+            </ul>
+        </section>
+    </div>
+</div>

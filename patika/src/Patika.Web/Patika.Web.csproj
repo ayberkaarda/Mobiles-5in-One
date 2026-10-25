@@ -5,4 +5,8 @@
   <ItemGroup>
     <ProjectReference Include="../Patika.Infrastructure/Patika.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Guides, legal and site pages; read by Seo/Documents/DocumentStore. -->
+    <EmbeddedResource Include="Content/**/*.md" LogicalName="patika-content:%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
