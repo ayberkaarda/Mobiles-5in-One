@@ -63,17 +63,19 @@
                 <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource TekirSoft}" IsVisible="{Binding IsDone}">
                     <Label Text="Hesabın kapandı. Bu süre içinde yeniden giriş yaparsan silme iptal olur." FontFamily="NunitoSansSemiBold" />
                 </Border>
-
-                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
             </VerticalStackLayout>
         </ScrollView>
-        <VerticalStackLayout Grid.Row="2" Padding="20,0,20,20" Spacing="8" IsVisible="{Binding IsExplaining}">
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AcilDeep}" />
-            <Button Text="Hesabımı sil" Style="{StaticResource UrgentButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
-                    Command="{Binding DeleteWithPasswordCommand}" IsEnabled="{Binding IsNotBusy}" IsVisible="{Binding HasPassword}"
-                    AutomationId="ConfirmDeleteButton" />
-            <Button Text="Vazgeç" BackgroundColor="Transparent" TextColor="{StaticResource Kaldirim}" HeightRequest="48"
-                    Command="{Binding CancelCommand}" />
+        <!-- Errors sit above the fixed actions so a wrong password is visible without scrolling. -->
+        <VerticalStackLayout Grid.Row="2" Padding="20,0,20,20" Spacing="8">
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" AutomationId="DeleteError" />
+            <VerticalStackLayout Spacing="8" IsVisible="{Binding IsExplaining}">
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AcilDeep}" />
+                <Button Text="Hesabımı sil" Style="{StaticResource UrgentButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
+                        Command="{Binding DeleteWithPasswordCommand}" IsEnabled="{Binding IsNotBusy}" IsVisible="{Binding HasPassword}"
+                        AutomationId="ConfirmDeleteButton" />
+                <Button Text="Vazgeç" BackgroundColor="Transparent" TextColor="{StaticResource Kaldirim}" HeightRequest="48"
+                        Command="{Binding CancelCommand}" />
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </Grid>
 </ContentPage>
