@@ -58,7 +58,7 @@ import { SeoService } from '../seo/seo.service';
     }
     .ring {
       fill: none;
-      stroke: #14213d;
+      stroke: var(--iv-accent-ink);
       stroke-width: 4;
     }
     .stripe {
@@ -86,7 +86,7 @@ import { SeoService } from '../seo/seo.service';
       color: var(--iv-accent-ink);
       font-weight: 650;
       text-decoration: none;
-      box-shadow: 0 4px 0 var(--iv-board-edge);
+      box-shadow: none;
     }
     a:focus-visible {
       outline: 3px solid var(--iv-stripe);

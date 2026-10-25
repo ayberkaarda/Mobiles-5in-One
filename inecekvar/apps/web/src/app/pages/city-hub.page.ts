@@ -169,7 +169,7 @@ export function cityHubJsonLd(origin: string, { city }: CityData): JsonLdNode[] 
     }
     @media (min-width: 44rem) {
       .boards {
-        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        grid-template-columns: 1fr;
       }
     }
     .recent {
@@ -177,6 +177,7 @@ export function cityHubJsonLd(origin: string, { city }: CityData): JsonLdNode[] 
       padding: 0;
       list-style: none;
       border-top: 1px solid var(--iv-line);
+      background: var(--iv-surface);
     }
     .recent li {
       display: flex;
@@ -184,7 +185,7 @@ export function cityHubJsonLd(origin: string, { city }: CityData): JsonLdNode[] 
       align-items: baseline;
       justify-content: space-between;
       gap: 0.25rem 1rem;
-      padding: 0.85rem 0.25rem;
+      padding: 0.85rem 1rem;
       border-bottom: 1px solid var(--iv-line);
     }
     .recent a {

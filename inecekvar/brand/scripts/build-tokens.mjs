@@ -55,6 +55,15 @@ export function buildCss(tokens) {
   for (const [key, entry] of Object.entries(palette)) {
     lines.push(`  --iv-color-${kebab(key)}: ${entry.value};`);
   }
+  const legacy = tokens.color.legacy?.values ?? {};
+  if (Object.keys(legacy).length > 0) {
+    lines.push('  /* Former palette names, kept for pages not yet on the semantic tokens. */');
+  }
+  for (const [key, value] of Object.entries(legacy)) {
+    if (!HEX6.test(value)) errors.push(`legacy.${key} must be an upper-case #RRGGBB value`);
+    if (palette[key]) errors.push(`legacy.${key} clashes with a palette entry`);
+    lines.push(`  --iv-color-${kebab(key)}: ${value};`);
+  }
   lines.push(`  --iv-color-background: ${textOnDark};`);
   lines.push(`  --iv-color-text: ${textOnLight};`);
   for (const [name, key] of Object.entries(tokens.color.ionic)) {

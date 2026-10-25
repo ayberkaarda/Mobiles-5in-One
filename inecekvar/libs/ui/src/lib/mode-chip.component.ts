@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { LineMode } from '@inecekvar/domain';
 
-/** Vehicle kind of a line: dolmuş on yellow, minibüs on turquoise, servis on a neutral tint. */
+/**
+ * Vehicle kind of a line: the label always names the kind; the tint and the dot only repeat it
+ * (dolmuş on the plate colour, minibüs on the information blue, servis on a neutral tint).
+ */
 @Component({
   selector: 'iv-mode-chip',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,11 +42,10 @@ import { LineMode } from '@inecekvar/domain';
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--iv-color-dolmus-sarisi);
-      box-shadow: inset 0 0 0 2px var(--iv-color-lacivert);
+      background: var(--iv-mode-dolmus-dot);
     }
     :host(.iv-chip--minibus) .dot {
-      background: var(--iv-color-turkuaz);
+      background: var(--iv-mode-minibus-dot);
     }
     :host(.iv-chip--servis) .dot {
       background: var(--iv-ink);

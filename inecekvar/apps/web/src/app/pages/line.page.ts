@@ -123,7 +123,14 @@ export function lineAppLinks(
             <section class="diagram" aria-labelledby="diagram-title">
               <h2 id="diagram-title">Hat şeması</h2>
               @if (strip().length > 1) {
-                <iv-route-strip [nodes]="strip()" [label]="diagramLabel()" [fit]="560" />
+                <div
+                  class="diagram-scroll"
+                  tabindex="0"
+                  role="region"
+                  [attr.aria-label]="diagramLabel()"
+                >
+                  <iv-route-strip [nodes]="strip()" [label]="diagramLabel()" [fit]="560" />
+                </div>
                 <p class="note">Şema durak sırasını gösterir, mesafeyi değil.</p>
               } @else {
                 <p>Güzergâh çizimi henüz yok.</p>
@@ -287,6 +294,10 @@ export function lineAppLinks(
       background: var(--iv-surface);
       border: 1px solid var(--iv-line);
     }
+    .diagram-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+    }
     .note {
       margin: 0.25rem 0 0;
       font-size: 0.85rem;
@@ -339,7 +350,7 @@ export function lineAppLinks(
       left: var(--cut);
       top: 0.75rem;
       bottom: 0.75rem;
-      border-left: 2px dashed rgba(20, 33, 61, 0.45);
+      border-left: 2px dashed var(--iv-line-strong);
     }
     .fare dt {
       position: absolute;
@@ -353,7 +364,7 @@ export function lineAppLinks(
       font-family: var(--iv-font-display);
       font-size: 0.75rem;
       letter-spacing: 0.12em;
-      text-transform: uppercase;
+      text-transform: none;
       writing-mode: vertical-rl;
       transform: rotate(180deg);
     }

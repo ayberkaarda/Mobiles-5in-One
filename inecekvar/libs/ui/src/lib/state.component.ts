@@ -5,7 +5,8 @@ export type StateKind = 'empty' | 'error' | 'offline';
 
 /**
  * Empty, error and offline states. The illustration is a stop sign on a pole: upright and
- * yellow when there is simply nothing yet, knocked over in red for errors, greyed for offline.
+ * on its board colours when there is simply nothing yet, knocked over and dark for errors (the
+ * heading says what went wrong, colour is never the only cue), greyed for offline.
  * First-run moments can show the street scene instead.
  */
 @Component({
@@ -77,17 +78,17 @@ export type StateKind = 'empty' | 'error' | 'offline';
       fill: var(--iv-ink-muted);
     }
     .sign {
-      fill: var(--iv-color-dolmus-sarisi);
+      fill: var(--iv-board);
       stroke: var(--iv-ink);
       stroke-width: 3;
     }
     .ring {
       fill: none;
-      stroke: var(--iv-color-lacivert);
+      stroke: var(--iv-plate);
       stroke-width: 4;
     }
     .stripe {
-      fill: var(--iv-color-turkuaz);
+      fill: var(--iv-stripe);
     }
     :host(.iv-state--error) .sign {
       fill: var(--iv-danger);

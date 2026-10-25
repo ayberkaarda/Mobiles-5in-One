@@ -12,7 +12,7 @@ export interface ItineraryStep {
 }
 
 /**
- * The steps of the selected itinerary as an ordered list: a yellow placard marks each ride, a
+ * The steps of the selected itinerary as an ordered list: a code plate marks each ride, a
  * dashed ring each walk, joined by a rail like the stop sequence of a line page.
  */
 @Component({

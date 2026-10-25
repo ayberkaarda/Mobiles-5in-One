@@ -115,14 +115,14 @@ export function lineListJsonLd(origin: string, { city }: LineListData): JsonLdNo
     }
     .boards {
       display: grid;
-      gap: 0.85rem;
+      gap: 0;
       margin: 1.75rem 0 0;
       padding: 0;
       list-style: none;
     }
     @media (min-width: 44rem) {
       .boards {
-        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        grid-template-columns: 1fr;
       }
     }
     .pages {

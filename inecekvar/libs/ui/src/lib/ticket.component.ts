@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
- * Fare ticket: a yellow stub with a perforated tear line. The stub carries the short label, the
+ * Fare ticket: a stub with a perforated tear line. The stub carries the short label, the
  * body the amount and a note such as the update date. Text only; the caller translates it.
  */
 @Component({
@@ -9,7 +9,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'iv-ticket' },
   styles: `
-    /* Fare ticket: a yellow stub with a perforated tear line and notches. */
+    /* Fare ticket: a stub with a perforated tear line and notches. */
     :host {
       --iv-ticket-cut: 4.25rem;
       position: relative;
@@ -36,7 +36,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       display: grid;
       place-items: center;
       /* The stub is turned half a turn, so its left edge is the tear line. */
-      border-left: 2px dashed rgba(20, 33, 61, 0.45);
+      border-left: 2px dashed color-mix(in srgb, var(--iv-ticket-ink) 45%, transparent);
       font-family: var(--iv-font-display);
       font-weight: var(--iv-font-display-weight);
       font-size: 0.72rem;

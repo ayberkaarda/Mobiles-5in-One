@@ -12,39 +12,43 @@ export interface MapPalette {
   minorRoad: string;
   majorRoad: string;
   routeCasing: string;
+  /** Dashed walking legs of a planned trip. */
+  walk: string;
   route: string;
   stopFill: string;
   stopStroke: string;
 }
 
-/** Krem paper with lacivert ink, the turquoise stripe for the route (brand section 2). */
+/** Concrete street with charcoal ink and the painted red route (palette "Boyalı Levha"). */
 export const LIGHT_PALETTE: MapPalette = {
-  background: '#F6ECD2',
-  earth: '#FFF8E7',
-  water: '#BFE3EA',
-  park: '#E3EBCB',
-  building: '#EFE4C8',
+  background: '#DADBD6',
+  earth: '#ECECEA',
+  water: '#C3D0DD',
+  park: '#D3DBC9',
+  building: '#E0E0DB',
   minorRoad: '#FFFFFF',
-  majorRoad: '#F7D77A',
-  routeCasing: '#14213D',
-  route: '#2AB7CA',
-  stopFill: '#FFF8E7',
-  stopStroke: '#14213D',
+  majorRoad: '#FFFFFF',
+  routeCasing: '#1F2124',
+  walk: '#5A5D62',
+  route: '#B3261E',
+  stopFill: '#FFFFFF',
+  stopStroke: '#1F2124',
 };
 
-/** Night lacivert base; roads stay dim so the route keeps the contrast. */
+/** Wet asphalt at night; roads stay dim so the sodium-orange route keeps the contrast. */
 export const DARK_PALETTE: MapPalette = {
-  background: '#101B33',
-  earth: '#0B1428',
-  water: '#06223A',
-  park: '#10261F',
-  building: '#16233F',
-  minorRoad: '#22304F',
-  majorRoad: '#3A3A2A',
-  routeCasing: '#060D1D',
-  route: '#2AB7CA',
-  stopFill: '#F2B705',
-  stopStroke: '#060D1D',
+  background: '#1F2226',
+  earth: '#24272B',
+  water: '#18222D',
+  park: '#1F2924',
+  building: '#2A2E33',
+  minorRoad: '#2F3338',
+  majorRoad: '#3A3F46',
+  routeCasing: '#0B0C0E',
+  walk: '#A9ADB3',
+  route: '#F59E2E',
+  stopFill: '#F2EFE8',
+  stopStroke: '#121417',
 };
 
 export interface StyleInput {
@@ -161,7 +165,7 @@ export function buildMapStyle(input: StyleInput): StyleSpecification {
       source: 'route',
       filter: ['==', ['get', 'role'], 'walk'],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': p.routeCasing, 'line-width': 3, 'line-dasharray': [1, 1.6] },
+      paint: { 'line-color': p.walk, 'line-width': 3, 'line-dasharray': [1, 1.6] },
     });
   }
   style.layers.push(

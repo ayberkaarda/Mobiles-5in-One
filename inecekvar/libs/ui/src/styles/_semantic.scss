@@ -1,6 +1,7 @@
-// Semantic design tokens of the route-board language (ADR-0059), shared by the app and the web.
-// Light is krem paper with lacivert route boards and yellow placards; dark is the night bus: a
-// deep lacivert street, near-black boards and the same yellow signs, slightly lit.
+// Semantic design tokens of the sign language (ADR-0059, palette from ADR-0060), shared by the app
+// and the web. Light is the hand-painted route placard ("Boyalı Levha"): a concrete street, white
+// boards with charcoal lettering, the line code painted red. Dark is the night line ("Gece
+// Hattı"): wet asphalt, near-black boards and one signal colour, the sodium-lamp orange.
 // The app applies `dark` under `:root.ion-palette-dark` (manual or system choice, ThemeService);
 // the web applies it under `prefers-color-scheme: dark`.
 
@@ -23,120 +24,157 @@
 }
 
 @mixin light {
-  --iv-bg: #fff8e7;
-  --iv-bg-deep: #f6ead0;
+  --iv-bg: #dadbd6;
+  --iv-bg-deep: #cfd0ca;
   --iv-surface: #ffffff;
-  --iv-surface-sunk: #f8efd9;
-  --iv-ink: #14213d;
-  /* Yol Grisi darkened so muted text keeps 4.5:1 on krem and white. */
-  --iv-ink-muted: #4f5866;
-  --iv-line: rgba(20, 33, 61, 0.14);
-  --iv-line-strong: rgba(20, 33, 61, 0.34);
+  --iv-surface-sunk: #ececea;
+  --iv-ink: #1f2124;
+  /* Paslı Gri: 4.75:1 on Beton, 6.61:1 on white. */
+  --iv-ink-muted: #5a5d62;
+  --iv-line: rgba(31, 33, 36, 0.16);
+  --iv-line-strong: rgba(31, 33, 36, 0.4);
 
-  /* Route boards: the lacivert sign with krem and yellow lettering. */
-  --iv-board: #14213d;
-  --iv-board-raised: #1d2c4f;
-  --iv-board-ink: #fff8e7;
-  --iv-board-muted: rgba(255, 248, 231, 0.74);
-  --iv-board-sign: #f2b705;
+  /* Boards: the white placard with charcoal lettering and painted red sign text. */
+  --iv-board: #ffffff;
+  --iv-board-raised: #f3f3f0;
+  --iv-board-ink: #1f2124;
+  --iv-board-muted: #5a5d62;
+  --iv-board-sign: #b3261e;
   --iv-board-glow: none;
-  --iv-board-edge: #0b1428;
+  --iv-board-edge: #1f2124;
+  --iv-board-line: rgba(31, 33, 36, 0.24);
 
-  --iv-plate: #f2b705;
-  --iv-plate-ink: #14213d;
-  --iv-stripe: #2ab7ca;
-  --iv-rail: #2ab7ca;
-  --iv-rail-casing: #14213d;
-  --iv-walk: #6c757d;
-  --iv-stop-fill: #fff8e7;
+  /* Line-code plate: red paint, white letters, a charcoal rim and underline. */
+  --iv-plate: #b3261e;
+  --iv-plate-ink: #ffffff;
+  --iv-plate-edge: #1f2124;
+  --iv-plate-stripe: #1f2124;
+  --iv-stripe: #b3261e;
+  --iv-rail: #b3261e;
+  --iv-rail-casing: #1f2124;
+  --iv-walk: #5a5d62;
+  --iv-stop-fill: #ffffff;
 
-  --iv-accent: #f2b705;
-  --iv-accent-ink: #14213d;
-  /* Fren Kırmızısı is the stop-request button: used for "İnecek var" moments only. */
-  --iv-signal: #d7263d;
+  --iv-accent: #b3261e;
+  --iv-accent-ink: #ffffff;
+  --iv-signal: #b3261e;
   --iv-signal-ink: #ffffff;
-  --iv-danger: #c41f35;
-  --iv-success: #24774a;
-  --iv-ticket: #f2b705;
-  --iv-ticket-ink: #14213d;
+  /* Errors are charcoal text with an icon, never red alone. */
+  --iv-danger: #1f2124;
+  --iv-danger-ink: #ffffff;
+  --iv-success: #1f6b42;
+  --iv-info: #34557a;
+  --iv-ticket: #ffffff;
+  --iv-ticket-ink: #1f2124;
 
-  --iv-chrome: #14213d;
-  --iv-chrome-ink: #fff8e7;
-  --iv-chrome-ink-muted: rgba(255, 248, 231, 0.7);
-  --iv-tag: #14213d;
-  --iv-tag-ink: #fff8e7;
-  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.26);
-  --iv-mode-minibus-bg: rgba(42, 183, 202, 0.22);
-  --iv-mode-servis-bg: rgba(20, 33, 61, 0.08);
+  --iv-chrome: #b3261e;
+  --iv-chrome-ink: #ffffff;
+  --iv-chrome-ink-muted: #f3d9d6;
+  --iv-chrome-edge: #1f2124;
+  --iv-tabbar: #ffffff;
+  --iv-tabbar-ink: #1f2124;
+  --iv-tabbar-ink-muted: #5a5d62;
+  --iv-tag: #1f2124;
+  --iv-tag-ink: #ffffff;
+  --iv-mode-dolmus-bg: rgba(179, 38, 30, 0.14);
+  --iv-mode-minibus-bg: rgba(52, 85, 122, 0.16);
+  --iv-mode-servis-bg: rgba(31, 33, 36, 0.07);
+  --iv-mode-dolmus-dot: #b3261e;
+  --iv-mode-minibus-dot: #34557a;
 
-  --iv-shadow-hard: 0 3px 0 rgba(20, 33, 61, 0.16);
-  --iv-shadow-board: 0 4px 0 #0b1428;
-  --iv-press: #14213d;
-  --iv-focus: 0 0 0 3px rgba(42, 183, 202, 0.6);
-  --iv-hazard: repeating-linear-gradient(-45deg, #f2b705 0 7px, #14213d 7px 14px);
-  --iv-scene-far: #f1e1bc;
-  --iv-scene-win: rgba(20, 33, 61, 0.16);
-  --iv-scene-curb: #e9d7ae;
-  --iv-scene-road: #14213d;
-  --iv-scene-glass: #cfeef2;
-  --iv-scene-sun: rgba(242, 183, 5, 0.45);
-  --iv-scene-ink: #14213d;
+  /* Flat signs: no drop shadows; a board stands on its foot stripe and rim instead. */
+  --iv-shadow-hard: 0 0 transparent;
+  --iv-shadow-board: 0 0 transparent;
+  --iv-board-foot: #1f2124;
+  --iv-tabbar-edge: #1f2124;
+  --iv-press: #1f2124;
+  --iv-focus: 0 0 0 3px #34557a;
+  --iv-hazard: repeating-linear-gradient(-45deg, #b3261e 0 7px, #ffffff 7px 14px);
+  --iv-scene-far: #c4c6c0;
+  --iv-scene-win: rgba(31, 33, 36, 0.18);
+  --iv-scene-curb: #bcbeb8;
+  --iv-scene-road: #1f2124;
+  --iv-scene-glass: #e3e8ee;
+  --iv-scene-sun: rgba(255, 255, 255, 0.75);
+  --iv-scene-ink: #1f2124;
+  --iv-scene-van: #ffffff;
+  --iv-scene-line: #1f2124;
+  --iv-scene-lane: #ffffff;
+  --iv-scene-board-text: #ffffff;
 }
 
 @mixin dark {
-  --iv-bg: #0a1226;
-  --iv-bg-deep: #070d1c;
-  --iv-surface: #121d38;
-  --iv-surface-sunk: #0e1730;
-  --iv-ink: #fff8e7;
-  --iv-ink-muted: #b6bdcb;
-  --iv-line: rgba(255, 248, 231, 0.12);
-  --iv-line-strong: rgba(255, 248, 231, 0.3);
+  --iv-bg: #1f2226;
+  --iv-bg-deep: #121417;
+  --iv-surface: #2a2e33;
+  --iv-surface-sunk: #24272b;
+  --iv-ink: #f2efe8;
+  /* Sis Grisi: 7.08:1 on the street, 6.06:1 on surfaces. */
+  --iv-ink-muted: #a9adb3;
+  --iv-line: rgba(242, 239, 232, 0.12);
+  --iv-line-strong: rgba(242, 239, 232, 0.32);
 
-  --iv-board: #050a17;
-  --iv-board-raised: #0d1630;
-  --iv-board-ink: #fff3d1;
-  --iv-board-muted: rgba(255, 243, 209, 0.72);
-  --iv-board-sign: #ffc61a;
-  --iv-board-glow: 0 0 10px rgba(255, 198, 26, 0.38);
-  --iv-board-edge: rgba(255, 248, 231, 0.14);
+  --iv-board: #121417;
+  --iv-board-raised: #1a1d21;
+  --iv-board-ink: #f2efe8;
+  --iv-board-muted: #a9adb3;
+  --iv-board-sign: #f59e2e;
+  --iv-board-glow: 0 0 10px rgba(245, 158, 46, 0.35);
+  --iv-board-edge: rgba(242, 239, 232, 0.14);
+  --iv-board-line: rgba(242, 239, 232, 0.22);
 
-  --iv-plate: #f2b705;
-  --iv-plate-ink: #14213d;
-  --iv-stripe: #3cc8da;
-  --iv-rail: #3cc8da;
-  --iv-rail-casing: #050a17;
-  --iv-walk: #9aa3b2;
-  --iv-stop-fill: #fff8e7;
+  --iv-plate: #f59e2e;
+  --iv-plate-ink: #121417;
+  --iv-plate-edge: #121417;
+  --iv-plate-stripe: #121417;
+  --iv-stripe: #f59e2e;
+  --iv-rail: #f59e2e;
+  --iv-rail-casing: #121417;
+  --iv-walk: #a9adb3;
+  --iv-stop-fill: #f2efe8;
 
-  --iv-accent: #f2b705;
-  --iv-accent-ink: #14213d;
-  --iv-signal: #ff5a6e;
-  --iv-signal-ink: #14213d;
-  --iv-danger: #ff6b7d;
-  --iv-success: #5cc98b;
-  --iv-ticket: #f2b705;
-  --iv-ticket-ink: #14213d;
+  --iv-accent: #f59e2e;
+  --iv-accent-ink: #121417;
+  --iv-signal: #ff7a6b;
+  --iv-signal-ink: #121417;
+  --iv-danger: #ff7a6b;
+  --iv-danger-ink: #121417;
+  --iv-success: #6fcf97;
+  --iv-info: #8fb0d6;
+  --iv-ticket: #f59e2e;
+  --iv-ticket-ink: #121417;
 
-  --iv-chrome: #050a17;
-  --iv-chrome-ink: #fff8e7;
-  --iv-chrome-ink-muted: rgba(255, 248, 231, 0.68);
-  --iv-tag: #fff8e7;
-  --iv-tag-ink: #14213d;
-  --iv-mode-dolmus-bg: rgba(242, 183, 5, 0.2);
-  --iv-mode-minibus-bg: rgba(60, 200, 218, 0.2);
-  --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
+  --iv-chrome: #121417;
+  --iv-chrome-ink: #f2efe8;
+  --iv-chrome-ink-muted: #a9adb3;
+  --iv-chrome-edge: #f59e2e;
+  --iv-tabbar: #121417;
+  --iv-tabbar-ink: #f2efe8;
+  --iv-tabbar-ink-muted: #a9adb3;
+  --iv-tag: #f2efe8;
+  --iv-tag-ink: #121417;
+  --iv-mode-dolmus-bg: rgba(245, 158, 46, 0.18);
+  --iv-mode-minibus-bg: rgba(143, 176, 214, 0.18);
+  --iv-mode-servis-bg: rgba(242, 239, 232, 0.08);
+  --iv-mode-dolmus-dot: #f59e2e;
+  --iv-mode-minibus-dot: #8fb0d6;
 
-  --iv-shadow-hard: 0 3px 0 rgba(0, 0, 0, 0.45);
-  --iv-shadow-board: 0 4px 0 rgba(0, 0, 0, 0.55);
+  --iv-shadow-hard: 0 0 transparent;
+  --iv-shadow-board: 0 0 transparent;
+  --iv-board-foot: #f59e2e;
+  --iv-tabbar-edge: transparent;
   --iv-press: rgba(0, 0, 0, 0.6);
-  --iv-focus: 0 0 0 3px rgba(60, 200, 218, 0.65);
-  --iv-hazard: repeating-linear-gradient(-45deg, #f2b705 0 7px, #050a17 7px 14px);
-  --iv-scene-far: #142142;
-  --iv-scene-win: #f2b705;
-  --iv-scene-curb: #1b2847;
-  --iv-scene-road: #040914;
-  --iv-scene-glass: #ffd659;
-  --iv-scene-sun: #fff3d1;
-  --iv-scene-ink: #c9d0de;
+  --iv-focus: 0 0 0 3px #f59e2e;
+  --iv-hazard: repeating-linear-gradient(-45deg, #f59e2e 0 7px, #121417 7px 14px);
+  --iv-scene-far: #2a2e33;
+  --iv-scene-win: #f59e2e;
+  --iv-scene-curb: #24272b;
+  --iv-scene-road: #0b0c0e;
+  --iv-scene-glass: #f5c27a;
+  --iv-scene-sun: #f2efe8;
+  --iv-scene-ink: #a9adb3;
+  --iv-scene-van: #f2efe8;
+  --iv-scene-line: #121417;
+  --iv-scene-lane: #a9adb3;
+  --iv-scene-board-text: #f59e2e;
 }

@@ -165,7 +165,6 @@ import { LineItem, LineListComponent } from '../shared/line-list.component';
       border-left: 6px solid var(--iv-stripe);
       border-radius: var(--iv-radius-l);
       background: var(--iv-surface);
-      box-shadow: var(--iv-shadow-hard);
     }
     .signin h2 {
       margin: 0;

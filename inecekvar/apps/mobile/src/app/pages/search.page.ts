@@ -48,7 +48,7 @@ interface PackPrompt {
   ],
   providers: [SearchStore],
   templateUrl: './search.page.html',
-  styleUrls: ['./search.page.scss', './search-cards.scss'],
+  styleUrls: ['./band-sign.scss', './search.page.scss', './search-cards.scss'],
 })
 export class SearchPage {
   private readonly i18n = inject(LanguageService);

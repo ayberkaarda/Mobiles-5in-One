@@ -221,7 +221,11 @@ type Stage = 'sign-in' | 'confirm' | 'done' | 'ended';
       border-left: 0.25rem solid var(--iv-accent);
       padding: 0.5rem 0.75rem;
     }
+    .error::before {
+      content: '⊗ ';
+    }
     .error {
+      color: var(--iv-ink);
       font-weight: 600;
     }
   `,

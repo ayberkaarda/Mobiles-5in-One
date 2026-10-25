@@ -4,7 +4,7 @@
  * `styles` array of a component.
  */
 export const PLACARD_STYLES = `
-/* Line-code placard: the yellow window sign of a dolmuş with the turquoise minibüs stripe and
+/* Line-code plate: the painted code of a route placard with its underline stripe, a rim and
    two rivets. The code never wraps. */
 .iv-placard {
   position: relative;
@@ -18,8 +18,8 @@ export const PLACARD_STYLES = `
   background: var(--iv-plate);
   color: var(--iv-plate-ink);
   box-shadow:
-    inset 0 -0.24em 0 var(--iv-stripe),
-    0 0 0 2px var(--iv-plate-ink);
+    inset 0 -0.24em 0 var(--iv-plate-stripe),
+    0 0 0 2px var(--iv-plate-edge);
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
   font-size: 16px;

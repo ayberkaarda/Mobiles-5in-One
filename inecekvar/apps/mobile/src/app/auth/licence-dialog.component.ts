@@ -54,7 +54,7 @@ import { LicenceGate } from './licence-gate';
       position: fixed;
       inset: 0;
       z-index: 1000;
-      background: rgba(11, 20, 40, 0.55);
+      background: rgba(31, 33, 36, 0.6);
     }
     .panel {
       position: fixed;
@@ -69,7 +69,6 @@ import { LicenceGate } from './licence-gate';
       border-top: 8px solid var(--iv-stripe);
       background: var(--iv-surface);
       color: var(--iv-ink);
-      box-shadow: 0 6px 0 var(--iv-press);
     }
     .panel:focus {
       outline: none;

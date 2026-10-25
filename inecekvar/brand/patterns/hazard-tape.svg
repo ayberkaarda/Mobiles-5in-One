@@ -1,5 +1,5 @@
-<!-- Hazard tape used only for the sample-data label (ADR-0059): 45 degree Dolmuş Sarısı and Lacivert bands, 7 units each. -->
+<!-- Hazard tape used only for the sample-data label (ADR-0059): 45 degree Boya Kırmızısı and Levha Beyazı bands, 7 units each. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-  <rect width="20" height="20" fill="#14213D"/>
-  <path d="M0 20 L20 0 L20 10 L10 20 Z M0 10 L10 0 L0 0 Z" fill="#F2B705"/>
+  <rect width="20" height="20" fill="#FFFFFF"/>
+  <path d="M0 20 L20 0 L20 10 L10 20 Z M0 10 L10 0 L0 0 Z" fill="#B3261E"/>
 </svg>

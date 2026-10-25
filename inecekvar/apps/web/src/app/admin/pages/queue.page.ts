@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { StatusBadgeComponent } from '@inecekvar/ui';
 import type { QueueEdit } from '../admin-api';
 import { formatTime } from '../admin-text';
 import { describeChanges, hasPhoto, KIND_LABELS, projectMapDiff } from '../queue/edit-diff';
@@ -6,6 +7,7 @@ import { QueueStore, REASON_MAX } from '../queue/queue.store';
 
 @Component({
   selector: 'iv-admin-queue',
+  imports: [StatusBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="head">
@@ -31,6 +33,7 @@ import { QueueStore, REASON_MAX } from '../queue/queue.store';
       <article class="iv-admin-card edit" [attr.data-edit]="edit.id" [attr.data-kind]="edit.kind">
         <header>
           <h2>{{ kind(edit.kind) }}</h2>
+          <iv-status-badge tone="pending" label="Onay bekliyor" />
           <p class="iv-admin-muted">
             {{ edit.city }} · Öneren: <span class="text">{{ edit.author }}</span> ·
             {{ time(edit.created_at) }}
@@ -47,40 +50,50 @@ import { QueueStore, REASON_MAX } from '../queue/queue.store';
                 role="img"
                 [attr.aria-label]="mapLabel(edit.kind, drawing.changed)"
               >
-                <rect width="100%" height="100%" fill="#FFF8E7" />
+                <rect width="100%" height="100%" fill="var(--iv-surface)" />
                 @if (edit.kind === 'retire') {
                   <path
                     [attr.d]="drawing.before ?? drawing.after"
                     fill="none"
-                    stroke="#D7263D"
+                    stroke="var(--iv-ink)"
                     stroke-width="5"
                     stroke-dasharray="12 8"
                   />
                 } @else if (!drawing.changed) {
-                  <path [attr.d]="drawing.before" fill="none" stroke="#14213D" stroke-width="5" />
+                  <path
+                    [attr.d]="drawing.before"
+                    fill="none"
+                    stroke="var(--iv-ink)"
+                    stroke-width="5"
+                  />
                 } @else {
                   @if (drawing.before) {
                     <path
                       [attr.d]="drawing.before"
                       fill="none"
-                      stroke="#6C757D"
+                      stroke="var(--iv-ink-muted)"
                       stroke-width="6"
                       stroke-dasharray="10 6"
                     />
                   }
                   @if (drawing.after) {
-                    <path [attr.d]="drawing.after" fill="none" stroke="#2AB7CA" stroke-width="4" />
+                    <path
+                      [attr.d]="drawing.after"
+                      fill="none"
+                      stroke="var(--iv-rail)"
+                      stroke-width="4"
+                    />
                   }
                 }
               </svg>
               <figcaption>
                 @if (edit.kind === 'retire') {
-                  <span>Kesik kırmızı: kaldırılacak güzergâh</span>
+                  <span>Kesik çizgi: kaldırılacak güzergâh</span>
                 } @else if (!drawing.changed) {
-                  <span>Güzergâh değişmiyor (lacivert: şimdiki).</span>
+                  <span>Güzergâh değişmiyor (düz çizgi: şimdiki).</span>
                 } @else {
                   <span>Kesik gri: şimdiki güzergâh</span>
-                  <span>Turkuaz: önerilen</span>
+                  <span>Düz çizgi: önerilen</span>
                 }
               </figcaption>
             </figure>
@@ -197,7 +210,7 @@ import { QueueStore, REASON_MAX } from '../queue/queue.store';
     }
     .own {
       font-weight: 600;
-      color: #7a4b00;
+      color: var(--iv-ink);
     }
     .body {
       display: grid;
@@ -210,7 +223,7 @@ import { QueueStore, REASON_MAX } from '../queue/queue.store';
     svg {
       width: 100%;
       height: auto;
-      border: 1px solid #e3dccb;
+      border: 1px solid var(--iv-line);
       border-radius: 0.5rem;
     }
     figcaption {

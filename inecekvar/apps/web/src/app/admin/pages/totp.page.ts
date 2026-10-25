@@ -59,7 +59,7 @@ export function groupSecret(secret: string): string {
               shape-rendering="crispEdges"
             >
               <rect width="100%" height="100%" fill="#FFFFFF" />
-              <path [attr.d]="drawing.d" fill="#14213D" />
+              <path [attr.d]="drawing.d" fill="#1F2124" />
             </svg>
           } @else {
             <p class="iv-admin-error">Karekod çizilemedi; aşağıdaki anahtarı elle gir.</p>
@@ -126,7 +126,7 @@ export function groupSecret(secret: string): string {
       height: auto;
       display: block;
       margin: 0.5rem 0;
-      border: 1px solid #e3dccb;
+      border: 1px solid var(--iv-line);
     }
     .secret-row {
       display: flex;
@@ -138,7 +138,7 @@ export function groupSecret(secret: string): string {
       font-size: 1.125rem;
       letter-spacing: 0.05em;
       padding: 0.4rem 0.6rem;
-      background: #f4efe1;
+      background: var(--iv-surface-sunk);
       border-radius: 0.4rem;
       overflow-wrap: anywhere;
       display: inline-block;

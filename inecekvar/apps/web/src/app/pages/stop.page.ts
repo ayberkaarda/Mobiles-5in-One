@@ -117,14 +117,14 @@ export function stopJsonLd(origin: string, { city, stop }: StopData): JsonLdNode
     }
     .boards {
       display: grid;
-      gap: 0.85rem;
+      gap: 0;
       margin: 0;
       padding: 0;
       list-style: none;
     }
     @media (min-width: 44rem) {
       .boards {
-        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        grid-template-columns: 1fr;
       }
     }
   `,

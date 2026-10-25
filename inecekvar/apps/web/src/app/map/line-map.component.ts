@@ -1,3 +1,4 @@
+import { NoticeComponent } from '@inecekvar/ui';
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterNextRender,
@@ -21,6 +22,7 @@ import type { MapHandle } from './map-library';
 @Component({
   selector: 'iv-line-map',
   standalone: true,
+  imports: [NoticeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -37,7 +39,7 @@ import type { MapHandle } from './map-library';
         ></div>
       }
       @if (failed()) {
-        <p role="status">Harita açılamadı.</p>
+        <iv-notice tone="error" message="Harita açılamadı." />
       }
       @if (attribution()) {
         <p>© OpenStreetMap katkıcıları</p>
@@ -83,7 +85,7 @@ import type { MapHandle } from './map-library';
       top: 0;
     }
     .iv-line-map .maplibregl-canvas:focus-visible {
-      outline: 2px solid var(--iv-color-lacivert);
+      outline: 2px solid var(--iv-info);
       outline-offset: -2px;
     }
   `,
@@ -144,9 +146,21 @@ export class LineMapComponent implements OnDestroy {
       if (!container) throw new Error('Missing map surface');
       const line = this.line();
       const stops = line.stops.map((stop) => stop.location);
+      const css = this.document.defaultView?.getComputedStyle(container);
+      const token = (name: string, fallback: string) =>
+        css?.getPropertyValue(name).trim() || fallback;
+      const colors = {
+        background: token('--iv-bg', '#DADBD6'),
+        surface: token('--iv-surface', '#FFFFFF'),
+        sunk: token('--iv-surface-sunk', '#ECECEA'),
+        ink: token('--iv-rail-casing', '#1F2124'),
+        rail: token('--iv-rail', '#B3261E'),
+        water: token('--iv-info', '#34557A'),
+        stop: token('--iv-stop-fill', '#FFFFFF'),
+      };
       const map = library.createMap({
         container,
-        style: style.buildMapStyle(line.geometry.coordinates, stops, basemap),
+        style: style.buildMapStyle(line.geometry.coordinates, stops, basemap, colors),
       });
       this.map = map;
       const bounds = style.boundsOf([...line.geometry.coordinates, ...stops]);
@@ -166,7 +180,7 @@ export class LineMapComponent implements OnDestroy {
         if (event.sourceId === 'basemap') {
           hasBasemap = false;
           this.attribution.set(false);
-          map.setStyle(style.buildMapStyle(line.geometry.coordinates, stops, null));
+          map.setStyle(style.buildMapStyle(line.geometry.coordinates, stops, null, colors));
         } else {
           this.fail();
         }

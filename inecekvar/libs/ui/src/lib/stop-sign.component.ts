@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 /**
- * The header of a stop: a stop pole beside the projected name and kind, on a lacivert board.
- * The pole is the brand's stop sign (yellow disc, lacivert ring, turquoise band) drawn from
+ * The header of a stop: a stop pole beside the projected name and kind, on a board.
+ * The pole is the brand's stop sign (plate-coloured disc, ring and band) drawn from
  * plain shapes; it is decorative.
  */
 @Component({
@@ -51,7 +51,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       stroke-width: 4.5;
     }
     .band {
-      fill: var(--iv-stripe);
+      fill: var(--iv-plate-stripe);
     }
     .text {
       flex: 1;

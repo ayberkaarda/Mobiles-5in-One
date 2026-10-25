@@ -3,10 +3,34 @@ export interface SvgPoint {
   y: number;
 }
 
+/** Colours a standalone SVG may use: the current palette first, then the former one. */
 export type SvgColor =
-  '#F2B705' | '#14213D' | '#FFFFFF' | '#FFF8E7' | '#2AB7CA' | '#6C757D' | '#D7263D' | '#2E8B57';
+  | '#B3261E'
+  | '#1F2124'
+  | '#DADBD6'
+  | '#34557A'
+  | '#5A5D62'
+  | '#1F6B42'
+  | '#F59E2E'
+  | '#121417'
+  | '#F2B705'
+  | '#14213D'
+  | '#FFFFFF'
+  | '#FFF8E7'
+  | '#2AB7CA'
+  | '#6C757D'
+  | '#D7263D'
+  | '#2E8B57';
 
 const colors: readonly SvgColor[] = [
+  '#B3261E',
+  '#1F2124',
+  '#DADBD6',
+  '#34557A',
+  '#5A5D62',
+  '#1F6B42',
+  '#F59E2E',
+  '#121417',
   '#F2B705',
   '#14213D',
   '#FFFFFF',
@@ -68,12 +92,18 @@ export function svgDocument(model: {
   height: number;
   title: string;
   background?: SvgColor;
+  /** Fill of the labels; the former lacivert when left out. */
+  labelFill?: SvgColor;
   paths: { points: SvgPoint[]; stroke: SvgColor; width: number }[];
   labels: { x: number; y: number; text: string; size?: number; weight?: 'normal' | 'bold' }[];
 }): string {
   const viewBox = svgViewBox(model.width, model.height);
   if (model.background !== undefined && !colors.includes(model.background)) {
     throw new Error('Invalid SVG background');
+  }
+  const labelFill = model.labelFill ?? '#14213D';
+  if (!colors.includes(labelFill)) {
+    throw new Error('Invalid SVG label fill');
   }
   const background =
     model.background === undefined
@@ -101,7 +131,7 @@ export function svgDocument(model: {
     const size = label.size === undefined ? '' : ` font-size="${svgNumber(label.size)}"`;
     const weight = label.weight === undefined ? '' : ` font-weight="${label.weight}"`;
     return (
-      `<text x="${svgNumber(label.x)}" y="${svgNumber(label.y)}" fill="#14213D"${size}${weight}>` +
+      `<text x="${svgNumber(label.x)}" y="${svgNumber(label.y)}" fill="${labelFill}"${size}${weight}>` +
       escapeXmlText(label.text) +
       '</text>'
     );

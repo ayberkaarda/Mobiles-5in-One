@@ -72,13 +72,13 @@ import { ROLE_LABELS } from '../admin-text';
     <iv-admin-dialogs />
   `,
   styles: `
-    /* The admin area keeps the light route-board look in every system scheme. */
+    /* Administration follows the shared street and sign palette. */
     .iv-admin {
       display: block;
-      min-height: 100vh;
-      background: var(--iv-color-krem);
-      color: var(--iv-color-lacivert);
-      color-scheme: light;
+      min-height: 100dvh;
+      background: var(--iv-bg);
+      color: var(--iv-ink);
+      color-scheme: light dark;
     }
     .iv-admin-bar {
       display: flex;
@@ -86,9 +86,9 @@ import { ROLE_LABELS } from '../admin-text';
       gap: 0.5rem 1rem;
       align-items: center;
       padding: 0.75rem 1rem;
-      background: var(--iv-color-lacivert);
-      border-bottom: 4px solid var(--iv-color-turkuaz);
-      color: var(--iv-color-krem);
+      background: var(--iv-chrome);
+      border-bottom: 4px solid var(--iv-chrome-edge);
+      color: var(--iv-chrome-ink);
     }
     .iv-admin-bar a {
       color: inherit;
@@ -97,10 +97,10 @@ import { ROLE_LABELS } from '../admin-text';
       font-family: var(--iv-font-display);
       font-weight: 700;
       text-decoration: none;
-      color: var(--iv-color-dolmus-sarisi);
+      color: var(--iv-chrome-ink);
     }
     .iv-admin-bar .brand span {
-      color: var(--iv-color-krem);
+      color: var(--iv-chrome-ink);
       font-weight: 500;
     }
     .iv-admin-bar nav {
@@ -116,8 +116,9 @@ import { ROLE_LABELS } from '../admin-text';
       min-height: 24px;
     }
     .iv-admin-bar nav a.active {
-      background: var(--iv-color-dolmus-sarisi);
-      color: var(--iv-color-lacivert);
+      background: var(--iv-surface);
+      color: var(--iv-ink);
+      text-decoration: underline;
     }
     .iv-admin-bar .who {
       display: flex;
@@ -140,16 +141,16 @@ import { ROLE_LABELS } from '../admin-text';
     .iv-admin-banner {
       margin: 0;
       padding: 0.6rem 1rem;
-      background: #fde9a8;
-      border-bottom: 1px solid var(--iv-color-dolmus-sarisi);
+      background: var(--iv-surface);
+      border-bottom: 1px solid var(--iv-accent);
     }
     .iv-admin-banner.ok {
-      background: #dff1e6;
-      border-color: var(--iv-color-onay-yesili);
+      background: var(--iv-surface);
+      border-color: var(--iv-success);
     }
     .iv-admin-banner a,
     .iv-admin-main a {
-      color: var(--iv-color-lacivert);
+      color: var(--iv-ink);
       font-weight: 600;
     }
     .iv-admin h1 {
@@ -166,9 +167,9 @@ import { ROLE_LABELS } from '../admin-text';
       min-height: 44px;
       padding: 0.5rem 1rem;
       border-radius: 0.5rem;
-      border: 2px solid var(--iv-color-lacivert);
-      background: var(--iv-color-lacivert);
-      color: var(--iv-color-krem);
+      border: 2px solid var(--iv-ink);
+      background: var(--iv-chrome);
+      color: var(--iv-chrome-ink);
       cursor: pointer;
     }
     .iv-admin button.secondary {
@@ -177,9 +178,9 @@ import { ROLE_LABELS } from '../admin-text';
       border-color: currentColor;
     }
     .iv-admin button.danger {
-      background: var(--iv-color-fren-kirmizisi);
-      border-color: var(--iv-color-fren-kirmizisi);
-      color: #fff;
+      background: var(--iv-danger);
+      border-color: var(--iv-danger);
+      color: var(--iv-danger-ink);
     }
     .iv-admin button:disabled {
       opacity: 0.55;
@@ -198,18 +199,18 @@ import { ROLE_LABELS } from '../admin-text';
       width: 100%;
       min-height: 44px;
       padding: 0.5rem;
-      border: 1px solid var(--iv-color-yol-grisi);
+      border: 1px solid var(--iv-line-strong);
       border-radius: 0.4rem;
-      background: #fff;
-      color: var(--iv-color-lacivert);
+      background: var(--iv-surface);
+      color: var(--iv-ink);
     }
     .iv-admin :focus-visible {
-      outline: 3px solid var(--iv-color-turkuaz);
+      outline: 3px solid var(--iv-info);
       outline-offset: 2px;
     }
     .iv-admin-card {
-      background: #fff;
-      border: 1px solid #e3dccb;
+      background: var(--iv-surface);
+      border: 1px solid var(--iv-line);
       border-radius: 0.75rem;
       padding: 1rem;
       margin: 0 0 1rem;
@@ -221,20 +222,23 @@ import { ROLE_LABELS } from '../admin-text';
       margin-top: 0.75rem;
     }
     .iv-admin-error {
-      color: #a81c2e;
+      color: var(--iv-ink);
       font-weight: 600;
     }
+    .iv-admin-error::before {
+      content: '⊗ ';
+    }
     .iv-admin-ok {
-      color: #1f6b41;
+      color: var(--iv-success);
       font-weight: 600;
     }
     .iv-admin-muted {
-      color: #555d65;
+      color: var(--iv-ink-muted);
     }
     .iv-admin-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(20, 33, 61, 0.6);
+      background: color-mix(in srgb, var(--iv-bg-deep) 70%, transparent);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -242,7 +246,7 @@ import { ROLE_LABELS } from '../admin-text';
       z-index: 10;
     }
     .iv-admin-dialog {
-      background: #fff;
+      background: var(--iv-surface);
       border-radius: 0.75rem;
       padding: 1.25rem;
       max-width: 28rem;
@@ -257,7 +261,7 @@ import { ROLE_LABELS } from '../admin-text';
     .iv-admin td {
       text-align: left;
       padding: 0.4rem;
-      border-bottom: 1px solid #e3dccb;
+      border-bottom: 1px solid var(--iv-line);
       vertical-align: top;
     }
     .iv-admin code {
@@ -271,7 +275,7 @@ import { ROLE_LABELS } from '../admin-text';
       .iv-admin table.stack tr {
         display: block;
         padding: 0.5rem 0;
-        border-bottom: 1px solid #e3dccb;
+        border-bottom: 1px solid var(--iv-line);
       }
       .iv-admin table.stack td {
         display: grid;

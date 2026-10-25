@@ -117,7 +117,7 @@ import { SiteHeaderComponent } from '../../home/site-header.component';
       max-width: 52rem;
       padding: 1.5rem 0 1.75rem;
       border-bottom: 4px solid var(--iv-ink);
-      box-shadow: 0 6px 0 var(--iv-accent);
+      border-bottom: 4px solid var(--iv-accent);
       margin-bottom: 2.5rem;
     }
     h1 {
@@ -209,7 +209,7 @@ import { SiteHeaderComponent } from '../../home/site-header.component';
       border-radius: 1rem;
       background: var(--iv-surface);
       border: 1px solid var(--iv-line);
-      box-shadow: var(--iv-shadow-hard);
+      box-shadow: none;
     }
     .stop {
       position: absolute;

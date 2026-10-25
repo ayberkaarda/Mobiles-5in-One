@@ -1,0 +1,73 @@
+// The windshield route sign of a page (ADR-0059, palette ADR-0060): the painted app bar runs on
+// under the toolbar as a band, and the page's one sign hangs in it from a short hanger. Light: a
+// white board with charcoal lettering, the red code plate and a charcoal foot stripe. Dark: the
+// sign is the night line's one signal, sodium orange with near-black lettering and a dark code
+// plate. Only custom properties change, so library components inside the sign follow them.
+// Listed first in a page's styleUrls; the page marks its header `class="banded"`.
+
+ion-header.banded ion-toolbar {
+  --border-width: 0;
+}
+
+.band {
+  position: relative;
+  margin: calc(-1 * var(--iv-space-5)) 0 var(--iv-space-4);
+  padding: var(--iv-space-4) 0 var(--iv-space-5);
+  background: var(--iv-chrome);
+  color: var(--iv-chrome-ink);
+  // Paint the band to both screen edges past the page gutter, without a wrapper.
+  box-shadow: 0 0 0 100vmax var(--iv-chrome);
+  clip-path: inset(0 -100vmax);
+}
+
+.band::after {
+  content: '';
+  position: absolute;
+  left: -100vmax;
+  right: -100vmax;
+  bottom: 0;
+  height: 4px;
+  background: var(--iv-chrome-edge);
+}
+
+.signboard {
+  --iv-stripe: var(--iv-plate-stripe);
+  --iv-shadow-board: 0 0 transparent;
+  --iv-board-edge: transparent;
+  position: relative;
+  display: block;
+  margin: 10px 0 0;
+}
+
+// The hanger the sign hangs from.
+.signboard::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: -10px;
+  left: 50%;
+  width: 80px;
+  height: 11px;
+  margin-left: -40px;
+  border-radius: 7px 7px 0 0;
+  background: var(--iv-board);
+}
+
+:host-context(.ion-palette-dark) .signboard {
+  --iv-board: var(--iv-accent);
+  --iv-board-raised: var(--iv-accent);
+  --iv-board-ink: var(--iv-accent-ink);
+  --iv-board-muted: var(--iv-accent-ink);
+  --iv-board-sign: var(--iv-accent-ink);
+  --iv-board-glow: none;
+  --iv-board-line: color-mix(in srgb, var(--iv-accent-ink) 40%, transparent);
+  --iv-plate: var(--iv-bg-deep);
+  --iv-plate-ink: var(--iv-accent);
+  --iv-plate-edge: var(--iv-bg-deep);
+  --iv-plate-stripe: var(--iv-bg-deep);
+  --iv-stripe: var(--iv-bg-deep);
+  --iv-board-foot: var(--iv-bg-deep);
+  --iv-rail: var(--iv-bg-deep);
+  --iv-signal: var(--iv-bg-deep);
+  --iv-focus: 0 0 0 3px var(--iv-bg-deep);
+}

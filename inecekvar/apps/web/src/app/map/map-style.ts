@@ -11,6 +11,15 @@ export function buildMapStyle(
   line: readonly Location[],
   stops: readonly Location[],
   basemapUrl: string | null,
+  colors = {
+    background: '#DADBD6',
+    surface: '#FFFFFF',
+    sunk: '#ECECEA',
+    ink: '#1F2124',
+    rail: '#B3261E',
+    water: '#34557A',
+    stop: '#FFFFFF',
+  },
 ): StyleSpecification {
   const features: {
     type: 'Feature';
@@ -33,7 +42,9 @@ export function buildMapStyle(
   const style: StyleSpecification = {
     version: 8,
     sources: { route: { type: 'geojson', data: { type: 'FeatureCollection', features } } },
-    layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#F6ECD2' } }],
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': colors.background } },
+    ],
   };
   if (basemapUrl) {
     style.sources['basemap'] = { type: 'vector', url: basemapUrl };
@@ -43,7 +54,7 @@ export function buildMapStyle(
         type: 'fill',
         source: 'basemap',
         'source-layer': 'earth',
-        paint: { 'fill-color': '#FFF8E7' },
+        paint: { 'fill-color': colors.surface },
       },
       {
         id: 'park',
@@ -51,14 +62,14 @@ export function buildMapStyle(
         source: 'basemap',
         'source-layer': 'landuse',
         filter: kindIn('park', 'forest', 'wood', 'grass', 'cemetery', 'garden'),
-        paint: { 'fill-color': '#E3EBCB' },
+        paint: { 'fill-color': colors.sunk },
       },
       {
         id: 'water',
         type: 'fill',
         source: 'basemap',
         'source-layer': 'water',
-        paint: { 'fill-color': '#BFE3EA' },
+        paint: { 'fill-color': colors.water },
       },
       {
         id: 'buildings',
@@ -66,7 +77,7 @@ export function buildMapStyle(
         source: 'basemap',
         'source-layer': 'buildings',
         minzoom: 14,
-        paint: { 'fill-color': '#EFE4C8' },
+        paint: { 'fill-color': colors.sunk },
       },
       {
         id: 'roads-minor',
@@ -75,7 +86,7 @@ export function buildMapStyle(
         'source-layer': 'roads',
         filter: kindIn('minor_road', 'other', 'path'),
         paint: {
-          'line-color': '#FFFFFF',
+          'line-color': colors.surface,
           'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.5, 16, 4],
         },
       },
@@ -86,7 +97,7 @@ export function buildMapStyle(
         'source-layer': 'roads',
         filter: kindIn('highway', 'major_road', 'medium_road'),
         paint: {
-          'line-color': '#F7D77A',
+          'line-color': colors.sunk,
           'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 16, 7],
         },
       },
@@ -99,7 +110,7 @@ export function buildMapStyle(
       source: 'route',
       filter: ['==', ['get', 'role'], 'route'],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#14213D', 'line-width': 9 },
+      paint: { 'line-color': colors.ink, 'line-width': 9 },
     },
     {
       id: 'route',
@@ -107,7 +118,7 @@ export function buildMapStyle(
       source: 'route',
       filter: ['==', ['get', 'role'], 'route'],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#2AB7CA', 'line-width': 5 },
+      paint: { 'line-color': colors.rail, 'line-width': 5 },
     },
     {
       id: 'stops',
@@ -116,8 +127,8 @@ export function buildMapStyle(
       filter: ['==', ['get', 'role'], 'stop'],
       paint: {
         'circle-radius': 6,
-        'circle-color': '#FFF8E7',
-        'circle-stroke-color': '#14213D',
+        'circle-color': colors.stop,
+        'circle-stroke-color': colors.ink,
         'circle-stroke-width': 2.5,
       },
     },

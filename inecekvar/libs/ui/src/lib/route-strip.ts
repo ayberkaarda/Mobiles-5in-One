@@ -2,7 +2,7 @@ import { svgNumber, svgPathD, svgViewBox, type SvgPoint } from './safe-svg';
 
 /**
  * Schematic strip of a line or an itinerary (ADR-0059): stops as dots on one straight rail with
- * their names slanted above, ticks below, rides drawn as the turquoise rail with a lacivert
+ * their names slanted above, ticks below, rides drawn as the rail with a
  * casing and walks as a dotted line. It is a diagram, not a map: positions say nothing about
  * distance. Every coordinate and path here is produced from numbers through the safe SVG helpers;
  * names are only ever passed on as text.

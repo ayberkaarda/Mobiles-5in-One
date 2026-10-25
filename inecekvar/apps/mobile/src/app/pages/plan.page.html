@@ -1,18 +1,134 @@
-<ion-header>
+<ion-header class="banded">
   <ion-toolbar>
-    <ion-title>{{ 'tabs.plan' | t }}</ion-title>
+    <iv-city-picker class="city on-band" />
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <div class="iv-page">
-    <header class="iv-hero iv-board">
-      <p class="iv-kicker">{{ 'plan.kicker' | t }}</p>
-      <h1 class="iv-heading">{{ 'plan.heading' | t }}</h1>
-      <p class="iv-lead">{{ 'plan.lead' | t }}</p>
-    </header>
+    <div class="band">
+      <h1 class="band-title">{{ 'plan.heading' | t }}</h1>
+      <p class="band-lead">{{ 'plan.lead' | t }}</p>
+      @if (planner.view() !== 'no-city') {
+      <form
+        class="route iv-board signboard"
+        novalidate
+        (submit)="$event.preventDefault(); planner.submit()"
+      >
+        @for (item of ends; track item.end) {
+        <div class="field" [attr.data-end]="item.end">
+          <label class="field-label" [for]="item.inputId">
+            <span class="dot" aria-hidden="true"></span>{{ item.label | t }}
+          </label>
+          <input
+            type="text"
+            autocomplete="off"
+            [id]="item.inputId"
+            [name]="item.end"
+            [class.chosen]="chosen(item.end)"
+            [attr.enterkeyhint]="item.end === 'from' ? 'next' : 'search'"
+            [value]="text(item.end)"
+            [placeholder]="'plan.placeholder' | t"
+            (input)="onInput(item.end, $event)"
+          />
+          @if (!chosen(item.end) && text(item.end).trim().length >= 2) { @if
+          (planner.suggestions(item.end); as found) { @if (found.length > 0) {
+          <ul class="suggestions" role="list" [attr.aria-label]="'planner.suggestions' | t">
+            @for (stop of found; track stop.id) {
+            <li>
+              <button type="button" (click)="planner.chooseStop(item.end, stop)">
+                {{ stop.name }}
+              </button>
+            </li>
+            }
+          </ul>
+          } } }
+          <div class="field-tools">
+            <button
+              type="button"
+              class="tool"
+              [disabled]="planner.locating() !== null"
+              (click)="planner.useMyLocation(item.end)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.5" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                <circle cx="12" cy="12" r="7.5" />
+              </svg>
+              {{ (planner.locating() === item.end ? 'planner.locating' : 'planner.useLocation') | t
+              }}
+            </button>
+            <button
+              type="button"
+              class="tool"
+              [class.on]="planner.pickTarget() === item.end"
+              [attr.aria-pressed]="planner.pickTarget() === item.end"
+              (click)="togglePick(item.end)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 21s-6-5.6-6-11a6 6 0 1112 0c0 5.4-6 11-6 11z" />
+                <circle cx="12" cy="10" r="2.2" />
+              </svg>
+              {{ (planner.pickTarget() === item.end ? 'planner.picking' : 'planner.pickOnMap') | t
+              }}
+            </button>
+          </div>
+          @if (planner.locateProblem(); as problem) { @if (problem.end === item.end) {
+          <p class="field-msg" role="alert">
+            @switch (problem.problem) { @case ('denied') { {{ 'planner.locateDenied' | t }} } @case
+            ('unavailable') { {{ 'planner.locateUnavailable' | t }} } @default { {{
+            'planner.locateOutside' | t }} } }
+          </p>
+          } }
+        </div>
+        @if ($first) {
+        <div class="swap-row">
+          <span class="dash" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="swap"
+            [attr.aria-label]="'plan.swap' | t"
+            (click)="planner.swap()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3" />
+            </svg>
+          </button>
+        </div>
+        } }
 
-    <iv-city-picker class="city" />
+        <div class="transfers" role="radiogroup" [attr.aria-label]="'planner.transfersLabel' | t">
+          <span class="transfers-label" aria-hidden="true">{{ 'planner.transfersLabel' | t }}</span>
+          <span class="transfers-options">
+            @for (choice of transferChoices; track choice.value) {
+            <button
+              type="button"
+              role="radio"
+              class="choice"
+              [attr.data-value]="choice.value"
+              [class.on]="planner.maxTransfers() === choice.value"
+              [attr.aria-checked]="planner.maxTransfers() === choice.value"
+              (click)="setTransfers(choice.value)"
+            >
+              {{ choice.label | t }}
+            </button>
+            }
+          </span>
+        </div>
+
+        @if (formError(); as error) {
+        <p class="form-error" role="alert">{{ error | t }}</p>
+        }
+        <button
+          type="submit"
+          class="iv-button iv-button--block submit"
+          [disabled]="planner.loading() || planner.retryIn() > 0"
+        >
+          {{ 'plan.submit' | t }}
+        </button>
+      </form>
+      }
+    </div>
 
     @if (planner.view() === 'no-city') {
     <section class="iv-section">
@@ -24,117 +140,6 @@
       />
     </section>
     } @else {
-    <form class="route" novalidate (submit)="$event.preventDefault(); planner.submit()">
-      @for (item of ends; track item.end) {
-      <div class="field" [attr.data-end]="item.end">
-        <label class="field-label" [for]="item.inputId">
-          <span class="dot" aria-hidden="true"></span>{{ item.label | t }}
-        </label>
-        <input
-          type="text"
-          autocomplete="off"
-          [id]="item.inputId"
-          [name]="item.end"
-          [class.chosen]="chosen(item.end)"
-          [attr.enterkeyhint]="item.end === 'from' ? 'next' : 'search'"
-          [value]="text(item.end)"
-          [placeholder]="'plan.placeholder' | t"
-          (input)="onInput(item.end, $event)"
-        />
-        @if (!chosen(item.end) && text(item.end).trim().length >= 2) { @if
-        (planner.suggestions(item.end); as found) { @if (found.length > 0) {
-        <ul class="suggestions" role="list" [attr.aria-label]="'planner.suggestions' | t">
-          @for (stop of found; track stop.id) {
-          <li>
-            <button type="button" (click)="planner.chooseStop(item.end, stop)">
-              {{ stop.name }}
-            </button>
-          </li>
-          }
-        </ul>
-        } } }
-        <div class="field-tools">
-          <button
-            type="button"
-            class="tool"
-            [disabled]="planner.locating() !== null"
-            (click)="planner.useMyLocation(item.end)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.5" />
-              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-              <circle cx="12" cy="12" r="7.5" />
-            </svg>
-            {{ (planner.locating() === item.end ? 'planner.locating' : 'planner.useLocation') | t }}
-          </button>
-          <button
-            type="button"
-            class="tool"
-            [class.on]="planner.pickTarget() === item.end"
-            [attr.aria-pressed]="planner.pickTarget() === item.end"
-            (click)="togglePick(item.end)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21s-6-5.6-6-11a6 6 0 1112 0c0 5.4-6 11-6 11z" />
-              <circle cx="12" cy="10" r="2.2" />
-            </svg>
-            {{ (planner.pickTarget() === item.end ? 'planner.picking' : 'planner.pickOnMap') | t }}
-          </button>
-        </div>
-        @if (planner.locateProblem(); as problem) { @if (problem.end === item.end) {
-        <p class="field-msg" role="alert">
-          @switch (problem.problem) { @case ('denied') { {{ 'planner.locateDenied' | t }} } @case
-          ('unavailable') { {{ 'planner.locateUnavailable' | t }} } @default { {{
-          'planner.locateOutside' | t }} } }
-        </p>
-        } }
-      </div>
-      @if ($first) {
-      <div class="swap-row">
-        <span class="dash" aria-hidden="true"></span>
-        <button
-          type="button"
-          class="swap"
-          [attr.aria-label]="'plan.swap' | t"
-          (click)="planner.swap()"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3" />
-          </svg>
-        </button>
-      </div>
-      } }
-
-      <div class="transfers" role="radiogroup" [attr.aria-label]="'planner.transfersLabel' | t">
-        <span class="transfers-label" aria-hidden="true">{{ 'planner.transfersLabel' | t }}</span>
-        <span class="transfers-options">
-          @for (choice of transferChoices; track choice.value) {
-          <button
-            type="button"
-            role="radio"
-            class="choice"
-            [attr.data-value]="choice.value"
-            [class.on]="planner.maxTransfers() === choice.value"
-            [attr.aria-checked]="planner.maxTransfers() === choice.value"
-            (click)="setTransfers(choice.value)"
-          >
-            {{ choice.label | t }}
-          </button>
-          }
-        </span>
-      </div>
-
-      @if (formError(); as error) {
-      <p class="form-error" role="alert">{{ error | t }}</p>
-      }
-      <button
-        type="submit"
-        class="iv-button iv-button--block submit"
-        [disabled]="planner.loading() || planner.retryIn() > 0"
-      >
-        {{ 'plan.submit' | t }}
-      </button>
-    </form>
 
     <section class="iv-section results" aria-live="polite">
       @switch (planner.view()) { @case ('idle') {

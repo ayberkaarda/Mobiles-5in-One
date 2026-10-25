@@ -15,8 +15,8 @@ export interface StopSequenceItem {
 }
 
 /**
- * The ordered stops of a line as the vertical form of the strip diagram: the turquoise rail
- * with its lacivert casing, a dot per stop and yellow terminals. Each stop is a link (when the
+ * The ordered stops of a line as the vertical form of the strip diagram: the rail with its
+ * casing, a dot per stop and the terminals marked. Each stop is a link (when the
  * item has one) or a button that emits its slug. Names are rendered as text only.
  */
 @Component({

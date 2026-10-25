@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { FACTS } from '../../content/facts';
 
 /**
- * Lacivert site bar with the turquoise minibüs stripe, as in the app chrome: the brand mark from
+ * Site bar with the painted sign edge and the brand mark from
  * brand/logo/inecekvar-mark.svg with the name, and the three main content links.
  */
 @Component({
@@ -17,13 +17,20 @@ import { FACTS } from '../../content/facts';
       <div class="inner">
         <a class="brand" routerLink="/" aria-label="İnecek Var ana sayfa">
           <svg class="mark" viewBox="0 0 512 512" aria-hidden="true">
-            <rect x="208" y="64" width="96" height="64" rx="20" fill="#F2B705" />
-            <rect x="128" y="396" width="48" height="48" rx="12" fill="#FFF8E7" />
-            <rect x="336" y="396" width="48" height="48" rx="12" fill="#FFF8E7" />
-            <rect x="64" y="104" width="384" height="304" rx="64" fill="#F2B705" />
-            <rect x="232" y="232" width="48" height="96" fill="#14213D" />
-            <circle cx="256" cy="180" r="26" fill="none" stroke="#14213D" stroke-width="12" />
-            <rect x="96" y="352" width="320" height="20" rx="10" fill="#2AB7CA" />
+            <rect x="208" y="64" width="96" height="64" rx="20" fill="var(--iv-board-sign)" />
+            <rect x="128" y="396" width="48" height="48" rx="12" fill="var(--iv-board-ink)" />
+            <rect x="336" y="396" width="48" height="48" rx="12" fill="var(--iv-board-ink)" />
+            <rect x="64" y="104" width="384" height="304" rx="64" fill="var(--iv-board-sign)" />
+            <rect x="232" y="232" width="48" height="96" fill="var(--iv-board)" />
+            <circle
+              cx="256"
+              cy="180"
+              r="26"
+              fill="none"
+              stroke="var(--iv-board)"
+              stroke-width="12"
+            />
+            <rect x="96" y="352" width="320" height="20" rx="10" fill="var(--iv-board-ink)" />
           </svg>
           <span class="word" aria-hidden="true">{{ wordmark }}</span>
         </a>
@@ -110,6 +117,6 @@ import { FACTS } from '../../content/facts';
   `,
 })
 export class SiteHeaderComponent {
-  protected readonly wordmark = FACTS.wordmark;
+  protected readonly wordmark = FACTS.name;
   protected readonly paths = FACTS.topLevelPaths;
 }

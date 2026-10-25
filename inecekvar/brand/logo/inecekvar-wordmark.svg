@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 802 304">
   <title>İNECEK VAR</title>
-  <rect x="353" y="12" width="96" height="52" rx="16" fill="#F2B705"/>
-  <rect x="120" y="252" width="48" height="36" rx="10" fill="#14213D"/>
-  <rect x="634" y="252" width="48" height="36" rx="10" fill="#14213D"/>
-  <rect x="16" y="40" width="770" height="224" rx="36" fill="#F2B705"/>
-  <g fill="#14213D" fill-rule="evenodd">
+  <rect x="353" y="12" width="96" height="52" rx="16" fill="#B3261E"/>
+  <rect x="120" y="252" width="48" height="36" rx="10" fill="#1F2124"/>
+  <rect x="634" y="252" width="48" height="36" rx="10" fill="#1F2124"/>
+  <rect x="16" y="40" width="770" height="224" rx="36" fill="#B3261E"/>
+  <g fill="#FFFFFF" fill-rule="evenodd">
     <path transform="translate(66 132)" d="M0 0H14V70H0Z"/>
     <path transform="translate(104 132)" d="M0 70V0H14L42 45V0H56V70H42L14 25V70Z"/>
     <path transform="translate(184 132)" d="M0 0H48V13H14V28H43V41H14V57H48V70H0Z"/>
@@ -15,6 +15,6 @@
     <path transform="translate(581 132)" d="M0 70L23 0H39L62 70H47L43 55H19L15 70ZM23 42H39L31 15Z"/>
     <path transform="translate(674 132)" d="M0 70V0H28C46 0 55 8 55 23C55 33 50 40 42 43L59 70H42L27 46H14V70ZM14 13V33H27C36 33 41 30 41 23C41 16 36 13 27 13Z"/>
   </g>
-  <circle cx="73" cy="108" r="10" fill="none" stroke="#14213D" stroke-width="6"/>
-  <rect x="64" y="232" width="674" height="12" rx="6" fill="#2AB7CA"/>
+  <circle cx="73" cy="108" r="10" fill="none" stroke="#FFFFFF" stroke-width="6"/>
+  <rect x="64" y="232" width="674" height="12" rx="6" fill="#1F2124"/>
 </svg>

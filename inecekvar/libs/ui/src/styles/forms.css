@@ -53,6 +53,8 @@ select.iv-input {
 
 .iv-input[aria-invalid='true'] {
   border-color: var(--iv-danger);
+  border-style: dashed;
+  border-width: 2px;
 }
 
 .iv-hint,
@@ -66,9 +68,29 @@ select.iv-input {
   color: var(--iv-ink-muted);
 }
 
+/* Errors: the danger ink with a mark in front, so the message never relies on colour alone. */
 .iv-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   color: var(--iv-danger);
   font-weight: var(--iv-font-body-weight-600);
+}
+
+.iv-error::before {
+  content: '!';
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  margin-top: 0.05em;
+  border-radius: 50%;
+  background: var(--iv-danger);
+  color: var(--iv-danger-ink);
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .iv-button--ghost {
@@ -83,7 +105,7 @@ select.iv-input {
 
 .iv-button--danger {
   background: var(--iv-danger);
-  color: #fff;
+  color: var(--iv-danger-ink);
 }
 
 .iv-link-button {
@@ -129,9 +151,9 @@ select.iv-input {
 }
 
 .iv-segmented button[aria-pressed='true'] {
-  background: var(--iv-board);
-  color: var(--iv-board-sign);
-  box-shadow: inset 0 -3px 0 var(--iv-stripe);
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
+  box-shadow: inset 0 -3px 0 var(--iv-plate-stripe);
 }
 
 .iv-chip-toggle {
@@ -150,7 +172,7 @@ select.iv-input {
 }
 
 .iv-chip-toggle[aria-pressed='true'] {
-  border-color: var(--iv-board);
-  background: var(--iv-board);
-  color: var(--iv-board-sign);
+  border-color: var(--iv-plate);
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
 }
