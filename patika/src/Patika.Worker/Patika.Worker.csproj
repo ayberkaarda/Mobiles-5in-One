@@ -4,8 +4,13 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Patika.Contracts/Patika.Contracts.csproj" />
     <ProjectReference Include="../Patika.Infrastructure/Patika.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Quartz.Extensions.Hosting" />
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <Compile Include="../Patika.Api/Features/Adoptions/AdoptionClosureService.cs" LinkBase="Jobs/Adoptions/Linked" />
   </ItemGroup>
 </Project>

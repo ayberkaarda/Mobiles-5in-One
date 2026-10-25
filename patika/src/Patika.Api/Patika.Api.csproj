@@ -6,11 +6,13 @@
     <ProjectReference Include="../Patika.Contracts/Patika.Contracts.csproj" />
     <ProjectReference Include="../Patika.Infrastructure/Patika.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="AWSSDK.S3" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Patika.Api.Tests" />
