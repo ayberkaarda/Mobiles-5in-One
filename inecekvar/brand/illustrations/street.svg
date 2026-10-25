@@ -1,7 +1,7 @@
 <!-- İnecek Var street: blocks, minaret, stop pole, hailing passenger and the dolmuş (ADR-0059). Flat shapes; the apps colour it with tokens. -->
 <svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" width="720" height="240">
-  <circle fill="#F2B705" fill-opacity="0.45" cx="640" cy="52" r="26" />
-  <g fill="#F1E1BC">
+  <circle fill="#FFFFFF" fill-opacity="0.75" cx="640" cy="52" r="26" />
+  <g fill="#C4C6C0">
   <rect x="0" y="98" width="64" height="88" />
   <rect x="68" y="62" width="52" height="124" />
   <rect x="124" y="112" width="80" height="74" />
@@ -17,7 +17,7 @@
   <rect x="452" y="142" width="72" height="44" />
   <path d="M456 142 A32 30 0 0 1 520 142 Z" />
   </g>
-  <g fill="#14213D" fill-opacity="0.16">
+  <g fill="#1F2124" fill-opacity="0.16">
   <rect x="78" y="74" width="7" height="9" />
   <rect x="92" y="74" width="7" height="9" />
   <rect x="106" y="74" width="7" height="9" />
@@ -43,10 +43,10 @@
   <rect x="544" y="118" width="7" height="9" />
   <rect x="560" y="138" width="7" height="9" />
   </g>
-  <path fill="none" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" d="M488 46 q6 -6 12 0 q6 -6 12 0 M528 30 q5 -5 10 0 q5 -5 10 0" />
-  <rect fill="#E9D7AE" x="0" y="186" width="720" height="12" />
-  <rect fill="#14213D" x="0" y="198" width="720" height="42" />
-  <g fill="#FFF8E7" fill-opacity="0.55">
+  <path fill="none" stroke="#1F2124" stroke-width="2.5" stroke-linecap="round" d="M488 46 q6 -6 12 0 q6 -6 12 0 M528 30 q5 -5 10 0 q5 -5 10 0" />
+  <rect fill="#BCBEB8" x="0" y="186" width="720" height="12" />
+  <rect fill="#1F2124" x="0" y="198" width="720" height="42" />
+  <g fill="#FFFFFF" fill-opacity="0.55">
   <rect x="14" y="217" width="30" height="4" rx="2" />
   <rect x="84" y="217" width="30" height="4" rx="2" />
   <rect x="154" y="217" width="30" height="4" rx="2" />
@@ -59,40 +59,40 @@
   <rect x="644" y="217" width="30" height="4" rx="2" />
   </g>
   <g >
-  <rect fill="#14213D" x="557" y="112" width="6" height="76" rx="2" />
-  <circle fill="#F2B705" stroke="#14213D" stroke-width="3" cx="560" cy="102" r="17" />
-  <circle fill="none" stroke="#14213D" stroke-width="4" cx="560" cy="102" r="6.5" />
-  <rect fill="#2AB7CA" x="548" y="118" width="24" height="5" rx="2.5" />
+  <rect fill="#1F2124" x="557" y="112" width="6" height="76" rx="2" />
+  <circle fill="#B3261E" stroke="#1F2124" stroke-width="3" cx="560" cy="102" r="17" />
+  <circle fill="none" stroke="#1F2124" stroke-width="4" cx="560" cy="102" r="6.5" />
+  <rect fill="#1F2124" x="548" y="118" width="24" height="5" rx="2.5" />
   </g>
   <g >
-  <rect fill="#14213D" x="592" y="176" width="5" height="12" rx="2" />
-  <rect fill="#14213D" x="600" y="176" width="5" height="12" rx="2" />
-  <rect fill="#2AB7CA" x="589" y="150" width="19" height="30" rx="8" />
-  <circle fill="#14213D" cx="598" cy="141" r="7.5" />
-  <path fill="none" stroke="#14213D" stroke-width="5" stroke-linecap="round" d="M604 157 L616 136" />
+  <rect fill="#1F2124" x="592" y="176" width="5" height="12" rx="2" />
+  <rect fill="#1F2124" x="600" y="176" width="5" height="12" rx="2" />
+  <rect fill="#1F2124" x="589" y="150" width="19" height="30" rx="8" />
+  <circle fill="#1F2124" cx="598" cy="141" r="7.5" />
+  <path fill="none" stroke="#1F2124" stroke-width="5" stroke-linecap="round" d="M604 157 L616 136" />
   </g>
   <g >
   <g transform="translate(176 128)">
-  <rect fill="#14213D" x="34" y="-17" width="104" height="18" rx="3" />
-  <text fill="#F2B705" font-family="DM Sans, sans-serif" font-weight="700" font-size="10.5" letter-spacing="0.84" x="86" y="-4" text-anchor="middle">İNECEK VAR</text>
+  <rect fill="#1F2124" x="34" y="-17" width="104" height="18" rx="3" />
+  <text fill="#FFFFFF" font-family="DM Sans, sans-serif" font-weight="700" font-size="10.5" letter-spacing="0.84" x="86" y="-4" text-anchor="middle">İNECEK VAR</text>
   <path
-  fill="#F2B705" stroke="#14213D" stroke-width="3"
+  fill="#FFFFFF" stroke="#1F2124" stroke-width="3"
   d="M6 66 L6 20 Q6 6 20 6 L148 6 Q160 6 168 18 L186 44 Q190 50 190 56 L190 66 Z"
   />
-  <rect fill="#CFEEF2" stroke="#14213D" stroke-width="2" x="18" y="16" width="28" height="20" rx="4" />
-  <rect fill="#CFEEF2" stroke="#14213D" stroke-width="2" x="52" y="16" width="28" height="20" rx="4" />
-  <rect fill="#CFEEF2" stroke="#14213D" stroke-width="2" x="86" y="16" width="28" height="20" rx="4" />
-  <rect fill="#CFEEF2" stroke="#14213D" stroke-width="2" x="120" y="16" width="22" height="20" rx="4" />
-  <polygon fill="#CFEEF2" stroke="#14213D" stroke-width="2" points="148,16 160,16 176,40 148,40" />
-  <rect fill="#2AB7CA" x="6" y="44" width="184" height="7" />
-  <rect fill="#FFF8E7" stroke="#14213D" stroke-width="1.5" x="180" y="54" width="9" height="6" rx="2" />
+  <rect fill="#E3E8EE" stroke="#1F2124" stroke-width="2" x="18" y="16" width="28" height="20" rx="4" />
+  <rect fill="#E3E8EE" stroke="#1F2124" stroke-width="2" x="52" y="16" width="28" height="20" rx="4" />
+  <rect fill="#E3E8EE" stroke="#1F2124" stroke-width="2" x="86" y="16" width="28" height="20" rx="4" />
+  <rect fill="#E3E8EE" stroke="#1F2124" stroke-width="2" x="120" y="16" width="22" height="20" rx="4" />
+  <polygon fill="#E3E8EE" stroke="#1F2124" stroke-width="2" points="148,16 160,16 176,40 148,40" />
+  <rect fill="#B3261E" x="6" y="44" width="184" height="7" />
+  <rect fill="#FFFFFF" stroke="#1F2124" stroke-width="1.5" x="180" y="54" width="9" height="6" rx="2" />
   <g >
-  <circle fill="#14213D" cx="42" cy="68" r="14" />
-  <circle fill="#FFF8E7" cx="42" cy="68" r="5" />
+  <circle fill="#1F2124" cx="42" cy="68" r="14" />
+  <circle fill="#FFFFFF" cx="42" cy="68" r="5" />
   </g>
   <g >
-  <circle fill="#14213D" cx="152" cy="68" r="14" />
-  <circle fill="#FFF8E7" cx="152" cy="68" r="5" />
+  <circle fill="#1F2124" cx="152" cy="68" r="14" />
+  <circle fill="#FFFFFF" cx="152" cy="68" r="5" />
   </g>
   </g>
   </g>
