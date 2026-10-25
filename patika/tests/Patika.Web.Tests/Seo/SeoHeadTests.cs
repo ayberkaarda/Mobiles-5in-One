@@ -106,10 +106,18 @@ public sealed class SeoHeadTests
         await using var factory = SeoTestHelpers.Offline();
         using var client = factory.CreateClient();
 
-        using var assetLinks = await client.GetAsync("/.well-known/assetlinks.json", Ct);
-        Assert.Equal(HttpStatusCode.OK, assetLinks.StatusCode);
-        Assert.Equal("application/json", assetLinks.Content.Headers.ContentType?.MediaType);
-        using var links = JsonDocument.Parse(await assetLinks.Content.ReadAsStringAsync(Ct));
+        // Only the template ships: neither it nor a placeholder assetlinks.json may be served before the owner
+        // adds the release certificate fingerprint (docs/public-web-data.md, release checklist).
+        foreach (var path in new[] { "/.well-known/assetlinks.json", "/.well-known/assetlinks.json.example" })
+        {
+            using var response = await client.GetAsync(path, Ct);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "Patika.slnx"))) root = root.Parent;
+        Assert.NotNull(root);
+        var template = Path.Combine(root.FullName, "src", "Patika.Web", "wwwroot", ".well-known", "assetlinks.json.example");
+        using var links = JsonDocument.Parse(await File.ReadAllTextAsync(template, Ct));
         Assert.Equal("app.patika.android", links.RootElement[0].GetProperty("target").GetProperty("package_name").GetString());
 
         var llms = await SeoTestHelpers.GetOkAsync(client, "/llms.txt");
