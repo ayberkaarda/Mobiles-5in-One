@@ -1,3 +1,10 @@
+@using Patika.Web.Routing
+@inject TimeProvider Clock
+@{
+    var path = Context.Request.Path;
+    string? Current(string section) => path.StartsWithSegments(section, StringComparison.OrdinalIgnoreCase) ? "page" : null;
+    var stations = Routes.Province("istanbul");
+}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -16,17 +23,17 @@
     <a class="skip" href="#icerik">İçeriğe geç</a>
     <header class="masthead">
         <div class="masthead__inner">
-            <a class="masthead__logo" href="/" aria-label="Patika ana sayfa">
-                <img src="~/img/patika-lockup.svg" alt="Patika" width="152" height="46" />
+            <a class="masthead__logo" href="@Routes.Home" aria-label="Patika ana sayfa">
+                <img src="~/img/patika-lockup.svg" alt="Patika" width="136" height="41" />
             </a>
             <nav class="masthead__nav" aria-label="Ana menü">
-                <a href="/sahiplendirme">Sahiplendirme</a>
-                <a href="/istasyonlar/istanbul/kadikoy">İstasyonlar</a>
-                <a href="/bakim-yerleri/istanbul">Bakım yerleri</a>
-                <a href="/rehber/sokak-kedisi-nasil-beslenir">Rehber</a>
-                <a href="/etki">Etki</a>
+                <a href="@Routes.Adoptions" aria-current="@Current(Routes.Adoptions)">Sahiplendirme</a>
+                <a href="@stations" aria-current="@Current("/istasyonlar")">İstasyonlar</a>
+                <a href="@Routes.CarePlaces" aria-current="@(Current(Routes.CarePlaces) ?? Current("/bakim-yeri"))">Bakım yerleri</a>
+                <a href="@Routes.Guides" aria-current="@Current(Routes.Guides)">Rehber</a>
+                <a href="@Routes.Impact" aria-current="@Current(Routes.Impact)">Etki</a>
             </nav>
-            <a class="button button--small masthead__app" href="/#uygulama">Android uygulaması</a>
+            <a class="button button--small masthead__app" href="@(Routes.Home)#uygulama">Android uygulaması</a>
         </div>
     </header>
 
@@ -37,22 +44,24 @@
     <footer class="footer">
         <div class="footer__inner">
             <div class="footer__brand">
-                <img src="~/img/patika-lockup-kar.svg" alt="Patika" width="136" height="41" />
+                <img src="~/img/patika-lockup-kar.svg" alt="Patika" width="136" height="41" loading="lazy" />
                 <p class="footer__tagline">Mahallenin patilerini birlikte koruyalım.</p>
                 <p class="footer__promise">Konumun hiçbir zaman profilinde saklanmaz. Fotoğraflarının konum bilgisi telefonda silinir, sunucuya hiç gelmez.</p>
             </div>
             <nav class="footer__links" aria-label="Patika">
-                <a href="/hakkinda">Hakkında</a>
-                <a href="/sss">Sık sorulanlar</a>
-                <a href="/etki">Etki</a>
-                <a href="/iletisim">İletişim</a>
+                <a href="@Routes.About">Hakkında</a>
+                <a href="@Routes.Faq">Sık sorulanlar</a>
+                <a href="@Routes.Guides">Rehber</a>
+                <a href="@Routes.Impact">Etki</a>
+                <a href="@Routes.Contact">İletişim</a>
             </nav>
             <nav class="footer__links" aria-label="Yasal">
-                <a href="/gizlilik">Gizlilik</a>
-                <a href="/kvkk-aydinlatma">KVKK aydınlatma metni</a>
-                <a href="/hesap-silme">Hesabımı sil</a>
+                <a href="@Routes.Privacy">Gizlilik</a>
+                <a href="@Routes.Kvkk">KVKK aydınlatma metni</a>
+                <a href="@Routes.Terms">Kullanım koşulları</a>
+                <a href="@Routes.DeleteAccount">Hesabımı sil</a>
             </nav>
-            <p class="footer__legal">&copy; @DateTime.UtcNow.Year Patika Topluluk Teknolojileri</p>
+            <p class="footer__legal">&copy; @TimeZoneInfo.ConvertTime(Clock.GetUtcNow(), PublicText.Istanbul).Year Patika Topluluk Teknolojileri</p>
         </div>
     </footer>
 </body>

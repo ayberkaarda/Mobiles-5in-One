@@ -1,0 +1,20 @@
+@using Patika.Web.Routing
+@model CollarTag
+@{
+    var card = Model.Card;
+}
+<li class="collar">
+    <a class="collar__card" href="@Routes.Adoption(card.Slug)">
+        <span class="collar__species">@PublicText.Species(card.Species)</span>
+        <span class="collar__name">@PublicText.AnimalName(card)</span>
+        <span class="collar__sex">@PublicText.SexLine(card)</span>
+        @if (card.DistrictName is not null)
+        {
+            <span class="collar__district">@card.DistrictName</span>
+        }
+        <span class="collar__health@(PublicText.HealthIsGood(card) ? " is-good" : "")">@PublicText.HealthLine(card)</span>
+        <span class="collar__closes">@PublicText.ClosesIn(card.ClosesAt, Model.Now)</span>
+    </a>
+    <span class="collar__hole" aria-hidden="true"></span>
+    <span class="collar__ring" aria-hidden="true"></span>
+</li>

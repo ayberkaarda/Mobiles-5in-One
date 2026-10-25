@@ -1,0 +1,24 @@
+@model IReadOnlyList<Crumb>
+<nav class="crumbs" aria-label="Konum">
+    <ol>
+        @for (var i = 0; i < Model.Count; i++)
+        {
+            var crumb = Model[i];
+            var last = i == Model.Count - 1;
+            <li>
+                @if (crumb.Href is not null && !last)
+                {
+                    <a href="@crumb.Href">@crumb.Label</a>
+                }
+                else if (last)
+                {
+                    <span aria-current="page">@crumb.Label</span>
+                }
+                else
+                {
+                    @crumb.Label
+                }
+            </li>
+        }
+    </ol>
+</nav>

@@ -1,8 +1,8 @@
 @page
+@using Patika.Web.Routing
 @model IndexModel
 @{
-    ViewData["Title"] = "Patika: Sokak hayvanları için mahalle gönüllüleri";
-    ViewData["Description"] = "Mama istasyonları haritası, besleme takibi, sahiplendirme, acil yardım ve en yakın veteriner. Mahallenin patilerini birlikte koruyalım.";
+    var week = Model.LastWeek;
 }
 
 <section class="hero" aria-labelledby="hero-baslik">
@@ -10,7 +10,7 @@
         <h1 id="hero-baslik" class="hero__title">Mahallenin patilerini birlikte koruyalım.</h1>
         <p class="hero__answer">Patika, sokak kedileri ve köpekleri için mahalle gönüllülerini buluşturan bir uygulama. Mama istasyonlarını haritada görür, beslediğinde “Beslendi” dersin; böylece aynı sokağa iki kişi gitmez, unutulan köşe kalmaz. Sahiplendirme ilanları, acil yardım çağrıları ve en yakın veteriner de aynı yerde.</p>
         <div class="hero__actions">
-            <a class="button" href="/sahiplendirme">Sahiplendirme ilanlarına bak</a>
+            <a class="button" href="@Routes.Adoptions">Sahiplendirme ilanlarına bak</a>
             <a class="link-strong" href="#uygulama">Harita uygulaması yakında</a>
         </div>
     </div>
@@ -128,26 +128,21 @@
     <div class="adopt__head">
         <h2 id="yuva-baslik" class="section-title">Yuva arayanlar</h2>
         <p class="section-lede">İlanlar moderasyondan geçer ve 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır.</p>
-        <a class="link-strong" href="/sahiplendirme">Tüm ilanlar</a>
+        <a class="link-strong" href="@Routes.Adoptions">Tüm ilanlar</a>
     </div>
-    <ul class="tags">
-        @foreach (var animal in Model.Adoptions)
-        {
-            <li class="tag">
-                <span class="tag__hole" aria-hidden="true"></span>
-                <span class="tag__species">@(animal.Species == Species.Cat ? "Kedi" : "Köpek")</span>
-                <h3 class="tag__name">@animal.Name</h3>
-                <p class="tag__summary">@animal.Summary</p>
-                <p class="tag__district">@animal.District</p>
-                <ul class="tag__flags" aria-label="Sağlık durumu">
-                    <li class="@(animal.Sterilized ? "is-yes" : "is-no")">@(animal.Sterilized ? "Kısırlaştırıldı" : "Kısırlaştırılmadı")</li>
-                    <li class="@(animal.Vaccinated ? "is-yes" : "is-no")">@(animal.Vaccinated ? "Aşıları tam" : "Aşı bekliyor")</li>
-                    <li class="@(animal.EarTagged ? "is-yes" : "is-no")">@(animal.EarTagged ? "Kulak küpeli" : "Küpesiz")</li>
-                </ul>
-                <span class="sample">[ÖRNEK]</span>
-            </li>
-        }
-    </ul>
+    @if (Model.Adoptions.Count == 0)
+    {
+        <p class="empty adopt__empty">Şu an yayında sahiplendirme ilanı yok. Yeni ilanlar moderasyondan geçince burada görünür.</p>
+    }
+    else
+    {
+        <ul class="collars collars--home">
+            @foreach (var card in Model.Adoptions)
+            {
+                <partial name="_CollarTag" model="new CollarTag(card, Model.Now)" />
+            }
+        </ul>
+    }
 </section>
 
 <section class="urgent" aria-labelledby="acil-baslik">
@@ -159,37 +154,45 @@
                 <li><strong>Acil yardım çağrısı aç.</strong> Bir fotoğraf ve kısa bir not yeter. Konum yalnızca çağrı için kullanılır.</li>
                 <li><strong>En yakın açık veterinere ulaş.</strong> 2 km içindeki gönüllüler de çağrını görür.</li>
             </ol>
-            <a class="link-strong link-strong--light" href="/rehber/yarali-kedi-veya-kopek-bulursam">Rehberin tamamı</a>
+            <a class="link-strong link-strong--light" href="@Routes.Guide("yarali-kedi-veya-kopek-bulursam")">Rehberin tamamı</a>
         </div>
         <div class="urgent__places">
-            <h3 class="urgent__places-title">Yakındaki bakım yerleri <span class="sample sample--light">[ÖRNEK]</span></h3>
-            <ul class="places">
-                @foreach (var place in Model.CarePlaces)
-                {
-                    <li class="place">
-                        <span class="place__name">@place.Name</span>
-                        <span class="place__distance">@place.Distance</span>
-                        @if (place.OpenAllDay)
-                        {
-                            <span class="place__open">24 saat açık</span>
-                        }
-                    </li>
-                }
-            </ul>
+            <h3 class="urgent__places-title">Bakım yerleri</h3>
+            @if (Model.CarePlaces.Count == 0)
+            {
+                <p class="urgent__none">Henüz kayıtlı bakım yeri yok.</p>
+            }
+            else
+            {
+                <ul class="places">
+                    @foreach (var place in Model.CarePlaces)
+                    {
+                        <li class="place">
+                            <a class="place__name" href="@Routes.CarePlace(place.Slug)">@place.Name</a>
+                            <span class="place__distance">@(place.DistrictName ?? PublicText.CareKind(place.Kind))</span>
+                            @if (place.Open24h)
+                            {
+                                <span class="place__open">24 saat açık</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            <a class="link-strong link-strong--light urgent__all" href="@Routes.CarePlaces">Tüm bakım yerleri</a>
         </div>
     </div>
 </section>
 
 <section class="impact" aria-labelledby="etki-baslik">
     <h2 id="etki-baslik" class="visually-hidden">Etki</h2>
-    <p class="impact__sentence">Geçen hafta Kadıköy’deki <span class="num">38</span> istasyonda <span class="num">1.284</span> kap mama ve su bırakıldı, <span class="num">6</span> kedi yuvasına kavuştu. <span class="sample">[ÖRNEK]</span></p>
-    <p class="impact__note">Sayılar uygulamadaki besleme kayıtlarından gelir ve her pazartesi güncellenir. Yöntemi <a href="/etki">etki sayfasında</a> anlatıyoruz.</p>
+    <p class="impact__sentence">Geçen hafta <span class="num">@PublicText.Number(week.Feedings)</span> besleme kaydedildi, <span class="num">@PublicText.Number(week.NewStations)</span> yeni istasyon açıldı ve <span class="num">@PublicText.Number(week.Adoptions)</span> hayvan yuvasına kavuştu.</p>
+    <p class="impact__note">Sayılar uygulamadaki besleme ve ilan kayıtlarından, tamamlanan her hafta için hesaplanır (@PublicText.Week(week.StartsOn, withYear: true)). Yöntemi <a href="@Routes.Impact">etki sayfasında</a> anlatıyoruz.</p>
 </section>
 
 <section id="uygulama" class="app" aria-labelledby="uygulama-baslik">
-    <img class="app__icon" src="~/img/patika-icon-192.png" alt="" width="96" height="96" />
+    <img class="app__icon" src="~/img/patika-icon-192.png" alt="" width="96" height="96" loading="lazy" />
     <div class="app__text">
         <h2 id="uygulama-baslik" class="section-title">Patika önce Android’de</h2>
-        <p class="section-lede">Uygulama hazırlanıyor. Google Play’de yayımlandığında bu sayfadan duyuracağız; iPhone sürümü daha sonra gelecek.</p>
+        <p class="section-lede">Uygulama hazırlanıyor. Google Play’de yayımlandığında bu sayfadan duyuracağız; iPhone sürümü daha sonra gelecek. Sahiplendirme talebi, ilan bildirme ve acil yardım çağrısı uygulamadan yapılır.</p>
     </div>
 </section>

@@ -1,7 +1,26 @@
 @page "/404"
+@using Patika.Web.Routing
+@using Patika.Web.Seo
 @{
     Response.StatusCode = 404;
-    Layout = null;
+    ViewData[SeoMeta.Key] = new SeoMeta("Sayfa bulunamadı | Patika",
+        "Aradığın sayfa taşınmış, kapanmış ya da hiç olmamış olabilir. Sahiplendirme ilanlarına, istasyonlara ya da rehbere Patika ana sayfasından ulaşabilirsin.",
+        Routes.NotFound) { NoIndex = true };
 }
-<!doctype html>
-<html lang="tr"><head><title>Sayfa bulunamadı</title></head><body><h1>Sayfa bulunamadı</h1><a href="/">Ana sayfa</a></body></html>
+<div class="lost">
+    <div class="lost__text">
+        <p class="kicker kicker--large">404</p>
+        <h1 class="lost__title">Bu patika burada bitiyor.</h1>
+        <p class="lede lede--flush">Aradığın sayfa taşınmış, kapanmış ya da hiç olmamış olabilir. Kapanan sahiplendirme ilanları bir süre sonra yayından kalkar.</p>
+        <div class="actions">
+            <a class="button" href="@Routes.Adoptions">Sahiplendirme ilanlarına bak</a>
+            <a class="link-strong" href="@Routes.Guides">Rehbere git</a>
+        </div>
+    </div>
+    <svg class="lost__art" viewBox="0 0 420 300" aria-hidden="true" focusable="false">
+        <g fill="#F28C28">
+            <circle cx="30" cy="270" r="9"></circle><circle cx="68" cy="252" r="8.5"></circle><circle cx="106" cy="230" r="8"></circle><circle cx="142" cy="204" r="7.5"></circle><circle cx="174" cy="176" r="7"></circle><circle cx="202" cy="146" r="6.2"></circle><circle cx="226" cy="118" r="5.4"></circle><circle cx="246" cy="94" r="4.6"></circle><circle cx="263" cy="74" r="3.8"></circle><circle cx="277" cy="58" r="3"></circle><circle cx="288" cy="46" r="2.3"></circle>
+        </g>
+        <g fill="#E2DDD6"><circle cx="300" cy="36" r="1.8"></circle><circle cx="310" cy="28" r="1.4"></circle></g>
+    </svg>
+</div>
