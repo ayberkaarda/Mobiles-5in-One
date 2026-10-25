@@ -98,6 +98,26 @@ public sealed class FcmSenderTests
     public void ProviderErrorsAreClassified(HttpStatusCode status, string body, PushOutcome expected) =>
         Assert.Equal(expected, FcmPushSender.Classify(status, body));
 
+    [Fact]
+    public void TheMessageIsDataOnlyWithIdsAndNoText()
+    {
+        var data = new Dictionary<string, string> { ["type"] = "urgent", ["urgentId"] = Guid.Empty.ToString("D"), ["category"] = "injured" };
+        var json = JsonSerializer.Serialize(FcmPushSender.Body(new PushMessage("tok", "Acil", "Yakında", data, Critical: true)));
+
+        using var doc = JsonDocument.Parse(json);
+        var message = doc.RootElement.GetProperty("message");
+        Assert.False(message.TryGetProperty("notification", out _));
+        Assert.False(message.GetProperty("android").TryGetProperty("notification", out _));
+        Assert.Equal("HIGH", message.GetProperty("android").GetProperty("priority").GetString());
+        var sent = message.GetProperty("data").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString());
+        Assert.Equal(2, sent.Count);
+        Assert.Equal("urgent_nearby", sent["type"]);
+        Assert.Equal(Guid.Empty.ToString("D"), sent["urgentId"]);
+        Assert.DoesNotContain("Acil", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("Yakında", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("injured", json, StringComparison.Ordinal);
+    }
+
     private static FcmSettings Settings()
     {
         // A throwaway key created per run; nothing secret is stored in the repository.

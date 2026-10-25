@@ -3,18 +3,13 @@ using Patika.App.Core.Location;
 using Patika.App.Core.Navigation;
 using Patika.App.Core.Offline;
 using Patika.App.Pages.Account;
-using Patika.App.Pages.Adoption;
+using Patika.App.Pages.Animals;
 using Patika.App.Pages.Map;
-using Patika.App.Pages.Stations;
-using Patika.App.Pages.Urgent;
 using Patika.App.Services;
 using Patika.App.Services.Api;
 using Patika.App.Services.Location;
 using Patika.App.Services.Navigation;
 using Patika.App.Services.Offline;
-using Patika.App.ViewModels.Account;
-using Patika.App.ViewModels.Map;
-using Patika.App.ViewModels.Stations;
 
 namespace Patika.App;
 
@@ -36,7 +31,9 @@ public static class MauiProgram
             });
 
         AddCore(builder.Services);
-        AddScreens(builder.Services);
+        builder.Services.AddMapAndStationScreens();
+        builder.Services.AddAnimalAndAdoptionPages();
+        builder.AddUrgentAndAccount();
         return builder.Build();
     }
 
@@ -63,19 +60,5 @@ public static class MauiProgram
         services.AddSingleton<ILocationService, MauiLocationService>();
         services.AddSingleton<INavigationService, ShellNavigationService>();
         services.AddSingleton<SessionCoordinator>();
-    }
-
-    /// <summary>Pages and view models. Feature packages add theirs next to these.</summary>
-    private static void AddScreens(IServiceCollection services)
-    {
-        services.AddTransient<SignInViewModel>().AddTransient<SignInPage>();
-        services.AddTransient<SignUpViewModel>().AddTransient<SignUpPage>();
-        services.AddTransient<VerifyViewModel>().AddTransient<VerifyPage>();
-        services.AddTransient<ProfileViewModel>().AddTransient<ProfilePage>();
-        services.AddSingleton<MapViewModel>().AddTransient<MapPage>();
-        services.AddTransient<StationViewModel>().AddTransient<StationPage>();
-        services.AddTransient<OutboxViewModel>().AddTransient<OutboxPage>();
-        services.AddTransient<AdoptPage>();
-        services.AddTransient<UrgentPage>();
     }
 }

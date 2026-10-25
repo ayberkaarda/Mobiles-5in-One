@@ -75,21 +75,37 @@ public sealed class FcmPushSender : IPushSender
             : PushOutcome.Failed;
     }
 
-    public static object Body(PushMessage message) => new
+    /// <summary>
+    /// Data-only message: no notification block and no text, only ids. The app picks its own fixed wording
+    /// from the allow-listed <c>type</c>. High priority wakes a sleeping device for critical sends.
+    /// </summary>
+    public static object Body(PushMessage message)
     {
-        message = new
+        var data = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (message.Data.TryGetValue("urgentId", out var urgentId))
         {
-            token = message.Token,
-            notification = new { title = message.Title, body = message.Body },
-            data = message.Data,
-            android = new
+            data["type"] = "urgent_nearby";
+            data["urgentId"] = urgentId;
+        }
+        else if (message.Data.TryGetValue("type", out var type))
+        {
+            data["type"] = type;
+        }
+
+        return new
+        {
+            message = new
             {
-                priority = message.Critical ? "HIGH" : "NORMAL",
-                ttl = message.Critical ? "3600s" : "86400s",
-                notification = new { channel_id = message.Critical ? "urgent" : "general" },
+                token = message.Token,
+                data,
+                android = new
+                {
+                    priority = message.Critical ? "HIGH" : "NORMAL",
+                    ttl = message.Critical ? "3600s" : "86400s",
+                },
             },
-        },
-    };
+        };
+    }
 
     private async Task<string> AccessTokenAsync(CancellationToken cancellationToken)
     {
