@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Patika.Domain;
 using Patika.Domain.Entities;
+using Patika.Infrastructure.Persistence.Configurations;
 
 namespace Patika.Infrastructure.Persistence;
 
@@ -31,6 +32,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<DeletionRequest> DeletionRequests => Set<DeletionRequest>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

@@ -150,6 +150,11 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("District")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("district");
+
                     b.Property<bool>("EarTagged")
                         .HasColumnType("boolean")
                         .HasColumnName("ear_tagged");
@@ -539,6 +544,12 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
+                    b.Property<int>("FailedAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed_attempts");
+
                     b.Property<string>("Purpose")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -569,10 +580,15 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "Purpose")
+                        .IsUnique()
+                        .HasDatabaseName("ux_email_tokens_live_code")
+                        .HasFilter("used_at IS NULL");
 
                     b.ToTable("email_tokens", null, t =>
                         {
+                            t.HasCheckConstraint("ck_email_tokens_failed_attempts", "failed_attempts BETWEEN 0 AND 5");
+
                             t.HasCheckConstraint("ck_email_tokens_hash_length", "octet_length(token_hash) = 32");
                         });
                 });
@@ -885,6 +901,11 @@ namespace Patika.Infrastructure.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
+
+                    b.Property<string>("District")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("district");
 
                     b.Property<long>("FeedingsCount")
                         .HasColumnType("bigint")
@@ -1241,6 +1262,68 @@ namespace Patika.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Patika.Infrastructure.Persistence.Configurations.IdempotencyKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("Key")
+                        .HasColumnType("uuid")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("location");
+
+                    b.Property<byte[]>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("request_hash");
+
+                    b.Property<byte[]>("ResponseBody")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("response_body");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_code");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("idempotency_keys", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_idempotency_keys_body_length", "octet_length(response_body) <= 65536");
+
+                            t.HasCheckConstraint("ck_idempotency_keys_hash_length", "octet_length(request_hash) = 32");
+                        });
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.AdoptionPost", b =>
                 {
                     b.HasOne("Patika.Domain.Entities.Animal", null)
@@ -1442,6 +1525,15 @@ namespace Patika.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Patika.Infrastructure.Persistence.Configurations.IdempotencyKey", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
