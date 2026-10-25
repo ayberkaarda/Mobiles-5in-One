@@ -1,5 +1,6 @@
 using System.Globalization;
 using FluentValidation;
+using Patika.Api.Idempotency;
 using Patika.Api.Validation;
 using Patika.Contracts.Community;
 using Patika.Contracts.Geo;
@@ -35,6 +36,7 @@ public sealed class MapQueryValidator : AbstractValidator<MapQuery>
     {
         RuleFor(x => x.Bbox).Must(value => CommunityValidation.ParseBox(value) is { } box
             && new BoundingBoxValidator().Validate(box).IsValid);
+        RuleFor(x => x.StationId).NotEqual(Guid.Empty).When(x => x.StationId.HasValue);
         RuleFor(x => x.Zoom).InclusiveBetween(0, 22);
         RuleFor(x => x.Page).InclusiveBetween(1, 100000);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 500);
@@ -58,6 +60,7 @@ public sealed class StationRequestValidator : AbstractValidator<StationRequest>
         RuleFor(x => x.Kind).Must(CommunityValidation.EnumName<StationKind>);
         RuleFor(x => x.Species).Must(CommunityValidation.EnumName<Species>);
         RuleFor(x => x.PhotoKey).Must(CommunityValidation.Key);
+        RuleFor(x => x.District).MaximumLength(60).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.Name).MaximumLength(200).Must(TextRules.HasNoControlCharacters);
     }
 }
@@ -69,14 +72,16 @@ public sealed class StationUpdateRequestValidator : AbstractValidator<StationUpd
         RuleFor(x => x.Kind).Must(x => x is null || CommunityValidation.EnumName<StationKind>(x));
         RuleFor(x => x.Species).Must(x => x is null || CommunityValidation.EnumName<Species>(x));
         RuleFor(x => x.PhotoKey).Must(x => x is null || CommunityValidation.Key(x));
+        RuleFor(x => x.District).MaximumLength(60).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.Name).MaximumLength(200).Must(TextRules.HasNoControlCharacters);
     }
 }
 public sealed class FeedingRequestValidator : AbstractValidator<FeedingRequest>
 {
-    public FeedingRequestValidator()
+    public FeedingRequestValidator(TimeProvider? clock = null)
     {
         RuleFor(x => x.PhotoKey).Must(x => x is null || CommunityValidation.Key(x));
         RuleFor(x => x.Note).MaximumLength(2000).Must(TextRules.HasNoControlCharacters);
+        RuleFor(r => r.ClientCreatedAt).ClientCreatedAt(clock ?? TimeProvider.System);
     }
 }

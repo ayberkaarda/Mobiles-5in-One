@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Patika.Api.Features.Media;
 using Patika.Api.Features.Stations;
+using Patika.Api.Idempotency;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
 using Patika.Contracts.Community;
@@ -30,12 +32,36 @@ public static class AnimalEndpoints
         group.MapPost("/{id:guid}/sightings", SightingAsync).Validate<SightingRequest>().RequirePermission(Permission.AnimalsCreate);
         group.MapPut("/{id:guid}/follow", FollowAsync).RequirePermission(Permission.AnimalFollow);
         group.MapDelete("/{id:guid}/follow", UnfollowAsync).RequirePermission(Permission.AnimalFollow);
+        v1.MapGet("/me/follows", MyFollowsAsync).Validate<PageQuery>().RequirePermission(Permission.MeManage);
         return v1;
     }
 
-    public static AnimalResponse Response(Animal x) => new(x.Id, x.StationId,
+    public static AnimalResponse Response(Animal x, bool isFollowing = false, int followerCount = 0) => new(x.Id, x.StationId,
         new CoordinateDto(x.Location.Latitude, x.Location.Longitude), x.Species.ToString(), x.Name, x.Sex.ToString(),
-        x.Sterilized, x.Vaccinated, x.EarTagged, x.Status.ToString());
+        x.Sterilized, x.Vaccinated, x.EarTagged, x.Status.ToString(), x.District, isFollowing, followerCount);
+
+    private static async Task<AnimalResponse> ResponseAsync(Animal animal, HttpContext? http, PatikaDbContext db, CancellationToken ct)
+    {
+        var callerId = http is null ? (Guid?)null : ActorFactory.FromPrincipal(http.User).UserId;
+        var follows = db.Follows.Where(f => f.AnimalId == animal.Id);
+        return Response(animal, callerId != null && await follows.AnyAsync(f => f.UserId == callerId, ct),
+            await follows.CountAsync(ct));
+    }
+
+    public static async Task<IResult> MyFollowsAsync([AsParameters] PageQuery query, HttpContext http, PatikaDbContext db, CancellationToken ct)
+    {
+        if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId) return TypedResults.Unauthorized();
+        var rows = await db.Follows.AsNoTracking().Where(f => f.UserId == userId)
+            .Join(db.Animals, f => f.AnimalId, a => a.Id, (f, a) => new { Follow = f, Animal = a })
+            .OrderByDescending(x => x.Follow.CreatedAt).ThenByDescending(x => x.Follow.Id)
+            .Skip((query.Page - 1) * query.PageSize).Take(query.PageSize + 1)
+            .Select(x => x.Animal).ToListAsync(ct);
+        var ids = rows.Take(query.PageSize).Select(a => a.Id).ToArray();
+        var counts = await db.Follows.Where(f => ids.Contains(f.AnimalId)).GroupBy(f => f.AnimalId)
+            .Select(g => new { Id = g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Id, g => g.Count, ct);
+        var items = rows.Take(query.PageSize).Select(a => Response(a, true, counts.GetValueOrDefault(a.Id))).ToArray();
+        return TypedResults.Ok(new PageResponse<AnimalResponse>(items, query.Page, query.PageSize, rows.Count > query.PageSize));
+    }
 
     public static async Task<IResult> CreateAsync(AnimalRequest request, HttpContext http, PatikaDbContext db, CancellationToken ct)
     {
@@ -50,6 +76,7 @@ public static class AnimalEndpoints
             Sex = Enum.Parse<AnimalSex>(request.Sex),
             Status = Enum.Parse<AnimalStatus>(request.Status),
             Name = request.Name,
+            District = request.District?.Trim(),
             Sterilized = request.Sterilized,
             Vaccinated = request.Vaccinated,
             EarTagged = request.EarTagged,
@@ -57,13 +84,13 @@ public static class AnimalEndpoints
         };
         db.Animals.Add(animal);
         await db.SaveChangesAsync(ct);
-        return TypedResults.Created($"/v1/animals/{animal.Id}", Response(animal));
+        return TypedResults.Created($"/v1/animals/{animal.Id}", await ResponseAsync(animal, http, db, ct));
     }
 
-    public static async Task<IResult> GetAsync(Guid id, PatikaDbContext db, CancellationToken ct)
+    public static async Task<IResult> GetAsync(Guid id, PatikaDbContext db, CancellationToken ct, HttpContext? http = null)
     {
         var animal = await db.Animals.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
-        return animal is null ? TypedResults.NotFound() : TypedResults.Ok(Response(animal));
+        return animal is null ? TypedResults.NotFound() : TypedResults.Ok(await ResponseAsync(animal, http, db, ct));
     }
 
     public static async Task<IResult> UpdateAsync(Guid id, AnimalUpdateRequest request, HttpContext http,
@@ -83,20 +110,21 @@ public static class AnimalEndpoints
         if (request.Sex is { } sex) animal.Sex = Enum.Parse<AnimalSex>(sex);
         if (request.Status is { } status) animal.Status = Enum.Parse<AnimalStatus>(status);
         if (request.Name is { } name) animal.Name = name;
+        if (request.District is { } district) animal.District = district.Trim();
         if (request.Sterilized is { } sterilized) animal.Sterilized = sterilized;
         if (request.Vaccinated is { } vaccinated) animal.Vaccinated = vaccinated;
         if (request.EarTagged is { } tagged) animal.EarTagged = tagged;
         await db.SaveChangesAsync(ct);
-        return TypedResults.Ok(Response(animal));
+        return TypedResults.Ok(await ResponseAsync(animal, http, db, ct));
     }
 
-    public static async Task<IResult> PhotosAsync(Guid id, [AsParameters] PageQuery query, PatikaDbContext db, CancellationToken ct)
+    public static async Task<IResult> PhotosAsync(Guid id, [AsParameters] PageQuery query, PatikaDbContext db, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (!await db.Animals.AnyAsync(x => x.Id == id, ct)) return TypedResults.NotFound();
         var rows = await db.AnimalPhotos.AsNoTracking().Where(x => x.AnimalId == id && x.ModerationState == ModerationState.Approved)
             .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip((query.Page - 1) * query.PageSize).Take(query.PageSize + 1)
             .Select(x => new AnimalPhotoResponse(x.Id, x.Key)).ToListAsync(ct);
-        return TypedResults.Ok(new PageResponse<AnimalPhotoResponse>(rows.Take(query.PageSize).ToArray(), query.Page, query.PageSize, rows.Count > query.PageSize));
+        return TypedResults.Ok(new PageResponse<AnimalPhotoResponse>(rows.Take(query.PageSize).Select(x => x with { PhotoUrl = photos?.Resolve(x.Key, PhotoSize.Thumbnail) }).ToArray(), query.Page, query.PageSize, rows.Count > query.PageSize));
     }
 
     public static async Task<IResult> PhotoAsync(Guid id, AnimalPhotoRequest request, HttpContext http, PatikaDbContext db, CancellationToken ct)
@@ -123,7 +151,7 @@ public static class AnimalEndpoints
     {
         if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId) return TypedResults.Unauthorized();
         if (!await db.Animals.AnyAsync(x => x.Id == id, ct)) return TypedResults.NotFound();
-        var sighting = new Sighting { AnimalId = id, UserId = userId, At = clock.GetUtcNow(), Note = request.Note };
+        var sighting = new Sighting { AnimalId = id, UserId = userId, At = ClientTimestamp.Resolve(request.ClientCreatedAt, clock.GetUtcNow()), Note = request.Note };
         db.Sightings.Add(sighting);
         await db.SaveChangesAsync(ct);
         return TypedResults.Created($"/v1/animals/{id}/sightings/{sighting.Id}", new SightingResponse(sighting.Id, sighting.At, sighting.Note));

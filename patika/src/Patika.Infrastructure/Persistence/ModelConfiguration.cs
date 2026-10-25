@@ -67,6 +67,7 @@ public sealed class StationConfiguration : IEntityTypeConfiguration<Station>
 {
     public void Configure(EntityTypeBuilder<Station> entity)
     {
+        entity.Property(row => row.District).HasMaxLength(60);
         entity.Property(row => row.Name).HasMaxLength(200);
         entity.Property(row => row.PhotoKey).HasMaxLength(512);
         entity.HasOne<User>().WithMany().HasForeignKey(row => row.CreatedBy).OnDelete(DeleteBehavior.Restrict);
@@ -92,6 +93,7 @@ public sealed class AnimalConfiguration : IEntityTypeConfiguration<Animal>
 {
     public void Configure(EntityTypeBuilder<Animal> entity)
     {
+        entity.Property(row => row.District).HasMaxLength(60);
         entity.Property(row => row.Name).HasMaxLength(100);
         entity.HasOne<Station>().WithMany().HasForeignKey(row => row.StationId).OnDelete(DeleteBehavior.SetNull);
         entity.HasOne<User>().WithMany().HasForeignKey(row => row.CreatedBy).OnDelete(DeleteBehavior.Restrict);
