@@ -16,6 +16,9 @@ public static class Routes
     public const string Kvkk = "/kvkk";
     public const string Terms = "/kosullar";
     public const string DeleteAccount = "/hesap-silme";
+    public const string About = "/hakkinda";
+    public const string Faq = "/sss";
+    public const string Contact = "/iletisim";
     public const string NotFound = "/404";
 
     private static string Segment(string value) => Uri.EscapeDataString(value.Trim('/').ToLowerInvariant());
