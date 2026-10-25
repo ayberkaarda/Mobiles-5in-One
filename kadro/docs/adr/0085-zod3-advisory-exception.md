@@ -45,7 +45,7 @@ exhausts that process's memory. Accepted by the owner for the time the exception
 
 ## Review and removal
 
-Because the ignore is per advisory, it also hides a future zod 4 copy below 4.6.6. Check
-`pnpm why zod -r` whenever the lockfile changes: every copy except the one under `@expo/cli` must be
-`>=4.6.6`. Remove the entry when the Expo CLI moves to a patched zod (re-check on every Expo SDK
+Because the ignore is per advisory, it would also hide any other zod copy below 4.6.6. The `audit`
+job therefore runs `scripts/security/zod-exception-check.ts` right after `pnpm audit`: it reads
+`pnpm-lock.yaml` and fails on any zod resolution below 4.6.6 other than `3.25.76` under `@expo/cli`. Remove the entry when the Expo CLI moves to a patched zod (re-check on every Expo SDK
 upgrade) and confirm by running the audit with the entry removed.
