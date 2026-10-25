@@ -21,6 +21,8 @@ public sealed class UpdateAdoptionPostValidator : AbstractValidator<UpdateAdopti
         RuleFor(x => x.Requirements).Must(x => x is null || AdoptionText.Clean(x).Length > 0).MaximumLength(3000);
         RuleFor(x => x.District).Must(x => x is null || AdoptionText.Clean(x).Length > 0).MaximumLength(100);
         RuleFor(x => x.State).Must(x => x is null or "Published" or "Rejected" or "Closed");
+        RuleFor(x => x.Reason).Must(x => x is null or "Adopted" or "Withdrawn");
+        RuleFor(x => x.Reason).Null().When(x => x.State != "Closed");
     }
 }
 

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Patika.Api.Features.Media;
 using Patika.Api.Idempotency;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
@@ -10,6 +9,7 @@ using Patika.Contracts.Geo;
 using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Stations;
@@ -50,6 +50,7 @@ public static class StationEndpoints
             CreatedBy = userId,
             Status = StationStatus.Active
         };
+        station.DistrictId = await new DistrictResolver(db).ResolveAsync(station.District, ct);
         db.Stations.Add(station);
         await db.SaveChangesAsync(ct);
         return TypedResults.Created($"/v1/stations/{station.Id}", Response(station, photos));

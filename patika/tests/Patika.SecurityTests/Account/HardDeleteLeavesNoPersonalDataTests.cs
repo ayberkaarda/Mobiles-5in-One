@@ -271,7 +271,8 @@ public sealed class HardDeleteLeavesNoPersonalDataTests(AccountDatabaseFixture d
             new Feeding { StationId = station.Id, UserId = user.Id, At = DateTimeOffset.UtcNow, Note = $"su-{tag}" },
             new Sighting { AnimalId = animal.Id, UserId = user.Id, At = DateTimeOffset.UtcNow, Note = $"gordum-{tag}" },
             new AnimalPhoto { AnimalId = animal.Id, Key = animalKey, CreatedBy = user.Id },
-            new UrgentPost { Location = new GeoPoint(29.04, 41.03), Description = $"acil-{tag}", PhotoKey = urgentKey, CreatedBy = user.Id },
+            // Hidden by moderation: the purge must still find it, past the default urgent visibility filter.
+            new UrgentPost { Location = new GeoPoint(29.04, 41.03), Description = $"acil-{tag}", PhotoKey = urgentKey, CreatedBy = user.Id, HiddenAt = DateTimeOffset.UtcNow, HiddenReason = $"gizli-{tag}" },
             new AdoptionRequest { PostId = helperPost.Id, RequesterId = user.Id, Message = $"talep-{tag}" },
             new AdoptionRequest { PostId = post.Id, RequesterId = helper.Id, Message = $"gelen-{tag}" },
             new Report { TargetType = "station", TargetId = station.Id, ReporterId = user.Id, Reason = $"sikayet-{tag}" },

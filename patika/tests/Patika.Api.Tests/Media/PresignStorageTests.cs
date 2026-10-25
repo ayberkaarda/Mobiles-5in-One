@@ -6,6 +6,7 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Options;
 using Patika.Api.Features.Media;
 using Patika.Contracts.Media;
+using Patika.Infrastructure.Media;
 using Xunit;
 
 namespace Patika.Api.Tests.Media;

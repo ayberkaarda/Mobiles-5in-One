@@ -16,6 +16,7 @@ using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
 using Patika.Infrastructure;
+using Patika.Infrastructure.Media;
 
 namespace Patika.Api.Tests.Media;
 

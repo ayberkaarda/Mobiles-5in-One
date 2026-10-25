@@ -41,7 +41,7 @@ public sealed class PgUrgentFanoutStore(PatikaDbContext db) : IUrgentFanoutStore
             UPDATE urgent_posts AS p SET fanout_at = {utc}
             WHERE p.id IN (
                 SELECT id FROM urgent_posts
-                WHERE fanout_at IS NULL AND state = 'Open' AND created_at >= {since}
+                WHERE fanout_at IS NULL AND hidden_at IS NULL AND state = 'Open' AND created_at >= {since}
                 ORDER BY created_at LIMIT {batch} FOR UPDATE SKIP LOCKED)
             RETURNING p.id AS "Id", p.created_by AS "CreatedBy", ST_Y(p.location::geometry) AS "Latitude",
                 ST_X(p.location::geometry) AS "Longitude", p.category AS "Category"

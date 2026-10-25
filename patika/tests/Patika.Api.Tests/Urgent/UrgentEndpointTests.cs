@@ -7,6 +7,7 @@ using Patika.Contracts.Geo;
 using Patika.Contracts.Media;
 using Patika.Contracts.Urgent;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Xunit;
 
 namespace Patika.Api.Tests.Urgent;

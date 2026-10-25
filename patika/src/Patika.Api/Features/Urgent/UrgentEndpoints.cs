@@ -14,6 +14,7 @@ using Patika.Contracts.Urgent;
 using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Urgent;

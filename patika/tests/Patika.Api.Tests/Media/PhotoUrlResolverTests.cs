@@ -2,8 +2,8 @@ using System.Net;
 using System.Web;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
-using Patika.Api.Features.Media;
 using Patika.Contracts.Media;
+using Patika.Infrastructure.Media;
 using Xunit;
 
 namespace Patika.Api.Tests.Media;

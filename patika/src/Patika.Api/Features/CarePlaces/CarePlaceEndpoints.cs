@@ -81,6 +81,8 @@ public static class CarePlaceEndpoints
         IReadOnlyList<CarePlace> places;
         try { places = CarePlaceCsv.Parse(new UTF8Encoding(false, true).GetString(buffer.ToArray())); }
         catch (Exception exception) when (exception is FormatException or DecoderFallbackException) { return Invalid(); }
+        var districts = new DistrictResolver(db);
+        foreach (var place in places) place.DistrictId = await districts.ResolveAsync(place.District, ct);
         db.CarePlaces.AddRange(places);
         db.AuditLogs.Add(new AuditLog
         {

@@ -5,6 +5,7 @@ using Patika.Api.Validation;
 using Patika.Contracts.Errors;
 using Patika.Contracts.Media;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 
 namespace Patika.Api.Features.Media;
 

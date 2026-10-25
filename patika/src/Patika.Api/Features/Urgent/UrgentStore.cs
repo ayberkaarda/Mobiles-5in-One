@@ -43,7 +43,7 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         var lockKey = "urgent:" + post.CreatedBy.ToString("D");
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))", cancellationToken);
-        var today = await db.UrgentPosts.CountAsync(p => p.CreatedBy == post.CreatedBy && p.CreatedAt >= since, cancellationToken);
+        var today = await db.UrgentPosts.IgnoreQueryFilters().CountAsync(p => p.CreatedBy == post.CreatedBy && p.CreatedAt >= since, cancellationToken);
         if (today >= dailyCap)
         {
             return false;
@@ -82,7 +82,7 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         var rows = await db.Database.SqlQuery<NearRow>($"""
             SELECT id AS "Id", ST_Distance(location, origin)::int AS "DistanceMeters"
             FROM urgent_posts, (SELECT ST_SetSRID(ST_MakePoint({center.Longitude}, {center.Latitude}), 4326)::geography AS origin) AS o
-            WHERE state = {open} AND ST_DWithin(location, origin, {radiusMeters})
+            WHERE hidden_at IS NULL AND state = {open} AND ST_DWithin(location, origin, {radiusMeters})
             ORDER BY ST_Distance(location, origin), id
             LIMIT {limit}
             """).ToListAsync(cancellationToken);

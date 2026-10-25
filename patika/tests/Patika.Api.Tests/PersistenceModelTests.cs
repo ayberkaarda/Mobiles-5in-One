@@ -23,8 +23,8 @@ public sealed class PersistenceModelTests
         [
             "adoption_posts", "adoption_requests", "animal_photos", "animals",
             "app_store_notifications", "audit_logs", "care_places", "deletion_requests",
-            "device_tokens", "email_tokens", "external_logins", "feedings", "follows", "idempotency_keys",
-            "push_daily_counters", "refresh_tokens",
+            "device_tokens", "districts", "email_tokens", "external_logins", "feedings", "follows", "idempotency_keys",
+            "moderation_decisions", "provinces", "push_daily_counters", "refresh_tokens",
             "reports", "sightings", "stations", "subscriptions", "uploads", "urgent_posts", "users"
         ];
 
@@ -44,7 +44,7 @@ public sealed class PersistenceModelTests
             ],
             [typeof(UrgentPost)] =
             [
-                "category", "created_at", "created_by", "description", "fanout_at", "id",
+                "category", "created_at", "created_by", "description", "fanout_at", "hidden_at", "hidden_reason", "id",
                 "location", "notified_count", "photo_key", "state", "updated_at"
             ]
         };
