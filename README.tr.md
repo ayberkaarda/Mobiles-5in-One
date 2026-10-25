@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kadro'nun, Askıda'nın, Cetele'nin ve Inecek Var'ın uygulaması var. Dört uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri), [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) ve [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/readme/) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Yalnızca Patika kartı, henüz tasarım aşamasındaki bir ürün için yer tutucudur.
+Her proje için bir kart. Kadro'nun, Askıda'nın, Cetele'nin ve Inecek Var'ın uygulaması var. Dört uygulama kartının da düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri), [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) ve [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Yalnızca Patika kartı, henüz tasarım aşamasındaki bir ürün için yer tutucudur.
 
 <table>
   <tr>
@@ -45,11 +45,11 @@ Her proje için bir kart. Kadro'nun, Askıda'nın, Cetele'nin ve Inecek Var'ın 
       <sub><b>Cetele</b>: web ana sayfası ve Android müşteri listesi (yerel sunucu, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: tabela gibi slogan ve sokak çizimiyle web ana sayfası ve hat tabelası, durak şeması ve ücret biletiyle Android hat sayfası, yerel yığın, örnek veri" width="100%"><br>
-      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android uygulaması: Nereye inecek var? tabelası, etiketli örnek şehir ve kısayollarla arama ekranı, emülatör" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android uygulaması: hat tabelası, durak şeması ve ücret biletiyle hat sayfası, örnek veri, emülatör" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android uygulaması: iki aktarmalı A'dan B'ye sonucu, hat plakalarıyla durak şeması olarak, örnek veri, emülatör" width="32%"><br>
-      <sub><b>Inecek Var</b>: web ana sayfası ve Android hat ekranları (yerel yığın, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var kartı: kırmızı hat tabelası, nereden-nereye panosu ve sokak çizimiyle web ana sayfası ve ORN-1 plakası, durak şeması ve ücret biletiyle Android hat sayfası, yerel yığın, örnek veri" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/route-sign/android-01-search.png" alt="Inecek Var Android uygulaması: Nereye inecek var? tabelası, etiketli örnek şehir ve kısayollarla arama ekranı, örnek veri, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/route-sign/android-02-line.png" alt="Inecek Var Android uygulaması: ORN-1 plakası, ilk ve son durak, durak şeması ve ücret biletiyle hat sayfası, örnek veri, emülatör" width="32%">
+      <img src="inecekvar/docs/screenshots/route-sign/android-03-planner-dark.png" alt="Inecek Var Android uygulaması koyu temada: iki aktarmalı A'dan B'ye sonucu, hat plakaları ve durak şeması, örnek veri, emülatör" width="32%"><br>
+      <sub><b>Inecek Var</b>: web ana sayfası ve Android arama, hat ve rota ekranları, açık ve koyu tema (yerel yığın, örnek veri) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>
   <tr>
