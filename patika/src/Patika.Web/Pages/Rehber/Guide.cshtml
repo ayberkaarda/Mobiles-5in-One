@@ -5,7 +5,9 @@
 @{
     var guide = Model.Guide;
 }
-<link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
 <div class="doc">
     <nav class="doc-crumbs" aria-label="Konum"><a href="/">Ana sayfa</a> / <a href="@Routes.Guides">Rehber</a> / <span aria-current="page">@(guide.ShortTitle ?? guide.Title)</span></nav>
     <header class="doc-head">

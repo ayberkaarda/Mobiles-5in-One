@@ -2,7 +2,9 @@
 @model Patika.Web.Pages.Rehber.IndexModel
 @using Patika.Web.Routing
 @using Patika.Web.Seo.Documents
-<link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+@section Head {
+    <link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+}
 <div class="doc">
     <nav class="doc-crumbs" aria-label="Konum"><a href="/">Ana sayfa</a> / <span aria-current="page">Rehber</span></nav>
     <header class="doc-head">
