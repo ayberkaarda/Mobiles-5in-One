@@ -33,6 +33,18 @@ The system includes the .NET MAUI mobile client, Minimal API, Razor Pages site a
 - Subscription forgery, webhook replay, or sandbox/production confusion.
 - Refresh-token theft and reuse, including on a compromised mobile device.
 - Moderation privilege escalation or unauthorized care-place changes.
+- MFA replay and parallel guesses: user-row locking, monotonic accepted steps, persisted five-failure
+  lockout across all TOTP paths, and single-use recovery-code hashes. MFA and step-up challenge hashes
+  expire in five minutes and bind to the user and session; action transactions consume step-up once.
+- Stolen privileged password: enrolled Moderator/Admin sign-in returns only a challenge; admin policies
+  require MFA. Unenrolled elevated users can only enrol. Current DB role is checked on every bearer
+  request; role changes/suspensions revoke refresh families and increment session versions.
+- Administrative repudiation and CSV tampering: entity change, moderation decision and audit commit
+  atomically; SaveChanges refuses audit modifications/deletions. Step-up reasons are preserved in audit.
+  CSV commit revalidates the byte hash, rejects erroneous/formula cells, and deduplicates exact files.
+- Queue disclosure: keyed opaque author ids, account age/rejection count only, no moderator emails;
+  admin email search is exact and results are masked. Pending-photo links expire after two minutes
+  and require processed media. Hidden urgent rows are visible only in explicit management queries.
 - Oversized or misleading media upload and resource exhaustion through map queries.
 
 ## Required verification
