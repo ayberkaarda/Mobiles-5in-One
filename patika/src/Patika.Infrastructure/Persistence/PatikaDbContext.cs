@@ -9,6 +9,7 @@ namespace Patika.Infrastructure.Persistence;
 
 public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbContext(options)
 {
+    public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<EmailToken> EmailTokens => Set<EmailToken>();
@@ -38,6 +39,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
     {
         modelBuilder.HasPostgresExtension("postgis");
         ConfigureEntity<User>(modelBuilder, "users");
+        ConfigureEntity<ExternalLogin>(modelBuilder, "external_logins");
         ConfigureEntity<RefreshToken>(modelBuilder, "refresh_tokens");
         ConfigureEntity<EmailToken>(modelBuilder, "email_tokens");
         ConfigureEntity<Station>(modelBuilder, "stations");
@@ -69,6 +71,8 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
         modelBuilder.Entity<CarePlace>().Property(place => place.HoursJson).HasColumnType("jsonb");
         modelBuilder.Entity<AuditLog>().Property(log => log.DetailsJson).HasColumnType("jsonb");
 
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PatikaDbContext).Assembly);
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             foreach (var property in entityType.GetProperties())
@@ -83,6 +87,43 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
         }
     }
 
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        StampChanges();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        StampChanges();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void StampChanges()
+    {
+        ChangeTracker.DetectChanges();
+        var now = DateTimeOffset.UtcNow;
+        foreach (var entry in ChangeTracker.Entries<Entity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                if (entry.Entity.Id == Guid.Empty)
+                {
+                    entry.Entity.Id = Guid.CreateVersion7();
+                }
+
+                entry.Entity.CreatedAt = now;
+                entry.Entity.UpdatedAt = now;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Property(row => row.CreatedAt).IsModified = false;
+                entry.Entity.UpdatedAt = now;
+            }
+        }
+    }
+
     private static void ConfigureEntity<T>(ModelBuilder modelBuilder, string tableName)
         where T : Entity
     {
@@ -90,6 +131,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
         entity.HasBaseType((Type?)null);
         entity.ToTable(tableName);
         entity.HasKey(row => row.Id);
+        entity.Property(row => row.Id).HasValueGenerator<Uuid7ValueGenerator>();
 
     }
 

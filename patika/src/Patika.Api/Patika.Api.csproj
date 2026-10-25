@@ -5,5 +5,15 @@
   <ItemGroup>
     <ProjectReference Include="../Patika.Contracts/Patika.Contracts.csproj" />
     <ProjectReference Include="../Patika.Infrastructure/Patika.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Patika.Api.Tests" />
+    <InternalsVisibleTo Include="Patika.SecurityTests" />
   </ItemGroup>
 </Project>

@@ -23,7 +23,7 @@ public sealed class PersistenceModelTests
         [
             "adoption_posts", "adoption_requests", "animal_photos", "animals",
             "app_store_notifications", "audit_logs", "care_places", "deletion_requests",
-            "device_tokens", "email_tokens", "feedings", "follows", "refresh_tokens",
+            "device_tokens", "email_tokens", "external_logins", "feedings", "follows", "refresh_tokens",
             "reports", "sightings", "stations", "subscriptions", "urgent_posts", "users"
         ];
 

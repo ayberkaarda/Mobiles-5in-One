@@ -2,7 +2,7 @@ namespace Patika.Domain.Entities;
 
 public sealed class Subscription : Entity
 {
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public required string OriginalTransactionIdHash { get; set; }
     public required string ProductId { get; set; }
     public SubscriptionStatus Status { get; set; }
