@@ -180,6 +180,14 @@ public sealed class InMemoryUrgentStore : IUrgentStore
     {
         lock (gate)
         {
+            return Task.FromResult(Posts.GetValueOrDefault(id) is { Hidden: false } post ? post : null);
+        }
+    }
+
+    public Task<UrgentPostRecord?> FindForManagementAsync(Guid id, CancellationToken cancellationToken)
+    {
+        lock (gate)
+        {
             return Task.FromResult(Posts.GetValueOrDefault(id));
         }
     }
@@ -199,7 +207,7 @@ public sealed class InMemoryUrgentStore : IUrgentStore
         lock (gate)
         {
             IReadOnlyList<UrgentPostRecord> result = [.. Posts.Values
-                .Where(p => p.State == UrgentPostState.Open)
+                .Where(p => p.State == UrgentPostState.Open && !p.Hidden)
                 .Select(p => p with { DistanceMeters = (int)Haversine(center, p.Location) })
                 .Where(p => p.DistanceMeters <= radiusMeters)
                 .OrderBy(p => p.DistanceMeters)
