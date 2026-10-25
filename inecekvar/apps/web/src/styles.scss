@@ -75,6 +75,27 @@ button:focus-visible {
   opacity: 0.6;
 }
 
+/* Keep stop links, including their padding, inside the line page column. */
+iv-line-page .stops iv-stop-sequence,
+iv-line-page .stops iv-stop-sequence .seq,
+iv-line-page .stops iv-stop-sequence li,
+iv-line-page .stops iv-stop-sequence .row,
+iv-line-page .stops iv-stop-sequence .text {
+  min-width: 0;
+  max-width: 100%;
+}
+
+iv-line-page .stops iv-stop-sequence .row {
+  box-sizing: border-box;
+}
+
+iv-line-page .stops iv-stop-sequence .name,
+iv-line-page .stops iv-stop-sequence .note {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Calls to action shared by the public pages. */
 .iv-cta {
   display: inline-flex;
@@ -110,7 +131,48 @@ button:focus-visible {
   letter-spacing: -0.015em;
 }
 
-/* Short pages keep the footer road near the bottom of the window. */
+/* Public page frames keep the footer at the bottom of short pages. */
+iv-root > :has(> iv-site-footer) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+iv-root > :has(> iv-site-footer) > main {
+  flex: 1;
+}
+
 main#icerik {
   min-height: 55vh;
+}
+
+/* Web boards have painted edges without elevation. */
+:root {
+  --iv-shadow-hard: none;
+  --iv-shadow-board: none;
+  --iv-board-glow: none;
+}
+
+.iv-board {
+  border-radius: var(--iv-radius-s);
+  box-shadow: inset 0 -4px 0 var(--iv-stripe);
+}
+
+.iv-cta {
+  border: 1px solid var(--iv-accent);
+  border-radius: var(--iv-radius-xs);
+  box-shadow: none;
+}
+
+.iv-cta--ghost {
+  border-color: currentColor;
+}
+
+.iv-cta--board {
+  border-color: var(--iv-board-edge);
+}
+
+.iv-tape {
+  text-transform: none;
+  letter-spacing: normal;
 }

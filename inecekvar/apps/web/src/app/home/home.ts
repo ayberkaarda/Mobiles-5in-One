@@ -8,6 +8,7 @@ import { StatusPageComponent } from '../pages/status-page.component';
 import { breadcrumbList, JsonLdNode, organization, webSite } from '../seo/json-ld';
 import { PageSeo } from '../seo/seo';
 import { CitySceneComponent, PLACARD_STYLES, SIGN_TEXT_STYLES } from '@inecekvar/ui';
+import { RouteSearchComponent } from './route-search.component';
 import { HomeGuideComponent } from './home-guide.component';
 import { SiteFooterComponent } from './site-footer.component';
 import { SiteHeaderComponent } from './site-header.component';
@@ -53,6 +54,7 @@ export function cityInitials(name: string): string {
     SiteHeaderComponent,
     SiteFooterComponent,
     HomeGuideComponent,
+    RouteSearchComponent,
     CitySceneComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,6 +68,10 @@ export function cityInitials(name: string): string {
             <div class="copy">
               <h1 class="title">İnecek Var</h1>
               <p class="lead">{{ description }}</p>
+              <p class="tagline">
+                <span class="row iv-flip">Dolmuş nereden geçer? </span
+                ><span class="row answer iv-flip iv-flip--1">Mahalle bilir.</span>
+              </p>
               <div class="ctas">
                 @if (featured(page.cities); as city) {
                   <a class="btn primary iv-cta" [routerLink]="['/', city.slug]">
@@ -82,10 +88,8 @@ export function cityInitials(name: string): string {
             <div class="windshield">
               <span class="strap left" aria-hidden="true"></span>
               <span class="strap right" aria-hidden="true"></span>
-              <p class="tagline iv-board">
-                <span class="row iv-flip">Dolmuş nereden geçer? </span
-                ><span class="row answer iv-flip iv-flip--1">Mahalle bilir.</span>
-              </p>
+
+              <iv-route-search [cities]="page.cities" />
             </div>
           </div>
           <div class="street">
@@ -96,7 +100,7 @@ export function cityInitials(name: string): string {
           <h2 id="cities-title" class="iv-section-head">Şehirler</h2>
           <ul role="list">
             @for (city of page.cities; track city.slug) {
-              <li class="city iv-board">
+              <li class="city">
                 <span class="plate iv-placard" aria-hidden="true">{{ initials(city.name) }}</span>
                 <span class="city-body">
                   <a class="city-name" [routerLink]="['/', city.slug]">{{ city.name }}</a>
@@ -135,7 +139,7 @@ export function cityInitials(name: string): string {
       .hero {
         overflow: hidden;
         padding-top: clamp(2rem, 5vw, 3.5rem);
-        background: linear-gradient(var(--iv-bg) 70%, var(--iv-bg-deep));
+        background: var(--iv-bg);
       }
       .hero-grid {
         display: grid;
@@ -196,11 +200,11 @@ export function cityInitials(name: string): string {
         display: grid;
         gap: 0.4rem;
         margin: 0;
-        padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem) clamp(1.6rem, 3.5vw, 2.4rem);
+        padding: 1rem 0 0;
         border-radius: 1.25rem;
         font-family: var(--iv-font-display);
         font-weight: var(--iv-font-display-weight);
-        font-size: clamp(1.6rem, 4.4vw, 2.6rem);
+        font-size: 1rem;
         line-height: 1.08;
         letter-spacing: -0.01em;
         color: var(--iv-board-ink);
@@ -247,6 +251,9 @@ export function cityInitials(name: string): string {
         }
       }
       .city {
+        background: var(--iv-surface);
+        border-bottom: 1px solid var(--iv-line);
+        color: var(--iv-ink);
         display: flex;
         align-items: flex-start;
         gap: 1rem;

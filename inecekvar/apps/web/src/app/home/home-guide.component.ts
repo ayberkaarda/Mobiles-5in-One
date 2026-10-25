@@ -169,8 +169,8 @@ function guidePath(slug: string): string {
       padding: 1.75rem;
       background: var(--iv-surface);
       border: 1px solid var(--iv-line);
-      border-radius: 1.25rem;
-      box-shadow: var(--iv-shadow-hard);
+      border-radius: var(--iv-radius-xs);
+      box-shadow: none;
     }
     .teaser h2 {
       margin: 0;
@@ -198,9 +198,7 @@ function guidePath(slug: string): string {
       background: var(--iv-board);
       color: var(--iv-board-ink);
       border-color: var(--iv-board-edge);
-      box-shadow:
-        inset 0 -5px 0 var(--iv-stripe),
-        var(--iv-shadow-board);
+      border-bottom: 3px solid var(--iv-stripe);
     }
     .bell {
       display: inline-flex;

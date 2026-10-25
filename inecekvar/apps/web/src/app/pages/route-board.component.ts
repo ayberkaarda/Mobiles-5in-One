@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { PLACARD_STYLES } from '@inecekvar/ui';
 
 /**
- * One line as a route board link on the public pages: the yellow code placard on a lacivert sign
+ * One line as a route board link on the public pages: the painted code placard on a plain list row
  * with the line name and a short meta line, the same board as the line cards of the app. The
  * whole board is one link; names are rendered as text only.
  */
@@ -13,7 +13,7 @@ import { PLACARD_STYLES } from '@inecekvar/ui';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a class="board iv-board" [routerLink]="link()">
+    <a class="board" [routerLink]="link()">
       <span class="plate iv-placard" aria-hidden="true">{{ code() }}</span>
       <span class="text">
         <span class="name"
@@ -32,6 +32,8 @@ import { PLACARD_STYLES } from '@inecekvar/ui';
         display: block;
       }
       .board {
+        background: var(--iv-surface);
+        border-bottom: 1px solid var(--iv-line);
         display: flex;
         align-items: flex-start;
         gap: 1rem;
@@ -43,7 +45,7 @@ import { PLACARD_STYLES } from '@inecekvar/ui';
         transition: transform 120ms var(--iv-ease-out);
       }
       .board:hover {
-        transform: translateY(-2px);
+        background: var(--iv-surface-sunk);
       }
       .board:hover .name {
         text-decoration: underline;
@@ -83,6 +85,8 @@ import { PLACARD_STYLES } from '@inecekvar/ui';
       }
       @media (prefers-reduced-motion: reduce) {
         .board {
+          background: var(--iv-surface);
+          border-bottom: 1px solid var(--iv-line);
           transition: none;
         }
       }

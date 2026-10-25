@@ -43,14 +43,9 @@ import { FACTS } from '../../content/facts';
     .road {
       height: 2.75rem;
       background:
-        repeating-linear-gradient(
-            90deg,
-            rgba(255, 248, 231, 0.55) 0 2.25rem,
-            transparent 2.25rem 4.5rem
-          )
+        repeating-linear-gradient(90deg, var(--iv-scene-lane) 0 2.25rem, transparent 2.25rem 4.5rem)
           center / 100% 4px no-repeat,
         var(--iv-scene-road);
-      border-top: 0.6rem solid var(--iv-scene-curb);
     }
     .inner {
       display: flex;

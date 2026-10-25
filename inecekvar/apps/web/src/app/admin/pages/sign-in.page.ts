@@ -63,6 +63,11 @@ const NOTICES = {
     </section>
   `,
   styles: `
+    .signin button[type='submit'] {
+      background: var(--iv-accent);
+      color: var(--iv-accent-ink);
+      border-color: var(--iv-accent);
+    }
     .signin {
       max-width: 26rem;
       margin: 2rem auto;
