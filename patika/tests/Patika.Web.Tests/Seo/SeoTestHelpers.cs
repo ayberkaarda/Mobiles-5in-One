@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Patika.Web.Tests.Seo;
 
-internal static partial class SeoTestHelpers
+internal static class SeoTestHelpers
 {
     public const string BaseUrl = "https://patika.example.org";
 
@@ -40,12 +40,12 @@ internal static partial class SeoTestHelpers
 
     /// <summary>Every JSON-LD block of a page, parsed. Fails if a block is not valid JSON.</summary>
     public static IReadOnlyList<JsonElement> JsonLdBlocks(string html) =>
-        JsonLdPattern().Matches(html).Select(m => JsonDocument.Parse(m.Groups["json"].Value).RootElement.Clone()).ToArray();
+        JsonLdPatternRegex.Matches(html).Select(m => JsonDocument.Parse(m.Groups["json"].Value).RootElement.Clone()).ToArray();
 
     public static JsonElement OfType(IEnumerable<JsonElement> blocks, string type) =>
         Assert.Single(blocks, b => b.GetProperty("@type").GetString() == type);
 
-    public static string? Canonical(string html) => CanonicalPattern().Match(html) is { Success: true } m ? m.Groups["href"].Value : null;
+    public static string? Canonical(string html) => CanonicalPatternRegex.Match(html) is { Success: true } m ? m.Groups["href"].Value : null;
 
     /// <summary>Required-property check, following Google's rich result requirements where they exist.</summary>
     public static void AssertSchema(JsonElement item)
@@ -105,9 +105,7 @@ internal static partial class SeoTestHelpers
     public static void AssertAbsolute(string? url) =>
         Assert.True(Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https", $"not an absolute https URL: {url}");
 
-    [GeneratedRegex("""<script type="application/ld\+json">(?<json>.*?)</script>""", RegexOptions.Singleline)]
-    private static partial Regex JsonLdPattern();
+    private static readonly Regex JsonLdPatternRegex = new("""<script type="application/ld\+json">(?<json>.*?)</script>""", RegexOptions.Singleline | RegexOptions.Compiled);
 
-    [GeneratedRegex("""<link rel="canonical" href="(?<href>[^"]*)" />""")]
-    private static partial Regex CanonicalPattern();
+    private static readonly Regex CanonicalPatternRegex = new("""<link rel="canonical" href="(?<href>[^"]*)" />""", RegexOptions.Compiled);
 }

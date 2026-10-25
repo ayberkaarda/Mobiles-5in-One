@@ -8,7 +8,7 @@ using Patika.Web.Seo.Documents;
 
 namespace Patika.Web.Seo;
 
-public static partial class SeoEndpoints
+public static class SeoEndpoints
 {
     private const string XmlType = "application/xml; charset=utf-8";
 
@@ -38,7 +38,7 @@ public static partial class SeoEndpoints
 
         endpoints.MapGet("/sitemaps/{file}", async (string file, SitemapService sitemaps, SiteUrls urls, CancellationToken ct) =>
             {
-                var match = FilePattern().Match(file);
+                var match = FilePatternRegex.Match(file);
                 if (!match.Success) return Results.NotFound();
                 var files = (await sitemaps.GetAsync(ct)).Files();
                 return files.TryGetValue(match.Groups["name"].Value, out var entries)
@@ -69,6 +69,5 @@ public static partial class SeoEndpoints
 
           """;
 
-    [GeneratedRegex(@"^(?<name>static|districts|adoptions-[1-9][0-9]{0,4}|care-places-[1-9][0-9]{0,4})\.xml$")]
-    private static partial Regex FilePattern();
+    private static readonly Regex FilePatternRegex = new(@"^(?<name>static|districts|adoptions-[1-9][0-9]{0,4}|care-places-[1-9][0-9]{0,4})\.xml$", RegexOptions.Compiled);
 }

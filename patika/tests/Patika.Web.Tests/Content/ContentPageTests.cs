@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Patika.Web.Tests.Content;
 
-public sealed partial class ContentPageTests
+public sealed class ContentPageTests
 {
     private static readonly string[] GuideSlugs =
     [
@@ -152,9 +152,8 @@ public sealed partial class ContentPageTests
         var start = html.IndexOf("<article class=\"doc-body\">", StringComparison.Ordinal);
         // Body and answer box only: the FAQ section is not counted toward the 600 words.
         var end = html.IndexOf("<section class=\"doc-faq\"", start, StringComparison.Ordinal);
-        return System.Net.WebUtility.HtmlDecode(TagPattern().Replace(html[start..end], " "));
+        return System.Net.WebUtility.HtmlDecode(TagPatternRegex.Replace(html[start..end], " "));
     }
 
-    [GeneratedRegex("<[^>]+>")]
-    private static partial Regex TagPattern();
+    private static readonly Regex TagPatternRegex = new("<[^>]+>", RegexOptions.Compiled);
 }

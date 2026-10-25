@@ -14,7 +14,7 @@ public sealed record DocHeading(int Level, string Id, string Text);
 /// links are kept only for site paths, fragments, https and mailto. Upper-case <c>[YER TUTUCU]</c>
 /// placeholders are marked so they stay visible until legal review fills them.
 /// </summary>
-public static partial class MarkdownLite
+public static class MarkdownLite
 {
     public static (string Html, IReadOnlyList<DocHeading> Headings) Render(string markdown)
     {
@@ -47,7 +47,7 @@ public static partial class MarkdownLite
                 continue;
             }
 
-            var heading = HeadingPattern().Match(line);
+            var heading = HeadingPatternRegex.Match(line);
             if (heading.Success)
             {
                 FlushParagraph();
@@ -61,7 +61,7 @@ public static partial class MarkdownLite
                 continue;
             }
 
-            var item = ListPattern().Match(line);
+            var item = ListPatternRegex.Match(line);
             if (item.Success)
             {
                 FlushParagraph();
@@ -88,18 +88,18 @@ public static partial class MarkdownLite
     /// <summary>Plain text of a Markdown fragment (for word counts and JSON-LD answers).</summary>
     public static string PlainText(string markdown)
     {
-        var text = LinkPattern().Replace(markdown, "${text}");
+        var text = LinkPatternRegex.Replace(markdown, "${text}");
         text = text.Replace("**", "", StringComparison.Ordinal);
-        text = LineMarkerPattern().Replace(text, "");
-        return WhitespacePattern().Replace(text, " ").Trim();
+        text = LineMarkerPatternRegex.Replace(text, "");
+        return WhitespacePatternRegex.Replace(text, " ").Trim();
     }
 
-    public static int CountWords(string text) => WordPattern().Count(text);
+    public static int CountWords(string text) => WordPatternRegex.Count(text);
 
     public static string Inline(string text)
     {
         var encoded = Encode(text);
-        encoded = LinkPattern().Replace(encoded, match =>
+        encoded = LinkPatternRegex.Replace(encoded, match =>
         {
             var href = WebUtility.HtmlDecode(match.Groups["href"].Value);
             var label = match.Groups["text"].Value;
@@ -107,8 +107,8 @@ public static partial class MarkdownLite
             var external = href.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
             return $"<a href=\"{Encode(href)}\"{(external ? " rel=\"noopener\"" : "")}>{label}</a>";
         });
-        encoded = BoldPattern().Replace(encoded, "<strong>${text}</strong>");
-        encoded = PlaceholderPattern().Replace(encoded, "<mark class=\"doc-ph\">${text}</mark>");
+        encoded = BoldPatternRegex.Replace(encoded, "<strong>${text}</strong>");
+        encoded = PlaceholderPatternRegex.Replace(encoded, "<mark class=\"doc-ph\">${text}</mark>");
         return encoded;
     }
 
@@ -126,27 +126,19 @@ public static partial class MarkdownLite
         || href.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
         || href.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase);
 
-    [GeneratedRegex(@"^(?<hashes>#{2,3})\s+(?<text>.+?)(\s*\{#(?<id>[a-z0-9-]+)\})?$")]
-    private static partial Regex HeadingPattern();
+    private static readonly Regex HeadingPatternRegex = new(@"^(?<hashes>#{2,3})\s+(?<text>.+?)(\s*\{#(?<id>[a-z0-9-]+)\})?$", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"^(?:(?<ordered>\d+\.)|[-*])\s+(?<text>.+)$")]
-    private static partial Regex ListPattern();
+    private static readonly Regex ListPatternRegex = new(@"^(?:(?<ordered>\d+\.)|[-*])\s+(?<text>.+)$", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"\[(?<text>[^\]]+)\]\((?<href>[^)\s]+)\)")]
-    private static partial Regex LinkPattern();
+    private static readonly Regex LinkPatternRegex = new(@"\[(?<text>[^\]]+)\]\((?<href>[^)\s]+)\)", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"\*\*(?<text>.+?)\*\*")]
-    private static partial Regex BoldPattern();
+    private static readonly Regex BoldPatternRegex = new(@"\*\*(?<text>.+?)\*\*", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"(?<text>\[[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9 ,;:./()&-]{2,}\])")]
-    private static partial Regex PlaceholderPattern();
+    private static readonly Regex PlaceholderPatternRegex = new(@"(?<text>\[[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9 ,;:./()&-]{2,}\])", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"(?m)^\s*(?:#{1,6}|\d+\.|[-*])\s+")]
-    private static partial Regex LineMarkerPattern();
+    private static readonly Regex LineMarkerPatternRegex = new(@"(?m)^\s*(?:#{1,6}|\d+\.|[-*])\s+", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespacePattern();
+    private static readonly Regex WhitespacePatternRegex = new(@"\s+", RegexOptions.Compiled);
 
-    [GeneratedRegex(@"[\p{L}\p{N}][\p{L}\p{N}'’.-]*")]
-    private static partial Regex WordPattern();
+    private static readonly Regex WordPatternRegex = new(@"[\p{L}\p{N}][\p{L}\p{N}'’.-]*", RegexOptions.Compiled);
 }
