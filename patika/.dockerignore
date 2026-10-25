@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/.env
+**/.env.*
+**/*.user
+**/.vs/
+**/TestResults/
+**/*.p8
+**/*.p12
+**/*.mobileprovision
+.git/
+app/
+brand/
+docs/
+tests/
+*.md

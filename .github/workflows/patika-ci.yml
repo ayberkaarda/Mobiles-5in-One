@@ -1,0 +1,200 @@
+name: Patika CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patika-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  changes:
+    name: Detect Patika changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      patika: ${{ steps.diff.outputs.patika }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Diff against base
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          base=""
+          head=""
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="HEAD^1"
+            head="HEAD"
+          elif [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+            head="$AFTER"
+          fi
+          if [ -z "$base" ]; then
+            patika=true
+          else
+            if git diff --quiet --no-renames "$base" "$head" -- patika/ .github/workflows/patika-ci.yml .gitleaks.toml; then
+              status=0
+            else
+              status=$?
+            fi
+            case "$status" in
+              0) patika=false ;;
+              *) patika=true ;;
+            esac
+          fi
+          echo "patika=$patika" >> "$GITHUB_OUTPUT"
+
+  backend:
+    name: Patika backend
+    needs: changes
+    if: needs.changes.outputs.patika == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: patika
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: patika/global.json
+      - name: Restore backend and tests
+        run: |
+          for project in src/*/*.csproj tests/*/*.csproj; do
+            dotnet restore "$project"
+          done
+      - name: Build backend and tests
+        run: |
+          for project in src/*/*.csproj tests/*/*.csproj; do
+            dotnet build "$project" -c Release --no-restore
+          done
+      - name: Test
+        run: |
+          for project in tests/*/*.csproj; do
+            dotnet test "$project" -c Release --no-build --no-restore
+          done
+      - name: Verify formatting
+        run: |
+          for project in src/*/*.csproj tests/*/*.csproj; do
+            dotnet format "$project" --verify-no-changes --no-restore
+          done
+
+  android:
+    name: Patika Android
+    needs: changes
+    if: needs.changes.outputs.patika == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: patika/global.json
+      - name: Setup JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install MAUI Android workload
+        working-directory: patika
+        run: dotnet workload install maui-android
+      - name: Verify Android formatting
+        run: dotnet format patika/app/Patika.App/Patika.App.csproj --verify-no-changes
+      - name: Build Android
+        working-directory: patika
+        run: dotnet build app/Patika.App/Patika.App.csproj -f net10.0-android -c Release
+
+  compose:
+    name: Patika Compose validation
+    needs: changes
+    if: needs.changes.outputs.patika == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate Compose configuration
+        run: |
+          cp patika/.env.example patika/.env
+          docker compose -f patika/docker-compose.yml config --quiet
+
+  gitleaks:
+    name: Patika secret scan
+    needs: changes
+    if: needs.changes.outputs.patika == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (all commits)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$RUNNER_TEMP/$archive" --directory "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+      - name: Scan history
+        run: '"$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="--all" .'
+
+  gate:
+    name: Patika CI gate
+    needs: [changes, backend, android, compose, gitleaks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Evaluate job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          PATIKA_CHANGED: ${{ needs.changes.outputs.patika }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          ANDROID_RESULT: ${{ needs.android.result }}
+          COMPOSE_RESULT: ${{ needs.compose.result }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+        run: |
+          [ "$CHANGES_RESULT" = "success" ] || exit 1
+          case "$PATIKA_CHANGED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *) exit 1 ;;
+          esac
+          for result in "$BACKEND_RESULT" "$ANDROID_RESULT" "$COMPOSE_RESULT" "$GITLEAKS_RESULT"; do
+            if [ "$result" != "$expected" ]; then
+              echo "Patika CI failed: patika=$PATIKA_CHANGED requires every job to be $expected."
+              exit 1
+            fi
+          done
+          echo "Patika CI passed (patika=$PATIKA_CHANGED, all jobs $expected)."
