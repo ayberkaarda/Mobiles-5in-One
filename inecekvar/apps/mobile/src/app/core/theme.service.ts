@@ -6,8 +6,8 @@ export const THEME_PREFS = ['system', 'light', 'dark'] as const;
 export type ThemePref = (typeof THEME_PREFS)[number];
 
 export const DARK_CLASS = 'ion-palette-dark';
-const CHROME_LIGHT = '#14213D';
-const CHROME_DARK = '#060D1D';
+const CHROME_LIGHT = '#B3261E';
+const CHROME_DARK = '#121417';
 
 export function isThemePref(value: unknown): value is ThemePref {
   return typeof value === 'string' && (THEME_PREFS as readonly string[]).includes(value);

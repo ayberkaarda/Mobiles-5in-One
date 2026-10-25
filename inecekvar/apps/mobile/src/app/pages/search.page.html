@@ -1,45 +1,44 @@
-<ion-header>
+<ion-header class="banded">
   <ion-toolbar>
-    <div class="brand">
-      <img src="brand/inecekvar-wordmark.svg" width="105" height="40" [attr.alt]="'app.name' | t" />
-    </div>
+    <iv-city-picker class="city on-band" />
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <div class="iv-page ara">
-    <section class="hero iv-board">
+    <div class="band">
       <p class="tagline">{{ 'search.kicker' | t }}</p>
-      <h1 class="title">{{ 'search.heading' | t }}</h1>
-      @if (search.view() !== 'no-city') {
-      <ion-searchbar
-        class="search"
-        mode="md"
-        [value]="search.query()"
-        [placeholder]="'search.placeholder' | t"
-        [debounce]="0"
-        (ionInput)="search.setQuery($event.detail.value)"
-      />
-      <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
-        @for (filter of filters; track filter.value) {
-        <button
-          type="button"
-          class="filter"
-          [class.on]="search.mode() === filter.value"
-          [attr.aria-pressed]="search.mode() === filter.value"
-          (click)="search.mode.set(filter.value)"
-        >
-          {{ filter.label | t }}
-        </button>
+      <section class="hero iv-board signboard">
+        <h1 class="title">{{ 'search.heading' | t }}</h1>
+        @if (search.view() !== 'no-city') {
+        <ion-searchbar
+          class="search"
+          mode="md"
+          [value]="search.query()"
+          [placeholder]="'search.placeholder' | t"
+          [debounce]="0"
+          (ionInput)="search.setQuery($event.detail.value)"
+        />
+        } @else {
+        <p class="lead">{{ 'search.lead' | t }}</p>
         }
-      </div>
-      } @else {
-      <p class="lead">{{ 'search.lead' | t }}</p>
+      </section>
+    </div>
+    @if (search.view() !== 'no-city') {
+    <div class="filters" role="group" [attr.aria-label]="'search.filterLabel' | t">
+      @for (filter of filters; track filter.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.on]="search.mode() === filter.value"
+        [attr.aria-pressed]="search.mode() === filter.value"
+        (click)="search.mode.set(filter.value)"
+      >
+        {{ filter.label | t }}
+      </button>
       }
-    </section>
-
-    <iv-city-picker class="city" />
-    @if (cities.selected()?.is_sample) {
+    </div>
+    } @if (cities.selected()?.is_sample) {
     <p class="sample">
       <span class="iv-tape" aria-hidden="true">{{ 'search.sampleTape' | t }}</span>
       <span class="sample-text">{{ 'city.sampleNote' | t }}</span>

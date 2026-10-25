@@ -67,7 +67,7 @@ const PAYMENT_KEYS: Record<string, TranslationKey> = {
     TpPipe,
   ],
   templateUrl: './line.page.html',
-  styleUrl: './line.page.scss',
+  styleUrls: ['./band-sign.scss', './line.page.scss'],
 })
 export class LinePage {
   private readonly api = inject(CatalogSource);

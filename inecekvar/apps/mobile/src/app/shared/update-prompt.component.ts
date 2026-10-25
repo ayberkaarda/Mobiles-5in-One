@@ -43,15 +43,14 @@ export type UpdateState = 'none' | 'ready' | 'broken';
       padding: 10px 12px;
       border-radius: var(--iv-radius-m);
       border: 1px solid var(--iv-line);
-      border-left: 5px solid var(--iv-color-turkuaz);
+      border-left: 5px solid var(--iv-info);
       background: var(--iv-surface);
       color: var(--iv-ink);
-      box-shadow: var(--iv-shadow-hard);
       font-size: 14px;
       line-height: 1.4;
     }
     .bar.warn {
-      border-left-color: var(--iv-color-dolmus-sarisi);
+      border-left-color: var(--iv-ink);
     }
     .text {
       flex: 1;

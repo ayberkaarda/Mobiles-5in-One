@@ -1,5 +1,21 @@
 .city {
-  margin-top: var(--iv-space-5);
+  display: block;
+  padding-inline: max(var(--iv-space-2), var(--ion-safe-area-left, 0px));
+}
+
+.band-title {
+  margin: 0;
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.band-lead {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--iv-chrome-ink-muted);
 }
 
 .form-error,
@@ -54,4 +70,32 @@
   border-radius: var(--iv-radius-l);
   background: var(--iv-surface);
   border: 1px solid var(--iv-line);
+}
+
+/* An error is lettering with a mark, never colour alone. */
+.field-msg {
+  margin: 0;
+  font-size: 13px;
+  font-weight: var(--iv-font-body-weight-600);
+  line-height: 1.4;
+  color: var(--iv-board-ink);
+}
+
+.field-msg::before {
+  content: '!';
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--iv-board-ink);
+  color: var(--iv-board);
+  font-size: 12px;
+}
+
+/* The sign's own button: the code-plate colours, so it stays visible on the orange night sign. */
+.submit:not(:disabled) {
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
 }

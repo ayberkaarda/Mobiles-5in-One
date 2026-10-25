@@ -1,4 +1,4 @@
-<ion-header>
+<ion-header class="banded">
   <ion-toolbar>
     <ion-buttons slot="start">
       <iv-back-button />
@@ -38,32 +38,35 @@
       (action)="retry()"
     />
     } @case ('ready') { @if (data(); as line) {
-    <iv-destination-sign
-      class="hero"
-      [code]="line.code"
-      [mode]="modeLabel()"
-      [from]="ends()?.from ?? ''"
-      [to]="ends()?.to ?? ''"
-      [fromLabel]="'line.from' | t"
-      [toLabel]="'line.to' | t"
-    >
-      <button
-        slot="action"
-        type="button"
-        class="star"
-        [class.on]="favorite()"
-        [attr.aria-pressed]="favorite()"
-        [attr.aria-label]="(favorite() ? 'line.favoriteRemove' : 'line.favoriteAdd') | t"
-        (click)="toggleFavorite()"
+    <div class="band">
+      <iv-destination-sign
+        class="hero signboard"
+        [code]="line.code"
+        [mode]="modeLabel()"
+        [from]="ends()?.from ?? ''"
+        [to]="ends()?.to ?? ''"
+        [fromLabel]="'line.from' | t"
+        [toLabel]="'line.to' | t"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z" />
-        </svg>
-      </button>
-      <h1 class="name">
-        <span class="iv-visually-hidden">{{ line.code }} </span><iv-keep-codes [text]="line.name" />
-      </h1>
-    </iv-destination-sign>
+        <button
+          slot="action"
+          type="button"
+          class="star"
+          [class.on]="favorite()"
+          [attr.aria-pressed]="favorite()"
+          [attr.aria-label]="(favorite() ? 'line.favoriteRemove' : 'line.favoriteAdd') | t"
+          (click)="toggleFavorite()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z" />
+          </svg>
+        </button>
+        <h1 class="name">
+          <span class="iv-visually-hidden">{{ line.code }} </span
+          ><iv-keep-codes [text]="line.name" />
+        </h1>
+      </iv-destination-sign>
+    </div>
 
     <div class="view-switch" role="group" [attr.aria-label]="'line.viewLabel' | t">
       <button

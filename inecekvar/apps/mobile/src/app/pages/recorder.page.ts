@@ -46,7 +46,11 @@ const PROBLEMS: Record<RecorderProblem, TranslationKey> = {
     TpPipe,
   ],
   templateUrl: './recorder.page.html',
-  styleUrls: ['../../../../../libs/ui/src/styles/forms.css', './recorder.page.scss'],
+  styleUrls: [
+    '../../../../../libs/ui/src/styles/forms.css',
+    './band-sign.scss',
+    './recorder.page.scss',
+  ],
 })
 export class RecorderPage {
   protected readonly rec = inject(RecorderStore);

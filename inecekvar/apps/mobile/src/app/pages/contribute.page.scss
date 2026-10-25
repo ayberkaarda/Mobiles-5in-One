@@ -60,9 +60,8 @@
   min-height: 64px;
   padding: 10px 16px;
   border-radius: var(--iv-radius-m);
-  background: var(--iv-signal);
-  color: var(--iv-signal-ink);
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  background: var(--iv-accent);
+  color: var(--iv-accent-ink);
   text-decoration: none;
 }
 
@@ -82,7 +81,7 @@
   height: 22px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 35%, transparent);
 }
 
 .rec::after {
@@ -191,7 +190,6 @@
   background: var(--iv-surface);
   border: 1px solid var(--iv-line);
   border-radius: var(--iv-radius-m);
-  box-shadow: var(--iv-shadow-hard);
   color: inherit;
   text-decoration: none;
 }
@@ -207,9 +205,9 @@
   height: 40px;
   padding: 8px;
   border-radius: var(--iv-radius-s);
-  background: var(--iv-chrome);
+  background: var(--iv-plate);
   fill: none;
-  stroke: var(--iv-accent);
+  stroke: var(--iv-plate-ink);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;

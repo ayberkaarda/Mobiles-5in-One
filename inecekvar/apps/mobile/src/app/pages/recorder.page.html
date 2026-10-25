@@ -1,4 +1,4 @@
-<ion-header>
+<ion-header class="banded">
   <ion-toolbar>
     <ion-buttons slot="start">
       <iv-back-button fallback="/katki" />
@@ -16,11 +16,13 @@
       {{ 'recorder.retryCleanup' | t }}
     </button>
     } @switch (rec.view()) { @case ('idle') {
-    <header class="iv-hero iv-board">
-      <p class="iv-kicker">{{ 'recorder.kicker' | t }}</p>
-      <h1 class="iv-heading">{{ 'recorder.heading' | t }}</h1>
-      <p class="iv-lead">{{ 'recorder.lead' | t }}</p>
-    </header>
+    <div class="band">
+      <header class="iv-hero iv-board signboard">
+        <p class="iv-kicker">{{ 'recorder.kicker' | t }}</p>
+        <h1 class="iv-heading">{{ 'recorder.heading' | t }}</h1>
+        <p class="iv-lead">{{ 'recorder.lead' | t }}</p>
+      </header>
+    </div>
     <iv-city-picker class="city" />
     <section class="privacy" aria-labelledby="iv-rec-privacy">
       <h2 id="iv-rec-privacy">{{ 'recorder.privacyTitle' | t }}</h2>
@@ -36,7 +38,7 @@
     }
     <button
       type="button"
-      class="iv-button iv-button--signal iv-button--block start"
+      class="iv-button iv-button--block start"
       [disabled]="!cities.selectedSlug()"
       (click)="start()"
     >
@@ -164,31 +166,33 @@
       </button>
     </div>
     } @default {
-    <section class="live" [class.live--paused]="rec.view() === 'paused'">
-      <p class="status" role="status">
-        <span class="pulse" aria-hidden="true"></span>
-        {{ (rec.view() === 'recording' ? 'recorder.recording' : 'recorder.paused') | t }}
-      </p>
-      <dl class="stats">
-        <div>
-          <dt>{{ 'recorder.points' | t }}</dt>
-          <dd data-stat="points">{{ rec.pointCount() }}</dd>
-        </div>
-        <div>
-          <dt>{{ 'recorder.distance' | t }}</dt>
-          <dd data-stat="distance">{{ distance() }}<small> km</small></dd>
-        </div>
-        <div>
-          <dt>{{ 'recorder.duration' | t }}</dt>
-          <dd>{{ elapsed() }}</dd>
-        </div>
-      </dl>
-      <p class="meta">
-        {{ 'recorder.stopsMarked' | tp: rec.stops().length }} · {{ (rec.wakeLockOn() ?
-        'recorder.screenOn' : rec.wakeLockSupported ? 'recorder.screenOff' :
-        'recorder.screenUnsupported') | t }}
-      </p>
-    </section>
+    <div class="band">
+      <section class="live signboard" [class.live--paused]="rec.view() === 'paused'">
+        <p class="status" role="status">
+          <span class="pulse" aria-hidden="true"></span>
+          {{ (rec.view() === 'recording' ? 'recorder.recording' : 'recorder.paused') | t }}
+        </p>
+        <dl class="stats">
+          <div>
+            <dt>{{ 'recorder.points' | t }}</dt>
+            <dd data-stat="points">{{ rec.pointCount() }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'recorder.distance' | t }}</dt>
+            <dd data-stat="distance">{{ distance() }}<small> km</small></dd>
+          </div>
+          <div>
+            <dt>{{ 'recorder.duration' | t }}</dt>
+            <dd>{{ elapsed() }}</dd>
+          </div>
+        </dl>
+        <p class="meta">
+          {{ 'recorder.stopsMarked' | tp: rec.stops().length }} · {{ (rec.wakeLockOn() ?
+          'recorder.screenOn' : rec.wakeLockSupported ? 'recorder.screenOff' :
+          'recorder.screenUnsupported') | t }}
+        </p>
+      </section>
+    </div>
     @if (rec.interrupted()) {
     <iv-notice tone="warn" [message]="'recorder.interrupted' | t" />
     } @if (rec.weakSignal()) {

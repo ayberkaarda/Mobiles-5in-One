@@ -15,7 +15,6 @@
   border: 1px solid var(--iv-line);
   border-radius: var(--iv-radius-m);
   background: var(--iv-surface);
-  box-shadow: var(--iv-shadow-hard);
   color: var(--iv-ink);
   font: inherit;
   text-align: left;
@@ -73,7 +72,6 @@
   border-radius: var(--iv-radius-l);
   background: var(--iv-surface);
   border: 1px solid var(--iv-line);
-  box-shadow: var(--iv-shadow-hard);
 }
 
 .pack-art {
@@ -108,7 +106,6 @@
   gap: var(--iv-space-3);
   padding: var(--iv-space-4);
   background: var(--iv-surface-sunk);
-  box-shadow: none;
   border-left: 6px solid var(--iv-success);
 }
 

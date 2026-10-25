@@ -7,7 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { IonContent, IonHeader, IonToolbar } from '@ionic/angular';
 import {
   ItineraryCardComponent,
   RouteStripComponent,
@@ -59,7 +59,6 @@ interface EndView {
   imports: [
     IonHeader,
     IonToolbar,
-    IonTitle,
     IonContent,
     CityPickerComponent,
     ItineraryCardComponent,
@@ -72,7 +71,7 @@ interface EndView {
   ],
   providers: [PlannerStore],
   templateUrl: './plan.page.html',
-  styleUrls: ['./plan-form.scss', './plan.page.scss'],
+  styleUrls: ['./band-sign.scss', './plan-form.scss', './plan.page.scss'],
 })
 export class PlanPage {
   private readonly i18n = inject(LanguageService);

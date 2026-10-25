@@ -42,7 +42,7 @@
   height: 2px;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255, 248, 231, 0.5) 0 12px,
+    color-mix(in srgb, var(--iv-board-ink) 50%, transparent) 0 12px,
     transparent 12px 22px
   );
 }
@@ -157,7 +157,7 @@ h3 {
 }
 
 .pin.on svg {
-  stroke: #fff;
+  stroke: var(--iv-accent-ink);
 }
 
 .status {
@@ -257,7 +257,7 @@ h3 {
 .danger.confirm {
   border-color: var(--iv-danger);
   background: var(--iv-danger);
-  color: #fff;
+  color: var(--iv-danger-ink);
 }
 
 .ghost:focus-visible,

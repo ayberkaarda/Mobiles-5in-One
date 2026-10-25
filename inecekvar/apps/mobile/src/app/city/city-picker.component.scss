@@ -135,3 +135,34 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* On the painted band of a page: the city name in sign lettering, no chip. */
+:host(.on-band) .trigger {
+  min-height: 52px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  background: transparent;
+  color: var(--iv-chrome-ink);
+}
+
+/* A light ring with a dark inner edge reads on the red and the night band alike. */
+:host(.on-band) .trigger:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--iv-plate-edge),
+    0 0 0 5px var(--iv-chrome-ink);
+}
+
+:host(.on-band) .trigger svg {
+  stroke: currentColor;
+}
+
+:host(.on-band) .trigger-label {
+  color: var(--iv-chrome-ink-muted);
+}
+
+:host(.on-band) .trigger-name {
+  flex: 0 1 auto;
+  font-family: var(--iv-font-display);
+  font-weight: var(--iv-font-display-weight);
+  font-size: 20px;
+}
