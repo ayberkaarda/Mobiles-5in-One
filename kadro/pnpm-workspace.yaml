@@ -22,16 +22,16 @@ overrides:
 # workspace was scaffolded with the latest stable releases (see docs/adr/0001-stack-and-versions.md).
 
 minimumReleaseAgeExclude:
-  - '@next/env@16.3.8'
-  - '@next/eslint-plugin-next@16.3.8'
-  - '@next/swc-darwin-arm64@16.3.8'
-  - '@next/swc-darwin-x64@16.3.8'
-  - '@next/swc-linux-arm64-gnu@16.3.8'
-  - '@next/swc-linux-arm64-musl@16.3.8'
-  - '@next/swc-linux-x64-gnu@16.3.8'
-  - '@next/swc-linux-x64-musl@16.3.8'
-  - '@next/swc-win32-arm64-msvc@16.3.8'
-  - '@next/swc-win32-x64-msvc@16.3.8'
+  - '@next/env@16.4.3'
+  - '@next/eslint-plugin-next@16.4.3'
+  - '@next/swc-darwin-arm64@16.4.3'
+  - '@next/swc-darwin-x64@16.4.3'
+  - '@next/swc-linux-arm64-gnu@16.4.3'
+  - '@next/swc-linux-arm64-musl@16.4.3'
+  - '@next/swc-linux-x64-gnu@16.4.3'
+  - '@next/swc-linux-x64-musl@16.4.3'
+  - '@next/swc-win32-arm64-msvc@16.4.3'
+  - '@next/swc-win32-x64-msvc@16.4.3'
   - '@turbo/darwin-64@2.11.6'
   - '@turbo/darwin-arm64@2.11.6'
   - '@turbo/linux-64@2.11.6'
@@ -42,14 +42,14 @@ minimumReleaseAgeExclude:
   - '@vitest/spy@5.0.3'
   - eslint-plugin-security@4.2.0
   - globals@17.13.0
-  - next@16.3.8
+  - next@16.4.3
   - pg-boss@12.35.1
   - pg-cloudflare@1.4.1
   - pg-connection-string@2.14.1
   - pg-protocol@1.16.1
   - pg@8.23.1
   - turbo@2.11.6
-  - vite@8.3.2
+  - vite@8.3.5
   - vitest@5.0.3
   - '@aws-sdk/client-s3@3.1144.0'
   - '@aws-sdk/s3-request-presigner@3.1144.0'
@@ -81,10 +81,12 @@ minimumReleaseAgeExclude:
   - expo-crypto@57.0.4
   - expo-modules-jsi@57.1.2
 
-# Documented audit exceptions, see docs/adr/0043-node-forge-advisory-exception.md and
-# docs/adr/0078-braces-advisory-exception.md.
+# Documented audit exceptions, see docs/adr/0043-node-forge-advisory-exception.md,
+# docs/adr/0078-braces-advisory-exception.md and docs/adr/0085-zod3-advisory-exception.md.
 # Only these advisories are ignored; the CI gate (`--audit-level=high`) is unchanged.
 auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv
     - GHSA-vfj7-8cjw-p6xm
+    # zod 3.25.76 only under @expo/cli (dev tooling, no patched 3.x); all other zod copies are 4.6.7.
+    - GHSA-mrhx-c7xc-m3w5
