@@ -9,7 +9,9 @@
              BackgroundColor="{StaticResource Kar}"
              Title="Acil yardım çağrısı">
     <ContentPage.Resources>
-        <Style x:Key="CategoryOff" TargetType="Button">
+        <!-- One style; the selected state only swaps colours. Swapping the whole Style in a trigger re-measured
+             the chip with the app-wide button font and clipped the label ("Hast", "Yara"). -->
+        <Style x:Key="Category" TargetType="Button">
             <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
             <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
             <Setter Property="BorderColor" Value="{StaticResource Cizgi}" />
@@ -19,11 +21,7 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="FontFamily" Value="NunitoSansBold" />
             <Setter Property="FontSize" Value="14" />
-        </Style>
-        <Style x:Key="CategoryOn" TargetType="Button" BasedOn="{StaticResource CategoryOff}">
-            <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
-            <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
-            <Setter Property="BorderWidth" Value="0" />
+            <Setter Property="LineBreakMode" Value="NoWrap" />
         </Style>
         <Style x:Key="Legend" TargetType="Label">
             <Setter Property="FontFamily" Value="NunitoExtraBold" />
@@ -51,43 +49,39 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Ne oldu?" Style="{StaticResource Legend}" SemanticProperties.HeadingLevel="Level2" />
                     <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
-                        <Button Text="Yaralı" Command="{Binding SelectCategoryCommand}" CommandParameter="Injured">
+                        <Button Text="Yaralı" Style="{StaticResource Category}" Command="{Binding SelectCategoryCommand}" CommandParameter="Injured">
                             <Button.Triggers>
                                 <DataTrigger TargetType="Button" Binding="{Binding IsInjured}" Value="True">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
-                                </DataTrigger>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsInjured}" Value="False">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                    <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+                                    <Setter Property="BorderWidth" Value="0" />
                                 </DataTrigger>
                             </Button.Triggers>
                         </Button>
-                        <Button Grid.Column="1" Text="Hasta" Command="{Binding SelectCategoryCommand}" CommandParameter="Sick">
+                        <Button Grid.Column="1" Text="Hasta" Style="{StaticResource Category}" Command="{Binding SelectCategoryCommand}" CommandParameter="Sick">
                             <Button.Triggers>
                                 <DataTrigger TargetType="Button" Binding="{Binding IsSick}" Value="True">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
-                                </DataTrigger>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsSick}" Value="False">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                    <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+                                    <Setter Property="BorderWidth" Value="0" />
                                 </DataTrigger>
                             </Button.Triggers>
                         </Button>
-                        <Button Grid.Column="2" Text="Sıkışmış" Command="{Binding SelectCategoryCommand}" CommandParameter="Trapped">
+                        <Button Grid.Column="2" Text="Sıkışmış" Style="{StaticResource Category}" Command="{Binding SelectCategoryCommand}" CommandParameter="Trapped">
                             <Button.Triggers>
                                 <DataTrigger TargetType="Button" Binding="{Binding IsTrapped}" Value="True">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
-                                </DataTrigger>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsTrapped}" Value="False">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                    <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+                                    <Setter Property="BorderWidth" Value="0" />
                                 </DataTrigger>
                             </Button.Triggers>
                         </Button>
-                        <Button Grid.Column="3" Text="Diğer" Command="{Binding SelectCategoryCommand}" CommandParameter="Other">
+                        <Button Grid.Column="3" Text="Diğer" Style="{StaticResource Category}" Command="{Binding SelectCategoryCommand}" CommandParameter="Other">
                             <Button.Triggers>
                                 <DataTrigger TargetType="Button" Binding="{Binding IsOther}" Value="True">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
-                                </DataTrigger>
-                                <DataTrigger TargetType="Button" Binding="{Binding IsOther}" Value="False">
-                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                    <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+                                    <Setter Property="BorderWidth" Value="0" />
                                 </DataTrigger>
                             </Button.Triggers>
                         </Button>
