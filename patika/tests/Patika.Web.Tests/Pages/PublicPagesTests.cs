@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Patika.Web.Tests.Pages;
 
-public sealed partial class PublicPagesTests(PageFixture site) : IClassFixture<PageFixture>
+public sealed class PublicPagesTests(PageFixture site) : IClassFixture<PageFixture>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -40,7 +40,7 @@ public sealed partial class PublicPagesTests(PageFixture site) : IClassFixture<P
         {
             var (status, html) = await GetAsync(path);
             Assert.True(status == HttpStatusCode.OK, $"{path} returned {status}");
-            Assert.Single(H1().Matches(html));
+            Assert.Single(H1.Matches(html));
             Assert.Contains("<main id=\"icerik\">", html, StringComparison.Ordinal);
             Assert.Contains("<nav class=\"masthead__nav\" aria-label=\"Ana menü\">", html, StringComparison.Ordinal);
             Assert.Contains("<footer class=\"footer\">", html, StringComparison.Ordinal);
@@ -56,8 +56,8 @@ public sealed partial class PublicPagesTests(PageFixture site) : IClassFixture<P
         foreach (var path in IndexablePages)
         {
             var (_, html) = await GetAsync(path);
-            var title = Title().Match(html).Groups[1].Value;
-            var description = Description().Match(html).Groups[1].Value;
+            var title = Title.Match(html).Groups[1].Value;
+            var description = Description.Match(html).Groups[1].Value;
             Assert.InRange(title.Length, 10, 60);
             Assert.InRange(description.Length, 120, 160);
             Assert.True(titles.Add(title), $"duplicate title on {path}: {title}");
@@ -246,12 +246,9 @@ public sealed partial class PublicPagesTests(PageFixture site) : IClassFixture<P
         Assert.Equal(["Mo-Su 00:00-23:59"], OpeningHours.Parse(null, true).Schema);
     }
 
-    [GeneratedRegex("<h1[ >]")]
-    private static partial Regex H1();
+    private static readonly Regex H1 = new("<h1[ >]");
 
-    [GeneratedRegex("<title>(.*?)</title>")]
-    private static partial Regex Title();
+    private static readonly Regex Title = new("<title>(.*?)</title>");
 
-    [GeneratedRegex("<meta name=\"description\" content=\"(.*?)\" />")]
-    private static partial Regex Description();
+    private static readonly Regex Description = new("<meta name=\"description\" content=\"(.*?)\" />");
 }

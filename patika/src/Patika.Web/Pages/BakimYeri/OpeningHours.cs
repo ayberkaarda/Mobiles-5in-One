@@ -8,7 +8,7 @@ namespace Patika.Web.Pages.BakimYeri;
 /// <c>{"mon": "09:00-18:00", "sat": ["10:00-13:00", "14:00-17:00"], "sun": "closed"}</c> (keys may be
 /// two or three letters or full English day names), and returns nothing for anything else.
 /// </summary>
-public static partial class OpeningHours
+public static class OpeningHours
 {
     private static readonly (string Schema, string Turkish, string[] Keys)[] Days =
     [
@@ -75,7 +75,7 @@ public static partial class OpeningHours
 
     private static string? Normalize(string range)
     {
-        var match = Range().Match(range.Trim());
+        var match = Range.Match(range.Trim());
         if (!match.Success || (match.Groups[3].Value == "24" && match.Groups[4].Value != "00")) return null;
         var from = new TimeOnly(int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), int.Parse(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture));
         var to = match.Groups[3].Value == "24" && match.Groups[4].Value == "00"
@@ -84,6 +84,5 @@ public static partial class OpeningHours
         return $"{from:HH\\:mm}-{to:HH\\:mm}";
     }
 
-    [GeneratedRegex(@"^([01]?\d|2[0-3])[:.]([0-5]\d)\s*[-–]\s*([01]?\d|2[0-4])[:.]([0-5]\d)$")]
-    private static partial Regex Range();
+    private static readonly Regex Range = new(@"^([01]?\d|2[0-3])[:.]([0-5]\d)\s*[-–]\s*([01]?\d|2[0-4])[:.]([0-5]\d)$", RegexOptions.Compiled);
 }
