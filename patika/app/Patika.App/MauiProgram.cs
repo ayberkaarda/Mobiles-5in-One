@@ -34,6 +34,9 @@ public static class MauiProgram
         builder.Services.AddMapAndStationScreens();
         builder.Services.AddAnimalAndAdoptionPages();
         builder.AddUrgentAndAccount();
+#if ANDROID
+        Accessibility.PasswordSemantics.Configure();
+#endif
         return builder.Build();
     }
 
