@@ -36,25 +36,40 @@ export class HealthReporter {
     return this.#status;
   }
 
-  async set(status: HealthStatus): Promise<void> {
+  /**
+   * File operations run one at a time in call order. Without this, a health probe still writing
+   * when `stop()` writes `stopping` shares the temporary file: one rename moves it and the other
+   * fails with ENOENT, or a late write recreates the file after `clear()`.
+   */
+  #queue: Promise<void> = Promise.resolve();
+
+  #enqueue(operation: () => Promise<void>): Promise<void> {
+    const run = this.#queue.then(operation);
+    this.#queue = run.catch(() => undefined);
+    return run;
+  }
+
+  set(status: HealthStatus): Promise<void> {
     this.#status = status;
     const snapshot: HealthSnapshot = {
       status,
       pid: process.pid,
       updatedAt: this.now().toISOString(),
     };
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- status file path fixed at construction
-    await mkdir(dirname(this.file), { recursive: true });
-    const temporary = `${this.file}.${process.pid}.tmp`;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- sibling of the fixed status file
-    await writeFile(temporary, JSON.stringify(snapshot), 'utf8');
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- sibling of the fixed status file
-    await rename(temporary, this.file);
+    return this.#enqueue(async () => {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- status file path fixed at construction
+      await mkdir(dirname(this.file), { recursive: true });
+      const temporary = `${this.file}.${process.pid}.tmp`;
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- sibling of the fixed status file
+      await writeFile(temporary, JSON.stringify(snapshot), 'utf8');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- sibling of the fixed status file
+      await rename(temporary, this.file);
+    });
   }
 
-  async clear(): Promise<void> {
+  clear(): Promise<void> {
     this.#status = 'stopped';
-    await rm(this.file, { force: true });
+    return this.#enqueue(() => rm(this.file, { force: true }));
   }
 }
 
