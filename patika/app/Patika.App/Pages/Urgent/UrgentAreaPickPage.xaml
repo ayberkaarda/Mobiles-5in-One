@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Urgent"
+             xmlns:account="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Urgent.UrgentAreaPickPage"
+             x:DataType="vm:UrgentAreaPickViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Ev bölgeni seç">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <account:PageHeader Title="Ev bölgeni seç" IsClose="True" Command="{Binding CancelCommand}" />
+        <GraphicsView Grid.Row="1" x:Name="AreaMap" SemanticProperties.Description="Ev bölgesi. Bölgeyi taşımak için sürükle."
+                      SemanticProperties.Hint="{Binding CenterText}" />
+        <VerticalStackLayout Grid.Row="2" Padding="20" Spacing="10">
+            <Label Text="Haritayı sürükle; ortadaki iğne ev bölgen olur. Yaklaşık 100 m’ye yuvarlanır." Style="{StaticResource Muted}" />
+            <Label Text="{Binding CenterText}" FontFamily="NunitoSansBold" FontSize="15" />
+            <Button Text="Bu bölgeyi kullan" HeightRequest="56" CornerRadius="28" FontSize="19" Command="{Binding ConfirmCommand}"
+                    AutomationId="ConfirmAreaButton" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

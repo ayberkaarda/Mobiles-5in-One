@@ -31,5 +31,6 @@
     <PackageVersion Include="Testcontainers.Minio" Version="4.15.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Urgent"
+             xmlns:account="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Urgent.UrgentCreatePage"
+             x:DataType="vm:UrgentCreateViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Acil yardım çağrısı">
+    <ContentPage.Resources>
+        <Style x:Key="CategoryOff" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="BorderColor" Value="{StaticResource Cizgi}" />
+            <Setter Property="BorderWidth" Value="1" />
+            <Setter Property="HeightRequest" Value="44" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontFamily" Value="NunitoSansBold" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style x:Key="CategoryOn" TargetType="Button" BasedOn="{StaticResource CategoryOff}">
+            <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+            <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="BorderWidth" Value="0" />
+        </Style>
+        <Style x:Key="Legend" TargetType="Label">
+            <Setter Property="FontFamily" Value="NunitoExtraBold" />
+            <Setter Property="FontSize" Value="17" />
+        </Style>
+    </ContentPage.Resources>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <account:PageHeader Title="Acil yardım çağrısı" IsClose="True" Command="{Binding CancelCommand}" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,16,20,20" Spacing="16">
+                <Grid ColumnDefinitions="112,*" ColumnSpacing="14">
+                    <Border WidthRequest="112" HeightRequest="112" StrokeShape="RoundRectangle 24" StrokeThickness="0" BackgroundColor="{StaticResource Kum}">
+                        <Image Source="{Binding Photo.PreviewPath, FallbackValue={x:Null}}" Aspect="AspectFill" IsVisible="{Binding HasPhoto}"
+                               SemanticProperties.Description="Eklenen fotoğraf" />
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                        <Label Text="{Binding PhotoTitle}" FontFamily="NunitoExtraBold" FontSize="17" />
+                        <Label Text="Konum bilgisi telefonda silinir." Style="{StaticResource Muted}" />
+                        <Button Text="{Binding PhotoButton}" Style="{StaticResource QuietButton}" BorderWidth="1" BorderColor="{StaticResource Sis}"
+                                HorizontalOptions="Start" HeightRequest="44" CornerRadius="22" FontFamily="NunitoSansBold" FontSize="15" Padding="14,0"
+                                Command="{Binding TakePhotoCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="UrgentPhotoButton" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Ne oldu?" Style="{StaticResource Legend}" SemanticProperties.HeadingLevel="Level2" />
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                        <Button Text="Yaralı" Command="{Binding SelectCategoryCommand}" CommandParameter="Injured">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsInjured}" Value="True">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsInjured}" Value="False">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1" Text="Hasta" Command="{Binding SelectCategoryCommand}" CommandParameter="Sick">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsSick}" Value="True">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsSick}" Value="False">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="2" Text="Sıkışmış" Command="{Binding SelectCategoryCommand}" CommandParameter="Trapped">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsTrapped}" Value="True">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsTrapped}" Value="False">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="3" Text="Diğer" Command="{Binding SelectCategoryCommand}" CommandParameter="Other">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOther}" Value="True">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOn}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOther}" Value="False">
+                                    <Setter Property="Style" Value="{StaticResource CategoryOff}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Kısa bir not" Style="{StaticResource Legend}" />
+                    <Border Style="{StaticResource Field}" Padding="14,4">
+                        <Editor Text="{Binding Note}" AutoSize="TextChanges" MinimumHeightRequest="96" MaxLength="1000"
+                                Placeholder="Nerede, ne durumda? Yanında mısın?" PlaceholderColor="{StaticResource SisDeep}"
+                                FontFamily="NunitoSans" FontSize="16" TextColor="{StaticResource Kaldirim}" BackgroundColor="Transparent"
+                                SemanticProperties.Description="Kısa bir not, en az 10 karakter" AutomationId="UrgentNote" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource Panel}" Padding="12">
+                    <Grid ColumnDefinitions="88,*" ColumnSpacing="12">
+                        <Border WidthRequest="88" HeightRequest="64" StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="{StaticResource Cizgi}">
+                            <Grid>
+                                <Path Data="M-4 46C20 38 50 28 92 14" Stroke="{StaticResource Kar}" StrokeThickness="10" />
+                                <Ellipse Fill="{StaticResource Acil}" Stroke="{StaticResource Beyaz}" StrokeThickness="3" WidthRequest="16" HeightRequest="16"
+                                         HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                            <Label Text="{Binding LocationText}" FontFamily="NunitoSansBold" FontSize="15" />
+                            <Button Text="Konumu yeniden al" Style="{StaticResource LinkButton}" HorizontalOptions="Start" Padding="0" FontSize="15"
+                                    Command="{Binding LocateCommand}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout Grid.Row="2" Padding="20,0,20,20" Spacing="8">
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AcilDeep}" />
+            <Button Text="Çağrıyı gönder" Style="{StaticResource UrgentButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
+                    Command="{Binding SendCommand}" IsEnabled="{Binding CanSend}" AutomationId="SendUrgentButton" />
+            <Label Text="2 km içindeki gönüllülere bildirim gider. Günde en fazla 3 çağrı açabilirsin." FontSize="{StaticResource FontSizeCaption}"
+                   TextColor="{StaticResource SisDeep}" HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

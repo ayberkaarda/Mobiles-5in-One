@@ -40,6 +40,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- FCM token and messages for urgent help (ADR-0008). Without google-services.json the app runs with push off. -->
+    <PackageReference Include="Xamarin.Firebase.Messaging" />
+  </ItemGroup>
+
+  <!-- google-services.json is an owner secret: never committed (see patika/app/.gitignore), added on the build machine. -->
+  <ItemGroup Condition="Exists('google-services.json')">
+    <GoogleServicesJson Include="google-services.json" />
   </ItemGroup>
 
   <ItemGroup>
