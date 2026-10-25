@@ -35,11 +35,16 @@ public sealed class PersistenceTests
             "users", "refresh_tokens", "email_tokens", "external_logins", "stations", "feedings",
             "animals", "animal_photos", "sightings", "follows", "adoption_posts", "adoption_requests",
             "urgent_posts", "care_places", "device_tokens", "subscriptions", "app_store_notifications",
-            "reports", "audit_logs", "deletion_requests"
+            "reports", "audit_logs", "deletion_requests", "uploads", "push_daily_counters"
         ];
         Assert.Equal(tables.Order(), context.Model.GetEntityTypes().Select(entity => entity.GetTableName()!).Order());
         foreach (var entity in context.Model.GetEntityTypes())
         {
+            if (entity.ClrType == typeof(PushDailyCounter))
+            {
+                continue;
+            }
+
             Assert.Null(entity.FindProperty("Id")!.GetDefaultValueSql());
             Assert.NotNull(entity.FindProperty("CreatedAt"));
             Assert.NotNull(entity.FindProperty("UpdatedAt"));
@@ -49,7 +54,7 @@ public sealed class PersistenceTests
 
         var sql = context.Database.GenerateCreateScript();
         Assert.Contains("CREATE EXTENSION IF NOT EXISTS postgis", sql);
-        Assert.Equal(4, sql.Split("USING gist").Length - 1);
+        Assert.Equal(5, sql.Split("USING gist").Length - 1);
         Assert.Contains("geography(Point,4326)", sql);
         var designModel = context.GetService<IDesignTimeModel>().Model;
         var operations = context.GetService<IMigrationsModelDiffer>()
@@ -158,6 +163,40 @@ public sealed class PersistenceTests
         Assert.True(user.UpdatedAt >= createdAt);
     }
 
+    [Fact]
+    public void PhaseTwoSchemaMatchesWorkerContract()
+    {
+        using var context = CreateContext();
+        var sql = context.Database.GenerateCreateScript();
+        Assert.Contains("urgent_home geography(Point,4326)", sql);
+        Assert.Contains("CREATE INDEX ix_users_urgent_home ON users USING gist (urgent_home) WHERE urgent_opt_in;", sql);
+        Assert.Contains("fanout_at timestamptz", sql);
+        Assert.Contains("CREATE INDEX ix_urgent_posts_fanout_pending ON urgent_posts (created_at) WHERE fanout_at IS NULL;", sql);
+        Assert.Contains("CREATE INDEX ix_uploads_user_id_created_at ON uploads (user_id, created_at);", sql);
+        Assert.Contains("UNIQUE (key)", sql);
+        Assert.Contains("CHECK (content_length BETWEEN 1 AND 5242880)", sql);
+        Assert.Contains("FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE", sql);
+        Assert.Contains("PRIMARY KEY (day, channel)", sql);
+        Assert.Contains("count integer NOT NULL DEFAULT 0", sql);
+        var model = context.GetService<IDesignTimeModel>().Model;
+        Assert.Equal("urgent_radius_m BETWEEN 500 AND 2000",
+            model.FindEntityType(typeof(User))!.GetCheckConstraints()
+                .Single(check => check.Name == "ck_users_urgent_radius").Sql);
+        foreach (var pair in new[]
+        {
+            (typeof(Feeding), "UserId"),
+            (typeof(Sighting), "UserId"),
+            (typeof(AnimalPhoto), "CreatedBy"),
+            (typeof(AdoptionRequest), "RequesterId"),
+            (typeof(Report), "ReporterId")
+        })
+        {
+            Assert.Contains(model.FindEntityType(pair.Item1)!.GetIndexes(), index =>
+                !index.IsUnique && index.Properties.Select(property => property.Name).SequenceEqual([pair.Item2]));
+        }
+
+        Assert.Equal(typeof(string), model.FindEntityType(typeof(EmailToken))!.FindProperty("Purpose")!.ClrType);
+    }
     private sealed class SuppressWrites : SaveChangesInterceptor
     {
         public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)

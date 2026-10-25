@@ -22,6 +22,7 @@ public sealed class EmailToken : Entity
 public sealed class DeviceToken : Entity
 {
     public Guid UserId { get; set; }
+    public Guid InstallationId { get; set; }
     public required string Token { get; set; }
     public StoreEnvironment Environment { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
