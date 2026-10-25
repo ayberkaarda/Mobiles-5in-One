@@ -5,6 +5,7 @@ using Patika.Api.Features.Urgent;
 using Patika.Contracts.Media;
 using Patika.Domain;
 using Patika.Domain.Entities;
+using Patika.Infrastructure.Media;
 using Xunit;
 
 namespace Patika.Api.Tests.Urgent;

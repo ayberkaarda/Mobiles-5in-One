@@ -18,6 +18,7 @@ public sealed class AnimalRequestValidator : AbstractValidator<AnimalRequest>
         RuleFor(x => x.District).MaximumLength(60).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.Name).MaximumLength(100).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.StationId).NotEqual(Guid.Empty).When(x => x.StationId.HasValue);
+        RuleFor(x => x.BirthYear).Must(AnimalBirthYear.IsValid);
     }
 }
 public sealed class AnimalUpdateRequestValidator : AbstractValidator<AnimalUpdateRequest>
@@ -31,7 +32,17 @@ public sealed class AnimalUpdateRequestValidator : AbstractValidator<AnimalUpdat
         RuleFor(x => x.District).MaximumLength(60).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.Name).MaximumLength(100).Must(TextRules.HasNoControlCharacters);
         RuleFor(x => x.StationId).NotEqual(Guid.Empty).When(x => x.StationId.HasValue);
+        RuleFor(x => x.BirthYear).Must(AnimalBirthYear.IsValid);
     }
+}
+/// <summary>Estimated birth year: optional, from 1990 up to the current calendar year in Türkiye.</summary>
+public static class AnimalBirthYear
+{
+    public const short Earliest = 1990;
+
+    public static bool IsValid(short? year) => year is null || (year >= Earliest && year <= CurrentYear());
+
+    private static int CurrentYear() => DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(3)).Year;
 }
 public sealed class AnimalPhotoRequestValidator : AbstractValidator<AnimalPhotoRequest>
 {

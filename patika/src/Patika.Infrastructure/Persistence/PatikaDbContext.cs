@@ -8,8 +8,11 @@ using Patika.Infrastructure.Persistence.Configurations;
 
 namespace Patika.Infrastructure.Persistence;
 
-public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbContext(options)
+public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbContext(options)
 {
+    public DbSet<Province> Provinces => Set<Province>();
+    public DbSet<District> Districts => Set<District>();
+    public DbSet<ModerationDecision> ModerationDecisions => Set<ModerationDecision>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
     public DbSet<Upload> Uploads => Set<Upload>();
     public DbSet<PushDailyCounter> PushDailyCounters => Set<PushDailyCounter>();
@@ -42,7 +45,11 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("postgis");
+        ConfigureEntity<Province>(modelBuilder, "provinces");
+        ConfigureEntity<District>(modelBuilder, "districts");
+        ConfigureEntity<ModerationDecision>(modelBuilder, "moderation_decisions");
         ConfigureEntity<User>(modelBuilder, "users");
+        Phase4Configuration.Configure(modelBuilder);
         ConfigureEntity<Upload>(modelBuilder, "uploads");
         ConfigureEntity<ExternalLogin>(modelBuilder, "external_logins");
         ConfigureEntity<RefreshToken>(modelBuilder, "refresh_tokens");
@@ -83,7 +90,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
             foreach (var property in entityType.GetProperties())
             {
                 property.SetColumnName(ToSnakeCase(property.Name));
-                if (property.ClrType.IsEnum)
+                if ((Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum)
                 {
                     modelBuilder.Entity(entityType.ClrType)
                         .Property(property.Name).HasConversion<string>();
@@ -94,6 +101,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        PreparePublicData();
         StampChanges();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -101,9 +109,12 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
     public override Task<int> SaveChangesAsync(
         bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        PreparePublicData();
         StampChanges();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
+
+    private void PreparePublicData() => PublicDataPreparation.Prepare(this);
 
     private void StampChanges()
     {

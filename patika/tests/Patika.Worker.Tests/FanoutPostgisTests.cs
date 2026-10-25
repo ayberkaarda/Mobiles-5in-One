@@ -144,6 +144,41 @@ public sealed class FanoutPostgisTests(WorkerPostgisFixture database) : IClassFi
     }
 
     [Fact]
+    public async Task HiddenPostsAreNeverClaimedForFanout()
+    {
+        var author = (await VolunteerAsync(null, 29.0, optIn: false)).UserId;
+        Guid visible, hidden;
+        await using (var db = database.CreateContext())
+        {
+            UrgentPost Post(DateTimeOffset? hiddenAt) => new()
+            {
+                Location = new GeoPoint(29.0, 41.0),
+                Category = UrgentCategory.Injured,
+                Description = "Yaralı bir köpek, ön bacağı",
+                PhotoKey = "urgent/" + Guid.CreateVersion7().ToString("D"),
+                State = UrgentPostState.Open,
+                CreatedBy = author,
+                HiddenAt = hiddenAt,
+                HiddenReason = hiddenAt is null ? null : "Uygunsuz fotoğraf",
+            };
+            var posts = new[] { Post(null), Post(DateTimeOffset.UtcNow) };
+            db.UrgentPosts.AddRange(posts);
+            await db.SaveChangesAsync(Ct);
+            (visible, hidden) = (posts[0].Id, posts[1].Id);
+        }
+
+        await using var claim = database.CreateContext();
+        var claimed = await new PgUrgentFanoutStore(claim).ClaimAsync(
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(-1), 100, Ct);
+
+        Assert.Contains(claimed, p => p.Id == visible);
+        Assert.DoesNotContain(claimed, p => p.Id == hidden);
+        var unclaimed = await claim.Database.SqlQuery<int>(
+            $"SELECT count(*)::int AS \"Value\" FROM urgent_posts WHERE id = {hidden} AND fanout_at IS NULL").SingleAsync(Ct);
+        Assert.Equal(1, unclaimed);
+    }
+
+    [Fact]
     public async Task ConcurrentReservationsNeverOverrunTheDailyCounter()
     {
         var day = new DateOnly(2026, 10, 25);

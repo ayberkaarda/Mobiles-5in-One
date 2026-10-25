@@ -80,6 +80,23 @@ public sealed class CommunityValidatorTests
     }
 
     [Fact]
+    public void BirthYearIsOptionalAndBoundedFrom1990ToThisYear()
+    {
+        var thisYear = (short)DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(3)).Year;
+        foreach (short? year in new short?[] { null, 1990, 2015, thisYear })
+        {
+            Assert.True(new AnimalRequestValidator().Validate(new AnimalRequest(Istanbul, "Cat", "Unknown", "Healthy", BirthYear: year)).IsValid);
+            Assert.True(new AnimalUpdateRequestValidator().Validate(new AnimalUpdateRequest(BirthYear: year)).IsValid);
+        }
+
+        foreach (short year in new short[] { 0, 1989, (short)(thisYear + 1), short.MaxValue, -5 })
+        {
+            Assert.False(new AnimalRequestValidator().Validate(new AnimalRequest(Istanbul, "Cat", "Unknown", "Healthy", BirthYear: year)).IsValid);
+            Assert.False(new AnimalUpdateRequestValidator().Validate(new AnimalUpdateRequest(BirthYear: year)).IsValid);
+        }
+    }
+
+    [Fact]
     public void AcceptsValidRequestsAndOptionalNotes()
     {
         Assert.True(new StationRequestValidator().Validate(new StationRequest(Istanbul, "Both", "Mixed", "station/a.jpg")).IsValid);

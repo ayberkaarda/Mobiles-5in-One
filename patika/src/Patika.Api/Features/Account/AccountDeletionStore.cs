@@ -88,6 +88,8 @@ public sealed class EfAccountDeletionStore(PatikaDbContext db) : IAccountDeletio
                 && (p.State == AdoptionPostState.Pending || p.State == AdoptionPostState.Published))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(p => p.State, AdoptionPostState.Closed)
+                .SetProperty(p => p.ClosedReason, AdoptionClosedReason.AccountDeleted)
+                .SetProperty(p => p.AdoptedAt, (DateTimeOffset?)null)
                 .SetProperty(p => p.ClosesAt, p => p.ClosesAt < now ? p.ClosesAt : now)
                 .SetProperty(p => p.UpdatedAt, now), cancellationToken);
 

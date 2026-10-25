@@ -2,6 +2,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
+using Patika.Infrastructure.Media;
 
 namespace Patika.Api.Features.Media;
 

@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Patika.Api.Features.Media;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
 using Patika.Contracts.Adoptions;
 using Patika.Contracts.Community;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Adoptions;
@@ -84,6 +84,10 @@ public static class AdoptionEndpoints
 
     private static IResult Invalid() => Results.Problem(statusCode: 400, title: "İstek geçersiz.");
 
+    /// <summary>Concurrent creates kept taking the same public address; the client may simply retry.</summary>
+    internal static IResult SlugConflict() => Results.Problem(statusCode: 409, title: "Aynı anda çok fazla benzer kayıt oluşturuldu; lütfen tekrar deneyin.",
+        extensions: new Dictionary<string, object?> { ["code"] = "slug_conflict" });
+
     internal static async Task<IResult> List(PatikaDbContext db, string? district, Species? species, int page = 1, int pageSize = 20, CancellationToken ct = default, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (page is < 1 or > 100000 || pageSize is < 1 or > 100 || (species.HasValue && !Enum.IsDefined(species.Value))) return Invalid();
@@ -123,8 +127,16 @@ public static class AdoptionEndpoints
             State = AdoptionPostState.Pending,
             ClosesAt = DateTimeOffset.UtcNow.AddDays(60)
         };
+        post.DistrictId = await new DistrictResolver(db).ResolveAsync(post.District, ct);
         db.AdoptionPosts.Add(post);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesWithSlugRetryAsync(ct);
+        }
+        catch (SlugConflictException)
+        {
+            return SlugConflict();
+        }
         return Results.Created($"/v1/adoptions/{post.Id}", (await EnrichAsync([post], db, ct, photos))[0]);
     }
 
@@ -144,7 +156,12 @@ public static class AdoptionEndpoints
         if (body.State == "Published" && (post.ClosesAt <= DateTimeOffset.UtcNow
             || await db.Animals.AnyAsync(a => a.Id == post.AnimalId && a.Status == AnimalStatus.Adopted, ct))) return Results.Conflict();
         if (body.State is not null) post.State = Enum.Parse<AdoptionPostState>(body.State);
-        if (post.State == AdoptionPostState.Closed) await AdoptionClosureService.ClosePostAsync(db, post, ct);
+        if (post.State == AdoptionPostState.Closed)
+        {
+            // Old clients send no reason; a manual close then means the owner withdrew the post.
+            var reason = body.Reason == "Adopted" ? AdoptionClosedReason.Adopted : AdoptionClosedReason.Withdrawn;
+            await AdoptionClosureService.ClosePostAsync(db, post, ct, reason);
+        }
         if (actor.IsModeratorOrAbove) db.AuditLogs.Add(new AuditLog { ActorId = actor.UserId, Action = "adoption.update", TargetType = "adoption", TargetId = id });
         await db.SaveChangesAsync(ct);
         return Results.Ok((await EnrichAsync([post], db, ct, photos))[0]);

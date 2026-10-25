@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Patika.Api.Features.Media;
 using Patika.Api.Features.Stations;
 using Patika.Api.Idempotency;
 using Patika.Api.Security.Authorization;
@@ -11,6 +10,7 @@ using Patika.Contracts.Geo;
 using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Animals;
@@ -38,7 +38,7 @@ public static class AnimalEndpoints
 
     public static AnimalResponse Response(Animal x, bool isFollowing = false, int followerCount = 0) => new(x.Id, x.StationId,
         new CoordinateDto(x.Location.Latitude, x.Location.Longitude), x.Species.ToString(), x.Name, x.Sex.ToString(),
-        x.Sterilized, x.Vaccinated, x.EarTagged, x.Status.ToString(), x.District, isFollowing, followerCount);
+        x.Sterilized, x.Vaccinated, x.EarTagged, x.Status.ToString(), x.District, isFollowing, followerCount, x.BirthYear);
 
     private static async Task<AnimalResponse> ResponseAsync(Animal animal, HttpContext? http, PatikaDbContext db, CancellationToken ct)
     {
@@ -77,6 +77,7 @@ public static class AnimalEndpoints
             Status = Enum.Parse<AnimalStatus>(request.Status),
             Name = request.Name,
             District = request.District?.Trim(),
+            BirthYear = request.BirthYear,
             Sterilized = request.Sterilized,
             Vaccinated = request.Vaccinated,
             EarTagged = request.EarTagged,
@@ -111,6 +112,7 @@ public static class AnimalEndpoints
         if (request.Status is { } status) animal.Status = Enum.Parse<AnimalStatus>(status);
         if (request.Name is { } name) animal.Name = name;
         if (request.District is { } district) animal.District = district.Trim();
+        if (request.BirthYear is { } birthYear) animal.BirthYear = birthYear;
         if (request.Sterilized is { } sterilized) animal.Sterilized = sterilized;
         if (request.Vaccinated is { } vaccinated) animal.Vaccinated = vaccinated;
         if (request.EarTagged is { } tagged) animal.EarTagged = tagged;

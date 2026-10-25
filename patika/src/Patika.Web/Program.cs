@@ -1,18 +1,64 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.EntityFrameworkCore;
+using Patika.Infrastructure.Media;
+using Patika.Infrastructure.Persistence;
+using Patika.Web.Services;
+using Patika.Web.Services.PublicQueries;
 
+var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddProblemDetails();
+builder.Services.AddResponseCompression();
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.LowercaseUrls = true;
+    options.AppendTrailingSlash = false;
+});
+builder.Services.AddOutputCache(options => options.AddBasePolicy(policy => policy
+    .With(context => HttpMethods.IsGet(context.HttpContext.Request.Method) && !(context.HttpContext.User.Identity?.IsAuthenticated ?? false))
+    .Expire(TimeSpan.FromMinutes(5)).SetVaryByQuery("*").Tag("public-data")));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.Configure<StorageSettings>(builder.Configuration.GetSection(StorageSettings.SectionName));
+builder.Services.Configure<MediaSettings>(builder.Configuration.GetSection(MediaSettings.SectionName));
+builder.Services.AddSingleton<IPhotoUrlResolver, PhotoUrlResolver>();
+builder.Services.AddDbContext<PatikaDbContext>((services, options) =>
+{
+    var connection = builder.Configuration.GetConnectionString("PatikaRead")
+        ?? (builder.Environment.IsDevelopment() ? builder.Configuration.GetConnectionString("Patika") : null)
+        ?? throw new InvalidOperationException("ConnectionStrings:PatikaRead is required.");
+    options.UseNpgsql(connection, postgres => postgres.UseNetTopologySuite())
+        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+});
+builder.Services.AddScoped<PatikaDbContext>(services => new PublicReadContext(services.GetRequiredService<DbContextOptions<PatikaDbContext>>()));
+builder.Services.AddScoped<IAdoptionQueries, AdoptionQueries>();
+builder.Services.AddScoped<IPlaceQueries, PlaceQueries>();
+builder.Services.AddScoped<ICarePlaceQueries, CarePlaceQueries>();
+builder.Services.AddScoped<IImpactQueries, ImpactQueries>();
+builder.Services.AddScoped<ISitemapQueries, SitemapQueries>();
 
 var app = builder.Build();
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler();
     app.UseHsts();
 }
-
+app.UseResponseCompression();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    var media = builder.Configuration["Storage:PublicBaseUrl"] ?? builder.Configuration["Storage:PublicEndpoint"]
+        ?? builder.Configuration["Storage:Endpoint"];
+    var origin = Uri.TryCreate(media, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
+        ? " " + uri.GetLeftPart(UriPartial.Authority) : "";
+    context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    await next(context);
+});
+app.UseStatusCodePagesWithReExecute("/404");
 app.UseStaticFiles();
 app.UseRouting();
+app.UseOutputCache();
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).CacheOutput(policy => policy.NoCache());
 app.MapRazorPages();
-
 app.Run();
+
+public partial class Program;

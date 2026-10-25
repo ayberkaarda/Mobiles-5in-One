@@ -81,6 +81,8 @@ public static class CarePlaceEndpoints
         IReadOnlyList<CarePlace> places;
         try { places = CarePlaceCsv.Parse(new UTF8Encoding(false, true).GetString(buffer.ToArray())); }
         catch (Exception exception) when (exception is FormatException or DecoderFallbackException) { return Invalid(); }
+        var districts = new DistrictResolver(db);
+        foreach (var place in places) place.DistrictId = await districts.ResolveAsync(place.District, ct);
         db.CarePlaces.AddRange(places);
         db.AuditLogs.Add(new AuditLog
         {
@@ -88,7 +90,15 @@ public static class CarePlaceEndpoints
             Action = "care_places.import",
             TargetType = "care_place"
         });
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesWithSlugRetryAsync(ct);
+        }
+        catch (SlugConflictException)
+        {
+            return Results.Problem(statusCode: 409, title: "Aynı anda çok fazla benzer kayıt oluşturuldu; lütfen tekrar deneyin.",
+                extensions: new Dictionary<string, object?> { ["code"] = "slug_conflict" });
+        }
         return Results.Ok(new CarePlaceImportResponse(places.Count));
     }
 }

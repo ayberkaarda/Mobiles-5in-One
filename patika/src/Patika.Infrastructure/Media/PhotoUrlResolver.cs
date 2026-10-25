@@ -4,7 +4,7 @@ using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
 using Patika.Contracts.Media;
 
-namespace Patika.Api.Features.Media;
+namespace Patika.Infrastructure.Media;
 
 /// <summary>Rendition of a processed photo; see <see cref="MediaKeys.Rendition"/>.</summary>
 public enum PhotoSize

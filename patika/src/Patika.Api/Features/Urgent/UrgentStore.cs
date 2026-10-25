@@ -15,7 +15,8 @@ public sealed record UrgentPostRecord(
     Guid CreatedBy,
     int NotifiedCount,
     DateTimeOffset CreatedAt,
-    int? DistanceMeters = null);
+    int? DistanceMeters = null,
+    bool Hidden = false);
 
 public interface IUrgentStore
 {
@@ -25,8 +26,16 @@ public interface IUrgentStore
     /// </summary>
     Task<bool> TryCreateAsync(UrgentPostRecord post, DateTimeOffset dayStart, int dailyCap, CancellationToken cancellationToken);
 
+    /// <summary>Public lookup: hidden posts are not found.</summary>
     Task<UrgentPostRecord?> FindAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Management lookup that also finds hidden posts. Callers must authorize the result (owner or
+    /// moderator) before acting on it or showing it.
+    /// </summary>
+    Task<UrgentPostRecord?> FindForManagementAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Called only after authorization, so it reaches hidden posts too.</summary>
     Task UpdateStateAsync(Guid id, UrgentPostState state, CancellationToken cancellationToken);
 
     /// <summary>Open posts within <paramref name="radiusMeters"/>, nearest first.</summary>
@@ -43,7 +52,7 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         var lockKey = "urgent:" + post.CreatedBy.ToString("D");
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))", cancellationToken);
-        var today = await db.UrgentPosts.CountAsync(p => p.CreatedBy == post.CreatedBy && p.CreatedAt >= since, cancellationToken);
+        var today = await db.UrgentPosts.IgnoreQueryFilters().CountAsync(p => p.CreatedBy == post.CreatedBy && p.CreatedAt >= since, cancellationToken);
         if (today >= dailyCap)
         {
             return false;
@@ -70,8 +79,14 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         return post is null ? null : ToRecord(post);
     }
 
+    public async Task<UrgentPostRecord?> FindForManagementAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var post = await db.UrgentPosts.IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
+        return post is null ? null : ToRecord(post);
+    }
+
     public Task UpdateStateAsync(Guid id, UrgentPostState state, CancellationToken cancellationToken) =>
-        db.UrgentPosts.Where(p => p.Id == id).ExecuteUpdateAsync(
+        db.UrgentPosts.IgnoreQueryFilters().Where(p => p.Id == id).ExecuteUpdateAsync(
             set => set.SetProperty(p => p.State, state).SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow),
             cancellationToken);
 
@@ -82,7 +97,7 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         var rows = await db.Database.SqlQuery<NearRow>($"""
             SELECT id AS "Id", ST_Distance(location, origin)::int AS "DistanceMeters"
             FROM urgent_posts, (SELECT ST_SetSRID(ST_MakePoint({center.Longitude}, {center.Latitude}), 4326)::geography AS origin) AS o
-            WHERE state = {open} AND ST_DWithin(location, origin, {radiusMeters})
+            WHERE hidden_at IS NULL AND state = {open} AND ST_DWithin(location, origin, {radiusMeters})
             ORDER BY ST_Distance(location, origin), id
             LIMIT {limit}
             """).ToListAsync(cancellationToken);
@@ -96,8 +111,8 @@ public sealed class EfUrgentStore(PatikaDbContext db) : IUrgentStore
         return [.. rows.Where(r => posts.ContainsKey(r.Id)).Select(r => ToRecord(posts[r.Id]) with { DistanceMeters = r.DistanceMeters })];
     }
 
-    private static UrgentPostRecord ToRecord(UrgentPost p) =>
-        new(p.Id, p.Location, p.Category, p.Description, p.PhotoKey, p.State, p.CreatedBy, p.NotifiedCount, p.CreatedAt);
+    internal static UrgentPostRecord ToRecord(UrgentPost p) =>
+        new(p.Id, p.Location, p.Category, p.Description, p.PhotoKey, p.State, p.CreatedBy, p.NotifiedCount, p.CreatedAt, Hidden: p.HiddenAt != null);
 
     private sealed record NearRow(Guid Id, int DistanceMeters);
 }

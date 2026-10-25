@@ -14,6 +14,7 @@ using Patika.Contracts.Urgent;
 using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Urgent;
@@ -120,7 +121,7 @@ public static class UrgentEndpoints
         return TypedResults.Ok(new UrgentPostListResponse([.. posts.Select(p => ToResponse(p, photos, PhotoSize.Thumbnail))]));
     }
 
-    private static async Task<IResult> GetAsync(Guid id, IUrgentStore store, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null) =>
+    internal static async Task<IResult> GetAsync(Guid id, IUrgentStore store, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null) =>
         await store.FindAsync(id, ct) is { } post ? TypedResults.Ok(ToResponse(post, photos)) : NotFound();
 
     private static async Task<IResult> CreateAsync(
@@ -159,17 +160,24 @@ public static class UrgentEndpoints
         return TypedResults.Created($"/v1/urgent/{post.Id}", ToResponse(post, photos));
     }
 
-    private static async Task<IResult> UpdateAsync(
+    internal static async Task<IResult> UpdateAsync(
         HttpContext http, Guid id, UpdateUrgentPostRequest request, IUrgentStore store, IAuthorizationService authorization,
         CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
-        if (await store.FindAsync(id, ct) is not { } post)
+        // The owner and moderators can still close a post moderation has hidden; everyone else gets the
+        // same 404 as the public lookup, so a hidden post's existence is not revealed.
+        if (await store.FindForManagementAsync(id, ct) is not { } post)
         {
             return NotFound();
         }
 
         if (!await authorization.IsAllowedAsync(http.User, new OwnedResource(post.CreatedBy, isPublic: true), Permission.UrgentUpdate))
         {
+            if (post.Hidden)
+            {
+                return NotFound();
+            }
+
             return TypedResults.Problem(title: "Forbidden.", statusCode: StatusCodes.Status403Forbidden,
                 extensions: new Dictionary<string, object?> { ["code"] = "forbidden" });
         }
@@ -190,11 +198,11 @@ public static class UrgentEndpoints
         if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId) return TypedResults.Unauthorized();
         if (page is < 1 or > 100000 || pageSize is < 1 or > 100)
             return TypedResults.Problem(statusCode: 400, title: "Invalid paging.");
-        var rows = await db.UrgentPosts.AsNoTracking().Where(p => p.CreatedBy == userId)
+        // The owner's own history includes posts moderation has hidden, flagged as such.
+        var rows = await db.UrgentPosts.IgnoreQueryFilters().AsNoTracking().Where(p => p.CreatedBy == userId)
             .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
             .Skip((page - 1) * pageSize).Take(pageSize + 1).ToListAsync(ct);
-        var items = rows.Take(pageSize).Select(p => ToResponse(new UrgentPostRecord(p.Id, p.Location, p.Category,
-            p.Description, p.PhotoKey, p.State, p.CreatedBy, p.NotifiedCount, p.CreatedAt), photos, PhotoSize.Thumbnail)).ToArray();
+        var items = rows.Take(pageSize).Select(p => ToResponse(EfUrgentStore.ToRecord(p), photos, PhotoSize.Thumbnail)).ToArray();
         return TypedResults.Ok(new PageResponse<UrgentPostResponse>(items, page, pageSize, rows.Count > pageSize));
     }
 
@@ -224,5 +232,5 @@ public static class UrgentEndpoints
         post.State.ToString(),
         post.NotifiedCount,
         post.CreatedAt,
-        post.DistanceMeters, photos?.Resolve(post.PhotoKey, size));
+        post.DistanceMeters, photos?.Resolve(post.PhotoKey, size), post.Hidden);
 }

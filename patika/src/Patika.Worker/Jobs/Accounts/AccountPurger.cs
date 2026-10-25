@@ -122,7 +122,7 @@ public sealed class AccountPurger(
             .Select(f => f.PhotoKey!).ToListAsync(cancellationToken));
         keys.UnionWith(await db.AnimalPhotos.Where(p => p.CreatedBy == userId)
             .Select(p => p.Key).ToListAsync(cancellationToken));
-        keys.UnionWith(await db.UrgentPosts.Where(p => p.CreatedBy == userId)
+        keys.UnionWith(await db.UrgentPosts.IgnoreQueryFilters().Where(p => p.CreatedBy == userId)
             .Select(p => p.PhotoKey).ToListAsync(cancellationToken));
         keys.UnionWith(await db.Stations.Where(s => (s.CreatedBy == userId || uploadKeys.Contains(s.PhotoKey)) && s.PhotoKey != "")
             .Select(s => s.PhotoKey).ToListAsync(cancellationToken));
@@ -153,7 +153,7 @@ public sealed class AccountPurger(
                 .SetProperty(x => x.Note, (string?)null)
                 .SetProperty(x => x.UpdatedAt, now), cancellationToken);
         await db.AnimalPhotos.Where(p => p.CreatedBy == userId).ExecuteDeleteAsync(cancellationToken);
-        await db.UrgentPosts.Where(p => p.CreatedBy == userId).ExecuteDeleteAsync(cancellationToken);
+        await db.UrgentPosts.IgnoreQueryFilters().Where(p => p.CreatedBy == userId).ExecuteDeleteAsync(cancellationToken);
         await db.AdoptionRequests.Where(r => r.RequesterId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.AdoptionPosts.Where(p => p.CreatedBy == userId).ExecuteDeleteAsync(cancellationToken);
         await db.Follows.Where(f => f.UserId == userId).ExecuteDeleteAsync(cancellationToken);

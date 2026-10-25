@@ -3,6 +3,6 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Patika.Contracts/Patika.Contracts.csproj" />
+    <ProjectReference Include="../Patika.Infrastructure/Patika.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

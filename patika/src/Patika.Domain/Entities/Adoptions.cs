@@ -2,6 +2,10 @@ namespace Patika.Domain.Entities;
 
 public sealed class AdoptionPost : Entity
 {
+    public string Slug { get; set; } = "";
+    public Guid? DistrictId { get; set; }
+    public AdoptionClosedReason? ClosedReason { get; set; }
+    public DateTimeOffset? AdoptedAt { get; set; }
     public Guid AnimalId { get; set; }
     public required string Description { get; set; }
     public required string Requirements { get; set; }

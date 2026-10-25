@@ -1,4 +1,4 @@
-namespace Patika.Api.Features.Media;
+namespace Patika.Infrastructure.Media;
 
 /// <summary>S3-compatible object storage (MinIO locally, Cloudflare R2 in production).</summary>
 public sealed class StorageSettings

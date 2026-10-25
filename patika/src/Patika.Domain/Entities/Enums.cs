@@ -15,3 +15,5 @@ public enum CarePlaceKind { Vet, Shelter, MunicipalCare }
 public enum StoreEnvironment { Sandbox, Production }
 public enum SubscriptionStatus { Active, Expired, Revoked }
 public enum ReportState { Pending, Reviewed, Dismissed }
+public enum AdoptionClosedReason { Adopted, Expired, Withdrawn, AccountDeleted }
+public enum ModerationDecisionKind { Approved, Rejected, Hidden, Restored }

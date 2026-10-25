@@ -1,7 +1,8 @@
 namespace Patika.Contracts.Adoptions;
 
 public sealed record CreateAdoptionPost(string Description, string Requirements, string District);
-public sealed record UpdateAdoptionPost(string? Description, string? Requirements, string? District, string? State);
+/// <summary><paramref name="Reason"/> is optional and only valid with State "Closed": "Adopted" or "Withdrawn" (the default).</summary>
+public sealed record UpdateAdoptionPost(string? Description, string? Requirements, string? District, string? State, string? Reason = null);
 public sealed record CreateAdoptionRequest(string Message);
 public sealed record ReplyToAdoptionRequest(string Reply);
 public sealed record AdoptionPostResponse(Guid Id, Guid AnimalId, string Description, string Requirements,

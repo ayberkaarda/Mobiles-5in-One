@@ -26,6 +26,8 @@ public sealed class FeaturePostgisFixture : IAsyncLifetime
         }
     }
 
+    public string ConnectionString => container.GetConnectionString();
+
     public async ValueTask DisposeAsync() => await container.DisposeAsync();
 
     public PatikaDbContext CreateContext() => new(new DbContextOptionsBuilder<PatikaDbContext>()

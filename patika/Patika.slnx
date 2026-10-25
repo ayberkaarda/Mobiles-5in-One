@@ -14,6 +14,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Patika.Domain.Tests/Patika.Domain.Tests.csproj" />
     <Project Path="tests/Patika.Api.Tests/Patika.Api.Tests.csproj" />
+    <Project Path="tests/Patika.Web.Tests/Patika.Web.Tests.csproj" />
     <Project Path="tests/Patika.SecurityTests/Patika.SecurityTests.csproj" />
     <Project Path="tests/Patika.Worker.Tests/Patika.Worker.Tests.csproj" />
     <Project Path="tests/Patika.App.Tests/Patika.App.Tests.csproj" />
