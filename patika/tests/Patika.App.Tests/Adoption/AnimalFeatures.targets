@@ -1,0 +1,9 @@
+<Project>
+    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Patika.App.Tests'">
+        <DefineConstants>$(DefineConstants);ANIMAL_FEATURE_TESTS</DefineConstants>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(MSBuildProjectName)' == 'Patika.App.Tests'">
+        <Compile Include="$(MSBuildThisFileDirectory)..\..\..\app\Patika.App\ViewModels\Adoption\*.cs" />
+        <Compile Include="$(MSBuildThisFileDirectory)..\..\..\app\Patika.App\ViewModels\Animals\*.cs" />
+    </ItemGroup>
+</Project>

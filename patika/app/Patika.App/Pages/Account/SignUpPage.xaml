@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             xmlns:local="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Account.SignUpPage"
+             x:DataType="vm:SignUpViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Kayıt ol">
+    <Grid RowDefinitions="Auto,*">
+        <local:PageHeader Title="Kayıt ol" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="24" Spacing="14">
+                <Label Text="Gönüllü ol, mahallendeki istasyonları birlikte besleyelim." Style="{StaticResource Lede}" />
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Adın" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource Field}">
+                        <Entry Text="{Binding DisplayName}" AutomationId="NameEntry" SemanticProperties.Description="Adın" />
+                    </Border>
+                </VerticalStackLayout>
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="E-posta" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource Field}">
+                        <Entry Text="{Binding Email}" Keyboard="Email" AutomationId="EmailEntry" SemanticProperties.Description="E-posta" />
+                    </Border>
+                </VerticalStackLayout>
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Şifre" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource Field}">
+                        <Entry Text="{Binding Password}" IsPassword="True" AutomationId="PasswordEntry"
+                               SemanticProperties.Description="Şifre, en az 10 karakter" ReturnCommand="{Binding RegisterCommand}" />
+                    </Border>
+                    <Label Text="En az 10 karakter. Sızdırılmış şifre listelerindeki şifreler kabul edilmez." Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                <Button Text="Kayıt ol" HeightRequest="56" CornerRadius="28" FontSize="19" Command="{Binding RegisterCommand}"
+                        IsEnabled="{Binding IsNotBusy}" AutomationId="RegisterButton" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource TekirDeep}" />
+                <Label Text="E-postana 6 haneli bir doğrulama kodu göndereceğiz." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" />
+                <Button Text="Hesabın var mı? Giriş yap" Style="{StaticResource LinkButton}" Command="{Binding SignInCommand}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

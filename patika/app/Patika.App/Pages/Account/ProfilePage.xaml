@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             x:Class="Patika.App.Pages.Account.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Profil">
+    <ContentPage.Resources>
+        <Style x:Key="BadgeChip" TargetType="Border">
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 999" />
+            <Setter Property="BackgroundColor" Value="{StaticResource TekirSoft}" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="HeightRequest" Value="36" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <Grid ColumnDefinitions="64,*,48" ColumnSpacing="14">
+                <Border BackgroundColor="{StaticResource TekirSoft}" StrokeThickness="0" StrokeShape="Ellipse" WidthRequest="64" HeightRequest="64">
+                    <Label Text="{Binding Initial}" FontFamily="NunitoExtraBold" FontSize="28" TextColor="{StaticResource TekirDeep}"
+                           HorizontalOptions="Center" VerticalOptions="Center" SemanticProperties.Description="Profil" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                    <Label Text="{Binding DisplayName}" FontFamily="NunitoExtraBold" FontSize="30" SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="{Binding Since}" Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+                <Border Grid.Column="2" WidthRequest="48" HeightRequest="48" StrokeShape="Ellipse" Stroke="{StaticResource Cizgi}"
+                        BackgroundColor="{StaticResource Beyaz}" VerticalOptions="Center" SemanticProperties.Description="Ayarlar"
+                        AutomationId="SettingsButton">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
+                    </Border.GestureRecognizers>
+                    <Path Data="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4z"
+                          Stroke="{StaticResource Kaldirim}" StrokeThickness="1.8" StrokeLineJoin="Round"
+                          HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+            </Grid>
+
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+
+            <VerticalStackLayout IsVisible="{Binding IsGuest}" Spacing="12">
+                <Label Text="Giriş yapınca beslemelerini kaydedebilir, istasyon ekleyebilir ve acil çağrı açabilirsin." Style="{StaticResource Lede}" />
+                <Button Text="Giriş yap ya da kayıt ol" HeightRequest="56" CornerRadius="28" Command="{Binding SignInCommand}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout IsVisible="{Binding IsMember}" Spacing="20">
+                <Border Style="{StaticResource Panel}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{Binding FeedingCount}" Style="{StaticResource Count}" LineHeight="1" />
+                        <Label Text="besleme" Style="{StaticResource Small}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Rozetler" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" SemanticProperties.HeadingLevel="Level2" />
+                    <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Badges}" IsVisible="{Binding HasBadges}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Style="{StaticResource BadgeChip}">
+                                    <Label Text="{Binding .}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeSmall}"
+                                           TextColor="{StaticResource TekirDeep}" VerticalOptions="Center" />
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                    <Label Text="İlk beslemeni kaydedince ilk rozetin gelir." Style="{StaticResource Muted}" IsVisible="{Binding HasBadges, Converter={StaticResource Not}}" />
+                    <Label Text="Sıralama yok. Rozetler yalnızca senin için." Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource NaneSoft}" Padding="20,18">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Konumun sende kalır" FontFamily="NunitoExtraBold" FontSize="19" TextColor="{StaticResource NaneDeep}"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <Label Text="Patika konumunu profilinde saklamaz. İstasyon eklerken ya da acil çağrı açarken yalnızca o an kullanılır."
+                           FontSize="{StaticResource FontSizeSmall}" LineHeight="1.5" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

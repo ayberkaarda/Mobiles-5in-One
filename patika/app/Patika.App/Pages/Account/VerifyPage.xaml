@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             xmlns:local="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Account.VerifyPage"
+             x:DataType="vm:VerifyViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="E-posta doğrulama">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <local:PageHeader />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="24,12,24,24" Spacing="16">
+                <Border BackgroundColor="{StaticResource TekirSoft}" Stroke="{StaticResource TekirDeep}" StrokeThickness="2.5"
+                        StrokeShape="RoundRectangle 10" WidthRequest="72" HeightRequest="52" HorizontalOptions="Start">
+                    <Path Data="M4 6l31 22 31-22" Stroke="{StaticResource TekirDeep}" StrokeThickness="2.5" StrokeLineJoin="Round" />
+                </Border>
+                <Label Text="E-postanı doğrula" Style="{StaticResource Display}" FontSize="{StaticResource FontSizeH3}" SemanticProperties.HeadingLevel="Level1" />
+                <Label>
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{Binding Email}" FontFamily="NunitoSansBold" />
+                            <Span Text=" adresine 6 haneli bir kod gönderdik." />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+
+                <Label Text="Doğrulama kodu" Style="{StaticResource FieldLabel}" />
+                <local:CodeBoxes />
+
+                <Label Text="E-postadaki bağlantıya dokunursan da hesabın doğrulanır. Gelen kutunda yoksa istenmeyen klasörüne bak."
+                       Style="{StaticResource Muted}" />
+                <Label Text="{Binding Notice}" IsVisible="{Binding HasNotice}" FontFamily="NunitoSansSemiBold" TextColor="{StaticResource NaneDeep}" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                <Button Text="{Binding ResendLabel}" Style="{StaticResource QuietButton}" BorderWidth="1" BorderColor="{StaticResource Sis}"
+                        HorizontalOptions="Start" HeightRequest="44" CornerRadius="22" FontFamily="NunitoSansBold" FontSize="15"
+                        Command="{Binding ResendCommand}" IsEnabled="{Binding CanResend}" AutomationId="ResendButton" />
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout Grid.Row="2" Padding="24,0,24,24" Spacing="8">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource TekirDeep}" />
+            <Button Text="Doğrula" HeightRequest="56" CornerRadius="28" FontSize="19" Command="{Binding VerifyCommand}"
+                    IsEnabled="{Binding IsNotBusy}" AutomationId="VerifyButton" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

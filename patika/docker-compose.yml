@@ -73,6 +73,9 @@ services:
     environment:
       <<: *app-env
       ASPNETCORE_HTTP_PORTS: "8080"
+      # Host the app loads photos and PUTs uploads from; URLs are signed for this host. 10.0.2.2 is the
+      # Android emulator's alias for this machine (the Debug app allows cleartext only there).
+      Storage__PublicEndpoint: ${Storage__PublicEndpoint:-http://10.0.2.2:9000}
       # Local stack only: apply EF migrations on startup. Production runs them as a separate step.
       Database__MigrateOnStartup: "true"
     healthcheck:

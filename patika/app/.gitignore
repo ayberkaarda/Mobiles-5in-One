@@ -1,2 +1,4 @@
 bin/
 obj/
+# Firebase project config for push: an owner secret, placed on the build machine only (ADR-0008).
+google-services.json

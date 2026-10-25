@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Urgent"
+             x:Class="Patika.App.Pages.Urgent.UrgentPage"
+             x:DataType="vm:UrgentListViewModel"
+             x:Name="Root"
+             Title="Acil"
+             BackgroundColor="{StaticResource Kaldirim}">
+    <ContentPage.Resources>
+        <Style x:Key="OnDark" TargetType="Label">
+            <Setter Property="TextColor" Value="{StaticResource Kar}" />
+        </Style>
+        <Style x:Key="Section" TargetType="Label">
+            <Setter Property="FontFamily" Value="NunitoExtraBold" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeLead}" />
+            <Setter Property="TextColor" Value="{StaticResource Kar}" />
+            <Setter Property="SemanticProperties.HeadingLevel" Value="Level2" />
+        </Style>
+    </ContentPage.Resources>
+    <RefreshView Command="{Binding RefreshCommand}" IsRefreshing="{Binding IsBusy}" RefreshColor="{StaticResource AcilDeep}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,20,20,32" Spacing="16">
+                <Grid ColumnDefinitions="*,48" ColumnSpacing="8">
+                    <Label Text="Yaralı bir hayvan mı buldun?" FontFamily="NunitoExtraBold" FontSize="30" LineHeight="1.1"
+                           Style="{StaticResource OnDark}" SemanticProperties.HeadingLevel="Level1" />
+                    <Border Grid.Column="1" WidthRequest="48" HeightRequest="48" StrokeShape="Ellipse" StrokeThickness="0"
+                            BackgroundColor="{StaticResource KaldirimSoft}" VerticalOptions="Start"
+                            SemanticProperties.Description="Acil bildirim ayarları" AutomationId="UrgentSettingsButton">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
+                        </Border.GestureRecognizers>
+                        <Path Data="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4" Stroke="{StaticResource Kar}" StrokeThickness="2"
+                              StrokeLineJoin="Round" StrokeLineCap="Round" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+                </Grid>
+
+                <Button Text="Acil yardım çağrısı aç" Style="{StaticResource UrgentButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
+                        Command="{Binding CreateCommand}" AutomationId="CreateUrgentButton" />
+
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" FontFamily="NunitoSansSemiBold" TextColor="{StaticResource AcilSoft}" />
+
+                <VerticalStackLayout IsVisible="{Binding NeedsLocation}" Spacing="10">
+                    <Label Text="{Binding LocationNote}" TextColor="{StaticResource Cizgi}" />
+                    <Button Text="Konumumu kullan" Style="{StaticResource QuietButton}" HorizontalOptions="Start" HeightRequest="44" CornerRadius="22"
+                            FontSize="15" Command="{Binding UseLocationCommand}" />
+                </VerticalStackLayout>
+
+                <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="{StaticResource Kar}" />
+
+                <VerticalStackLayout IsVisible="{Binding IsReady}" Spacing="6">
+                    <Label Text="2 km içinde açık çağrılar" Style="{StaticResource Section}" />
+                    <Label Text="Şu an yakınında açık çağrı yok." IsVisible="{Binding IsEmpty}" TextColor="{StaticResource Cizgi}" Margin="0,8" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Posts}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:UrgentRow">
+                                <VerticalStackLayout>
+                                    <Grid ColumnDefinitions="56,*" ColumnSpacing="12" Padding="0,14" SemanticProperties.Description="{Binding Description}">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:UrgentListViewModel}}, x:DataType=vm:UrgentListViewModel}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+                                        <Border WidthRequest="56" HeightRequest="56" StrokeShape="RoundRectangle 12" StrokeThickness="0"
+                                                BackgroundColor="{StaticResource KaldirimSoft}" VerticalOptions="Start">
+                                            <Image Source="{Binding PhotoUrl}" Aspect="AspectFill" IsVisible="{Binding HasPhoto}" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Border HeightRequest="26" Padding="10,0" StrokeShape="RoundRectangle 999" StrokeThickness="0"
+                                                        BackgroundColor="{StaticResource AcilDeep}" IsVisible="{Binding IsInjured}">
+                                                    <Label Text="{Binding Category}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeCaption}"
+                                                           TextColor="{StaticResource Beyaz}" VerticalOptions="Center" />
+                                                </Border>
+                                                <Border HeightRequest="26" Padding="10,0" StrokeShape="RoundRectangle 999" StrokeThickness="0"
+                                                        BackgroundColor="{StaticResource Kar}" IsVisible="{Binding IsInjured, Converter={StaticResource Not}}">
+                                                    <Label Text="{Binding Category}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeCaption}"
+                                                           TextColor="{StaticResource Kaldirim}" VerticalOptions="Center" />
+                                                </Border>
+                                                <Label Text="{Binding Distance}" FontFamily="NunitoExtraBold" FontSize="15" TextColor="{StaticResource Kar}" VerticalOptions="Center" />
+                                                <Label Text="{Binding Age}" FontSize="{StaticResource FontSizeCaption}" TextColor="{StaticResource Cizgi}" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding Description}" FontSize="15" LineHeight="1.4" TextColor="{StaticResource Cizgi}" MaxLines="3"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding Notified}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeCaption}"
+                                                   TextColor="{StaticResource Nane}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <BoxView HeightRequest="1" Color="{StaticResource KaldirimSoft}" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding HasCarePlaces}" Spacing="4">
+                    <Label Text="Yakındaki bakım yerleri" Style="{StaticResource Section}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding CarePlaces}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CarePlaceRow">
+                                <VerticalStackLayout>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="0,12">
+                                        <VerticalStackLayout VerticalOptions="Center">
+                                            <HorizontalStackLayout Spacing="6">
+                                                <Label Text="{Binding Name}" FontFamily="NunitoSansBold" TextColor="{StaticResource Kar}" />
+                                                <Label Style="{StaticResource Sample}" TextColor="{StaticResource SisLight}" IsVisible="{Binding IsSample}" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                            <Label FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeCaption}" TextColor="{StaticResource Nane}">
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding Hours}" />
+                                                        <Span Text=" · " />
+                                                        <Span Text="{Binding Distance}" />
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="Ara" IsVisible="{Binding HasPhone}" HeightRequest="44" CornerRadius="22" Padding="16,0"
+                                                BackgroundColor="Transparent" BorderColor="{StaticResource Kar}" BorderWidth="2" TextColor="{StaticResource Kar}"
+                                                FontSize="15" SemanticProperties.Description="{Binding CallDescription}"
+                                                Command="{Binding CallCommand, Source={RelativeSource AncestorType={x:Type vm:UrgentListViewModel}}, x:DataType=vm:UrgentListViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                    <BoxView HeightRequest="1" Color="{StaticResource KaldirimSoft}" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <Label Text="Konumun yalnızca yakındaki çağrıları bulmak için o an kullanılır, kaydedilmez." FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{StaticResource SisLight}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

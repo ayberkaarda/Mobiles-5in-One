@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-       xmlns:pages="clr-namespace:Patika.App.Pages"
+       xmlns:map="clr-namespace:Patika.App.Pages.Map"
+       xmlns:adoption="clr-namespace:Patika.App.Pages.Adoption"
+       xmlns:urgent="clr-namespace:Patika.App.Pages.Urgent"
+       xmlns:account="clr-namespace:Patika.App.Pages.Account"
        x:Class="Patika.App.AppShell"
        Shell.NavBarIsVisible="False"
        Shell.FlyoutBehavior="Disabled">
-    <TabBar>
+    <!-- Tabs first so a returning user lands on the map; without a session the app routes to //giris. -->
+    <TabBar Route="ana">
         <Tab Title="Harita" Icon="tab_harita.png">
-            <ShellContent ContentTemplate="{DataTemplate pages:MapPage}" Route="harita" />
+            <ShellContent ContentTemplate="{DataTemplate map:MapPage}" Route="harita" />
         </Tab>
         <Tab Title="Sahiplen" Icon="tab_sahiplen.png">
-            <ShellContent ContentTemplate="{DataTemplate pages:AdoptPage}" Route="sahiplen" />
+            <ShellContent ContentTemplate="{DataTemplate adoption:AdoptPage}" Route="sahiplen" />
         </Tab>
         <Tab Title="Acil" Icon="tab_acil.png">
-            <ShellContent ContentTemplate="{DataTemplate pages:UrgentPage}" Route="acil" />
+            <ShellContent ContentTemplate="{DataTemplate urgent:UrgentPage}" Route="acil" />
         </Tab>
         <Tab Title="Profil" Icon="tab_profil.png">
-            <ShellContent ContentTemplate="{DataTemplate pages:ProfilePage}" Route="profil" />
+            <ShellContent ContentTemplate="{DataTemplate account:ProfilePage}" Route="profil" />
         </Tab>
     </TabBar>
+    <ShellContent Route="giris" ContentTemplate="{DataTemplate account:SignInPage}" Shell.TabBarIsVisible="False" />
 </Shell>

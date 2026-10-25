@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Platform-independent core of the Android app: API client, token handling, offline cache,
+    outbox and view-model base. No MAUI types here, so it builds and tests on plain net10.0.
+    Platform adapters (SecureStorage, Connectivity, Geolocation, Shell) live in Patika.App.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Patika.App.Core</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Patika.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Patika.Contracts/Patika.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

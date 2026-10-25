@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Urgent"
+             xmlns:account="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Urgent.UrgentAlertSettingsPage"
+             x:DataType="vm:UrgentSettingsViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Acil bildirimleri">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <account:PageHeader Title="Acil bildirimleri" Command="{Binding BackCommand}" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="18">
+                <Border BackgroundColor="{StaticResource Beyaz}" Stroke="{StaticResource Cizgi}" StrokeThickness="1" StrokeShape="RoundRectangle 24" Padding="16">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                        <VerticalStackLayout>
+                            <Label Text="Yakınımdaki çağrıları bildir" FontFamily="NunitoExtraBold" FontSize="18" />
+                            <Label Text="Ev bölgende biri yardım isteyince haber verelim." Style="{StaticResource Muted}" LineHeight="1.4" />
+                        </VerticalStackLayout>
+                        <Switch Grid.Column="1" IsToggled="{Binding OptIn}" OnColor="{StaticResource NaneDeep}" ThumbColor="{StaticResource Beyaz}"
+                                VerticalOptions="Center" SemanticProperties.Description="Yakınımdaki çağrıları bildir" AutomationId="UrgentOptInSwitch" />
+                    </Grid>
+                </Border>
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Ev bölgen" FontFamily="NunitoExtraBold" FontSize="19" SemanticProperties.HeadingLevel="Level2" />
+                    <Border StrokeShape="RoundRectangle 24" StrokeThickness="0" HeightRequest="200">
+                        <GraphicsView x:Name="AreaMap" SemanticProperties.Description="{Binding AreaText}" />
+                    </Border>
+                    <Label Text="{Binding AreaText}" FontSize="15" />
+                    <Label Text="Bölgen yaklaşık 100 m’ye yuvarlanarak saklanır; anlık konumun hiç kaydedilmez." FontSize="15" LineHeight="1.45" />
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start">
+                        <Button Text="Şu anki konumumu kullan" Style="{StaticResource QuietButton}" BorderWidth="1" BorderColor="{StaticResource Sis}"
+                                HeightRequest="44" CornerRadius="22" FontFamily="NunitoSansBold" FontSize="15" Padding="16,0" Margin="0,0,8,8"
+                                Command="{Binding UseCurrentPositionCommand}" />
+                        <Button Text="Bölgeyi haritada değiştir" Style="{StaticResource QuietButton}" BorderWidth="1" BorderColor="{StaticResource Sis}"
+                                HeightRequest="44" CornerRadius="22" FontFamily="NunitoSansBold" FontSize="15" Padding="16,0" Margin="0,0,8,8"
+                                Command="{Binding PickOnMapCommand}" />
+                    </FlexLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Çevre" FontFamily="NunitoExtraBold" FontSize="19" />
+                        <Label Grid.Column="1" Text="{Binding RadiusText}" FontFamily="NunitoExtraBold" FontSize="19" TextColor="{StaticResource TekirDeep}" />
+                    </Grid>
+                    <Slider Minimum="500" Maximum="2000" Value="{Binding Radius}" MinimumTrackColor="{StaticResource TekirDeep}"
+                            MaximumTrackColor="{StaticResource Cizgi}" ThumbColor="{StaticResource TekirDeep}" HeightRequest="44"
+                            SemanticProperties.Description="Bildirim çevresi, 500 metre ile 2 kilometre arası" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="500 m" FontSize="{StaticResource FontSizeCaption}" TextColor="{StaticResource SisDeep}" />
+                        <Label Grid.Column="1" Text="2 km" FontSize="{StaticResource FontSizeCaption}" TextColor="{StaticResource SisDeep}" />
+                    </Grid>
+                </VerticalStackLayout>
+
+                <Label Text="{Binding Notice}" IsVisible="{Binding HasNotice}" FontFamily="NunitoSansSemiBold" TextColor="{StaticResource NaneDeep}" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+            </VerticalStackLayout>
+        </ScrollView>
+        <VerticalStackLayout Grid.Row="2" Padding="20,0,20,20">
+            <Button Text="Kaydet" HeightRequest="56" CornerRadius="28" FontSize="19" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}"
+                    AutomationId="SaveUrgentSettingsButton" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

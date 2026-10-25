@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             xmlns:local="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Account.AccountSettingsPage"
+             x:DataType="vm:AccountSettingsViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Ayarlar">
+    <ContentPage.Resources>
+        <Style x:Key="Group" TargetType="Label">
+            <Setter Property="FontFamily" Value="NunitoExtraBold" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="TextColor" Value="{StaticResource SisDeep}" />
+            <Setter Property="Margin" Value="0,14,0,4" />
+            <Setter Property="SemanticProperties.HeadingLevel" Value="Level2" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="Stroke" Value="{StaticResource Cizgi}" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+        </Style>
+        <Style x:Key="Row" TargetType="Grid">
+            <Setter Property="MinimumHeightRequest" Value="56" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="ColumnSpacing" Value="12" />
+        </Style>
+        <Style x:Key="RowText" TargetType="Label">
+            <Setter Property="FontFamily" Value="NunitoSansBold" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
+    </ContentPage.Resources>
+    <Grid RowDefinitions="Auto,*">
+        <local:PageHeader Title="Ayarlar" Command="{Binding BackCommand}" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,8,20,24" Spacing="6">
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+
+                <VerticalStackLayout IsVisible="{Binding IsMember}" Spacing="6">
+                    <Label Text="Hesap" Style="{StaticResource Group}" />
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource Row}" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="E-posta" Style="{StaticResource RowText}" />
+                                <Label Text="{Binding Email}" Style="{StaticResource Muted}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding EmailState}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeCaption}"
+                                   TextColor="{StaticResource NaneDeep}" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+
+                <Label Text="Bildirimler ve kayıtlar" Style="{StaticResource Group}" />
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout>
+                        <Grid Style="{StaticResource Row}" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Bu cihazda bildirimler" Style="{StaticResource RowText}" />
+                                <Label Text="{Binding NotificationsNote}" Style="{StaticResource Muted}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding NotificationsEnabled}" OnColor="{StaticResource NaneDeep}"
+                                    ThumbColor="{StaticResource Beyaz}" IsEnabled="{Binding PushConfigured}" VerticalOptions="Center"
+                                    SemanticProperties.Description="Bu cihazda bildirimler" AutomationId="NotificationsSwitch" />
+                        </Grid>
+                        <BoxView HeightRequest="1" IsVisible="{Binding IsMember}" />
+                        <Grid Style="{StaticResource Row}" ColumnDefinitions="*,Auto" IsVisible="{Binding IsMember}"
+                              SemanticProperties.Description="Acil bildirimleri">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenUrgentSettingsCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="Acil bildirimleri" Style="{StaticResource RowText}" />
+                            <Label Grid.Column="1" Text="{Binding UrgentSummary}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}"
+                                   TextColor="{StaticResource NaneDeep}" VerticalOptions="Center" />
+                        </Grid>
+                        <BoxView HeightRequest="1" />
+                        <Grid Style="{StaticResource Row}" ColumnDefinitions="*,Auto" SemanticProperties.Description="Gönderilmeyi bekleyenler">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenOutboxCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="Gönderilmeyi bekleyenler" Style="{StaticResource RowText}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="Gizlilik" Style="{StaticResource Group}" />
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout>
+                        <Grid Style="{StaticResource Row}" SemanticProperties.Description="Gizlilik politikası">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenPrivacyCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="Gizlilik politikası" Style="{StaticResource RowText}" />
+                        </Grid>
+                        <BoxView HeightRequest="1" />
+                        <Grid Style="{StaticResource Row}" SemanticProperties.Description="KVKK aydınlatma metni">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenKvkkCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="KVKK aydınlatma metni" Style="{StaticResource RowText}" />
+                        </Grid>
+                        <BoxView HeightRequest="1" />
+                        <Grid Style="{StaticResource Row}" SemanticProperties.Description="Lisanslar ve hakkında">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenAboutCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="Lisanslar ve hakkında" Style="{StaticResource RowText}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout Spacing="10" Margin="0,20,0,0" IsVisible="{Binding IsMember}">
+                    <Button Text="Çıkış yap" Style="{StaticResource QuietButton}" Command="{Binding SignOutCommand}" IsEnabled="{Binding IsNotBusy}"
+                            AutomationId="SignOutButton" />
+                    <Button Text="Hesabımı sil" BackgroundColor="Transparent" TextColor="{StaticResource AcilDeep}"
+                            Command="{Binding DeleteAccountCommand}" AutomationId="DeleteAccountLink" />
+                </VerticalStackLayout>
+                <Label Text="{Binding Version}" Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" HorizontalTextAlignment="Center" Margin="0,6,0,0" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

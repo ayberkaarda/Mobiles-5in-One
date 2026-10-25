@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             xmlns:local="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Account.AccountDeletionPage"
+             x:DataType="vm:AccountDeletionViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Hesabımı sil">
+    <ContentPage.Resources>
+        <Style x:Key="StepTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="NunitoExtraBold" />
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+        <Style x:Key="StepText" TargetType="Label">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+            <Setter Property="LineHeight" Value="1.45" />
+        </Style>
+    </ContentPage.Resources>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <local:PageHeader Title="Hesabımı sil" IsClose="True" Command="{Binding CancelCommand}" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="16">
+                <Label Text="Hesabın hemen kapanır ama 7 gün boyunca geri dönebilirsin. Sonrası kalıcıdır." LineHeight="1.5" />
+
+                <Grid ColumnDefinitions="16,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="18">
+                    <Ellipse Fill="{StaticResource Kaldirim}" WidthRequest="16" HeightRequest="16" VerticalOptions="Start" Margin="0,3,0,0" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                        <Label Text="Bugün" Style="{StaticResource StepTitle}" />
+                        <Label Text="Hesabın kapanır, oturumların sonlanır. Adresine bir onay e-postası gelir." Style="{StaticResource StepText}" />
+                    </VerticalStackLayout>
+                    <Ellipse Grid.Row="1" Stroke="{StaticResource Tekir}" StrokeThickness="3" StrokeDashArray="2,2" Fill="{StaticResource Kar}"
+                             WidthRequest="16" HeightRequest="16" VerticalOptions="Start" Margin="0,3,0,0" />
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="2">
+                        <Label Text="7 gün içinde" Style="{StaticResource StepTitle}" />
+                        <Label Text="Yeniden giriş yaparsan silme iptal olur ve her şey olduğu gibi kalır." Style="{StaticResource StepText}" />
+                    </VerticalStackLayout>
+                    <Ellipse Grid.Row="2" Fill="{StaticResource AcilDeep}" WidthRequest="16" HeightRequest="16" VerticalOptions="Start" Margin="0,3,0,0" />
+                    <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="2">
+                        <Label Text="{Binding FinalDate}" Style="{StaticResource StepTitle}" />
+                        <Label Text="Hesabın ve kişisel verilerin kalıcı olarak silinir." Style="{StaticResource StepText}" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <Border Style="{StaticResource Panel}" Padding="18,16" IsVisible="{Binding IsExplaining}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Önce kimliğini doğrula" FontFamily="NunitoExtraBold" FontSize="17" SemanticProperties.HeadingLevel="Level2" />
+                        <Label Text="Güvenliğin için son 10 dakika içinde giriş yapmış olman gerekiyor. Şifreni yazınca seni yeniden doğrulayıp hesabını kapatırız."
+                               Style="{StaticResource StepText}" />
+                        <VerticalStackLayout Spacing="6" IsVisible="{Binding HasPassword}">
+                            <Label Text="Şifren" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeSmall}" />
+                            <Border Style="{StaticResource Field}" MinimumHeightRequest="48">
+                                <Entry Text="{Binding Password}" IsPassword="True" AutomationId="DeletePasswordEntry" SemanticProperties.Description="Şifren" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <Button Text="Google ile doğrula" Style="{StaticResource QuietButton}" BorderWidth="1" BorderColor="{StaticResource Sis}"
+                                HorizontalOptions="Start" HeightRequest="44" CornerRadius="22" FontFamily="NunitoSansBold" FontSize="15"
+                                Command="{Binding DeleteWithGoogleCommand}" IsEnabled="{Binding IsNotBusy}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource TekirSoft}" IsVisible="{Binding IsDone}">
+                    <Label Text="Hesabın kapandı. Bu süre içinde yeniden giriş yaparsan silme iptal olur." FontFamily="NunitoSansSemiBold" />
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+        <!-- Errors sit above the fixed actions so a wrong password is visible without scrolling. -->
+        <VerticalStackLayout Grid.Row="2" Padding="20,0,20,20" Spacing="8">
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" AutomationId="DeleteError" />
+            <VerticalStackLayout Spacing="8" IsVisible="{Binding IsExplaining}">
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource AcilDeep}" />
+                <Button Text="Hesabımı sil" Style="{StaticResource UrgentButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
+                        Command="{Binding DeleteWithPasswordCommand}" IsEnabled="{Binding IsNotBusy}" IsVisible="{Binding HasPassword}"
+                        AutomationId="ConfirmDeleteButton" />
+                <Button Text="Vazgeç" BackgroundColor="Transparent" TextColor="{StaticResource Kaldirim}" HeightRequest="48"
+                        Command="{Binding CancelCommand}" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

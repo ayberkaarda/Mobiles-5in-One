@@ -148,5 +148,45 @@
     <Style TargetType="BoxView">
         <Setter Property="Color" Value="{StaticResource Cizgi}" />
     </Style>
+    <!-- Form fields (canvas Giris/Dogrulama): white field, Sis outline, 50 high, label above. -->
+    <Style x:Key="Field" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+        <Setter Property="Stroke" Value="{StaticResource Sis}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="MinimumHeightRequest" Value="50" />
+    </Style>
+    <Style x:Key="FieldLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoExtraBold" />
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style TargetType="Entry">
+        <Setter Property="FontFamily" Value="NunitoSans" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource SisDeep}" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+    </Style>
+    <Style x:Key="ErrorText" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoSansSemiBold" />
+        <Setter Property="TextColor" Value="{StaticResource AcilDeep}" />
+    </Style>
+    <!-- Text links with a 44 px touch target. -->
+    <Style x:Key="LinkButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource BoncukDeep}" />
+        <Setter Property="FontFamily" Value="NunitoSansBold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="Padding" Value="8,0" />
+    </Style>
+    <!-- Offline banner (canvas Cevrimdisi). -->
+    <Style x:Key="OfflineBanner" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="Padding" Value="20,14" />
+    </Style>
 
 </ResourceDictionary>

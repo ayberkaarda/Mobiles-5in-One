@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Test-only: encodes and decodes real JPEGs for the photo pipeline tests (already pinned for the worker). -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+
+    <ProjectReference Include="../../app/Patika.App.Core/Patika.App.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    The urgent and account view models use no MAUI types, so they compile here as well and their states are
+    tested on net10.0. The Mvvm generators do not flow through the Core reference, hence the direct reference.
+  -->
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <Compile Include="../../app/Patika.App/ViewModels/Urgent/**/*.cs;../../app/Patika.App/ViewModels/Account/**/*.cs"
+             LinkBase="AppViewModels" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Account"
+             xmlns:local="clr-namespace:Patika.App.Pages.Account"
+             x:Class="Patika.App.Pages.Account.AboutPage"
+             x:DataType="vm:AboutViewModel"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Lisanslar ve hakkında">
+    <Grid RowDefinitions="Auto,*">
+        <local:PageHeader Title="Lisanslar ve hakkında" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="16">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{Binding Version}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" />
+                    <Label Text="Mahalle gönüllülerinin sokak hayvanlarını birlikte beslemesi ve koruması için." Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Licences}" Spacing="16">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LicenceItem">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding Name}" FontFamily="NunitoExtraBold" FontSize="17" SemanticProperties.HeadingLevel="Level2" />
+                                <Label Text="{Binding Text}" FontSize="{StaticResource FontSizeCaption}" TextColor="{StaticResource SisDeep}" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

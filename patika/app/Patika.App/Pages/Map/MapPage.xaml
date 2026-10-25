@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:drawing="clr-namespace:Patika.App.Drawing"
+             xmlns:core="clr-namespace:Patika.App.Core.Map;assembly=Patika.App.Core"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Map"
+             x:Class="Patika.App.Pages.Map.MapPage"
+             x:DataType="vm:MapViewModel"
+             BackgroundColor="{StaticResource Kum}"
+             Title="Harita">
+    <ContentPage.Resources>
+        <!-- Page-local: the filter chips of canvas "Main" (pill, 44 high; ink when on). -->
+        <Style x:Key="FilterChip" TargetType="Button">
+            <Setter Property="HeightRequest" Value="44" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="FontFamily" Value="NunitoSansBold" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="BorderColor" Value="{StaticResource Cizgi}" />
+            <Setter Property="BorderWidth" Value="1" />
+        </Style>
+        <Style x:Key="RoundAction" TargetType="Button">
+            <Setter Property="WidthRequest" Value="48" />
+            <Setter Property="HeightRequest" Value="48" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="BorderColor" Value="{StaticResource Cizgi}" />
+            <Setter Property="BorderWidth" Value="1" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="FontSize" Value="22" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <drawing:MapSurface Grid.RowSpan="3"
+                            Viewport="{Binding Viewport, Mode=TwoWay}"
+                            Pins="{Binding Pins}"
+                            UserLocation="{Binding UserLocation}"
+                            PinTappedCommand="{Binding PinTappedCommand}"
+                            EmptyTappedCommand="{Binding DeselectCommand}"
+                            SettledCommand="{Binding SettledCommand}"
+                            AutomationId="StationMap"
+                            SemanticProperties.Description="İstasyon haritası. İstasyonlar alttaki listede de var." />
+
+        <VerticalStackLayout Grid.Row="0" Spacing="10">
+            <Border Style="{StaticResource OfflineBanner}" IsVisible="{Binding IsOffline}" AutomationId="OfflineBanner"
+                    SemanticProperties.Description="Çevrimdışısın. Son baktığın bölge gösteriliyor. Kayıtların telefonda bekliyor.">
+                <VerticalStackLayout>
+                    <Label Text="Çevrimdışısın" FontFamily="NunitoExtraBold" TextColor="{StaticResource Kar}" />
+                    <Label Text="Son baktığın bölge gösteriliyor. Kayıtların telefonda bekliyor." FontSize="{StaticResource FontSizeSmall}" TextColor="{StaticResource Cizgi}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Margin="16,6,16,0" HeightRequest="52" Padding="12,0,16,0" BackgroundColor="{StaticResource Beyaz}"
+                    Stroke="{StaticResource Cizgi}" StrokeThickness="1" StrokeShape="RoundRectangle 26" IsVisible="{Binding IsOffline, Converter={StaticResource Not}}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                    <Image Source="patika_mark.png" HeightRequest="30" WidthRequest="30" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding AreaTitle}" FontFamily="NunitoExtraBold" FontSize="19" VerticalOptions="Center"
+                           LineBreakMode="TailTruncation" SemanticProperties.HeadingLevel="Level1" />
+                    <ActivityIndicator Grid.Column="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Color="{StaticResource Tekir}"
+                                       HeightRequest="20" WidthRequest="20" />
+                </Grid>
+            </Border>
+
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" SemanticProperties.Description="Filtreler">
+                <HorizontalStackLayout Spacing="8" Padding="16,0">
+                    <Button Text="Hepsi" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.All}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsAllOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Kedi" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.Cat}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsCatOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Köpek" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.Dog}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsDogOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Mama" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.Food}"
+                            TextColor="{StaticResource TekirDeep}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsFoodOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Su" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.Water}"
+                            TextColor="{StaticResource NaneDeep}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsWaterOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Text="Mama bitti" Style="{StaticResource FilterChip}" Command="{Binding FilterCommand}" CommandParameter="{x:Static core:FilterChip.NeedsRefill}"
+                            TextColor="{StaticResource TekirDeep}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsRefillOn}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </HorizontalStackLayout>
+            </ScrollView>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Spacing="12" Margin="16" HorizontalOptions="End" VerticalOptions="End">
+            <Button Text="◎" Style="{StaticResource RoundAction}" Command="{Binding LocateCommand}" AutomationId="LocateButton"
+                    SemanticProperties.Description="Konumuma git" SemanticProperties.Hint="Konumunu yalnızca bu görünüm için kullanır, kaydetmez" />
+            <Button Text="+" Style="{StaticResource RoundAction}" WidthRequest="56" HeightRequest="56" CornerRadius="28" FontSize="28"
+                    BackgroundColor="{StaticResource Kaldirim}" TextColor="{StaticResource Kar}" BorderWidth="0"
+                    Command="{Binding AddStationCommand}" AutomationId="AddStationButton" SemanticProperties.Description="İstasyon ekle" />
+        </VerticalStackLayout>
+
+        <Border Grid.Row="2" Style="{StaticResource Sheet}" Padding="20,12,20,20">
+            <VerticalStackLayout Spacing="4">
+                <BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center" Margin="0,0,0,10" />
+                <Button IsVisible="{Binding HasPending}" Style="{StaticResource QuietButton}" Command="{Binding OpenOutboxCommand}"
+                        Text="{Binding OutboxText}" LineBreakMode="WordWrap" MinimumHeightRequest="48" HeightRequest="-1" Margin="0,0,0,8"
+                        TextColor="{StaticResource TekirDeep}" AutomationId="OutboxButton" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+
+                <!-- Selected station (canvas "Main" sheet). -->
+                <VerticalStackLayout IsVisible="{Binding HasSelection}" Spacing="4" AutomationId="StationSheet">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Selected.Name}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeH4}"
+                               VerticalOptions="Center" SemanticProperties.HeadingLevel="Level2" AutomationId="SheetName" />
+                        <Button Grid.Column="1" Text="Listeye dön" Style="{StaticResource LinkButton}" Command="{Binding BackToListCommand}"
+                                AutomationId="BackToList" SemanticProperties.Hint="Seçimi kapatır ve istasyon listesini açar" />
+                    </Grid>
+                    <Label Text="{Binding Selected.FedLine}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}"
+                           TextColor="{StaticResource SisDeep}">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding Selected.FedToday}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource NaneDeep}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding Selected.Summary}" Style="{StaticResource Muted}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,14,0,0">
+                        <Button Text="Beslendi" Style="{StaticResource FedButton}" FontSize="18" Command="{Binding FeedCommand}"
+                                IsEnabled="{Binding IsNotBusy}" AutomationId="SheetFedButton" />
+                        <Button Grid.Column="1" Text="Ayrıntılar" Style="{StaticResource QuietButton}" FontSize="18"
+                                Command="{Binding OpenDetailsCommand}" AutomationId="SheetDetailsButton" />
+                    </Grid>
+                </VerticalStackLayout>
+
+                <!-- Nothing selected: the count and the list, the accessible twin of the pins. -->
+                <VerticalStackLayout IsVisible="{Binding HasNoSelection}" Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout VerticalOptions="Center">
+                            <Label Text="İstasyonlar" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeH4}" SemanticProperties.HeadingLevel="Level2" />
+                            <Label Text="{Binding Summary}" Style="{StaticResource Muted}" AutomationId="MapSummary" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Text="Liste" Style="{StaticResource QuietButton}" HeightRequest="44" Padding="16,0"
+                                Command="{Binding ToggleListCommand}" AutomationId="ListButton" SemanticProperties.Hint="Haritadaki istasyonları liste olarak gösterir" />
+                    </Grid>
+                    <CollectionView ItemsSource="{Binding Rows}" IsVisible="{Binding IsListOpen}" SelectionMode="None" MaximumHeightRequest="280"
+                                    AutomationId="StationList">
+                        <CollectionView.EmptyView>
+                            <Label Text="Bu bölgede istasyon yok." Style="{StaticResource Muted}" Margin="0,12" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StationRow">
+                                <Grid Padding="0,10" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" MinimumHeightRequest="48">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenRowCommand, Source={RelativeSource AncestorType={x:Type vm:MapViewModel}}, x:DataType=vm:MapViewModel}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="{Binding Title}" FontFamily="NunitoExtraBold" />
+                                    <Label Grid.Row="1" Text="{Binding Detail}" Style="{StaticResource Muted}" />
+                                    <Label Grid.RowSpan="2" Grid.Column="1" Text="›" FontSize="{StaticResource FontSizeH4}" VerticalOptions="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

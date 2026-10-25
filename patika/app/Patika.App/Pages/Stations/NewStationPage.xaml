@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:drawing="clr-namespace:Patika.App.Drawing"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
+             x:Class="Patika.App.Pages.Stations.NewStationPage"
+             x:DataType="vm:NewStationViewModel"
+             Shell.TabBarIsVisible="False"
+             Title="İstasyon ekle">
+    <ContentPage.Resources>
+        <!-- Page-local: the three-way choice buttons of canvas "IstasyonEkle". -->
+        <Style x:Key="Choice" TargetType="Button">
+            <Setter Property="HeightRequest" Value="44" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="FontFamily" Value="NunitoSansBold" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="BorderColor" Value="{StaticResource Cizgi}" />
+            <Setter Property="BorderWidth" Value="1" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="64,250,*,Auto">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4" Padding="8,0">
+            <Button Text="✕" WidthRequest="48" HeightRequest="48" CornerRadius="24" Padding="0" FontSize="20"
+                    BackgroundColor="Transparent" TextColor="{StaticResource Kaldirim}" Command="{Binding CancelCommand}"
+                    SemanticProperties.Description="Vazgeç" />
+            <Label Grid.Column="1" Text="İstasyon ekle" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}"
+                   VerticalOptions="Center" SemanticProperties.HeadingLevel="Level1" />
+            <BoxView Grid.ColumnSpan="2" HeightRequest="1" VerticalOptions="End" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <drawing:MapSurface Viewport="{Binding Viewport, Mode=TwoWay}" ShowCenterPin="True" SettledCommand="{Binding MovedCommand}"
+                                AutomationId="PinDropMap"
+                                SemanticProperties.Description="İstasyonun yeri: haritayı kaydır, iğne ortada kalır" />
+            <Border Style="{StaticResource Chip}" Padding="14,8" Margin="16,14" HorizontalOptions="Start" VerticalOptions="Start" InputTransparent="True">
+                <Label Text="Haritayı kaydır, iğneyi istasyonun yerine getir" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+            </Border>
+            <Button Text="Konumumu kullan" Style="{StaticResource Choice}" Padding="16,0" Margin="16,14" HorizontalOptions="End" VerticalOptions="End"
+                    Command="{Binding UseMyLocationCommand}" AutomationId="UseMyLocation" />
+        </Grid>
+
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Padding="20,16,20,16" Spacing="16">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Ne bırakılıyor?" FontFamily="NunitoExtraBold" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button Text="Mama" Style="{StaticResource Choice}" Command="{Binding SetKindCommand}" CommandParameter="Food">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsFood}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1" Text="Su" Style="{StaticResource Choice}" Command="{Binding SetKindCommand}" CommandParameter="Water">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsWater}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="2" Text="İkisi de" Style="{StaticResource Choice}" Command="{Binding SetKindCommand}" CommandParameter="Both">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsBoth}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Kimler için?" FontFamily="NunitoExtraBold" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button Text="Kedi" Style="{StaticResource Choice}" Command="{Binding SetSpeciesCommand}" CommandParameter="Cat">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsCat}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1" Text="Köpek" Style="{StaticResource Choice}" Command="{Binding SetSpeciesCommand}" CommandParameter="Dog">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDog}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="2" Text="Karışık" Style="{StaticResource Choice}" Command="{Binding SetSpeciesCommand}" CommandParameter="Mixed">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsMixed}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Kar}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="96,*" ColumnSpacing="14">
+                    <Border WidthRequest="96" HeightRequest="96" StrokeShape="RoundRectangle 24" Stroke="{StaticResource Sis}" StrokeThickness="2"
+                            StrokeDashArray="4,3" BackgroundColor="{StaticResource Kum}" AutomationId="PhotoButton"
+                            SemanticProperties.Description="İstasyonun fotoğrafını çek ya da seç">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnPhotoTapped" />
+                        </Border.GestureRecognizers>
+                        <Grid>
+                            <Label Text="📷" FontSize="30" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasNoPhoto}" />
+                            <Image Source="{Binding Preview}" Aspect="AspectFill" IsVisible="{Binding HasPhoto}" />
+                        </Grid>
+                    </Border>
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                        <Label Text="Fotoğraf gerekli" FontFamily="NunitoExtraBold" />
+                        <Label Text="{Binding PhotoNote}" Style="{StaticResource Muted}" LineHeight="1.3" AutomationId="PhotoNote" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <VerticalStackLayout Spacing="6">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="Adı" FontFamily="NunitoExtraBold" />
+                        <Label Text="İsteğe bağlı" Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansSemiBold" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Border Style="{StaticResource Field}">
+                        <Entry Text="{Binding Name}" Placeholder="Örneğin Moda Cad. köşesi" MaxLength="200" AutomationId="StationNameEntry" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" AutomationId="NewStationError" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Row="3" Padding="20,8,20,20">
+            <Button Text="İstasyonu ekle" HeightRequest="56" CornerRadius="28" FontSize="19" Command="{Binding SubmitCommand}" AutomationId="SubmitStation" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Kar}" HorizontalOptions="End" Margin="0,0,20,0" />
+        </Grid>
+    </Grid>
+</ContentPage>

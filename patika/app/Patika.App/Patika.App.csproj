@@ -14,6 +14,7 @@
 
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <NeutralLanguage>tr-TR</NeutralLanguage>
+    <MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,10 +25,32 @@
     <MauiFont Include="Resources\Fonts\*.ttf" />
     <!-- SIL OFL 1.1: the license text ships inside the app with the bundled fonts. -->
     <MauiAsset Include="Resources\Fonts\licenses\*.txt" LogicalName="licenses\%(Filename)%(Extension)" />
+    <!-- API base URL; the Development file is read only in Debug builds (see Services/AppSettings.cs). -->
+    <EmbeddedResource Include="appsettings.json" />
+    <EmbeddedResource Include="appsettings.Development.json" Condition="'$(Configuration)' == 'Debug'" />
+  </ItemGroup>
+
+  <!-- Cleartext to 10.0.2.2 exists only in Debug: swap the release network security config for the debug one. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <AndroidResource Remove="Platforms\Android\Resources\xml\network_security_config.xml" />
+    <AndroidResource Include="Platforms\Android\DebugResources\xml\network_security_config.xml"
+                     Link="Platforms\Android\Resources\xml\network_security_config.xml" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- FCM token and messages for urgent help (ADR-0008). Without google-services.json the app runs with push off. -->
+    <PackageReference Include="Xamarin.Firebase.Messaging" />
+  </ItemGroup>
+
+  <!-- google-services.json is an owner secret: never committed (see patika/app/.gitignore), added on the build machine. -->
+  <ItemGroup Condition="Exists('google-services.json')">
+    <GoogleServicesJson Include="google-services.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Patika.App.Core/Patika.App.Core.csproj" />
   </ItemGroup>
 
 </Project>

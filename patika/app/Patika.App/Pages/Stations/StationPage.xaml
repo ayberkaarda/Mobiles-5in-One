@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
+             x:Class="Patika.App.Pages.Stations.StationPage"
+             x:DataType="vm:StationViewModel"
+             Title="İstasyon">
+    <ContentPage.Resources>
+        <!-- Page-local: the status and fact chips of canvas "Istasyon" (32 high, Kum). -->
+        <Style x:Key="FactChip" TargetType="Border">
+            <Setter Property="HeightRequest" Value="32" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+            <Setter Property="BackgroundColor" Value="{StaticResource Kum}" />
+        </Style>
+        <Style x:Key="HeaderButton" TargetType="Button">
+            <Setter Property="WidthRequest" Value="48" />
+            <Setter Property="HeightRequest" Value="48" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="FontSize" Value="24" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="64,*">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4" Padding="8,0" BackgroundColor="{StaticResource Kar}">
+            <Button Text="‹" Style="{StaticResource HeaderButton}" Command="{Binding BackCommand}" SemanticProperties.Description="Haritaya dön" />
+            <Label Grid.Column="1" Text="{Binding Name}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}"
+                   VerticalOptions="Center" LineBreakMode="TailTruncation" SemanticProperties.HeadingLevel="Level1" AutomationId="StationName" />
+            <BoxView Grid.ColumnSpan="2" HeightRequest="1" VerticalOptions="End" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,16,20,24" Spacing="18">
+                <Border HeightRequest="150" StrokeThickness="0" StrokeShape="RoundRectangle 24" BackgroundColor="{StaticResource Kum}">
+                    <Grid>
+                        <Image Source="{Binding PhotoUrl}" Aspect="AspectFill" SemanticProperties.Description="İstasyon fotoğrafı" />
+                        <Border Style="{StaticResource Chip}" HorizontalOptions="Start" VerticalOptions="End" Margin="14"
+                                IsVisible="{Binding HasNoPhoto}">
+                            <Label Text="İstasyon fotoğrafı" Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansSemiBold" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+                <Label Text="{Binding CachedNote}" IsVisible="{Binding CachedNote, Converter={StaticResource HasText}}" Style="{StaticResource Muted}" />
+
+                <VerticalStackLayout Spacing="6" IsVisible="{Binding IsLoaded}">
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                        <Border Style="{StaticResource FactChip}" Margin="0,0,8,8" Padding="10,0,12,0">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding FedToday}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource NaneSoft}" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding NeedsRefill}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource TekirSoft}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <HorizontalStackLayout Spacing="8">
+                                <Ellipse WidthRequest="10" HeightRequest="10" VerticalOptions="Center" Fill="{StaticResource NaneDeep}" IsVisible="{Binding FedToday}" />
+                                <Label Text="{Binding FedChip}" Style="{StaticResource ChipLabel}" VerticalOptions="Center">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding FedToday}" Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource NaneDeep}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding NeedsRefill}" Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource TekirDeep}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </HorizontalStackLayout>
+                        </Border>
+                        <Border Style="{StaticResource FactChip}" Margin="0,0,8,8">
+                            <Label Text="{Binding SpeciesChip}" Style="{StaticResource ChipLabel}" VerticalOptions="Center" />
+                        </Border>
+                        <Border Style="{StaticResource FactChip}" Margin="0,0,8,8">
+                            <Label Text="{Binding KindChip}" Style="{StaticResource ChipLabel}" VerticalOptions="Center" />
+                        </Border>
+                    </FlexLayout>
+                    <Label Text="{Binding Paragraph}" LineHeight="1.4" />
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Button Text="Beslendi" Style="{StaticResource FedButton}" HeightRequest="56" CornerRadius="28" FontSize="19"
+                            Command="{Binding FedCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="FedButton" />
+                    <Button Grid.Column="1" Text="Mama bitti" Style="{StaticResource QuietButton}" HeightRequest="56" CornerRadius="28"
+                            Padding="20,0" Command="{Binding EmptyCommand}" IsEnabled="{Binding IsNotBusy}" AutomationId="EmptyButton" />
+                </Grid>
+                <Border Style="{StaticResource Panel}" Padding="16" IsVisible="{Binding Outcome, Converter={StaticResource HasText}}">
+                    <Label Text="{Binding Outcome}" FontFamily="NunitoSansBold" TextColor="{StaticResource NaneDeep}" AutomationId="StationOutcome" />
+                </Border>
+
+                <VerticalStackLayout>
+                    <Label Text="Son beslemeler" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" Margin="0,0,0,6"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Feedings}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FeedingRow">
+                                <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="12" Padding="0,12">
+                                    <Label Text="{Binding Day}" FontFamily="NunitoExtraBold" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                        <Label Text="{Binding Text}" FontSize="{StaticResource FontSizeSmall}" />
+                                        <Label Text="{Binding Author}" Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansSemiBold">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsMine}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource NaneDeep}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </VerticalStackLayout>
+                                    <Border Grid.Column="2" WidthRequest="48" HeightRequest="48" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                            BackgroundColor="{StaticResource Kum}" IsVisible="{Binding HasPhoto}" VerticalOptions="Start">
+                                        <Image Source="{Binding PhotoUrl}" Aspect="AspectFill" SemanticProperties.Description="Besleme fotoğrafı" />
+                                    </Border>
+                                    <BoxView Grid.ColumnSpan="3" HeightRequest="1" VerticalOptions="End" Margin="0,0,0,-12" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                        <BindableLayout.EmptyView>
+                            <Label Text="Henüz besleme kaydı yok." Style="{StaticResource Muted}" Margin="0,8" />
+                        </BindableLayout.EmptyView>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding HasAnimals}" Spacing="8">
+                    <Label Text="Burada görülenler" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" SemanticProperties.HeadingLevel="Level2" />
+                    <FlexLayout BindableLayout.ItemsSource="{Binding Animals}" Wrap="Wrap">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AnimalChip">
+                                <Button Text="{Binding Name}" Style="{StaticResource QuietButton}" HeightRequest="44" CornerRadius="22" Padding="16,0"
+                                        BorderWidth="1" BorderColor="{StaticResource Cizgi}" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeSmall}"
+                                        Margin="0,0,8,8"
+                                        Command="{Binding OpenAnimalCommand, Source={RelativeSource AncestorType={x:Type vm:StationViewModel}}, x:DataType=vm:StationViewModel}"
+                                        CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
