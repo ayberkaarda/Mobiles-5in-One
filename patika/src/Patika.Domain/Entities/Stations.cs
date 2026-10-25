@@ -2,6 +2,7 @@ namespace Patika.Domain.Entities;
 
 public sealed class Station : Entity
 {
+    public string? Name { get; set; }
     public GeoPoint Location { get; set; }
     public StationKind Kind { get; set; }
     public Species Species { get; set; }

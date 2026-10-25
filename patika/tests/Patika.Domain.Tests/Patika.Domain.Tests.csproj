@@ -14,5 +14,6 @@
     </PackageReference>
 
     <ProjectReference Include="../../src/Patika.Domain/Patika.Domain.csproj" />
+    <ProjectReference Include="../../src/Patika.Infrastructure/Patika.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
