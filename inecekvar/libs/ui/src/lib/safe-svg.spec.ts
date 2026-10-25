@@ -135,4 +135,37 @@ describe('safe SVG', () => {
       }),
     ).toThrow();
   });
+
+  it('paints labels in the requested palette colour and rejects others', () => {
+    const svg = svgDocument({
+      width: 100,
+      height: 50,
+      title: 'Hat',
+      background: '#DADBD6',
+      labelFill: '#1F2124',
+      paths: [
+        {
+          points: [
+            { x: 0, y: 0 },
+            { x: 10, y: 10 },
+          ],
+          stroke: '#B3261E',
+          width: 4,
+        },
+      ],
+      labels: [{ x: 1, y: 2, text: 'Hat' }],
+    });
+    expect(svg).toContain('fill="#1F2124">Hat</text>');
+    expect(svg).toContain('stroke="#B3261E"');
+    expect(() =>
+      svgDocument({
+        width: 100,
+        height: 50,
+        title: 'Hat',
+        paths: [],
+        labels: [],
+        labelFill: 'red' as SvgColor,
+      }),
+    ).toThrow();
+  });
 });

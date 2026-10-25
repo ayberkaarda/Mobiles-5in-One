@@ -75,4 +75,26 @@ describe('NoticeComponent', () => {
     expect(notice.getAttribute('role')).toBe('alert');
     expect(notice.querySelector('button')).toBeNull();
   });
+
+  it('marks every tone with its own shape and announces errors as alerts', () => {
+    const { fixture, root, host } = render();
+    const shapes = new Set<string>();
+    for (const tone of ['info', 'offline', 'warn', 'error'] as const) {
+      host.tone.set(tone);
+      fixture.detectChanges();
+      const notice = root.querySelector('iv-notice') as HTMLElement;
+      const mark = notice.querySelector('svg.mark') as SVGElement;
+      expect(mark.getAttribute('aria-hidden')).toBe('true');
+      shapes.add(
+        Array.from(mark.children)
+          .map((shape) => `${shape.tagName}:${shape.getAttribute('d') ?? shape.getAttribute('r')}`)
+          .join('|'),
+      );
+      expect(notice.classList).toContain('iv-notice--' + tone);
+      expect(notice.getAttribute('role')).toBe(
+        tone === 'warn' || tone === 'error' ? 'alert' : 'status',
+      );
+    }
+    expect(shapes.size).toBe(4);
+  });
 });

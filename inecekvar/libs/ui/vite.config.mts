@@ -7,7 +7,14 @@ import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/libs/ui',
-  plugins: [angular(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
+  plugins: [
+    // AOT in tests: with vite 8.3.5 and vitest 5.0.5 the JIT inline-style modules of the plugin are
+    // not found ("Cannot find module virtual:angular:jit:style:inline"), so every component spec
+    // failed to load.
+    angular({ jit: false }),
+    nxViteTsPaths(),
+    nxCopyAssetsPlugin(['*.md']),
+  ],
   // Uncomment this if you are using workers.
   // worker: {
   //   plugins: () => [ nxViteTsPaths() ],

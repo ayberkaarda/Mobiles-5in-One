@@ -4,14 +4,14 @@
  * (`lib/sign-styles.ts`) so they stay out of the initial stylesheet. Load after the semantic tokens.
  */
 
-/* Route board: a lacivert sign with krem lettering and the stripe along its foot. */
+/* Route board: the placard board with its rim, its lettering and the stripe along its foot. */
 .iv-board {
   position: relative;
   background: var(--iv-board);
   color: var(--iv-board-ink);
   border-radius: var(--iv-radius-m);
   box-shadow:
-    inset 0 -4px 0 var(--iv-stripe),
+    inset 0 -4px 0 var(--iv-board-foot),
     var(--iv-shadow-board);
   outline: 1px solid var(--iv-board-edge);
   outline-offset: -1px;
@@ -27,6 +27,7 @@
   border-radius: var(--iv-radius-xs);
   background: var(--iv-board);
   color: var(--iv-board-sign);
+  box-shadow: inset 0 0 0 1px var(--iv-board-edge);
   font-family: var(--iv-font-display);
   font-weight: var(--iv-font-display-weight);
   font-size: 0.78rem;

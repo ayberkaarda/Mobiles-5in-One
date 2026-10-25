@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { PLACARD_STYLES, SIGN_TEXT_STYLES } from './sign-styles';
 
 /**
- * The destination sign at the top of a line: the large code placard and the mode on a lacivert
+ * The destination sign at the top of a line: the large code plate and the mode on the
  * board, then the start and end stops in sign lettering joined by a short rail; each row turns
  * in once like a flip display (no motion with reduced motion). The page projects its heading
  * and an optional action (marked `slot="action"`). Text only.
@@ -67,7 +67,7 @@ import { PLACARD_STYLES, SIGN_TEXT_STYLES } from './sign-styles';
         gap: 12px;
         margin: 16px 0 0;
         padding: 14px 0 0 26px;
-        border-top: 1px dashed rgba(255, 248, 231, 0.24);
+        border-top: 1px dashed var(--iv-board-line);
       }
       .ends::before {
         content: '';

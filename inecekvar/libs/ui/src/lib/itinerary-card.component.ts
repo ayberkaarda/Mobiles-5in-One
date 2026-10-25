@@ -16,7 +16,7 @@ export interface ItinerarySummary {
 }
 
 /**
- * One planner option. The legs read left to right as a chain of yellow placards (rides) and
+ * One planner option. The legs read left to right as a chain of code plates (rides) and
  * dashed walk chips; duration leads, transfers, walking and the estimated fare follow. The
  * whole card is one toggle button that selects the option.
  */
@@ -85,11 +85,11 @@ export interface ItinerarySummary {
       .card.on {
         --iv-ink: var(--iv-board-ink);
         --iv-ink-muted: var(--iv-board-muted);
-        --iv-line-strong: rgba(255, 248, 231, 0.34);
+        --iv-line-strong: var(--iv-board-line);
         border-color: var(--iv-board-edge);
         background: var(--iv-board);
         box-shadow:
-          inset 0 -4px 0 var(--iv-stripe),
+          inset 0 -4px 0 var(--iv-board-foot),
           var(--iv-shadow-board);
       }
       .card.on .duration {

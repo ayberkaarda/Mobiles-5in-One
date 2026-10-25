@@ -1,6 +1,6 @@
 /*
- * App shell rules shared by the mobile pages: lacivert chrome with the turquoise minibüs stripe,
- * the tab bar with its lit sign for the current tab, page rhythm and the panel and button
+ * App shell rules shared by the mobile pages: the painted app bar with its charcoal edge (the
+ * sodium-orange edge at night), the tab bar with its lit plate for the current tab, page rhythm and the panel and button
  * primitives. Load after theme.css.
  */
 ion-header {
@@ -10,7 +10,7 @@ ion-header {
 ion-header ion-toolbar {
   --border-width: 0 0 4px 0;
   --border-style: solid;
-  --border-color: var(--iv-stripe);
+  --border-color: var(--iv-chrome-edge);
   --min-height: 56px;
 }
 
@@ -30,7 +30,7 @@ ion-tab-bar {
   --border: 0;
   height: calc(66px + var(--ion-safe-area-bottom, 0px));
   padding-top: 4px;
-  border-top: 3px solid var(--iv-stripe);
+  border-top: 1px solid var(--iv-tabbar-edge);
 }
 
 ion-tab-button {
@@ -59,11 +59,11 @@ ion-tab-button ion-label {
   overflow: visible;
 }
 
-/* The current tab lights up like a placard behind its icon. */
+/* The current tab lights up like a line-code plate behind its icon. */
 ion-tab-button.tab-selected ion-icon {
-  background: var(--iv-accent);
-  color: var(--iv-accent-ink);
-  box-shadow: inset 0 -3px 0 var(--iv-stripe);
+  background: var(--iv-plate);
+  color: var(--iv-plate-ink);
+  box-shadow: inset 0 -3px 0 var(--iv-plate-stripe);
 }
 
 ion-tab-button.tab-selected ion-label {
@@ -187,24 +187,24 @@ ion-tab-button.tab-selected ion-label {
   border-radius: var(--iv-radius-m);
   background: var(--iv-accent);
   color: var(--iv-accent-ink);
-  box-shadow: 0 3px 0 var(--iv-press);
+  /* Flat sign button: a charcoal foot stripe instead of a drop shadow. */
+  box-shadow: inset 0 -3px 0 var(--iv-plate-stripe);
   font: inherit;
   font-weight: var(--iv-font-body-weight-600);
   font-size: 16px;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 90ms ease-out;
+  transition: box-shadow 90ms ease-out;
 }
 
 .iv-button:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--iv-press);
+  box-shadow: inset 0 -1px 0 var(--iv-plate-stripe);
 }
 
 .iv-button:focus-visible {
   outline: none;
   box-shadow:
-    0 3px 0 var(--iv-press),
+    inset 0 -3px 0 var(--iv-plate-stripe),
     var(--iv-focus);
 }
 
@@ -223,7 +223,9 @@ ion-tab-button.tab-selected ion-label {
 .iv-button--board {
   background: var(--iv-board);
   color: var(--iv-board-sign);
-  box-shadow: 0 3px 0 var(--iv-stripe);
+  box-shadow:
+    inset 0 -3px 0 var(--iv-board-foot),
+    inset 0 0 0 1px var(--iv-board-edge);
 }
 
 .iv-button--signal {
@@ -237,7 +239,7 @@ ion-tab-button.tab-selected ion-label {
   }
 }
 
-/* Tab page heading on a route board: the question of the tab in sign yellow. */
+/* Tab page heading on a board: the question of the tab in sign lettering. */
 .iv-hero {
   margin: 0 calc(-1 * var(--iv-space-2));
   padding: 20px 16px 24px;

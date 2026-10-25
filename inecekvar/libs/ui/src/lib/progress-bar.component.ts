@@ -32,8 +32,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       border-radius: inherit;
       background: repeating-linear-gradient(
         -45deg,
-        var(--iv-color-turkuaz) 0 10px,
-        color-mix(in srgb, var(--iv-color-turkuaz) 75%, var(--iv-color-lacivert)) 10px 20px
+        var(--iv-rail) 0 10px,
+        color-mix(in srgb, var(--iv-rail) 75%, var(--iv-rail-casing)) 10px 20px
       );
       transition: width 160ms ease-out;
     }

@@ -16,9 +16,8 @@ export interface LineCardLabels {
 }
 
 /**
- * One line in a list, drawn as a route board: the yellow code placard bolted to a lacivert sign
- * with the line name in krem lettering, the mode and fare beneath, and the turquoise minibüs
- * stripe along the foot. The board is one button that opens the line; the star toggles a
+ * One line in a list, drawn as a route placard: the painted code plate bolted to the board with
+ * the line name in board lettering, the mode and fare beneath, and the stripe along the foot. The board is one button that opens the line; the star toggles a
  * favourite. Optional start and end stops read like a destination sign.
  */
 @Component({
@@ -86,10 +85,10 @@ export interface LineCardLabels {
       .card {
         --iv-ink: var(--iv-board-ink);
         --iv-ink-muted: var(--iv-board-muted);
-        --iv-line-strong: rgba(255, 248, 231, 0.34);
+        --iv-line-strong: var(--iv-board-line);
         --iv-tag: var(--iv-plate);
         --iv-tag-ink: var(--iv-plate-ink);
-        --iv-mode-servis-bg: rgba(255, 248, 231, 0.1);
+        --iv-mode-servis-bg: color-mix(in srgb, var(--iv-board-ink) 8%, transparent);
         display: flex;
         align-items: stretch;
         transition: transform 120ms var(--iv-ease-out);

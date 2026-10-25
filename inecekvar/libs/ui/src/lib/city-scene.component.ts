@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
  * The street illustration of the brand (ADR-0059; source in brand/illustrations): apartment
- * blocks and a minaret behind, a stop pole with someone hailing, and a yellow dolmuş with the
- * turquoise stripe and "İNECEK VAR" on its board. Flat shapes only, coloured by tokens, so it
+ * blocks and a minaret behind, a stop pole with someone hailing, and a dolmuş with its stripe
+ * and "İNECEK VAR" on its board. Flat shapes only, coloured by tokens, so it
  * turns into a night street in dark mode with lit windows. The dolmuş drives in once unless
  * reduced motion is set. Decorative: hidden from assistive technology.
  */
@@ -148,7 +148,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       fill: var(--iv-scene-road);
     }
     .lane rect {
-      fill: #fff8e7;
+      fill: var(--iv-scene-lane);
       opacity: 0.55;
     }
     .ink {
@@ -156,13 +156,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
     .sign,
     .body {
-      fill: #f2b705;
-      stroke: #14213d;
+      fill: var(--iv-scene-van);
+      stroke: var(--iv-scene-line);
       stroke-width: 3;
+    }
+    .sign {
+      fill: var(--iv-plate);
     }
     .ring {
       fill: none;
-      stroke: #14213d;
+      stroke: var(--iv-scene-line);
       stroke-width: 4;
     }
     .stripe,
@@ -171,31 +174,31 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
     .glass {
       fill: var(--iv-scene-glass);
-      stroke: #14213d;
+      stroke: var(--iv-scene-line);
       stroke-width: 2;
     }
     .board {
-      fill: #14213d;
+      fill: var(--iv-scene-line);
     }
     .board-text {
-      fill: #f2b705;
+      fill: var(--iv-scene-board-text);
       font-family: var(--iv-font-display);
       font-weight: 700;
       font-size: 10.5px;
       letter-spacing: 0.08em;
     }
     .lamp {
-      fill: #fff8e7;
-      stroke: #14213d;
+      fill: var(--iv-scene-lane);
+      stroke: var(--iv-scene-line);
       stroke-width: 1.5;
     }
     .wheel .ink {
-      fill: #14213d;
-      stroke: #fff8e7;
+      fill: var(--iv-scene-line);
+      stroke: var(--iv-scene-lane);
       stroke-width: 1.5;
     }
     .hub {
-      fill: #fff8e7;
+      fill: var(--iv-scene-lane);
     }
     .van {
       animation: iv-drive-in 1.3s cubic-bezier(0.2, 0.75, 0.25, 1) both;

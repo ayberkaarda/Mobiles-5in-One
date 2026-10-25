@@ -93,21 +93,21 @@ export function projectSketch(line: readonly LngLat[], stops: readonly LngLat[])
     }
     .casing {
       fill: none;
-      stroke: var(--iv-color-lacivert);
+      stroke: var(--iv-rail-casing);
       stroke-width: 8;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
     .route {
       fill: none;
-      stroke: var(--iv-color-turkuaz);
+      stroke: var(--iv-rail);
       stroke-width: 5;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
     .stop {
-      fill: var(--iv-color-krem);
-      stroke: var(--iv-color-lacivert);
+      fill: var(--iv-stop-fill);
+      stroke: var(--iv-rail-casing);
       stroke-width: 2.5;
     }
   `,
