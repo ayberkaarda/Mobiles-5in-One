@@ -175,6 +175,153 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         return revoked;
     }
 
+    public async Task StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.EmailTokens
+            .Where(t => t.UserId == token.UserId && t.Purpose == token.Purpose && t.UsedAt == null)
+            .ExecuteDeleteAsync(cancellationToken);
+        db.EmailTokens.Add(new EmailToken
+        {
+            Id = token.Id,
+            UserId = token.UserId,
+            TokenHash = token.TokenHash,
+            Purpose = token.Purpose,
+            CreatedAt = token.CreatedAt,
+            UpdatedAt = token.CreatedAt,
+            ExpiresAt = token.ExpiresAt,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    public async Task<Guid?> TryResetPasswordAsync(
+        byte[] tokenHash, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var token = await db.EmailTokens.AsNoTracking()
+            .SingleOrDefaultAsync(t => t.TokenHash == tokenHash && t.Purpose == EmailTokenRecord.PasswordReset, cancellationToken);
+        if (token is null)
+        {
+            return null;
+        }
+
+        // Compare-and-set: a reset code works once even under concurrent requests.
+        var consumed = await db.EmailTokens
+            .Where(t => t.Id == token.Id && t.UsedAt == null && t.ExpiresAt > now)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.UsedAt, now)
+                .SetProperty(t => t.UpdatedAt, now), cancellationToken);
+        var updated = consumed != 1 ? 0 : await db.Users
+            .Where(u => u.Id == token.UserId && u.DeactivatedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.PasswordHash, newPasswordHash)
+                .SetProperty(u => u.EmailVerifiedAt, u => u.EmailVerifiedAt ?? now)
+                .SetProperty(u => u.UpdatedAt, now), cancellationToken);
+        if (updated != 1)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return null;
+        }
+
+        await db.EmailTokens
+            .Where(t => t.UserId == token.UserId && t.Purpose == EmailTokenRecord.PasswordReset && t.UsedAt == null)
+            .ExecuteDeleteAsync(cancellationToken);
+        await RevokeAllForUserAsync(token.UserId, now, cancellationToken);
+        await BumpSessionVersionAsync(db, token.UserId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return token.UserId;
+    }
+
+    public async Task<int?> GetSessionVersionAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        // Read by column name: users.session_version (int, not null, default 0).
+        var versions = await db.Database
+            .SqlQuery<int>($"SELECT session_version AS \"Value\" FROM users WHERE id = {userId}")
+            .ToListAsync(cancellationToken);
+        return versions.Count == 1 ? versions[0] : null;
+    }
+
+    public async Task<int?> TryIssueSessionAsync(
+        RefreshTokenRecord token, string? expectedPasswordHash, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // The row lock serializes with password reset, deletion requests and deletion cancels, which all
+        // update this row first: either they see the new token (and revoke it) or this sees their change.
+        var rows = await db.Database
+            .SqlQuery<SessionRow>($"""
+                SELECT session_version AS "Version", password_hash AS "PasswordHash"
+                FROM users WHERE id = {token.UserId} AND deactivated_at IS NULL
+                FOR UPDATE
+                """)
+            .ToListAsync(cancellationToken);
+        if (rows.Count != 1
+            || (expectedPasswordHash is not null && !string.Equals(rows[0].PasswordHash, expectedPasswordHash, StringComparison.Ordinal)))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return null;
+        }
+
+        db.RefreshTokens.Add(ToEntity(token));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        await transaction.CommitAsync(cancellationToken);
+        return rows[0].Version;
+    }
+
+    /// <summary>Increments <c>users.session_version</c>; callers run it inside their transaction.</summary>
+    internal static Task<int> BumpSessionVersionAsync(PatikaDbContext db, Guid userId, CancellationToken cancellationToken) =>
+        db.Database.ExecuteSqlAsync(
+            $"UPDATE users SET session_version = session_version + 1 WHERE id = {userId}", cancellationToken);
+
+    private sealed record SessionRow(int Version, string? PasswordHash);
+
+    public async Task<bool> TryCancelPendingDeletionAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var cancelled = await db.DeletionRequests
+            .Where(r => r.UserId == userId && r.CompletedAt == null && r.CancelledAt == null && r.ExecuteAfter > now)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.CancelledAt, now)
+                .SetProperty(r => r.UpdatedAt, now), cancellationToken);
+        if (cancelled == 0)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        await db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.DeactivatedAt, (DateTimeOffset?)null)
+                .SetProperty(u => u.UpdatedAt, now), cancellationToken);
+
+        // Tokens minted before the deletion request must not come back to life.
+        await BumpSessionVersionAsync(db, userId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>
+    /// Revokes every active refresh token of the user, across all families. Must run inside a
+    /// transaction: the user's tokens are locked first in id order (the same order rotation uses), and
+    /// the revoking statement runs after the lock wait so it also sees a replacement committed meanwhile.
+    /// </summary>
+    internal async Task<int> RevokeAllForUserAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await db.RefreshTokens
+            .FromSql($"SELECT * FROM refresh_tokens WHERE user_id = {userId} ORDER BY id FOR UPDATE")
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return await db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.RevokedAt, now)
+                .SetProperty(t => t.UpdatedAt, now), cancellationToken);
+    }
+
     /// <summary>A revoked token that was never replaced marks the family as ended (logout or reuse).</summary>
     internal static bool IsFamilyRevoked(IEnumerable<RefreshToken> family) =>
         family.Any(t => t.RevokedAt is not null && t.ReplacedById is null);

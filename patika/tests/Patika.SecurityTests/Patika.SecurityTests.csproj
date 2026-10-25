@@ -13,10 +13,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
     <ProjectReference Include="../../src/Patika.Api/Patika.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- The API test host (fakes, in-memory store, log capture) is shared with the API tests. -->
     <Compile Include="../Patika.Api.Tests/Infrastructure/**/*.cs" LinkBase="Shared" />
+    <!-- The hard delete runs in the worker; its purge logic is compiled in so the PII check needs no worker host. -->
+    <Compile Include="../../src/Patika.Worker/Jobs/Accounts/AccountPurger.cs" LinkBase="Worker" />
   </ItemGroup>
 </Project>

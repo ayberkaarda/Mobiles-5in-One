@@ -30,6 +30,21 @@ public static class AuthEndpoints
             .Produces<TokenResponse>()
             .Produces<ApiProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson);
 
+        auth.MapPost("/forgot", (HttpContext http, ForgotPasswordRequest request, AuthHandlers handlers, CancellationToken ct) =>
+                handlers.ForgotPasswordAsync(http, request, ct))
+            .Validate<ForgotPasswordRequest>()
+            .RequirePermission(Permission.AuthSession)
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .Produces<ForgotPasswordAcceptedResponse>(StatusCodes.Status202Accepted);
+
+        auth.MapPost("/reset", (ResetPasswordRequest request, AuthHandlers handlers, CancellationToken ct) =>
+                handlers.ResetPasswordAsync(request, ct))
+            .Validate<ResetPasswordRequest>()
+            .RequirePermission(Permission.AuthSession)
+            .RequireRateLimiting(RateLimitPolicies.Verify)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson);
+
         auth.MapPost("/login", (HttpContext http, LoginRequest request, AuthHandlers handlers, CancellationToken ct) =>
                 handlers.LoginAsync(http, request, ct))
             .Validate<LoginRequest>()
