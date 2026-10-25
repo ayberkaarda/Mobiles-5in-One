@@ -27,11 +27,11 @@
     "openapi": "node --import ./scripts/source-resolver.mjs scripts/generate-openapi.ts"
   },
   "dependencies": {
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "typescript": "6.0.3",
-    "vite": "8.3.2",
+    "vite": "8.3.5",
     "vitest": "5.0.3"
   }
 }

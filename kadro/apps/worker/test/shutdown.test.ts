@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -144,6 +144,23 @@ describe('health signal', () => {
     await reporter.set('stopping');
     expect((await readHealth(file, at)).healthy).toBe(false);
     await reporter.clear();
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary status file of this test
+    expect(existsSync(file)).toBe(false);
+  });
+
+  it('serializes overlapping writes, as when a probe is in flight during stop', async () => {
+    const file = join(await mkdtemp(join(tmpdir(), 'kadro-health-')), 'health.json');
+    const at = new Date('2031-02-01T10:00:00.000Z');
+    const reporter = new HealthReporter(file, () => at);
+    await Promise.all([
+      reporter.set('ready'),
+      reporter.set('stopping'),
+      reporter.set('ready'),
+      reporter.set('stopping'),
+    ]);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary status file of this test
+    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ status: 'stopping' });
+    await Promise.all([reporter.set('stopping'), reporter.clear()]);
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- temporary status file of this test
     expect(existsSync(file)).toBe(false);
   });

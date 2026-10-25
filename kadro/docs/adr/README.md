@@ -91,6 +91,7 @@ Decision, Consequences.
 | [0081](0081-cost-guard-usage-thresholds.md)                           | `cost.guard` usage thresholds and send gates                                                  | Accepted                                    |
 | [0082](0082-revenuecat-subscriber-deletion-and-backup-verify.md)      | RevenueCat subscriber deletion at hard delete, and `backup.verify`                            | Accepted                                    |
 | [0083](0083-faq-page-and-card-images.md)                              | FAQ page and Open Graph card images                                                           | Accepted                                    |
+| [0085](0085-zod3-advisory-exception.md)                               | Documented exception for the zod advisory GHSA-mrhx-c7xc-m3w5 (zod 3 via the Expo CLI)        | Accepted                                    |
 
 ADRs 0003–0027 record the authorization and domain-integrity decisions behind
 `docs/security/authorization-matrix.md`. Schema consequences for `packages/db`: `matches.locked_at`
@@ -114,4 +115,4 @@ The Status column is updated when a decision is implemented and merged to `main`
 the decision is in the code on `main`; where the evidence has a known limit (0076, 0077) the limit
 is written next to the status.
 
-**Next free number: 0084.**
+**Next free number: 0086.**

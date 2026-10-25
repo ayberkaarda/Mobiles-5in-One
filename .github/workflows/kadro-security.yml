@@ -155,6 +155,11 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
+      # The zod ignore entry (ADR-0085) is advisory-wide; this fails on any zod below 4.6.6 other
+      # than 3.25.76 under @expo/cli. Reads the lockfile only, like the audit.
+      - name: zod exception scope
+        run: node scripts/security/zod-exception-check.ts
+
       # Fails when the lockfile holds duplicate versions that a dedupe would merge.
       - name: pnpm dedupe check
         run: pnpm dedupe --check

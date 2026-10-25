@@ -195,13 +195,13 @@ function metaContent(html: string, name: string): string | undefined {
 /**
  * A 404 body without the per-response values: the nonce, the requested code itself and the
  * streamed not-found marker of the flight payload, whose position depends only on when the page
- * stopped rendering (a malformed code stops before the lookup).
+ * stopped rendering (a malformed code stops before the lookup). Flight row ids are hexadecimal.
  */
 function normalized(html: string, response: Response, code: string): string {
   return html
     .replaceAll(nonceOf(response), 'NONCE')
     .replaceAll(code, 'CODE')
-    .replace(/\d+:E\{\\"digest\\":\\"NEXT_HTTP_ERROR_FALLBACK;404\\"\}\\n/g, '');
+    .replace(/[0-9a-f]+:E\{\\"digest\\":\\"NEXT_HTTP_ERROR_FALLBACK;404\\"\}\\n/g, '');
 }
 
 describe.skipIf(!ENABLED)('invite landing and app link files (production build)', () => {
