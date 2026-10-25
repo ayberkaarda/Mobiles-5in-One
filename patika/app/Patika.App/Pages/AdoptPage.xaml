@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Patika.App.Pages.AdoptPage"
+             Title="Sahiplen">
+    <ScrollView>
+        <VerticalStackLayout Padding="20,28,20,32" Spacing="32">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Yuva arayanlar" SemanticProperties.HeadingLevel="Level1" Style="{StaticResource Display}" />
+                <Label Text="İlanlar moderasyondan geçer, 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır." Style="{StaticResource Lede}" />
+            </VerticalStackLayout>
+
+            <Grid Padding="0,12,0,0" Rotation="-1.2">
+                <Border Style="{StaticResource CollarTag}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Kedi" Style="{StaticResource ChipLabel}" TextColor="{StaticResource TekirDeep}" HorizontalOptions="Center" />
+                        <Label Text="Pamuk" SemanticProperties.HeadingLevel="Level2" Style="{StaticResource Display}" HorizontalOptions="Center" />
+                        <Label Text="Dişi kedi, yaklaşık 2 yaşında" HorizontalOptions="Center" />
+                        <Label Text="Moda, Kadıköy" Style="{StaticResource Muted}" HorizontalOptions="Center" />
+                        <BoxView HeightRequest="1" Margin="0,12" />
+                        <Label Text="●  Kısırlaştırıldı" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Text="●  Aşıları tam" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Text="●  Kulak küpeli" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Style="{StaticResource Sample}" HorizontalOptions="End" />
+                    </VerticalStackLayout>
+                </Border>
+                <Ellipse WidthRequest="20" HeightRequest="20" Stroke="{StaticResource Kaldirim}" StrokeThickness="2" Fill="{StaticResource Kar}" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,16,0,0" />
+                <Ellipse WidthRequest="40" HeightRequest="40" Stroke="{StaticResource Tekir}" StrokeThickness="3" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,-6,0,0" />
+            </Grid>
+
+            <Grid Padding="0,12,0,0" Rotation="0.8">
+                <Border Style="{StaticResource CollarTag}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Köpek" Style="{StaticResource ChipLabel}" TextColor="{StaticResource TekirDeep}" HorizontalOptions="Center" />
+                        <Label Text="Karabaş" SemanticProperties.HeadingLevel="Level2" Style="{StaticResource Display}" HorizontalOptions="Center" />
+                        <Label Text="Erkek köpek, yaklaşık 4 yaşında" HorizontalOptions="Center" />
+                        <Label Text="Caferağa, Kadıköy" Style="{StaticResource Muted}" HorizontalOptions="Center" />
+                        <BoxView HeightRequest="1" Margin="0,12" />
+                        <Label Text="●  Kısırlaştırıldı" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Text="●  Aşıları tam" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Text="○  Küpesiz" TextColor="{StaticResource SisDeep}" FontFamily="NunitoSansSemiBold" FontSize="{StaticResource FontSizeSmall}" />
+                        <Label Style="{StaticResource Sample}" HorizontalOptions="End" />
+                    </VerticalStackLayout>
+                </Border>
+                <Ellipse WidthRequest="20" HeightRequest="20" Stroke="{StaticResource Kaldirim}" StrokeThickness="2" Fill="{StaticResource Kar}" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,16,0,0" />
+                <Ellipse WidthRequest="40" HeightRequest="40" Stroke="{StaticResource Tekir}" StrokeThickness="3" HorizontalOptions="Center" VerticalOptions="Start" Margin="0,-6,0,0" />
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

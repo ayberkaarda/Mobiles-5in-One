@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Patika styles. Every color and size refers to a key from Tokens.xaml (built from brand/tokens.json). -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Style TargetType="Page" ApplyToDerivedTypes="True">
+        <Setter Property="BackgroundColor" Value="{StaticResource Kar}" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style TargetType="Shell" ApplyToDerivedTypes="True">
+        <Setter Property="Shell.BackgroundColor" Value="{StaticResource Kar}" />
+        <Setter Property="Shell.ForegroundColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="Shell.TitleColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource Beyaz}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource SisDeep}" />
+    </Style>
+
+    <Style TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoSans" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="LineHeight" Value="1.25" />
+    </Style>
+
+    <Style x:Key="Display" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoExtraBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
+        <Setter Property="LineHeight" Value="1.0" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+    </Style>
+
+    <Style x:Key="Title" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoExtraBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH4}" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+    </Style>
+
+    <Style x:Key="Lede" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="TextColor" Value="{StaticResource SisDeep}" />
+    </Style>
+
+    <Style x:Key="Small" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    </Style>
+
+    <Style x:Key="Muted" TargetType="Label">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="TextColor" Value="{StaticResource SisDeep}" />
+    </Style>
+
+    <!-- [ÖRNEK] marker for sample content. -->
+    <Style x:Key="Sample" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoSansSemiBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="TextColor" Value="{StaticResource SisDeep}" />
+        <Setter Property="Text" Value="[ÖRNEK]" />
+    </Style>
+
+    <Style x:Key="Count" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoExtraBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH1}" />
+        <Setter Property="TextColor" Value="{StaticResource TekirDeep}" />
+        <Setter Property="FontAutoScalingEnabled" Value="True" />
+    </Style>
+
+    <Style TargetType="Button">
+        <Setter Property="FontFamily" Value="NunitoExtraBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="TextColor" Value="{StaticResource Kar}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="CornerRadius" Value="26" />
+        <Setter Property="HeightRequest" Value="52" />
+        <Setter Property="Padding" Value="24,0" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{StaticResource Cizgi}" />
+                            <Setter Property="TextColor" Value="{StaticResource SisDeep}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <!-- "Beslendi": the main action on a station. -->
+    <Style x:Key="FedButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource Tekir}" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+    </Style>
+
+    <Style x:Key="QuietButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+        <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="BorderColor" Value="{StaticResource Kaldirim}" />
+        <Setter Property="BorderWidth" Value="2" />
+    </Style>
+
+    <Style x:Key="UrgentButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource AcilDeep}" />
+        <Setter Property="TextColor" Value="{StaticResource Beyaz}" />
+    </Style>
+
+    <!-- Bottom sheet over the map. -->
+    <Style x:Key="Sheet" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+        <Setter Property="Stroke" Value="{StaticResource Cizgi}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 24,24,0,0" />
+        <Setter Property="Padding" Value="20,20,20,24" />
+    </Style>
+
+    <!-- Collar tag for adoption listings: rounded top, softer bottom, ink outline. -->
+    <Style x:Key="CollarTag" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+        <Setter Property="Stroke" Value="{StaticResource Kaldirim}" />
+        <Setter Property="StrokeThickness" Value="2" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 40,40,24,24" />
+        <Setter Property="Padding" Value="20,40,20,20" />
+    </Style>
+
+    <Style x:Key="Panel" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Kum}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <Style x:Key="Chip" TargetType="Border">
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 999" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+    </Style>
+
+    <Style x:Key="ChipLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="NunitoSansBold" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    </Style>
+
+    <Style TargetType="BoxView">
+        <Setter Property="Color" Value="{StaticResource Cizgi}" />
+    </Style>
+
+</ResourceDictionary>

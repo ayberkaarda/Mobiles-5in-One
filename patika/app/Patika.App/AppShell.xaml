@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:pages="clr-namespace:Patika.App.Pages"
+       x:Class="Patika.App.AppShell"
+       Shell.NavBarIsVisible="False"
+       Shell.FlyoutBehavior="Disabled">
+    <TabBar>
+        <Tab Title="Harita" Icon="tab_harita.png">
+            <ShellContent ContentTemplate="{DataTemplate pages:MapPage}" Route="harita" />
+        </Tab>
+        <Tab Title="Sahiplen" Icon="tab_sahiplen.png">
+            <ShellContent ContentTemplate="{DataTemplate pages:AdoptPage}" Route="sahiplen" />
+        </Tab>
+        <Tab Title="Acil" Icon="tab_acil.png">
+            <ShellContent ContentTemplate="{DataTemplate pages:UrgentPage}" Route="acil" />
+        </Tab>
+        <Tab Title="Profil" Icon="tab_profil.png">
+            <ShellContent ContentTemplate="{DataTemplate pages:ProfilePage}" Route="profil" />
+        </Tab>
+    </TabBar>
+</Shell>

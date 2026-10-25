@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:drawing="clr-namespace:Patika.App.Drawing"
+             x:Class="Patika.App.Pages.MapPage"
+             Title="Harita">
+    <ContentPage.Resources>
+        <drawing:NeighbourhoodMap x:Key="MapArt" />
+    </ContentPage.Resources>
+    <Grid RowDefinitions="*,Auto">
+        <GraphicsView Grid.RowSpan="2" Drawable="{StaticResource MapArt}"
+                      SemanticProperties.Description="Moda mahallesi haritası, dört istasyon ve bir gönüllü yolu [ÖRNEK]" />
+
+        <!-- Top: place and filters -->
+        <VerticalStackLayout Grid.Row="0" VerticalOptions="Start" Padding="16,16,0,0" Spacing="12">
+            <Border Style="{StaticResource Chip}" HorizontalOptions="Start" Padding="10,8,16,8">
+                <HorizontalStackLayout Spacing="10">
+                    <Image Source="patika_mark.png" HeightRequest="26" WidthRequest="26" />
+                    <Label Text="Moda, Kadıköy" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" VerticalOptions="Center" />
+                    <Label Style="{StaticResource Sample}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8" Padding="0,0,16,0">
+                    <Border Style="{StaticResource Chip}" BackgroundColor="{StaticResource Kaldirim}">
+                        <Label Style="{StaticResource ChipLabel}" Text="Hepsi" TextColor="{StaticResource Kar}" />
+                    </Border>
+                    <Border Style="{StaticResource Chip}">
+                        <Label Style="{StaticResource ChipLabel}" Text="Kedi" />
+                    </Border>
+                    <Border Style="{StaticResource Chip}">
+                        <Label Style="{StaticResource ChipLabel}" Text="Köpek" />
+                    </Border>
+                    <Border Style="{StaticResource Chip}">
+                        <Label Style="{StaticResource ChipLabel}" Text="Su" TextColor="{StaticResource NaneDeep}" />
+                    </Border>
+                    <Border Style="{StaticResource Chip}">
+                        <Label Style="{StaticResource ChipLabel}" Text="Mama bitti" TextColor="{StaticResource TekirDeep}" />
+                    </Border>
+                </HorizontalStackLayout>
+            </ScrollView>
+        </VerticalStackLayout>
+
+        <!-- Bottom: selected station -->
+        <Border Grid.Row="1" Style="{StaticResource Sheet}">
+            <VerticalStackLayout Spacing="4">
+                <BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center" Margin="0,-8,0,12" />
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="Moda Cad. istasyonu" SemanticProperties.HeadingLevel="Level2" Style="{StaticResource Title}" />
+                    <Label Style="{StaticResource Sample}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <Label Text="Bugün 07.40’ta beslendi. Su kabı dolu." TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansSemiBold" />
+                <Label Text="Kedi istasyonu, 6 düzenli ziyaretçi" Style="{StaticResource Muted}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,16,0,0">
+                    <Button Text="Beslendi" Style="{StaticResource FedButton}" />
+                    <Button Grid.Column="1" Text="Mama bitti" Style="{StaticResource QuietButton}" />
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

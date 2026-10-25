@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 0 102 104" role="img" aria-labelledby="t">
+  <title id="t">Patika</title>
+  <g fill="currentColor">
+    <path d="M21 90C20 77 32 66 45 66C58 66 70 77 69 90C68.5 98 63 102 57 100.5C52 99 50 101 45 101C40 101 38 99 33 100.5C27 102 21.5 98 21 90Z"/>
+    <ellipse cx="17" cy="64" rx="7.4" ry="9.4" transform="rotate(-30 17 64)"/>
+    <ellipse cx="31" cy="47.5" rx="7.9" ry="9.9" transform="rotate(-10 31 47.5)"/>
+    <ellipse cx="50" cy="44.5" rx="7.5" ry="9.5" transform="rotate(12 50 44.5)"/>
+    <ellipse cx="65.5" cy="54" rx="6.3" ry="8" transform="rotate(34 65.5 54)"/>
+    <circle cx="78.5" cy="45.5" r="5"/>
+    <circle cx="87.5" cy="36.5" r="4.1"/>
+    <circle cx="94" cy="27.5" r="3.3"/>
+    <circle cx="98.6" cy="19" r="2.6"/>
+    <circle cx="101.6" cy="11.4" r="2"/>
+    <circle cx="103.4" cy="4.8" r="1.5"/>
+  </g>
+</svg>
