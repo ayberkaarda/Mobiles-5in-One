@@ -90,7 +90,15 @@ public static class CarePlaceEndpoints
             Action = "care_places.import",
             TargetType = "care_place"
         });
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesWithSlugRetryAsync(ct);
+        }
+        catch (SlugConflictException)
+        {
+            return Results.Problem(statusCode: 409, title: "Aynı anda çok fazla benzer kayıt oluşturuldu; lütfen tekrar deneyin.",
+                extensions: new Dictionary<string, object?> { ["code"] = "slug_conflict" });
+        }
         return Results.Ok(new CarePlaceImportResponse(places.Count));
     }
 }

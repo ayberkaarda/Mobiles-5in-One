@@ -183,26 +183,37 @@ namespace Patika.Infrastructure.Migrations
             {
                 migrationBuilder.Sql($"UPDATE {table} AS p SET district_id = d.id FROM districts AS d WHERE pg_temp.patika_slug(p.district) = d.slug;");
             }
+            // Set-based slug backfill: one base slug per row, then rows sharing a base are numbered in id
+            // order (first keeps the base, then -2, -3, ...). A suffixed slug can still equal another row's
+            // base (a care place literally named "Klinik 2"), so a set-based pass repeats until no slug is
+            // shared; each pass is one UPDATE over the duplicates only and real data needs at most one more.
             migrationBuilder.Sql("""
+                WITH base AS (
+                    SELECT p.id, pg_temp.patika_slug(coalesce(a.name, a.species) || '-' || coalesce(d.slug, ''))
+                        || '-' || left(replace(p.id::text, '-', ''), 6) AS slug
+                    FROM adoption_posts p JOIN animals a ON a.id = p.animal_id LEFT JOIN districts d ON d.id = p.district_id),
+                numbered AS (SELECT id, slug, row_number() OVER (PARTITION BY slug ORDER BY id) AS n FROM base)
+                UPDATE adoption_posts p SET slug = CASE WHEN n.n = 1 THEN n.slug ELSE n.slug || '-' || n.n END
+                FROM numbered n WHERE n.id = p.id;
+
+                WITH base AS (
+                    SELECT c.id, pg_temp.patika_slug(c.name || '-' || coalesce(d.slug, '')) AS slug
+                    FROM care_places c LEFT JOIN districts d ON d.id = c.district_id),
+                numbered AS (SELECT id, slug, row_number() OVER (PARTITION BY slug ORDER BY id) AS n FROM base)
+                UPDATE care_places c SET slug = CASE WHEN n.n = 1 THEN n.slug ELSE n.slug || '-' || n.n END
+                FROM numbered n WHERE n.id = c.id;
+
                 DO $$
-                DECLARE item record; basis text; candidate text; suffix integer;
                 BEGIN
-                    FOR item IN SELECT p.id, a.name, a.species, d.slug AS district FROM adoption_posts p JOIN animals a ON a.id = p.animal_id
-                        LEFT JOIN districts d ON d.id = p.district_id ORDER BY p.id LOOP
-                        basis := pg_temp.patika_slug(coalesce(item.name, item.species) || '-' || coalesce(item.district, '')) || '-' || left(replace(item.id::text, '-', ''), 6);
-                        candidate := basis; suffix := 2;
-                        WHILE EXISTS (SELECT 1 FROM adoption_posts WHERE slug = candidate) LOOP
-                            candidate := basis || '-' || suffix; suffix := suffix + 1;
-                        END LOOP;
-                        UPDATE adoption_posts SET slug = candidate WHERE id = item.id;
+                    LOOP
+                        WITH numbered AS (SELECT id, slug, row_number() OVER (PARTITION BY slug ORDER BY id) AS n FROM adoption_posts)
+                        UPDATE adoption_posts p SET slug = n.slug || '-' || n.n FROM numbered n WHERE n.id = p.id AND n.n > 1;
+                        EXIT WHEN NOT FOUND;
                     END LOOP;
-                    FOR item IN SELECT c.id, c.name, d.slug AS district FROM care_places c LEFT JOIN districts d ON d.id = c.district_id ORDER BY c.id LOOP
-                        basis := pg_temp.patika_slug(item.name || '-' || coalesce(item.district, ''));
-                        candidate := basis; suffix := 2;
-                        WHILE EXISTS (SELECT 1 FROM care_places WHERE slug = candidate) LOOP
-                            candidate := basis || '-' || suffix; suffix := suffix + 1;
-                        END LOOP;
-                        UPDATE care_places SET slug = candidate WHERE id = item.id;
+                    LOOP
+                        WITH numbered AS (SELECT id, slug, row_number() OVER (PARTITION BY slug ORDER BY id) AS n FROM care_places)
+                        UPDATE care_places c SET slug = n.slug || '-' || n.n FROM numbered n WHERE n.id = c.id AND n.n > 1;
+                        EXIT WHEN NOT FOUND;
                     END LOOP;
                 END $$;
                 DROP FUNCTION pg_temp.patika_slug(text);

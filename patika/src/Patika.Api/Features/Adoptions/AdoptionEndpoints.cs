@@ -84,6 +84,10 @@ public static class AdoptionEndpoints
 
     private static IResult Invalid() => Results.Problem(statusCode: 400, title: "İstek geçersiz.");
 
+    /// <summary>Concurrent creates kept taking the same public address; the client may simply retry.</summary>
+    internal static IResult SlugConflict() => Results.Problem(statusCode: 409, title: "Aynı anda çok fazla benzer kayıt oluşturuldu; lütfen tekrar deneyin.",
+        extensions: new Dictionary<string, object?> { ["code"] = "slug_conflict" });
+
     internal static async Task<IResult> List(PatikaDbContext db, string? district, Species? species, int page = 1, int pageSize = 20, CancellationToken ct = default, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (page is < 1 or > 100000 || pageSize is < 1 or > 100 || (species.HasValue && !Enum.IsDefined(species.Value))) return Invalid();
@@ -125,7 +129,14 @@ public static class AdoptionEndpoints
         };
         post.DistrictId = await new DistrictResolver(db).ResolveAsync(post.District, ct);
         db.AdoptionPosts.Add(post);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesWithSlugRetryAsync(ct);
+        }
+        catch (SlugConflictException)
+        {
+            return SlugConflict();
+        }
         return Results.Created($"/v1/adoptions/{post.Id}", (await EnrichAsync([post], db, ct, photos))[0]);
     }
 
