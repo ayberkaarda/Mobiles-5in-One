@@ -3,6 +3,7 @@ namespace Patika.Domain.Entities;
 public sealed class Station : Entity
 {
     public string? Name { get; set; }
+    public Guid? DistrictId { get; set; }
     public string? District { get; set; }
     public GeoPoint Location { get; set; }
     public StationKind Kind { get; set; }

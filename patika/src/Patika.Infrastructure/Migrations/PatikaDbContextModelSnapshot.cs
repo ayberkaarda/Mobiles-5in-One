@@ -31,9 +31,17 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("AdoptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("adopted_at");
+
                     b.Property<Guid>("AnimalId")
                         .HasColumnType("uuid")
                         .HasColumnName("animal_id");
+
+                    b.Property<string>("ClosedReason")
+                        .HasColumnType("text")
+                        .HasColumnName("closed_reason");
 
                     b.Property<DateTimeOffset>("ClosesAt")
                         .HasColumnType("timestamp with time zone")
@@ -59,11 +67,21 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("district");
 
+                    b.Property<Guid?>("DistrictId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("district_id");
+
                     b.Property<string>("Requirements")
                         .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("requirements");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("slug");
 
                     b.Property<string>("State")
                         .IsRequired()
@@ -79,6 +97,11 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("AnimalId");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("DistrictId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
 
                     b.HasIndex("State", "ClosesAt");
 
@@ -142,6 +165,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<short?>("BirthYear")
+                        .HasColumnType("smallint")
+                        .HasColumnName("birth_year");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -154,6 +181,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
                         .HasColumnName("district");
+
+                    b.Property<Guid?>("DistrictId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("district_id");
 
                     b.Property<bool>("EarTagged")
                         .HasColumnType("boolean")
@@ -203,6 +234,8 @@ namespace Patika.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("DistrictId");
 
                     b.HasIndex("Location");
 
@@ -375,6 +408,14 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("District")
+                        .HasColumnType("text")
+                        .HasColumnName("district");
+
+                    b.Property<Guid?>("DistrictId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("district_id");
+
                     b.Property<string>("HoursJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("hours_json");
@@ -408,6 +449,12 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("slug");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -416,17 +463,29 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("verified");
 
+                    b.Property<string>("Website")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("website");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("DistrictId");
 
                     b.HasIndex("Location");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Location"), "gist");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
 
                     b.HasIndex("Kind", "Open24h");
 
                     b.ToTable("care_places", null, t =>
                         {
                             t.HasCheckConstraint("ck_care_places_sample_label", "NOT is_sample OR name LIKE '[ÖRNEK]%'");
+
+                            t.HasCheckConstraint("ck_care_places_website", "website IS NULL OR website ~ '^https://[^/[:space:]]+'");
                         });
                 });
 
@@ -527,6 +586,45 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("device_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.District", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ProvinceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("province_id");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("slug");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProvinceId", "Slug")
+                        .IsUnique();
+
+                    b.ToTable("districts", (string)null);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.EmailToken", b =>
@@ -712,6 +810,91 @@ namespace Patika.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("follows", (string)null);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.ModerationDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("decision");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewer_id");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_id");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("target_type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetType", "TargetId", "DecidedAt");
+
+                    b.ToTable("moderation_decisions", (string)null);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.Province", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("slug");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("provinces", (string)null);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.PushDailyCounter", b =>
@@ -907,6 +1090,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("character varying(60)")
                         .HasColumnName("district");
 
+                    b.Property<Guid?>("DistrictId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("district_id");
+
                     b.Property<long>("FeedingsCount")
                         .HasColumnType("bigint")
                         .HasColumnName("feedings_count");
@@ -953,6 +1140,8 @@ namespace Patika.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("DistrictId");
 
                     b.HasIndex("Location");
 
@@ -1121,6 +1310,15 @@ namespace Patika.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("FanoutAt")
                         .HasColumnType("timestamptz")
                         .HasColumnName("fanout_at");
+
+                    b.Property<DateTimeOffset?>("HiddenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hidden_at");
+
+                    b.Property<string>("HiddenReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("hidden_reason");
 
                     b.Property<Point>("Location")
                         .IsRequired()
@@ -1337,6 +1535,11 @@ namespace Patika.Infrastructure.Migrations
                         .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Patika.Domain.Entities.District", null)
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.AdoptionRequest", b =>
@@ -1361,6 +1564,11 @@ namespace Patika.Infrastructure.Migrations
                         .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Patika.Domain.Entities.District", null)
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Patika.Domain.Entities.Station", null)
                         .WithMany()
@@ -1391,6 +1599,14 @@ namespace Patika.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Patika.Domain.Entities.CarePlace", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.District", null)
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.DeletionRequest", b =>
                 {
                     b.HasOne("Patika.Domain.Entities.User", null)
@@ -1406,6 +1622,15 @@ namespace Patika.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.District", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.Province", null)
+                        .WithMany()
+                        .HasForeignKey("ProvinceId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -1500,6 +1725,11 @@ namespace Patika.Infrastructure.Migrations
                         .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Patika.Domain.Entities.District", null)
+                        .WithMany()
+                        .HasForeignKey("DistrictId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.Subscription", b =>

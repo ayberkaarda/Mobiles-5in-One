@@ -8,12 +8,18 @@ public sealed class UrgentPost : Entity
     public required string PhotoKey { get; set; }
     public UrgentPostState State { get; set; }
     public Guid CreatedBy { get; set; }
+    public DateTimeOffset? HiddenAt { get; set; }
+    public string? HiddenReason { get; set; }
     public DateTimeOffset? FanoutAt { get; set; }
     public int NotifiedCount { get; set; }
 }
 
 public sealed class CarePlace : Entity
 {
+    public string Slug { get; set; } = "";
+    public string? District { get; set; }
+    public Guid? DistrictId { get; set; }
+    public string? Website { get; set; }
     public required string Name { get; set; }
     public CarePlaceKind Kind { get; set; }
     public GeoPoint Location { get; set; }

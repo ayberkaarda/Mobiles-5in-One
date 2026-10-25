@@ -3,10 +3,12 @@ namespace Patika.Domain.Entities;
 public sealed class Animal : Entity
 {
     public Guid? StationId { get; set; }
+    public Guid? DistrictId { get; set; }
     public string? District { get; set; }
     public GeoPoint Location { get; set; }
     public Species Species { get; set; }
     public string? Name { get; set; }
+    public short? BirthYear { get; set; }
     public AnimalSex Sex { get; set; }
     public bool Sterilized { get; set; }
     public bool Vaccinated { get; set; }

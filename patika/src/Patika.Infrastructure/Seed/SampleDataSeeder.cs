@@ -39,6 +39,7 @@ public static class SampleDataSeeder
             Kind = StationKind.Both,
             Species = Species.Cat,
             PhotoKey = "samples/moda-station.jpg",
+            District = "Kadıköy",
             CreatedBy = owner.Id
         };
         var yeldegirmeni = new Station
@@ -49,6 +50,7 @@ public static class SampleDataSeeder
             Kind = StationKind.Water,
             Species = Species.Mixed,
             PhotoKey = "samples/yeldegirmeni-station.jpg",
+            District = "Kadıköy",
             CreatedBy = owner.Id
         };
         var cat = new Animal
@@ -62,6 +64,7 @@ public static class SampleDataSeeder
             Sterilized = true,
             Vaccinated = true,
             Status = AnimalStatus.Healthy,
+            District = "Kadıköy",
             CreatedBy = owner.Id
         };
         var dog = new Animal
@@ -74,6 +77,7 @@ public static class SampleDataSeeder
             Sex = AnimalSex.Male,
             EarTagged = true,
             Status = AnimalStatus.Healthy,
+            District = "Kadıköy",
             CreatedBy = owner.Id
         };
         return
@@ -95,19 +99,19 @@ public static class SampleDataSeeder
             {
                 Id = SampleId(8), Name = "[ÖRNEK] Kadıköy Veteriner Noktası", Kind = CarePlaceKind.Vet,
                 Location = new GeoPoint(29.0300, 40.9850), Address = "[ÖRNEK] Kadıköy, İstanbul; gerçek işletme değildir.",
-                HoursJson = "{}", IsSample = true
+                District = "Kadıköy", HoursJson = "{}", IsSample = true
             },
             new CarePlace
             {
                 Id = SampleId(9), Name = "[ÖRNEK] Kadıköy Bakımevi", Kind = CarePlaceKind.Shelter,
                 Location = new GeoPoint(29.0400, 40.9900), Address = "[ÖRNEK] Kadıköy, İstanbul; gerçek işletme değildir.",
-                HoursJson = "{}", IsSample = true
+                District = "Kadıköy", HoursJson = "{}", IsSample = true
             },
             new CarePlace
             {
                 Id = SampleId(10), Name = "[ÖRNEK] Kadıköy Belediye Bakım Noktası", Kind = CarePlaceKind.MunicipalCare,
                 Location = new GeoPoint(29.0450, 40.9950), Address = "[ÖRNEK] Kadıköy, İstanbul; gerçek işletme değildir.",
-                HoursJson = "{}", IsSample = true
+                District = "Kadıköy", HoursJson = "{}", IsSample = true
             }
         ];
     }
