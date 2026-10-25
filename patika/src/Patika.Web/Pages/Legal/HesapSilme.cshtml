@@ -1,0 +1,55 @@
+@page "/hesap-silme"
+@model Patika.Web.Pages.Legal.HesapSilmeModel
+<link rel="stylesheet" href="~/css/content.css" asp-append-version="true" />
+<div class="doc">
+    <partial name="_LegalTabs" model="@("/hesap-silme")" />
+    <div class="delete">
+        <div class="delete__main">
+            <h1 class="doc-title doc-title--page">Patika hesabını sil</h1>
+            <p class="delete__lede">Hesabını Patika uygulamasından silebilirsin. Hesabın hemen kapanır; 7 gün boyunca yeniden giriş yaparak vazgeçebilirsin. 7 gün dolunca hesabın ve kişisel verilerin kalıcı olarak silinir.</p>
+
+            <section class="delete__app" aria-labelledby="uygulamadan">
+                <h2 id="uygulamadan">Uygulamadan</h2>
+                <ol>
+                    <li>Alttaki <strong>Profil</strong> sekmesini aç.</li>
+                    <li>Sağ üstteki <strong>Ayarlar</strong> düğmesine dokun.</li>
+                    <li>En alttaki <strong>Hesabımı sil</strong> seçeneğini kullan.</li>
+                    <li>Güvenliğin için şifrenle ya da Google ile yeniden doğrula; son 10 dakika içinde giriş yaptıysan bu adım kısa sürer.</li>
+                </ol>
+            </section>
+
+            <section aria-labelledby="sure">
+                <h2 id="sure" class="delete__h2">Silme nasıl ilerler?</h2>
+                <ol class="timeline">
+                    <li class="timeline__step timeline__step--now"><strong>Hemen:</strong> hesabın kapanır, tüm oturumların sonlanır, e-posta adresine bir onay e-postası gelir.</li>
+                    <li class="timeline__step timeline__step--grace"><strong>7 gün içinde:</strong> yeniden giriş yaparsan silme iptal olur ve her şey olduğu gibi kalır.</li>
+                    <li class="timeline__step timeline__step--final"><strong>7 gün sonra:</strong> hesabın ve kişisel verilerin kalıcı olarak silinir.</li>
+                </ol>
+            </section>
+
+            <section aria-labelledby="neler">
+                <h2 id="neler" class="delete__h2">Neler silinir, neler kalır?</h2>
+                <ul class="delete__list">
+                    <li><strong>Silinir:</strong> e-posta adresin, şifre özetin, görünen adın, acil bildirim bölgen ve ayarların, bildirim cihaz kayıtların, Google bağlantın, sahiplendirme ilanların ve başvuruların, acil yardım çağrıların, takip ettiğin hayvanlar, bildirdiğin içerikler ve yüklediğin tüm fotoğraflar.</li>
+                    <li><strong>Adsız kalır:</strong> besleme ve görülme kayıtların, istasyonların besleme geçmişi bozulmasın diye silinmez; hesabınla bağlantısı kesilir, not ve fotoğrafları silinir.</li>
+                    <li><strong>Haritada kalır:</strong> eklediğin istasyonlar ve hayvan kayıtları mahallenin ortak bilgisi olduğu için kalır, fotoğrafları silinir ve artık “Silinmiş hesap” olarak görünür.</li>
+                </ul>
+            </section>
+            <p class="doc-note">Ayrıntılar için <a href="/kvkk">KVKK aydınlatma metni</a> ve <a href="/gizlilik">gizlilik politikası</a>.</p>
+        </div>
+
+        <section class="delete__web" aria-labelledby="uygulaman-yoksa">
+            <h2 id="uygulaman-yoksa">Uygulaman yoksa</h2>
+            <p>Bu sayfadan hesap silme henüz yok. Telefonunda uygulama yüklü değilse ya da hesabına giremiyorsan, kayıtlı e-posta adresinden bize yaz; kimliğini doğruladıktan sonra silme talebini aynı 7 günlük süreçle başlatırız.</p>
+            <dl class="delete__contact">
+                <dt>E-posta</dt>
+                <dd><mark class="doc-ph">[DESTEK E-POSTA ADRESİ]</mark></dd>
+                <dt>Konu satırı</dt>
+                <dd>Hesap silme talebi</dd>
+                <dt>Yazman gerekenler</dt>
+                <dd>Hesabındaki e-posta adresi ve görünen adın. Şifreni asla e-postayla gönderme.</dd>
+            </dl>
+            <p class="delete__fine">Destek adresi hukuki inceleme sonrasında eklenecek. <mark class="doc-ph">[YANIT SÜRESİ, KVKK BAŞVURU YOLUYLA BİRLİKTE]</mark></p>
+        </section>
+    </div>
+</div>

@@ -138,7 +138,7 @@ public static partial class MarkdownLite
     [GeneratedRegex(@"\*\*(?<text>.+?)\*\*")]
     private static partial Regex BoldPattern();
 
-    [GeneratedRegex(@"(?<text>\[[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9 ,./()&-]{2,}\])")]
+    [GeneratedRegex(@"(?<text>\[[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9 ,;:./()&-]{2,}\])")]
     private static partial Regex PlaceholderPattern();
 
     [GeneratedRegex(@"(?m)^\s*(?:#{1,6}|\d+\.|[-*])\s+")]
