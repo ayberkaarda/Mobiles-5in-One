@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Patika.Api;
 using Patika.Api.Features.Account;
 using Patika.Api.Features.Adoptions;
@@ -13,6 +14,7 @@ using Patika.Api.Features.Stations;
 using Patika.Api.Features.Urgent;
 using Patika.Api.OpenApi;
 using Patika.Infrastructure;
+using Patika.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +22,13 @@ builder.AddPatikaApi();
 builder.Services.AddPatikaInfrastructure(builder.Configuration.GetConnectionString("Patika"));
 
 var app = builder.Build();
+
+// Development and compose only; production runs migrations as a separate step.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider.GetRequiredService<PatikaDbContext>().Database.MigrateAsync();
+}
 
 app.UsePatikaApi();
 app.MapHealth();

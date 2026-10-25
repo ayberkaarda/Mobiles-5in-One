@@ -73,6 +73,14 @@ services:
     environment:
       <<: *app-env
       ASPNETCORE_HTTP_PORTS: "8080"
+      # Local stack only: apply EF migrations on startup. Production runs them as a separate step.
+      Database__MigrateOnStartup: "true"
+    healthcheck:
+      test: [CMD-SHELL, "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.0\r\n\r\n\" >&3 && grep -q \"200 OK\" <&3'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
     ports:
       - "127.0.0.1:5000:8080"
 
@@ -90,6 +98,13 @@ services:
 
   worker:
     <<: *app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
     build:
       context: .
       dockerfile: src/Patika.Worker/Dockerfile
