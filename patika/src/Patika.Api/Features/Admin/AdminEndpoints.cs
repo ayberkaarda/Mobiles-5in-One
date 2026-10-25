@@ -20,6 +20,8 @@ public static class AdminEndpoints
             .RequireAuthorization(AdminPolicies.Manage).Validate<AdminRoleRequest>();
         admin.MapPost("/users/{id:guid}/suspend", (Guid id, HttpContext http, AdminSuspendRequest request, AdminHandlers h, CancellationToken ct) => h.SuspendAsync(http, id, request, ct))
             .RequireAuthorization(AdminPolicies.Manage).Validate<AdminSuspendRequest>();
+        admin.MapPost("/users/{id:guid}/unsuspend", (Guid id, HttpContext http, AdminUnsuspendRequest request, AdminHandlers h, CancellationToken ct) => h.UnsuspendAsync(http, id, request, ct))
+            .RequireAuthorization(AdminPolicies.Manage).Validate<AdminUnsuspendRequest>();
         admin.MapGet("/audit", (Guid? actor, string? action, string? target, DateTimeOffset? from, DateTimeOffset? to, string? cursor, AdminHandlers h, CancellationToken ct) =>
             h.AuditAsync(actor, action, target, from, to, cursor, ct)).RequireAuthorization(AdminPolicies.Manage);
         admin.MapPost("/care-places/csv/preview", (HttpContext http, AdminHandlers h, CancellationToken ct) => h.CsvAsync(http, false, ct))

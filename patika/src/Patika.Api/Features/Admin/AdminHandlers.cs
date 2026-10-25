@@ -1,8 +1,11 @@
+using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Patika.Api.Features.Auth;
 using Patika.Api.Features.CarePlaces;
+using Patika.Api.Security.Tokens;
 using Patika.Contracts.Admin;
 using Patika.Domain.Entities;
 using Patika.Infrastructure.Persistence;
@@ -61,14 +64,16 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
             || (decision is ModerationDecisionKind.Rejected or ModerationDecisionKind.Hidden && !TotpService.ReasonValid(request.Reason, 500))
             || request.Reason?.Length > 500) return Error(400, "decision_invalid");
         await using var tx = await BeginWriteAsync(ct);
+        if (!await CallerCurrentAsync(http, manage: false, ct)) return Revoked();
         string? stepReason = null;
         if (request.TargetType == "urgent" && decision == ModerationDecisionKind.Restored)
         {
-            stepReason = await StepAsync(http, ct);
+            stepReason = await StepAsync(http, StepUpActions.RestoreUrgent, request.TargetId.ToString(), ct);
             if (stepReason is null) return Error(403, "step_up_required");
         }
         var valid = false;
         var exists = false;
+        string? previous = null;
         switch (request.TargetType)
         {
             case "adoption":
@@ -77,6 +82,13 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
                 if (post?.State == AdoptionPostState.Pending && decision is ModerationDecisionKind.Approved or ModerationDecisionKind.Rejected)
                 {
                     post.State = decision == ModerationDecisionKind.Approved ? AdoptionPostState.Published : AdoptionPostState.Rejected;
+                    valid = true;
+                }
+                // Takedown of live content: a published post can still be rejected, with a reason.
+                else if (post?.State == AdoptionPostState.Published && decision == ModerationDecisionKind.Rejected)
+                {
+                    post.State = AdoptionPostState.Rejected;
+                    previous = nameof(AdoptionPostState.Published);
                     valid = true;
                 }
                 break;
@@ -98,6 +110,12 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
                     photo.ModerationState = decision == ModerationDecisionKind.Approved ? ModerationState.Approved : ModerationState.Rejected;
                     valid = true;
                 }
+                else if (photo?.ModerationState == ModerationState.Approved && decision == ModerationDecisionKind.Rejected)
+                {
+                    photo.ModerationState = ModerationState.Rejected;
+                    previous = nameof(ModerationState.Approved);
+                    valid = true;
+                }
                 break;
             case "report":
                 var report = await db.Reports.SingleOrDefaultAsync(x => x.Id == request.TargetId, ct);
@@ -109,7 +127,8 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
         }
         if (!exists) return Results.NotFound();
         if (!valid) return Error(409, "transition_invalid");
-        Record(http, "moderation.decision", request.TargetType, request.TargetId, decision, request.Reason?.Trim(), stepReason);
+        Record(http, "moderation.decision", request.TargetType, request.TargetId, decision, request.Reason?.Trim(), stepReason,
+            previous is null ? null : new { previous });
         await SaveAsync(tx, ct);
         return Results.NoContent();
     }
@@ -145,12 +164,13 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
             return Error(400, "role_invalid");
         if (id == TotpService.UserId(http.User)) return Error(409, "own_role_protected");
         await using var tx = await BeginWriteAsync(ct);
-        var reason = await StepAsync(http, ct);
+        if (!await CallerCurrentAsync(http, manage: true, ct)) return Revoked();
+        var reason = await StepAsync(http, StepUpActions.RoleChange, id.ToString(), ct);
         if (reason is null) return Error(403, "step_up_required");
         var user = await totp.LockUserAsync(id, ct);
         if (user is null) return Results.NotFound();
         if (user.Role == role) return Error(409, "transition_invalid");
-        if (user.Role == UserRole.Admin && role != UserRole.Admin && IsActiveAdmin(user) && await ActiveAdminsAsync(ct) <= 1)
+        if (role != UserRole.Admin && await AdminWriteLock.IsLastActiveAdminAsync(db, user, clock.GetUtcNow(), ct))
             return Error(409, "last_admin_protected");
         if (role is UserRole.Moderator or UserRole.Admin && user.TotpEnabledAt is null) return Error(409, "target_mfa_required");
         var previous = user.Role.ToString();
@@ -168,16 +188,38 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
         if (!TotpService.ReasonValid(request.Reason, 500) || request.Until <= clock.GetUtcNow()) return Error(400, "suspension_invalid");
         if (id == TotpService.UserId(http.User)) return Error(409, "own_account_protected");
         await using var tx = await BeginWriteAsync(ct);
-        var reason = await StepAsync(http, ct);
+        if (!await CallerCurrentAsync(http, manage: true, ct)) return Revoked();
+        var reason = await StepAsync(http, StepUpActions.Suspend, id.ToString(), ct);
         if (reason is null) return Error(403, "step_up_required");
         var user = await totp.LockUserAsync(id, ct);
         if (user is null) return Results.NotFound();
-        if (user.Role == UserRole.Admin && IsActiveAdmin(user) && await ActiveAdminsAsync(ct) <= 1)
-            return Error(409, "last_admin_protected");
-        user.SuspendedUntil = request.Until ?? DateTimeOffset.MaxValue;
+        var now = clock.GetUtcNow();
+        var until = request.Until ?? DateTimeOffset.MaxValue;
+        // Shortening a running suspension would silently lift it; ending one early is the unsuspend action.
+        if (user.SuspendedUntil > now && until < user.SuspendedUntil) return Error(400, "suspension_invalid");
+        if (await AdminWriteLock.IsLastActiveAdminAsync(db, user, now, ct)) return Error(409, "last_admin_protected");
+        user.SuspendedUntil = until;
         user.SessionVersion++;
-        await new EfAuthStore(db).RevokeAllForUserAsync(id, clock.GetUtcNow(), ct);
+        await new EfAuthStore(db).RevokeAllForUserAsync(id, now, ct);
         Record(http, "user.suspend", "user", id, ModerationDecisionKind.Hidden, request.Reason.Trim(), reason, new { request.Until });
+        await SaveAsync(tx, ct);
+        SessionVersionCache.Shared.Invalidate(id);
+        return Results.NoContent();
+    }
+
+    public async Task<IResult> UnsuspendAsync(HttpContext http, Guid id, AdminUnsuspendRequest request, CancellationToken ct)
+    {
+        if (!TotpService.ReasonValid(request.Reason, 500)) return Error(400, "suspension_invalid");
+        await using var tx = await BeginWriteAsync(ct);
+        if (!await CallerCurrentAsync(http, manage: true, ct)) return Revoked();
+        var reason = await StepAsync(http, StepUpActions.Unsuspend, id.ToString(), ct);
+        if (reason is null) return Error(403, "step_up_required");
+        var user = await totp.LockUserAsync(id, ct);
+        if (user is null) return Results.NotFound();
+        if (!(user.SuspendedUntil > clock.GetUtcNow())) return Error(409, "transition_invalid");
+        var previous = user.SuspendedUntil;
+        user.SuspendedUntil = null;
+        Record(http, "user.unsuspend", "user", id, ModerationDecisionKind.Restored, request.Reason.Trim(), reason, new { previous });
         await SaveAsync(tx, ct);
         SessionVersionCache.Shared.Invalidate(id);
         return Results.NoContent();
@@ -215,7 +257,8 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
         if (form["previewHash"].ToString() != preview.PreviewHash) return Error(409, "preview_hash_mismatch");
         if (preview.Rows.Any(x => x.Status != "valid")) return Error(400, "csv_rows_invalid");
         await using var tx = await BeginWriteAsync(ct);
-        var reason = await StepAsync(http, ct);
+        if (!await CallerCurrentAsync(http, manage: true, ct)) return Revoked();
+        var reason = await StepAsync(http, StepUpActions.CsvCommit, preview.PreviewHash, ct);
         if (reason is null) return Error(403, "step_up_required");
         var existing = await db.CarePlaceImports.SingleOrDefaultAsync(x => x.FileHash == preview.PreviewHash, ct);
         if (existing is not null)
@@ -236,31 +279,30 @@ public sealed class AdminHandlers(PatikaDbContext db, TotpService totp, EmailCod
         return Results.Ok(new CarePlaceCommit(import.FileHash, places.Count, false));
     }
 
-    // Suspended or deactivated admins cannot act, so they never count towards keeping one admin.
-    private bool IsActiveAdmin(User user) => user.Role == UserRole.Admin && user.DeactivatedAt is null
-        && !(user.SuspendedUntil > clock.GetUtcNow());
-
-    private Task<int> ActiveAdminsAsync(CancellationToken ct)
+    // Authorization ran before the advisory lock. Re-read the caller under the lock, so a demotion, suspension,
+    // deactivation or session revocation committed meanwhile stops this write before anything is consumed or changed.
+    private async Task<bool> CallerCurrentAsync(HttpContext http, bool manage, CancellationToken ct)
     {
-        var now = clock.GetUtcNow();
-        return db.Users.CountAsync(u => u.Role == UserRole.Admin && u.DeactivatedAt == null
-            && (u.SuspendedUntil == null || u.SuspendedUntil <= now), ct);
+        if (!int.TryParse(http.User.FindFirstValue(PatikaClaims.SessionVersion), NumberStyles.None, CultureInfo.InvariantCulture, out var version))
+            return false;
+        var caller = await totp.LockUserAsync(TotpService.UserId(http.User), ct);
+        return caller is not null && caller.SessionVersion == version && caller.DeactivatedAt is null
+            && !(caller.SuspendedUntil > clock.GetUtcNow())
+            && (manage ? caller.Role == UserRole.Admin : caller.Role is UserRole.Moderator or UserRole.Admin);
     }
+
+    private static IResult Revoked() => Error(403, "admin_access_revoked");
 
     private Task<int> RejectionsAsync(Guid user, CancellationToken ct) => db.ModerationDecisions.CountAsync(d => d.Decision == ModerationDecisionKind.Rejected &&
         ((d.TargetType == "adoption" && db.AdoptionPosts.Any(p => p.Id == d.TargetId && p.CreatedBy == user))
         || (d.TargetType == "photo" && db.AnimalPhotos.Any(p => p.Id == d.TargetId && p.CreatedBy == user))
         || (d.TargetType == "report" && db.Reports.Any(p => p.Id == d.TargetId && p.ReporterId == user))), ct);
 
-    private async Task<IDbContextTransaction> BeginWriteAsync(CancellationToken ct)
-    {
-        var tx = await db.Database.BeginTransactionAsync(ct);
-        // Serialize administrative writes, including last-admin checks and file-hash idempotency.
-        await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock({740409})", ct);
-        return tx;
-    }
+    // Serialize administrative writes, including last-admin checks and file-hash idempotency.
+    private Task<IDbContextTransaction> BeginWriteAsync(CancellationToken ct) => AdminWriteLock.BeginAsync(db, ct);
 
-    private Task<string?> StepAsync(HttpContext http, CancellationToken ct) => totp.ConsumeStepUpAsync(http.User, http.Request.Headers["X-Step-Up"].ToString(), ct);
+    private Task<string?> StepAsync(HttpContext http, string action, string target, CancellationToken ct) =>
+        totp.ConsumeStepUpAsync(http.User, http.Request.Headers["X-Step-Up"].ToString(), action, target, ct);
     private async Task SaveAsync(IDbContextTransaction tx, CancellationToken ct)
     {
         await db.SaveChangesAsync(ct);

@@ -70,6 +70,12 @@ public static class AccountEndpoints
             return TypedResults.Unauthorized();
         }
 
+        if (schedule.LastAdminProtected)
+        {
+            return AuthHandlers.Problem(StatusCodes.Status409Conflict, "last_admin_protected",
+                "Make another account an admin before deleting the last active admin.");
+        }
+
         if (schedule.Created)
         {
             SessionVersionCache.Shared.Invalidate(user.Id);

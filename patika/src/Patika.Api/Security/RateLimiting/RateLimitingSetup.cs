@@ -7,7 +7,12 @@ namespace Patika.Api.Security.RateLimiting;
 
 public static class RateLimitPolicies
 {
-    public const string Totp = Auth;
+    /// <summary>
+    /// TOTP verification routes (<c>/auth/mfa</c>, <c>/me/totp/*</c>, <c>/admin/step-up</c>): a loose ceiling of 100 per
+    /// 15 minutes per client IP. The real budget is per user, see <see cref="TotpRateLimiter"/>.
+    /// </summary>
+    public const string Totp = "totp";
+
     /// <summary>Register and login: 5 per 15 minutes per client IP (and per normalized email in the handler).</summary>
     public const string Auth = "auth";
 
@@ -68,6 +73,18 @@ public sealed class EmailRateLimiter() : IDisposable
     public void Dispose() => Limiter.Dispose();
 }
 
+/// <summary>
+/// Per-user budget for TOTP verification: 20 per 15 minutes, keyed by the authenticated user or, on
+/// <c>/auth/mfa</c>, by the user the MFA challenge belongs to. Separate from the per-IP login bucket, so
+/// admins behind one address (the Web BFF) do not share or burn each other's budget.
+/// </summary>
+public sealed class TotpRateLimiter() : IDisposable
+{
+    public KeyedRateLimiter Limiter { get; } = new(20, TimeSpan.FromMinutes(15), 15);
+
+    public void Dispose() => Limiter.Dispose();
+}
+
 /// <summary>Limiter for refresh, keyed by the user that owns the presented token.</summary>
 public sealed class RefreshRateLimiter() : IDisposable
 {
@@ -82,6 +99,7 @@ public static class RateLimitingSetup
     {
         services.AddSingleton<EmailRateLimiter>();
         services.AddSingleton<RefreshRateLimiter>();
+        services.AddSingleton<TotpRateLimiter>();
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -102,6 +120,11 @@ public static class RateLimitingSetup
                 RateLimitPartition.GetSlidingWindowLimiter(
                     "auth:" + ClientIp(context),
                     _ => KeyedRateLimiter.SlidingOptions(5, TimeSpan.FromMinutes(15), 15)));
+
+            options.AddPolicy(RateLimitPolicies.Totp, context =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    "totp:" + ClientIp(context),
+                    _ => KeyedRateLimiter.SlidingOptions(100, TimeSpan.FromMinutes(15), 15)));
 
             options.AddPolicy(RateLimitPolicies.External, context =>
                 RateLimitPartition.GetSlidingWindowLimiter(
@@ -169,4 +192,13 @@ public static class RateLimitingSetup
         var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
         context.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
     }
+}
+
+/// <summary>A 429 problem with <c>Retry-After</c>, for limits enforced inside a handler.</summary>
+public sealed class RetryLaterResult(TimeSpan retryAfter) : IResult, IStatusCodeHttpResult
+{
+    public int? StatusCode => StatusCodes.Status429TooManyRequests;
+
+    public Task ExecuteAsync(HttpContext httpContext) =>
+        RateLimitingSetup.TooManyRequests(httpContext, retryAfter).ExecuteAsync(httpContext);
 }

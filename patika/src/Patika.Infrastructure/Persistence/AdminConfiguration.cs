@@ -15,6 +15,8 @@ internal static class AdminConfiguration
         model.Entity<AdminAccessToken>().Property(x => x.Purpose).HasMaxLength(20);
         model.Entity<AdminAccessToken>().Property(x => x.Reason).HasMaxLength(300);
         model.Entity<AdminAccessToken>().Property(x => x.AuthMethod).HasMaxLength(20);
+        model.Entity<AdminAccessToken>().Property(x => x.Action).HasMaxLength(20);
+        model.Entity<AdminAccessToken>().Property(x => x.TargetId).HasMaxLength(64);
         model.Entity<CarePlaceImport>().HasIndex(x => x.FileHash).IsUnique();
         model.Entity<CarePlaceImport>().Property(x => x.FileHash).HasMaxLength(64);
         model.Entity<AdoptionPost>().HasIndex(x => new { x.State, x.CreatedAt, x.Id });

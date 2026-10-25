@@ -10,6 +10,8 @@ public sealed class StepUpRequestValidator : AbstractValidator<StepUpRequest>
     {
         RuleFor(x => x.Code).NotNull().MaximumLength(128);
         RuleFor(x => x.Reason).Must(x => TotpService.ReasonValid(x, 300));
+        RuleFor(x => x.Action).Must(x => StepUpActions.All.Contains(x));
+        RuleFor(x => x.TargetId).Must(x => TotpService.StepUpTarget(x) is not null);
     }
 }
 
@@ -32,4 +34,9 @@ public sealed class AdminRoleRequestValidator : AbstractValidator<AdminRoleReque
 public sealed class AdminSuspendRequestValidator : AbstractValidator<AdminSuspendRequest>
 {
     public AdminSuspendRequestValidator() => RuleFor(x => x.Reason).Must(x => TotpService.ReasonValid(x, 500));
+}
+
+public sealed class AdminUnsuspendRequestValidator : AbstractValidator<AdminUnsuspendRequest>
+{
+    public AdminUnsuspendRequestValidator() => RuleFor(x => x.Reason).Must(x => TotpService.ReasonValid(x, 500));
 }

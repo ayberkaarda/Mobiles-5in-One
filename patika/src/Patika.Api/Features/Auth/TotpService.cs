@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Patika.Api.Features.Admin;
 using Patika.Api.Security.Authorization;
+using Patika.Api.Security.RateLimiting;
 using Patika.Api.Security.Tokens;
 using Patika.Contracts.Admin;
 using Patika.Contracts.Auth;
@@ -17,7 +18,8 @@ namespace Patika.Api.Features.Auth;
 
 public sealed class TotpService(
     PatikaDbContext db, IDataProtectionProvider protection, EmailCodeHasher hashes,
-    IAccessTokenIssuer accessTokens, IOptions<JwtSettings> settings, TimeProvider clock)
+    IAccessTokenIssuer accessTokens, IOptions<JwtSettings> settings, TimeProvider clock,
+    TotpRateLimiter limits)
 {
     private readonly IDataProtector protector = protection.CreateProtector("Patika.Totp.v1");
 
@@ -53,6 +55,7 @@ public sealed class TotpService(
 
     public async Task<IResult> ConfirmAsync(ClaimsPrincipal principal, string? code, CancellationToken ct)
     {
+        if (Throttle(UserId(principal)) is { } limited) return limited;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var user = await LockUserAsync(UserId(principal), ct);
         if (user is null) return TypedResults.Unauthorized();
@@ -78,6 +81,7 @@ public sealed class TotpService(
 
     public async Task<IResult> DisableAsync(ClaimsPrincipal principal, string? code, CancellationToken ct)
     {
+        if (Throttle(UserId(principal)) is { } limited) return limited;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var user = await LockUserAsync(UserId(principal), ct);
         if (user is null) return TypedResults.Unauthorized();
@@ -115,15 +119,17 @@ public sealed class TotpService(
         var hash = RefreshTokens.Hash(request.MfaToken);
         var candidate = await db.AdminAccessTokens.AsNoTracking().SingleOrDefaultAsync(x => x.TokenHash == hash && x.Purpose == "mfa", ct);
         if (candidate is null) return Error(401, "mfa_invalid");
+        if (Throttle(candidate.UserId) is { } limited) return limited;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var user = await LockUserAsync(candidate.UserId, ct);
         var challenge = await db.AdminAccessTokens.SingleAsync(x => x.Id == candidate.Id, ct);
         await db.Entry(challenge).ReloadAsync(ct);
         var now = clock.GetUtcNow();
-        if (user is null || user.DeactivatedAt is not null || user.SessionVersion != challenge.SessionVersion
-            || challenge.UsedAt is not null || challenge.ExpiresAt <= now) return Error(401, "mfa_invalid");
-        if (user.SuspendedUntil > now) return Error(403, "account_suspended");
-        if (user.Role is not (UserRole.Moderator or UserRole.Admin)) return Error(401, "mfa_invalid");
+        if (user is null) return Error(401, "mfa_invalid");
+        if (user.DeactivatedAt is not null || user.SessionVersion != challenge.SessionVersion
+            || challenge.UsedAt is not null || challenge.ExpiresAt <= now) return await RejectMfaAsync(tx, user, 401, "mfa_invalid", ct);
+        if (user.SuspendedUntil > now) return await RejectMfaAsync(tx, user, 403, "account_suspended", ct);
+        if (user.Role is not (UserRole.Moderator or UserRole.Admin)) return await RejectMfaAsync(tx, user, 401, "mfa_invalid", ct);
         if (!await VerifyAsync(user, request.Code, request.RecoveryCode, false, ct)) return await FailedAsync(tx, ct);
         challenge.UsedAt = now;
         var refresh = RefreshTokens.NewToken();
@@ -147,30 +153,37 @@ public sealed class TotpService(
 
     public async Task<IResult> StepUpAsync(ClaimsPrincipal principal, StepUpRequest request, CancellationToken ct)
     {
-        if (!ReasonValid(request.Reason, 300) || !Guid.TryParse(principal.FindFirstValue(PatikaClaims.SessionId), out var session))
+        var target = StepUpTarget(request.TargetId);
+        if (!ReasonValid(request.Reason, 300) || !Guid.TryParse(principal.FindFirstValue(PatikaClaims.SessionId), out var session)
+            || !StepUpActions.All.Contains(request.Action) || target is null)
             return Error(400, "step_up_invalid");
+        if (Throttle(UserId(principal)) is { } limited) return limited;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var user = await LockUserAsync(UserId(principal), ct);
         if (user is null) return TypedResults.Unauthorized();
         if (!await VerifyAsync(user, request.Code, null, false, ct)) return await FailedAsync(tx, ct);
-        var token = NewToken(user, session, "step_up", request.Reason.Trim(), clock.GetUtcNow());
+        var token = NewToken(user, session, "step_up", request.Reason.Trim(), clock.GetUtcNow(), action: request.Action, target: target);
         // Not a moderation decision: the action that consumes the token records its own decision.
-        Audit(user.Id, "totp.step_up", "user", user.Id, new { reason = request.Reason.Trim() });
+        Audit(user.Id, "totp.step_up", "user", user.Id, new { reason = request.Reason.Trim(), action = request.Action, target });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return TypedResults.Ok(new StepUpResponse(token));
     }
 
     // Call inside the action transaction. The conditional update serializes competing uses.
-    public async Task<string?> ConsumeStepUpAsync(ClaimsPrincipal principal, string? token, CancellationToken ct)
+    // The token only authorizes the action and target it was issued for.
+    public async Task<string?> ConsumeStepUpAsync(ClaimsPrincipal principal, string? token, string action, string target, CancellationToken ct)
     {
+        var bound = StepUpTarget(target);
         if (!RefreshTokens.LooksValid(token) || !Guid.TryParse(principal.FindFirstValue(PatikaClaims.SessionId), out var session)
-            || !int.TryParse(principal.FindFirstValue(PatikaClaims.SessionVersion), NumberStyles.None, CultureInfo.InvariantCulture, out var version)) return null;
+            || !int.TryParse(principal.FindFirstValue(PatikaClaims.SessionVersion), NumberStyles.None, CultureInfo.InvariantCulture, out var version)
+            || bound is null) return null;
         var id = UserId(principal);
         var hash = RefreshTokens.Hash(token!);
         var now = clock.GetUtcNow();
         var query = db.AdminAccessTokens.Where(x => x.TokenHash == hash && x.UserId == id && x.SessionId == session
-            && x.SessionVersion == version && x.Purpose == "step_up" && x.UsedAt == null && x.ExpiresAt > now);
+            && x.SessionVersion == version && x.Purpose == "step_up" && x.Action == action && x.TargetId == bound
+            && x.UsedAt == null && x.ExpiresAt > now);
         var reason = await query.Select(x => x.Reason).SingleOrDefaultAsync(ct);
         if (reason is null) return null;
         return await query.ExecuteUpdateAsync(s => s.SetProperty(x => x.UsedAt, now), ct) == 1 ? reason : null;
@@ -179,7 +192,12 @@ public sealed class TotpService(
     public async Task<bool> VerifyAsync(User user, string? code, string? recovery, bool allowPending, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        if (user.TotpLockedUntil > now) return false;
+        if (user.TotpLockedUntil > now)
+        {
+            // Attempts during a lockout neither count nor extend it, but stay visible in the audit.
+            Audit(user.Id, "totp.failure_locked", "user", user.Id);
+            return false;
+        }
         var valid = false;
         if (user.TotpSecretEnc is not null && (allowPending || user.TotpEnabledAt is not null))
         {
@@ -222,7 +240,8 @@ public sealed class TotpService(
         return false;
     }
 
-    private string NewToken(User user, Guid session, string purpose, string? reason, DateTimeOffset authTime, string? authMethod = null)
+    private string NewToken(User user, Guid session, string purpose, string? reason, DateTimeOffset authTime, string? authMethod = null,
+        string? action = null, string? target = null)
     {
         var token = RefreshTokens.NewToken();
         db.AdminAccessTokens.Add(new AdminAccessToken
@@ -235,6 +254,8 @@ public sealed class TotpService(
             Reason = reason,
             AuthTime = authTime,
             AuthMethod = authMethod,
+            Action = action,
+            TargetId = target,
             ExpiresAt = clock.GetUtcNow().AddMinutes(5),
         });
         return token;
@@ -245,6 +266,30 @@ public sealed class TotpService(
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return Error(403, "totp_invalid");
+    }
+
+    // A refused challenge (used, expired, stale session version, suspended or demoted user) is audited for that user.
+    private async Task<IResult> RejectMfaAsync(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx, User user, int status, string code, CancellationToken ct)
+    {
+        Audit(user.Id, "totp.mfa_rejected", "user", user.Id, new { code });
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return Error(status, code);
+    }
+
+    // Per-user verification budget; the per-IP route ceiling is only a loose backstop.
+    private RetryLaterResult? Throttle(Guid user) =>
+        limits.Limiter.TryAcquire("totp:" + user.ToString("N")) is { } retryAfter ? new RetryLaterResult(retryAfter) : null;
+
+    /// <summary>
+    /// The canonical step-up target: a non-empty GUID in "D" form, or a SHA-256 hex file hash in upper case.
+    /// Returns null for anything else.
+    /// </summary>
+    public static string? StepUpTarget(string? value)
+    {
+        value = value?.Trim();
+        if (Guid.TryParse(value, out var id)) return id == Guid.Empty ? null : id.ToString("D");
+        return value is { Length: 64 } && value.All(char.IsAsciiHexDigit) ? value.ToUpperInvariant() : null;
     }
 
     public void Audit(Guid actor, string action, string type, Guid? target, object? details = null) => db.AuditLogs.Add(new AuditLog

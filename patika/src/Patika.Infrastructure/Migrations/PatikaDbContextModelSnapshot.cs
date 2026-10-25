@@ -31,6 +31,11 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("action");
+
                     b.Property<string>("AuthMethod")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
@@ -66,6 +71,11 @@ namespace Patika.Infrastructure.Migrations
                     b.Property<int>("SessionVersion")
                         .HasColumnType("integer")
                         .HasColumnName("session_version");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("target_id");
 
                     b.Property<byte[]>("TokenHash")
                         .IsRequired()
