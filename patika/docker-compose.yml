@@ -1,0 +1,99 @@
+name: patika
+
+x-app: &app
+  env_file: .env
+  environment: &app-env
+    ConnectionStrings__Patika: "Host=postgres;Port=5432;Database=patika;Username=patika;Password=${POSTGRES_PASSWORD:-patika-local-db}"
+    Storage__Endpoint: http://minio:9000
+    Storage__Bucket: ${Storage__Bucket:-patika-local}
+    Storage__AccessKey: ${Storage__AccessKey:-patika-local}
+    Storage__SecretKey: ${Storage__SecretKey:-patika-local-storage}
+  depends_on:
+    postgres:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: patika
+      POSTGRES_USER: patika
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-patika-local-db}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${Storage__AccessKey:-patika-local}
+      MINIO_ROOT_PASSWORD: ${Storage__SecretKey:-patika-local-storage}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      STORAGE_ACCESS_KEY: ${Storage__AccessKey:-patika-local}
+      STORAGE_SECRET_KEY: ${Storage__SecretKey:-patika-local-storage}
+      STORAGE_BUCKET: ${Storage__Bucket:-patika-local}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$$STORAGE_ACCESS_KEY" "$$STORAGE_SECRET_KEY" &&
+        mc mb --ignore-existing "local/$$STORAGE_BUCKET"
+
+  api:
+    <<: *app
+    build:
+      context: .
+      dockerfile: src/Patika.Api/Dockerfile
+    environment:
+      <<: *app-env
+      ASPNETCORE_HTTP_PORTS: "8080"
+    ports:
+      - "127.0.0.1:5000:8080"
+
+  web:
+    <<: *app
+    build:
+      context: .
+      dockerfile: src/Patika.Web/Dockerfile
+    environment:
+      <<: *app-env
+      ASPNETCORE_HTTP_PORTS: "8080"
+      API_BASE_URL: http://api:8080
+    ports:
+      - "127.0.0.1:5001:8080"
+
+  worker:
+    <<: *app
+    build:
+      context: .
+      dockerfile: src/Patika.Worker/Dockerfile
+
+volumes:
+  postgres-data:
+  minio-data:

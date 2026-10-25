@@ -1,0 +1,195 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Patika: Sokak hayvanları için mahalle gönüllüleri";
+    ViewData["Description"] = "Mama istasyonları haritası, besleme takibi, sahiplendirme, acil yardım ve en yakın veteriner. Mahallenin patilerini birlikte koruyalım.";
+}
+
+<section class="hero" aria-labelledby="hero-baslik">
+    <div class="hero__text">
+        <h1 id="hero-baslik" class="hero__title">Mahallenin patilerini birlikte koruyalım.</h1>
+        <p class="hero__answer">Patika, sokak kedileri ve köpekleri için mahalle gönüllülerini buluşturan bir uygulama. Mama istasyonlarını haritada görür, beslediğinde “Beslendi” dersin; böylece aynı sokağa iki kişi gitmez, unutulan köşe kalmaz. Sahiplendirme ilanları, acil yardım çağrıları ve en yakın veteriner de aynı yerde.</p>
+        <div class="hero__actions">
+            <a class="button" href="/sahiplendirme">Sahiplendirme ilanlarına bak</a>
+            <a class="link-strong" href="#uygulama">Harita uygulaması yakında</a>
+        </div>
+    </div>
+
+    <figure class="hero__map">
+        <svg class="mapart" viewBox="0 0 900 660" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="harita-baslik harita-aciklama">
+            <title id="harita-baslik">Moda mahallesinde bir sabah turu [ÖRNEK]</title>
+            <desc id="harita-aciklama">Dört istasyondan geçen noktalı bir yol: beslenmiş bir mama istasyonu, su istasyonu, maması biten bir istasyon ve acil yardım çağrısı.</desc>
+            <defs>
+                <mask id="iz-maske" maskUnits="userSpaceOnUse" x="0" y="0" width="900" height="660">
+                    <path class="mapart__reveal" pathLength="1" d="M70 680C110 590 190 520 250 470C305 425 160 360 200 300C240 240 400 255 480 210C575 160 655 300 630 470" />
+                </mask>
+            </defs>
+            <rect class="mapart__ground" width="900" height="660" />
+            <path class="mapart__park" d="M560 520C620 480 760 470 900 500V660H520C515 600 530 545 560 520Z" />
+            <g class="mapart__trees">
+                <circle cx="600" cy="560" r="9" /><circle cx="628" cy="545" r="12" /><circle cx="680" cy="530" r="10" />
+                <circle cx="715" cy="560" r="13" /><circle cx="590" cy="610" r="12" /><circle cx="660" cy="600" r="9" />
+                <circle cx="730" cy="620" r="10" /><circle cx="560" cy="640" r="8" /><circle cx="790" cy="545" r="12" /><circle cx="840" cy="600" r="10" /><circle cx="860" cy="530" r="8" />
+            </g>
+            <g class="mapart__streets">
+                <path class="mapart__street mapart__street--main" d="M-20 520C200 470 420 420 920 260" />
+                <path class="mapart__street" d="M120 -20C160 200 230 420 300 680" />
+                <path class="mapart__street" d="M460 -20C470 200 500 420 540 680" />
+                <path class="mapart__street" d="M-20 220C250 200 500 160 920 100" />
+                <path class="mapart__street mapart__street--thin" d="M640 -20C640 160 650 250 690 330" />
+                <path class="mapart__street mapart__street--lane" d="M170 330L320 312" />
+                <path class="mapart__street mapart__street--lane" d="M300 120L330 330" />
+                <path class="mapart__street mapart__street--lane" d="M40 360L160 345" />
+                <path class="mapart__street mapart__street--lane" d="M330 560L520 520" />
+                <path class="mapart__street mapart__street--lane" d="M690 330L920 300" />
+            </g>
+
+            <g class="mapart__plates">
+                <g transform="translate(36 486) rotate(-12)">
+                    <rect width="92" height="24" rx="5" /><text x="46" y="16.5">Moda Cad.</text>
+                </g>
+                <g transform="translate(168 70) rotate(78)">
+                    <rect width="108" height="24" rx="5" /><text x="54" y="16.5">Bahariye Cad.</text>
+                </g>
+                <g transform="translate(560 140) rotate(-8)">
+                    <rect width="96" height="24" rx="5" /><text x="48" y="16.5">Kuşdili Cad.</text>
+                </g>
+            </g>
+
+            <path class="mapart__trail" mask="url(#iz-maske)" d="M70 680C110 590 190 520 250 470C305 425 160 360 200 300C240 240 400 255 480 210C575 160 655 300 630 470" />
+
+            <g class="pin pin--fed" transform="translate(250 470)">
+                <circle r="21" />
+                <path class="pin__glyph" d="M-11 -1.5H11V1.5H-11ZM-9 3H9C8 8 4.5 10 0 10S-8 8 -9 3ZM-5 -5.5A2.3 2.3 0 1 1 -5 -5.49ZM1 -7.5A2.3 2.3 0 1 1 1 -7.49ZM5.5 -4.5A2.3 2.3 0 1 1 5.5 -4.49Z" />
+                <g class="pin__badge" transform="translate(15 -15)">
+                    <circle r="9" /><path d="M-4 0L-1 3L4 -3" />
+                </g>
+            </g>
+            <g class="pin pin--water" transform="translate(200 300)">
+                <circle r="21" />
+                <path class="pin__glyph" d="M0 -11C5 -4 8 0 8 4A8 8 0 0 1 -8 4C-8 0 -5 -4 0 -11Z" />
+            </g>
+            <g class="pin pin--empty" transform="translate(480 210)">
+                <circle r="21" />
+                <path class="pin__glyph" d="M-10 -3H10L7 7H-7Z" />
+            </g>
+            <g class="pin pin--urgent" transform="translate(630 470)">
+                <circle r="23" />
+                <path class="pin__glyph" d="M-3.5 -11H3.5V-3.5H11V3.5H3.5V11H-3.5V3.5H-11V-3.5H-3.5Z" />
+            </g>
+
+            <g class="mapart__sheet" transform="translate(286 382)">
+                <rect width="236" height="76" rx="14" />
+                <text class="mapart__sheet-title" x="16" y="30">Moda Cad. istasyonu</text>
+                <text class="mapart__sheet-meta" x="16" y="54">Bugün 07.40’ta beslendi</text>
+                <circle class="mapart__sheet-dot" cx="214" cy="25" r="6" />
+            </g>
+        </svg>
+        <figcaption class="hero__caption">Moda’da bir sabah turu. Harita, istasyon adları ve saatler örnektir. [ÖRNEK]</figcaption>
+    </figure>
+</section>
+
+<section class="round" aria-labelledby="tur-baslik">
+    <div class="round__head">
+        <h2 id="tur-baslik" class="section-title">Bir sabah turu, dört durak</h2>
+        <p class="section-lede">Patika’da her istasyonun son durumu herkese açık. Sen “Beslendi” dediğinde, bir sonraki gönüllü yolunu buna göre çizer.</p>
+    </div>
+    <ol class="round__list">
+        @foreach (var stop in Model.Round)
+        {
+            <li class="stop stop--@stop.Kind.ToString().ToLowerInvariant()">
+                <span class="stop__dot" aria-hidden="true"></span>
+                <time class="stop__time">@stop.Time</time>
+                <div class="stop__body">
+                    <h3 class="stop__place">@stop.Place <span class="sample">[ÖRNEK]</span></h3>
+                    <p class="stop__text">@stop.Text</p>
+                    @switch (stop.Kind)
+                    {
+                        case StopKind.Fed:
+                            <span class="chip chip--fed">Beslendi</span>
+                            break;
+                        case StopKind.Water:
+                            <span class="chip chip--water">Bir kap su bırak</span>
+                            break;
+                        case StopKind.Empty:
+                            <span class="chip chip--empty">Mama bitti</span>
+                            break;
+                        case StopKind.Urgent:
+                            <span class="chip chip--urgent">Acil yardım gerekiyor</span>
+                            break;
+                    }
+                </div>
+            </li>
+        }
+    </ol>
+</section>
+
+<section class="adopt" aria-labelledby="yuva-baslik">
+    <div class="adopt__head">
+        <h2 id="yuva-baslik" class="section-title">Yuva arayanlar</h2>
+        <p class="section-lede">İlanlar moderasyondan geçer ve 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır.</p>
+        <a class="link-strong" href="/sahiplendirme">Tüm ilanlar</a>
+    </div>
+    <ul class="tags">
+        @foreach (var animal in Model.Adoptions)
+        {
+            <li class="tag">
+                <span class="tag__hole" aria-hidden="true"></span>
+                <span class="tag__species">@(animal.Species == Species.Cat ? "Kedi" : "Köpek")</span>
+                <h3 class="tag__name">@animal.Name</h3>
+                <p class="tag__summary">@animal.Summary</p>
+                <p class="tag__district">@animal.District</p>
+                <ul class="tag__flags" aria-label="Sağlık durumu">
+                    <li class="@(animal.Sterilized ? "is-yes" : "is-no")">@(animal.Sterilized ? "Kısırlaştırıldı" : "Kısırlaştırılmadı")</li>
+                    <li class="@(animal.Vaccinated ? "is-yes" : "is-no")">@(animal.Vaccinated ? "Aşıları tam" : "Aşı bekliyor")</li>
+                    <li class="@(animal.EarTagged ? "is-yes" : "is-no")">@(animal.EarTagged ? "Kulak küpeli" : "Küpesiz")</li>
+                </ul>
+                <span class="sample">[ÖRNEK]</span>
+            </li>
+        }
+    </ul>
+</section>
+
+<section class="urgent" aria-labelledby="acil-baslik">
+    <div class="urgent__inner">
+        <div class="urgent__guide">
+            <h2 id="acil-baslik" class="section-title">Yaralı bir hayvan mı buldun?</h2>
+            <ol class="urgent__steps">
+                <li><strong>Mesafeni koru.</strong> Korkmuş bir hayvan ısırabilir; önce sakinleşmesini bekle.</li>
+                <li><strong>Acil yardım çağrısı aç.</strong> Bir fotoğraf ve kısa bir not yeter. Konum yalnızca çağrı için kullanılır.</li>
+                <li><strong>En yakın açık veterinere ulaş.</strong> 2 km içindeki gönüllüler de çağrını görür.</li>
+            </ol>
+            <a class="link-strong link-strong--light" href="/rehber/yarali-kedi-veya-kopek-bulursam">Rehberin tamamı</a>
+        </div>
+        <div class="urgent__places">
+            <h3 class="urgent__places-title">Yakındaki bakım yerleri <span class="sample sample--light">[ÖRNEK]</span></h3>
+            <ul class="places">
+                @foreach (var place in Model.CarePlaces)
+                {
+                    <li class="place">
+                        <span class="place__name">@place.Name</span>
+                        <span class="place__distance">@place.Distance</span>
+                        @if (place.OpenAllDay)
+                        {
+                            <span class="place__open">24 saat açık</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="impact" aria-labelledby="etki-baslik">
+    <h2 id="etki-baslik" class="visually-hidden">Etki</h2>
+    <p class="impact__sentence">Geçen hafta Kadıköy’deki <span class="num">38</span> istasyonda <span class="num">1.284</span> kap mama ve su bırakıldı, <span class="num">6</span> kedi yuvasına kavuştu. <span class="sample">[ÖRNEK]</span></p>
+    <p class="impact__note">Sayılar uygulamadaki besleme kayıtlarından gelir ve her pazartesi güncellenir. Yöntemi <a href="/etki">etki sayfasında</a> anlatıyoruz.</p>
+</section>
+
+<section id="uygulama" class="app" aria-labelledby="uygulama-baslik">
+    <img class="app__icon" src="~/img/patika-icon-192.png" alt="" width="96" height="96" />
+    <div class="app__text">
+        <h2 id="uygulama-baslik" class="section-title">Patika önce Android’de</h2>
+        <p class="section-lede">Uygulama hazırlanıyor. Google Play’de yayımlandığında bu sayfadan duyuracağız; iPhone sürümü daha sonra gelecek.</p>
+    </div>
+</section>

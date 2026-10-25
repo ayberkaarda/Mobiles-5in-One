@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android theme colors; values match brand/tokens.json (tekir, tekir-deep). -->
+<resources>
+    <color name="colorPrimary">#F28C28</color>
+    <color name="colorPrimaryDark">#A8520A</color>
+    <color name="colorAccent">#F28C28</color>
+</resources>

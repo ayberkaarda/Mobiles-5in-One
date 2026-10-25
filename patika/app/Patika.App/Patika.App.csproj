@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Patika.App</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+
+    <ApplicationTitle>Patika</ApplicationTitle>
+    <ApplicationId>app.patika.android</ApplicationId>
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <NeutralLanguage>tr-TR</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Icon, splash and colors come from patika/brand (tokens.json and app-icon/*.svg). -->
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.6" Color="#F28C28" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#F28C28" BaseSize="160,160" />
+    <MauiImage Include="Resources\Images\*.svg" />
+    <MauiFont Include="Resources\Fonts\*.ttf" />
+    <!-- SIL OFL 1.1: the license text ships inside the app with the bundled fonts. -->
+    <MauiAsset Include="Resources\Fonts\licenses\*.txt" LogicalName="licenses\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] ?? "Patika")</title>
+    @if (ViewData["Description"] is string description)
+    {
+        <meta name="description" content="@description" />
+    }
+    <meta name="theme-color" content="#F28C28" />
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="~/img/patika-icon-192.png" />
+    <link rel="preload" href="~/fonts/nunito/Nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="~/fonts/nunito-sans/NunitoSans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="skip" href="#icerik">İçeriğe geç</a>
+    <header class="masthead">
+        <div class="masthead__inner">
+            <a class="masthead__logo" href="/" aria-label="Patika ana sayfa">
+                <img src="~/img/patika-lockup.svg" alt="Patika" width="152" height="46" />
+            </a>
+            <nav class="masthead__nav" aria-label="Ana menü">
+                <a href="/sahiplendirme">Sahiplendirme</a>
+                <a href="/istasyonlar/istanbul/kadikoy">İstasyonlar</a>
+                <a href="/bakim-yerleri/istanbul">Bakım yerleri</a>
+                <a href="/rehber/sokak-kedisi-nasil-beslenir">Rehber</a>
+                <a href="/etki">Etki</a>
+            </nav>
+            <a class="button button--small masthead__app" href="/#uygulama">Android uygulaması</a>
+        </div>
+    </header>
+
+    <main id="icerik">
+        @RenderBody()
+    </main>
+
+    <footer class="footer">
+        <div class="footer__inner">
+            <div class="footer__brand">
+                <img src="~/img/patika-lockup-kar.svg" alt="Patika" width="136" height="41" />
+                <p class="footer__tagline">Mahallenin patilerini birlikte koruyalım.</p>
+                <p class="footer__promise">Konumun hiçbir zaman profilinde saklanmaz. Fotoğraflarının konum bilgisi telefonda silinir, sunucuya hiç gelmez.</p>
+            </div>
+            <nav class="footer__links" aria-label="Patika">
+                <a href="/hakkinda">Hakkında</a>
+                <a href="/sss">Sık sorulanlar</a>
+                <a href="/etki">Etki</a>
+                <a href="/iletisim">İletişim</a>
+            </nav>
+            <nav class="footer__links" aria-label="Yasal">
+                <a href="/gizlilik">Gizlilik</a>
+                <a href="/kvkk-aydinlatma">KVKK aydınlatma metni</a>
+                <a href="/hesap-silme">Hesabımı sil</a>
+            </nav>
+            <p class="footer__legal">&copy; @DateTime.UtcNow.Year Patika Topluluk Teknolojileri</p>
+        </div>
+    </footer>
+</body>
+</html>
