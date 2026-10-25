@@ -4,9 +4,11 @@
 
 Slogan: "Dolmuş nereden geçer? Mahalle bilir."
 
-<img src="docs/screenshots/web/home.png" alt="Inecek Var web ana sayfası: ad, hat tabelası gibi slogan, dolmuşlu sokak çizimi, etiketli örnek şehir ve hat çizgisi üzerinde üç adım, yerel derleme, örnek veri" width="100%">
+<img src="docs/screenshots/route-sign/web-home.png" alt="Inecek Var web ana sayfası: ad, kırmızı nereden-nereye panosu, dolmuşlu sokak çizimi, etiketli örnek şehir ve hat çizgisi üzerinde üç adım, yerel derleme, örnek veri" width="100%">
 
-Yerel derlemeden, örnek veriyle web ana sayfası. [Hat sayfası](docs/screenshots/web/line.png), bir [rehber](docs/screenshots/web/guide.png) ve [koyu ana sayfa](docs/screenshots/web/home-dark.png) `docs/screenshots/web` içinde.
+<img src="docs/screenshots/route-sign/android-01-search.png" alt="Inecek Var Android uygulaması: Nereye inecek var? tabelası ve etiketli örnek şehirle arama ekranı, örnek veri, emülatör" width="32%"> <img src="docs/screenshots/route-sign/android-02-line.png" alt="Inecek Var Android uygulaması: ORN-1 plakası, durak şeması ve ücret biletiyle hat sayfası, örnek veri, emülatör" width="32%"> <img src="docs/screenshots/route-sign/android-03-planner-dark.png" alt="Inecek Var Android uygulaması koyu temada: iki aktarmalı A'dan B'ye sonucu, örnek veri, emülatör" width="32%">
+
+Yerel derlemeden web ana sayfası ve `Pixel_8` emülatöründen Android ekranları, ikisi de yerel yığında örnek veriyle. [Hat sayfası](docs/screenshots/route-sign/web-line.png), bir [rehber](docs/screenshots/route-sign/web-guide.png) ve [koyu ana sayfa](docs/screenshots/route-sign/web-home-dark.png) `docs/screenshots/route-sign` içinde. Statik bir [web demo](https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/) GitHub Pages'te çalışır; giriş ve formlar orada çalışmaz.
 
 ## Ürün özeti
 

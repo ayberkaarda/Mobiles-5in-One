@@ -4,9 +4,11 @@ English | [Türkçe](README.tr.md)
 
 Tagline (tr): "Dolmuş nereden geçer? Mahalle bilir."
 
-<img src="docs/screenshots/web/home.png" alt="Inecek Var web home page: the name, the destination-sign tagline, the street scene with the dolmuş, the labelled sample city and the three steps on a route rail, local build, sample data" width="100%">
+<img src="docs/screenshots/route-sign/web-home.png" alt="Inecek Var web home page: the name, the red from-to board, the street scene with the dolmuş, the labelled sample city and the three steps on a route line, local build, sample data" width="100%">
 
-Web home page from a local build with sample data. The [line page](docs/screenshots/web/line.png), a [guide](docs/screenshots/web/guide.png) and the [dark home page](docs/screenshots/web/home-dark.png) are in `docs/screenshots/web`.
+<img src="docs/screenshots/route-sign/android-01-search.png" alt="Inecek Var Android app: search screen with the Nereye inecek var? sign and the labelled sample city, sample data, emulator" width="32%"> <img src="docs/screenshots/route-sign/android-02-line.png" alt="Inecek Var Android app: line page with the ORN-1 placard, the stop diagram and the fare ticket, sample data, emulator" width="32%"> <img src="docs/screenshots/route-sign/android-03-planner-dark.png" alt="Inecek Var Android app in the dark scheme: A to B planner result with two transfers, sample data, emulator" width="32%">
+
+Web home page from a local build and Android screens from the `Pixel_8` emulator, both against the local stack with sample data. The [line page](docs/screenshots/route-sign/web-line.png), a [guide](docs/screenshots/route-sign/web-guide.png) and the [dark home page](docs/screenshots/route-sign/web-home-dark.png) are in `docs/screenshots/route-sign`. A static [web demo](https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/) runs on GitHub Pages; sign-in and forms do not work there.
 
 ## Product summary
 

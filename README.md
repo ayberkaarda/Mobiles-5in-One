@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. Each of the four application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) and in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/readme/). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Only the Patika card is a placeholder, for a product that is still in the design stage.
+One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. Each of the four application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) and in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Only the Patika card is a placeholder, for a product that is still in the design stage.
 
 <table>
   <tr>
@@ -45,11 +45,11 @@ One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. E
       <sub><b>Cetele</b>: web home page and Android customer list (local server, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/cetele/">web demo</a></sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: web home page with the destination-sign tagline and the street scene, and the Android line page with the destination sign, the stop diagram and the fare ticket, local stack, sample data" width="100%"><br>
-      <img src="inecekvar/docs/screenshots/readme/01-search-sample-city.png" alt="Inecek Var Android app: search screen with the Nereye inecek var? board, the labelled sample city and the shortcuts, emulator" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/02-line-page.png" alt="Inecek Var Android app: line page with the destination sign, the stop diagram and the fare ticket, sample data, emulator" width="32%">
-      <img src="inecekvar/docs/screenshots/readme/03-planner.png" alt="Inecek Var Android app: A to B planner result with two transfers drawn as a stop diagram with the line placards, sample data, emulator" width="32%"><br>
-      <sub><b>Inecek Var</b>: web home page and Android line screens (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
+      <img src="docs/readme/inecekvar.png" alt="Inecek Var card: web home page with the red route sign, the from-to board and the street scene, and the Android line page with the ORN-1 placard, the stop diagram and the fare ticket, local stack, sample data" width="100%"><br>
+      <img src="inecekvar/docs/screenshots/route-sign/android-01-search.png" alt="Inecek Var Android app: search screen with the Nereye inecek var? sign, the labelled sample city and the shortcuts, sample data, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/route-sign/android-02-line.png" alt="Inecek Var Android app: line page with the ORN-1 placard, the first and last stop, the stop diagram and the fare ticket, sample data, emulator" width="32%">
+      <img src="inecekvar/docs/screenshots/route-sign/android-03-planner-dark.png" alt="Inecek Var Android app in the dark scheme: A to B planner result with two transfers, the line placards and the stop diagram, sample data, emulator" width="32%"><br>
+      <sub><b>Inecek Var</b>: web home page and Android search, line and planner screens, light and dark (local stack, sample data) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/">web demo</a></sub>
     </td>
   </tr>
   <tr>
