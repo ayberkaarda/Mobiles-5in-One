@@ -24,6 +24,78 @@ namespace Patika.Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Patika.Domain.Entities.AdminAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthMethod")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("auth_method");
+
+                    b.Property<DateTimeOffset>("AuthTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("auth_time");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<int>("SessionVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("session_version");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("admin_access_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.AdoptionPost", b =>
                 {
                     b.Property<Guid>("Id")
@@ -106,6 +178,8 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("State", "ClosesAt");
 
                     b.HasIndex("State", "District");
+
+                    b.HasIndex("State", "CreatedAt", "Id");
 
                     b.ToTable("adoption_posts", (string)null);
                 });
@@ -290,6 +364,8 @@ namespace Patika.Infrastructure.Migrations
 
                     b.HasIndex("ModerationState");
 
+                    b.HasIndex("ModerationState", "CreatedAt", "Id");
+
                     b.ToTable("animal_photos", (string)null);
                 });
 
@@ -385,6 +461,8 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("ActorId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedAt", "Id");
 
                     b.HasIndex("TargetType", "TargetId");
 
@@ -487,6 +565,39 @@ namespace Patika.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_care_places_website", "website IS NULL OR website ~ '^https://[^/[:space:]]+'");
                         });
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.CarePlaceImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_hash");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileHash")
+                        .IsUnique();
+
+                    b.ToTable("care_place_imports", (string)null);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.DeletionRequest", b =>
@@ -925,6 +1036,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("AuthTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("auth_time");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -936,6 +1051,10 @@ namespace Patika.Infrastructure.Migrations
                     b.Property<Guid>("FamilyId")
                         .HasColumnType("uuid")
                         .HasColumnName("family_id");
+
+                    b.Property<bool>("Mfa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("mfa");
 
                     b.Property<Guid?>("ReplacedById")
                         .HasColumnType("uuid")
@@ -1024,6 +1143,8 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("State", "CreatedAt");
 
                     b.HasIndex("TargetType", "TargetId");
+
+                    b.HasIndex("State", "CreatedAt", "Id");
 
                     b.ToTable("reports", (string)null);
                 });
@@ -1216,6 +1337,41 @@ namespace Patika.Infrastructure.Migrations
                     b.ToTable("subscriptions", (string)null);
                 });
 
+            modelBuilder.Entity("Patika.Domain.Entities.TotpRecoveryCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("CodeHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("totp_recovery_codes", (string)null);
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.Upload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1354,6 +1510,8 @@ namespace Patika.Infrastructure.Migrations
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Location"), "gist");
 
+                    b.HasIndex("CreatedAt", "Id");
+
                     b.HasIndex("CreatedBy", "CreatedAt");
 
                     b.HasIndex("State", "CreatedAt");
@@ -1419,6 +1577,30 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("session_version");
+
+                    b.Property<DateTimeOffset?>("SuspendedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suspended_until");
+
+                    b.Property<DateTimeOffset?>("TotpEnabledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("totp_enabled_at");
+
+                    b.Property<int>("TotpFailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("totp_failed_attempts");
+
+                    b.Property<DateTimeOffset?>("TotpFailureWindowAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("totp_failure_window_at");
+
+                    b.Property<long>("TotpLastStep")
+                        .HasColumnType("bigint")
+                        .HasColumnName("totp_last_step");
+
+                    b.Property<DateTimeOffset?>("TotpLockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("totp_locked_until");
 
                     b.Property<string>("TotpSecretEnc")
                         .HasColumnType("text")
@@ -1520,6 +1702,15 @@ namespace Patika.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_idempotency_keys_hash_length", "octet_length(request_hash) = 32");
                         });
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.AdminAccessToken", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.AdoptionPost", b =>
@@ -1738,6 +1929,15 @@ namespace Patika.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.TotpRecoveryCode", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.Upload", b =>

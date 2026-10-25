@@ -14,6 +14,8 @@ internal static class PublicDataPreparation
     public static void Prepare(PatikaDbContext db)
     {
         db.ChangeTracker.DetectChanges();
+        if (db.ChangeTracker.Entries<AuditLog>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Audit logs are append-only.");
         if (db.ChangeTracker.Entries<ModerationDecision>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Moderation decisions are append-only.");
         var entries = db.ChangeTracker.Entries<Entity>().Where(e => e.State is EntityState.Added or EntityState.Modified).ToArray();

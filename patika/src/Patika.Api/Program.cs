@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Patika.Api;
 using Patika.Api.Features.Account;
+using Patika.Api.Features.Admin;
 using Patika.Api.Features.Adoptions;
 using Patika.Api.Features.Animals;
 using Patika.Api.Features.Auth;
@@ -36,6 +37,8 @@ app.MapHealth();
 var v1 = app.MapGroup("/v1");
 v1.MapHealth();
 v1.MapAuth();
+v1.MapTotp();
+v1.MapAdmin();
 v1.MapMe();
 v1.MapAccount();
 // Create endpoints accept an Idempotency-Key; auth, token and upload routes stay outside this group.

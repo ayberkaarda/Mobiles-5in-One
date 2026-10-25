@@ -25,7 +25,8 @@ public sealed class AuthHandlers(
     EmailCodeResendLimiter resendLimiter,
     IOptions<JwtSettings> jwtSettings,
     TimeProvider clock,
-    ILogger<AuthHandlers> logger)
+    ILogger<AuthHandlers> logger,
+    TotpService totp)
 {
     public static readonly TimeSpan EmailTokenLifetime = EmailCodeHasher.Lifetime;
     public static readonly TimeSpan RecentAuthenticationWindow = TimeSpan.FromMinutes(10);
@@ -284,6 +285,9 @@ public sealed class AuthHandlers(
         }
 
         logger.LogInformation("User {UserId} verified their email address", user.Id);
+        if (user.SuspendedUntil > clock.GetUtcNow()) return Suspended();
+        if (user.Role is ActorRole.Moderator or ActorRole.Admin && user.TotpEnabledAt is not null)
+            return await totp.StartMfaAsync(user, null, PatikaClaims.EmailLinkMethod, cancellationToken);
         return await IssueAsync(user, PatikaClaims.EmailLinkMethod, expectedPasswordHash: null, cancellationToken) is { } tokens
             ? TypedResults.Ok(tokens)
             : Problem(StatusCodes.Status400BadRequest, AuthErrorCodes.VerificationInvalid,
@@ -316,6 +320,10 @@ public sealed class AuthHandlers(
         }
 
         user = active;
+
+        if (user.SuspendedUntil > clock.GetUtcNow()) return Suspended();
+        if (user.Role is ActorRole.Moderator or ActorRole.Admin && user.TotpEnabledAt is not null)
+            return await totp.StartMfaAsync(user, user.PasswordHash, PatikaClaims.PasswordMethod, cancellationToken);
 
         logger.LogInformation("User {UserId} signed in with password", user.Id);
         // The hash that was just verified must still be the stored one when the session is issued.
@@ -366,6 +374,9 @@ public sealed class AuthHandlers(
         }
 
         user = active;
+        if (user.SuspendedUntil > clock.GetUtcNow()) return Suspended();
+        if (user.Role is ActorRole.Moderator or ActorRole.Admin && user.TotpEnabledAt is not null)
+            return await totp.StartMfaAsync(user, null, PatikaClaims.ExternalMethod, cancellationToken);
         return await IssueAsync(user, PatikaClaims.ExternalMethod, expectedPasswordHash: null, cancellationToken) is { } tokens
             ? TypedResults.Ok(tokens)
             : Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.ExternalTokenInvalid, "Sign-in failed.");
@@ -423,8 +434,8 @@ public sealed class AuthHandlers(
     /// </summary>
     internal static bool IsRecentAuthentication(ClaimsPrincipal principal, DateTimeOffset now, params string[] methods)
     {
-        if (principal.FindFirstValue(PatikaClaims.AuthMethod) is not { } method
-            || !methods.Contains(method, StringComparer.Ordinal)
+        // An MFA sign-in carries the first factor and mfa; an MFA refresh carries only mfa.
+        if (!principal.FindAll(PatikaClaims.AuthMethod).Any(claim => methods.Contains(claim.Value, StringComparer.Ordinal))
             || !long.TryParse(principal.FindFirstValue(PatikaClaims.AuthTime), out var seconds))
         {
             return false;
@@ -454,6 +465,9 @@ public sealed class AuthHandlers(
             return RefreshInvalid();
         }
 
+        var user = await store.FindUserByIdAsync(current.UserId, cancellationToken);
+        if (user?.SuspendedUntil > now) return Suspended();
+
         if (current.RevokedAt is not null)
         {
             // A rotated (or logged-out) token came back: assume theft and end the whole session family.
@@ -468,7 +482,6 @@ public sealed class AuthHandlers(
             return RefreshInvalid();
         }
 
-        var user = await store.FindUserByIdAsync(current.UserId, cancellationToken);
         if (user is null || !user.IsActive)
         {
             await store.RevokeFamilyAsync(current.FamilyId, now, cancellationToken);
@@ -488,6 +501,7 @@ public sealed class AuthHandlers(
         }
 
         var (refreshToken, record) = NewRefreshToken(user.Id, current.FamilyId, now);
+        record = record with { Mfa = current.Mfa, AuthTime = current.AuthTime };
         if (!await store.TryRotateRefreshTokenAsync(current.Id, record, now, cancellationToken))
         {
             await store.RevokeFamilyAsync(current.FamilyId, now, cancellationToken);
@@ -495,7 +509,8 @@ public sealed class AuthHandlers(
             return Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.RefreshReused, "Session is no longer valid.");
         }
 
-        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, sessionVersion: version);
+        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, authMethod: null, version, current.FamilyId,
+            current.AuthTime, mfa: current.Mfa);
         return TypedResults.Ok(new TokenResponse(accessToken, "Bearer", expiresIn, refreshToken, RefreshLifetimeSeconds));
     }
 
@@ -522,14 +537,16 @@ public sealed class AuthHandlers(
     private async Task<TokenResponse?> IssueAsync(
         AuthUser user, string authMethod, string? expectedPasswordHash, CancellationToken cancellationToken)
     {
-        var (refreshToken, record) = NewRefreshToken(user.Id, Guid.CreateVersion7(), clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        var (refreshToken, record) = NewRefreshToken(user.Id, Guid.CreateVersion7(), now);
+        record = record with { AuthTime = now };
         if (await store.TryIssueSessionAsync(record, expectedPasswordHash, cancellationToken) is not { } version)
         {
             logger.LogWarning("User {UserId} changed during sign-in; no session issued", user.Id);
             return null;
         }
 
-        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, authMethod, version);
+        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, authMethod, version, record.FamilyId, now);
         return new TokenResponse(accessToken, "Bearer", expiresIn, refreshToken, RefreshLifetimeSeconds);
     }
 
@@ -557,6 +574,8 @@ public sealed class AuthHandlers(
 
     private static IResult RefreshInvalid() =>
         Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.RefreshInvalid, "Session is no longer valid.");
+
+    private static IResult Suspended() => Problem(403, "account_suspended", "Account is suspended.");
 
     internal static IResult Problem(int status, string code, string title) =>
         TypedResults.Problem(title: title, statusCode: status, extensions: new Dictionary<string, object?> { ["code"] = code });

@@ -15,6 +15,8 @@ public static class PatikaClaims
     public const string AccessTokenType = "at+jwt";
     public const string AuthTime = "auth_time";
     public const string AuthMethod = "amr";
+    public const string SessionId = "sid";
+    public const string MfaMethod = "mfa";
 
     /// <summary>The account session version when the token was minted; a mismatch with the database rejects the token.</summary>
     public const string SessionVersion = "sv";
@@ -29,10 +31,12 @@ public interface IAccessTokenIssuer
 {
     /// <summary>
     /// Issues an access token. <paramref name="authMethod"/> is set only for tokens minted by an
-    /// interactive sign-in; it adds <c>amr</c> and <c>auth_time</c>. Refreshed tokens carry neither,
-    /// so they can never satisfy a recent-authentication check.
+    /// interactive sign-in; it adds <c>amr</c> and <c>auth_time</c>. <paramref name="mfa"/> adds <c>mfa</c>
+    /// to <c>amr</c>. MFA refreshes pass only <paramref name="mfa"/> with the original authentication time,
+    /// so they keep admin access but never satisfy a recent sign-in check; other refreshes carry neither.
     /// </summary>
-    (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0);
+    (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0,
+        Guid? sessionId = null, DateTimeOffset? authTime = null, bool mfa = false);
 }
 
 public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> settings, TimeProvider clock)
@@ -40,7 +44,8 @@ public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> s
 {
     private readonly JsonWebTokenHandler handler = new() { SetDefaultTimesOnTokenCreation = false };
 
-    public (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0)
+    public (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0,
+        Guid? sessionId = null, DateTimeOffset? authTime = null, bool mfa = false)
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var lifetime = TimeSpan.FromMinutes(settings.Value.AccessTokenMinutes);
@@ -62,13 +67,16 @@ public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> s
                     sessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture), ClaimValueTypes.Integer32),
             ]),
         };
-        if (authMethod is not null)
+        if (authMethod is not null || mfa)
         {
-            descriptor.Subject.AddClaim(new Claim(PatikaClaims.AuthMethod, authMethod));
+            if (authMethod is not null) descriptor.Subject.AddClaim(new Claim(PatikaClaims.AuthMethod, authMethod));
+            if (mfa) descriptor.Subject.AddClaim(new Claim(PatikaClaims.AuthMethod, PatikaClaims.MfaMethod));
             descriptor.Subject.AddClaim(new Claim(PatikaClaims.AuthTime,
-                new DateTimeOffset(now).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                (authTime ?? new DateTimeOffset(now)).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ClaimValueTypes.Integer64));
         }
+
+        if (sessionId is { } sid) descriptor.Subject.AddClaim(new Claim(PatikaClaims.SessionId, sid.ToString()));
 
         return (handler.CreateToken(descriptor), (int)lifetime.TotalSeconds);
     }

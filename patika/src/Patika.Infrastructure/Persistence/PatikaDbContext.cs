@@ -11,6 +11,9 @@ namespace Patika.Infrastructure.Persistence;
 public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbContext(options)
 {
     public DbSet<Province> Provinces => Set<Province>();
+    public DbSet<TotpRecoveryCode> TotpRecoveryCodes => Set<TotpRecoveryCode>();
+    public DbSet<AdminAccessToken> AdminAccessTokens => Set<AdminAccessToken>();
+    public DbSet<CarePlaceImport> CarePlaceImports => Set<CarePlaceImport>();
     public DbSet<District> Districts => Set<District>();
     public DbSet<ModerationDecision> ModerationDecisions => Set<ModerationDecision>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
@@ -45,6 +48,10 @@ public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbCont
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("postgis");
+        ConfigureEntity<TotpRecoveryCode>(modelBuilder, "totp_recovery_codes");
+        ConfigureEntity<AdminAccessToken>(modelBuilder, "admin_access_tokens");
+        ConfigureEntity<CarePlaceImport>(modelBuilder, "care_place_imports");
+        AdminConfiguration.Configure(modelBuilder);
         ConfigureEntity<Province>(modelBuilder, "provinces");
         ConfigureEntity<District>(modelBuilder, "districts");
         ConfigureEntity<ModerationDecision>(modelBuilder, "moderation_decisions");

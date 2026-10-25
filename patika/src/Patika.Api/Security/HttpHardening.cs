@@ -113,13 +113,15 @@ public static class HttpHardening
     public static IApplicationBuilder UseRequestBodyLimit(this IApplicationBuilder app) =>
         app.Use(async (context, next) =>
         {
+            var bodyLimit = context.Request.Path.StartsWithSegments("/v1/admin/care-places/csv")
+                ? MaxRequestBodyBytes + 64 * 1024 : MaxRequestBodyBytes;
             var feature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
             if (feature is { IsReadOnly: false })
             {
-                feature.MaxRequestBodySize = MaxRequestBodyBytes;
+                feature.MaxRequestBodySize = bodyLimit;
             }
 
-            if (context.Request.ContentLength > MaxRequestBodyBytes)
+            if (context.Request.ContentLength > bodyLimit)
             {
                 await TypedResults.Problem(
                     title: "Request body too large.",
@@ -129,7 +131,7 @@ public static class HttpHardening
 
             if (context.Request.ContentLength is null && context.Request.Body.CanRead)
             {
-                context.Request.Body = new LengthLimitedStream(context.Request.Body, MaxRequestBodyBytes);
+                context.Request.Body = new LengthLimitedStream(context.Request.Body, bodyLimit);
             }
 
             await next(context);

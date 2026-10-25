@@ -18,6 +18,8 @@ public sealed record AuthUser(
     /// wrapper); <see cref="EfAuthStore"/> reads the column where a session is issued or checked.
     /// </summary>
     public int SessionVersion { get; init; }
+    public DateTimeOffset? TotpEnabledAt { get; init; }
+    public DateTimeOffset? SuspendedUntil { get; init; }
 }
 
 public sealed record RefreshTokenRecord(
@@ -28,7 +30,9 @@ public sealed record RefreshTokenRecord(
     DateTimeOffset CreatedAt,
     DateTimeOffset ExpiresAt,
     DateTimeOffset? RevokedAt,
-    Guid? ReplacedById);
+    Guid? ReplacedById,
+    bool Mfa = false,
+    DateTimeOffset? AuthTime = null);
 
 public sealed record ExternalLoginKey(string Provider, string Subject);
 

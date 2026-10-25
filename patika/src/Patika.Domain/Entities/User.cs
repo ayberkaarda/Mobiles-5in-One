@@ -15,5 +15,11 @@ public sealed class User : Entity
     public bool UrgentOptIn { get; set; }
     public int UrgentRadiusM { get; set; } = 2000;
     public string? TotpSecretEnc { get; set; }
+    public DateTimeOffset? TotpEnabledAt { get; set; }
+    public long TotpLastStep { get; set; } = -1;
+    public int TotpFailedAttempts { get; set; }
+    public DateTimeOffset? TotpFailureWindowAt { get; set; }
+    public DateTimeOffset? TotpLockedUntil { get; set; }
+    public DateTimeOffset? SuspendedUntil { get; set; }
     public DateTimeOffset? DeactivatedAt { get; set; }
 }

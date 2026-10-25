@@ -7,6 +7,7 @@ namespace Patika.Api.Security.RateLimiting;
 
 public static class RateLimitPolicies
 {
+    public const string Totp = Auth;
     /// <summary>Register and login: 5 per 15 minutes per client IP (and per normalized email in the handler).</summary>
     public const string Auth = "auth";
 
