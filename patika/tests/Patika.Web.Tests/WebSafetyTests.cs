@@ -85,6 +85,14 @@ public sealed class WebSafetyTests
     }
 
     [Fact]
+    public void StationRowsCarryNoPhoto()
+    {
+        // Station photos are not moderated; only approved animal photos may reach the public site.
+        Assert.DoesNotContain(typeof(StationRow).GetProperties(), p => p.Name.Contains("Photo", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(typeof(DistrictSummary).GetProperties(), p => p.Name.Contains("Photo", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void RoutesAreLowercaseAndHaveNoTrailingSlash()
     {
         Assert.Equal("/sahiplendirme/pamuk", Routes.Adoption("PAMUK/"));

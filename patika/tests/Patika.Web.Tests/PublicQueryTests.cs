@@ -66,6 +66,42 @@ public sealed class PublicQueryTests(PostgisFixture database) : IClassFixture<Po
     }
 
     [Fact]
+    public async Task DetailIsNullOnceThePostStopsBeingPublic()
+    {
+        await using var db = database.CreateContext();
+        var animal = new Animal { CreatedBy = PostgisFixture.UserId, Name = "Kısa Süre", Location = new GeoPoint(29, 41) };
+        db.Animals.Add(animal);
+        var post = new AdoptionPost
+        {
+            AnimalId = animal.Id,
+            CreatedBy = PostgisFixture.UserId,
+            Description = "Short",
+            Requirements = "Home",
+            District = "Bilinmeyen",
+            State = AdoptionPostState.Published,
+            ClosesAt = PostgisFixture.Now.AddHours(1)
+        };
+        db.AdoptionPosts.Add(post);
+        await db.SaveChangesAsync(Ct);
+        using var photos = Photos();
+
+        var detail = await new AdoptionQueries(db, photos, new FixedClock()).GetBySlugAsync(post.Slug, Ct);
+        Assert.NotNull(detail);
+        Assert.Equal("Kısa Süre", detail.Card.AnimalName);
+        Assert.Null(detail.Card.ThumbUrl);
+        Assert.Empty(detail.Photos);
+        Assert.Null(await new AdoptionQueries(db, photos, new At(PostgisFixture.Now.AddHours(2))).GetBySlugAsync(post.Slug, Ct));
+        post.State = AdoptionPostState.Pending;
+        await db.SaveChangesAsync(Ct);
+        Assert.Null(await new AdoptionQueries(db, photos, new FixedClock()).GetBySlugAsync(post.Slug, Ct));
+    }
+
+    private sealed class At(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    [Fact]
     public async Task CarePlaceSamplesAndFiltersAndSlugCollisions()
     {
         await using var db = database.CreateContext();
@@ -91,7 +127,7 @@ public sealed class PublicQueryTests(PostgisFixture database) : IClassFixture<Po
         await using var db = database.CreateContext();
         using var photos = Photos();
         var adoptions = new AdoptionQueries(db, photos, new FixedClock());
-        var queries = new PlaceQueries(db, adoptions, new CarePlaceQueries(db, Configuration()), photos, new FixedClock());
+        var queries = new PlaceQueries(db, adoptions, new CarePlaceQueries(db, Configuration()), new FixedClock());
         Assert.Single(await queries.ListProvincesAsync(Ct));
         Assert.Null(await queries.GetDistrictAsync("unknown", "kadikoy", Ct));
         var district = await queries.GetDistrictAsync("istanbul", "kadikoy", Ct);
@@ -104,6 +140,10 @@ public sealed class PublicQueryTests(PostgisFixture database) : IClassFixture<Po
         Assert.Equal(LastFedBucket.Never, station.LastFed);
         Assert.Equal(41.123, station.Latitude);
         Assert.Equal(29.123, station.Longitude);
+        // The fixture station has photo key station/2000...0001; nothing derived from it may surface.
+        var json = System.Text.Json.JsonSerializer.Serialize(district);
+        Assert.DoesNotContain("20000000-0000-0000-0000-000000000001", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("station/", json, StringComparison.OrdinalIgnoreCase);
         var sitemap = new SitemapQueries(db, Configuration(), new FixedClock());
         var entries = await sitemap.ListAsync(ct: Ct);
         Assert.Contains(entries, e => e.Url == "/istasyonlar/istanbul/kadikoy");

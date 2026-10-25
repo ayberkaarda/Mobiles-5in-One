@@ -44,15 +44,35 @@ public sealed class AdoptionQueries(PatikaDbContext db, IPhotoUrlResolver photos
             r.DistrictSlug, r.Sterilized, r.Vaccinated, photos.Resolve(r.Key, PhotoSize.Thumbnail))).ToArray();
     }
 
+    /// <summary>
+    /// One query decides visibility and reads every field, so a post that expires, closes or goes back to
+    /// pending mid-request is simply not found (null) instead of half-read.
+    /// </summary>
     public async Task<AdoptionDetail?> GetBySlugAsync(string slug, CancellationToken ct = default)
     {
-        var query = PublicPosts.Where(p => p.Slug == slug);
-        var detail = await query.Select(p => new { p.Description, p.Requirements, p.ClosesAt, p.AnimalId }).SingleOrDefaultAsync(ct);
-        if (detail is null) return null;
-        var cards = await CardsAsync(query, ct);
-        var keys = await db.AnimalPhotos.Where(p => p.AnimalId == detail.AnimalId && p.ModerationState == ModerationState.Approved)
-            .OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).Select(p => p.Key).ToListAsync(ct);
-        return new AdoptionDetail(cards[0], detail.Description, detail.Requirements, detail.ClosesAt,
-            keys.Select(k => photos.Resolve(k, PhotoSize.Medium)).OfType<string>().ToArray());
+        var row = await (from post in PublicPosts.Where(p => p.Slug == slug)
+                         join animal in db.Animals on post.AnimalId equals animal.Id
+                         select new
+                         {
+                             post.Slug,
+                             animal.Name,
+                             animal.Species,
+                             animal.Sex,
+                             animal.BirthYear,
+                             animal.Sterilized,
+                             animal.Vaccinated,
+                             DistrictName = db.Districts.Where(d => d.Id == post.DistrictId).Select(d => d.Name).FirstOrDefault(),
+                             DistrictSlug = db.Districts.Where(d => d.Id == post.DistrictId).Select(d => d.Slug).FirstOrDefault(),
+                             post.Description,
+                             post.Requirements,
+                             post.ClosesAt,
+                             Keys = db.AnimalPhotos.Where(p => p.AnimalId == animal.Id && p.ModerationState == ModerationState.Approved)
+                                 .OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).Select(p => p.Key).ToList()
+                         }).SingleOrDefaultAsync(ct);
+        if (row is null) return null;
+        var card = new AdoptionCard(row.Slug, row.Name, row.Species, row.Sex, row.BirthYear, row.DistrictName, row.DistrictSlug,
+            row.Sterilized, row.Vaccinated, photos.Resolve(row.Keys.FirstOrDefault(), PhotoSize.Thumbnail));
+        return new AdoptionDetail(card, row.Description, row.Requirements, row.ClosesAt,
+            row.Keys.Select(k => photos.Resolve(k, PhotoSize.Medium)).OfType<string>().ToArray());
     }
 }

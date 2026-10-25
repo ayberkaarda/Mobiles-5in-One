@@ -7,7 +7,8 @@ public sealed record AdoptionCard(string Slug, string? AnimalName, Species Speci
 public sealed record AdoptionDetail(AdoptionCard Card, string Description, string Requirements, DateTimeOffset ClosesAt, IReadOnlyList<string> Photos);
 public sealed record ProvinceSummary(string Name, string Slug);
 public enum LastFedBucket { Today, ThisWeek, Older, Never }
-public sealed record StationRow(string Name, StationKind Kind, Species Species, LastFedBucket LastFed, double Latitude, double Longitude, string? PhotoUrl);
+/// <summary>No photo: station photos are not moderated, so the public site never shows them.</summary>
+public sealed record StationRow(string Name, StationKind Kind, Species Species, LastFedBucket LastFed, double Latitude, double Longitude);
 public sealed record DistrictSummary(string Name, string Slug, string ProvinceName, string ProvinceSlug, int ActiveStations,
     int FeedingsLastSevenDays, int OpenAdoptions, IReadOnlyList<StationRow> Stations, IReadOnlyList<CarePlaceView> CarePlaces, IReadOnlyList<AdoptionCard> Adoptions);
 public sealed record CarePlaceView(string Slug, string Name, CarePlaceKind Kind, string Address, string? Phone,
