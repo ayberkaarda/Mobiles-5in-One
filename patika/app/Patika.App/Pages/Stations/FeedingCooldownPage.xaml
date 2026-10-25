@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
+             x:Class="Patika.App.Pages.Stations.FeedingCooldownPage"
+             x:DataType="vm:FeedingCooldownViewModel"
+             Title="Biraz bekle">
+    <ContentPage.Resources>
+        <!-- Page-local: the dashed, waiting state of the Beslendi button (canvas "Bekleme"). -->
+        <Style x:Key="WaitingButton" TargetType="Button">
+            <Setter Property="HeightRequest" Value="56" />
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="BackgroundColor" Value="{StaticResource Tekir}" />
+            <Setter Property="TextColor" Value="{StaticResource Kaldirim}" />
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="Disabled">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor" Value="{StaticResource Kar}" />
+                                <Setter Property="TextColor" Value="{StaticResource KaldirimSoft}" />
+                                <Setter Property="BorderColor" Value="{StaticResource Sis}" />
+                                <Setter Property="BorderWidth" Value="2" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="64,*">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4" Padding="8,0">
+            <Button Text="‹" WidthRequest="48" HeightRequest="48" CornerRadius="24" Padding="0" FontSize="24"
+                    BackgroundColor="Transparent" TextColor="{StaticResource Kaldirim}" Command="{Binding BackCommand}"
+                    SemanticProperties.Description="Geri dön" />
+            <Label Grid.Column="1" Text="{Binding StationName}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}"
+                   VerticalOptions="Center" LineBreakMode="TailTruncation" SemanticProperties.HeadingLevel="Level1" />
+            <BoxView Grid.ColumnSpan="2" HeightRequest="1" VerticalOptions="End" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="18">
+                <FlexLayout Wrap="Wrap">
+                    <Border HeightRequest="32" Padding="10,0,12,0" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                            BackgroundColor="{StaticResource NaneSoft}" Margin="0,0,8,8">
+                        <HorizontalStackLayout Spacing="8">
+                            <Ellipse WidthRequest="10" HeightRequest="10" Fill="{StaticResource NaneDeep}" VerticalOptions="Center" />
+                            <Label Text="{Binding FedChip}" Style="{StaticResource ChipLabel}" TextColor="{StaticResource NaneDeep}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+                    <Border HeightRequest="32" Padding="12,0" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                            BackgroundColor="{StaticResource Kum}" Margin="0,0,8,8">
+                        <Label Text="Senin kaydın" Style="{StaticResource ChipLabel}" VerticalOptions="Center" />
+                    </Border>
+                </FlexLayout>
+
+                <Border Style="{StaticResource Panel}">
+                    <VerticalStackLayout Spacing="14">
+                        <HorizontalStackLayout Spacing="16">
+                            <Grid WidthRequest="56" HeightRequest="56">
+                                <Ellipse Stroke="{StaticResource TekirDeep}" StrokeThickness="4" />
+                                <Label Text="⏱" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource TekirDeep}" />
+                            </Grid>
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="{Binding Remaining}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeH3}" LineHeight="1.0" AutomationId="CooldownRemaining" />
+                                <Label Text="sonra yeniden işaretleyebilirsin" FontSize="{StaticResource FontSizeSmall}" TextColor="{StaticResource KaldirimSoft}" />
+                            </VerticalStackLayout>
+                        </HorizontalStackLayout>
+                        <Button Text="{Binding ButtonText}" Style="{StaticResource WaitingButton}" Command="{Binding FeedAgainCommand}" AutomationId="CooldownFedButton" />
+                        <Label Text="Aynı istasyonu 30 dakikada bir işaretleyebilirsin. Böylece kayıtlar gerçek kalır ve haritaya bakan herkes doğru bilgiyi görür."
+                               FontSize="{StaticResource FontSizeSmall}" LineHeight="1.4" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Bu arada yapabileceklerin" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" SemanticProperties.HeadingLevel="Level2" />
+                    <Button Text="Mama bitti diye işaretle" Style="{StaticResource QuietButton}" Command="{Binding EmptyCommand}" IsEnabled="{Binding IsNotBusy}" />
+                    <Label Text="{Binding Outcome}" IsVisible="{Binding Outcome, Converter={StaticResource HasText}}" FontFamily="NunitoSansBold" TextColor="{StaticResource NaneDeep}" />
+                </VerticalStackLayout>
+
+                <Label Text="Kalan süre sunucunun bu kayda verdiği yanıttan, yoksa bu telefondaki son kaydından hesaplanır."
+                       Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansSemiBold" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

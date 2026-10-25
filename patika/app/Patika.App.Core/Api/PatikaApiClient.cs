@@ -45,6 +45,9 @@ public sealed class PatikaApiClient
 
     public TokenManager Tokens => tokens;
 
+    /// <summary>The server clock from the latest response <c>Date</c> header, carried forward on the monotonic clock.</summary>
+    public ServerTime ServerTime { get; init; } = new(TimeProvider.System);
+
     // ---- Auth ---------------------------------------------------------------------------------
 
     /// <summary>Always 202 for a well-formed request; the next step arrives by email.</summary>
@@ -281,7 +284,9 @@ public sealed class PatikaApiClient
     {
         try
         {
-            return await http.SendAsync(request, ct).ConfigureAwait(false);
+            var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+            ServerTime.Observe(response.Headers.Date);
+            return response;
         }
         catch (OperationCanceledException e) when (!ct.IsCancellationRequested)
         {
@@ -307,6 +312,7 @@ public sealed class PatikaApiClient
         string? code = null;
         string? title = null;
         Dictionary<string, string[]>? errors = null;
+        int? retryAfter = response.Headers.RetryAfter?.Delta is { } delta ? (int)Math.Ceiling(delta.TotalSeconds) : null;
         try
         {
             var text = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -316,6 +322,12 @@ public sealed class PatikaApiClient
                 var root = document.RootElement;
                 code = ReadString(root, "code");
                 title = ReadString(root, "title");
+                if (root.TryGetProperty("retryAfterSeconds", out var wait) && wait.ValueKind == JsonValueKind.Number
+                    && wait.TryGetInt32(out var seconds) && seconds >= 0)
+                {
+                    retryAfter = seconds;
+                }
+
                 if (root.TryGetProperty("errors", out var errorsElement) && errorsElement.ValueKind == JsonValueKind.Object)
                 {
                     errors = [];
@@ -335,7 +347,10 @@ public sealed class PatikaApiClient
 
         code ??= string.Create(CultureInfo.InvariantCulture, $"http_{status}");
         var kind = status >= 500 ? ApiErrorKind.Server : ApiErrorKind.Client;
-        return new ApiException(kind, ErrorMessages.For(code, status), status, code, title, errors);
+        return new ApiException(kind, ErrorMessages.For(code, status), status, code, title, errors)
+        {
+            RetryAfterSeconds = retryAfter,
+        };
     }
 
     private static string? ReadString(JsonElement root, string name) =>

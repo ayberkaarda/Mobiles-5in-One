@@ -54,6 +54,12 @@ public sealed class ApiException : Exception
     public IReadOnlyDictionary<string, string[]> FieldErrors { get; }
 
     /// <summary>
+    /// How long the server asks to wait: the problem details <c>retryAfterSeconds</c> member (for example
+    /// with <c>feeding_cooldown</c>) or else the <c>Retry-After</c> header; null when it sent neither.
+    /// </summary>
+    public int? RetryAfterSeconds { get; init; }
+
+    /// <summary>
     /// Worth retrying later with the same request: no response, 5xx, 408, 429 or a duplicate still in flight.
     /// Everything else is a final answer about this request.
     /// </summary>

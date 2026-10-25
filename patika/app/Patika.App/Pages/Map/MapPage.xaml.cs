@@ -15,6 +15,8 @@ public partial class MapPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await viewModel.LoadAsync();
+
+        // Back from Beslendi or a new station: the selected card and the pins may have changed.
+        await viewModel.AppearAsync();
     }
 }

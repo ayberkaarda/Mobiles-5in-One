@@ -4,29 +4,72 @@
              xmlns:vm="clr-namespace:Patika.App.ViewModels.Stations"
              x:Class="Patika.App.Pages.Stations.OutboxPage"
              x:DataType="vm:OutboxViewModel"
-             Shell.NavBarIsVisible="True"
+             BackgroundColor="{StaticResource Kum}"
              Title="Giden kutusu">
-    <ScrollView>
-        <VerticalStackLayout Padding="20,24" Spacing="12">
-            <Label Text="Gönderilmeyi bekleyenler" Style="{StaticResource Title}" SemanticProperties.HeadingLevel="Level1" />
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="vm:OutboxRow">
-                        <Grid ColumnDefinitions="56,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" Padding="0,12">
-                            <Label Text="{Binding Time}" FontFamily="NunitoExtraBold" />
-                            <Label Grid.Column="1" Text="{Binding Title}" FontFamily="NunitoSansBold" />
-                            <Label Grid.Column="2" Text="{Binding State}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansBold"
-                                   TextColor="{StaticResource TekirDeep}" />
-                            <Label Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Reason}" IsVisible="{Binding IsStuck}"
-                                   Style="{StaticResource Muted}" TextColor="{StaticResource AcilDeep}" />
-                        </Grid>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Canvas "Cevrimdisi": the banner on top, the outbox as a sheet below. -->
+        <Border Style="{StaticResource OfflineBanner}" IsVisible="{Binding IsOffline}" AutomationId="OfflineBanner">
+            <VerticalStackLayout>
+                <Label Text="Çevrimdışısın" FontFamily="NunitoExtraBold" TextColor="{StaticResource Kar}" />
+                <Label Text="Son baktığın bölge gösteriliyor. Kayıtların telefonda bekliyor." FontSize="{StaticResource FontSizeSmall}" TextColor="{StaticResource Cizgi}" />
             </VerticalStackLayout>
-            <Label Text="{Binding Summary}" AutomationId="OutboxSummary" />
-            <Button Text="Şimdi yeniden dene" Style="{StaticResource QuietButton}" Command="{Binding RetryNowCommand}" IsEnabled="{Binding IsNotBusy}" />
-            <Button Text="Gönderilemeyenleri temizle" Style="{StaticResource LinkButton}" Command="{Binding DismissStuckCommand}"
-                    IsVisible="{Binding HasStuck}" HorizontalOptions="Start" />
-        </VerticalStackLayout>
-    </ScrollView>
+        </Border>
+
+        <Button Grid.Row="1" Text="‹ Haritaya dön" Style="{StaticResource LinkButton}" TextColor="{StaticResource Kaldirim}"
+                HorizontalOptions="Start" VerticalOptions="Start" Margin="8,8,0,0" Command="{Binding BackCommand}" />
+
+        <Border Grid.Row="2" Style="{StaticResource Sheet}" Padding="20,12,20,20">
+            <VerticalStackLayout Spacing="0">
+                <BoxView WidthRequest="40" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center" Margin="0,0,0,14" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Gönderilmeyi bekleyenler" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeH4}"
+                           SemanticProperties.HeadingLevel="Level1" />
+                    <Label Grid.Column="1" Text="{Binding PendingCount}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeH4}"
+                           TextColor="{StaticResource TekirDeep}" AutomationId="OutboxCount" />
+                </Grid>
+                <ScrollView MaximumHeightRequest="380" Margin="0,10,0,0">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OutboxRow">
+                                <Grid ColumnDefinitions="52,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" Padding="0,12">
+                                    <Label Text="{Binding Time}" FontFamily="NunitoExtraBold" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" FontSize="{StaticResource FontSizeSmall}" VerticalOptions="Center">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Title}" FontFamily="NunitoSansBold" />
+                                                <Span Text=", " />
+                                                <Span Text="{Binding Target}" />
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Label Grid.Column="2" Text="{Binding State}" FontSize="{StaticResource FontSizeCaption}" FontFamily="NunitoSansBold"
+                                           TextColor="{StaticResource TekirDeep}" VerticalOptions="Center">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsRetry}" Value="True">
+                                                <Setter Property="TextColor" Value="{StaticResource AcilDeep}" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsStuck}" Value="True">
+                                                <Setter Property="TextColor" Value="{StaticResource AcilDeep}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Reason}" IsVisible="{Binding IsStuck}"
+                                           FontSize="{StaticResource FontSizeSmall}" TextColor="{StaticResource AcilDeep}" />
+                                    <BoxView Grid.Row="1" Grid.ColumnSpan="3" HeightRequest="1" VerticalOptions="End" Margin="0,0,0,-12" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                        <BindableLayout.EmptyView>
+                            <Label Text="Telefonda bekleyen kayıt yok." Style="{StaticResource Muted}" Margin="0,8" />
+                        </BindableLayout.EmptyView>
+                    </VerticalStackLayout>
+                </ScrollView>
+                <Label Text="{Binding Summary}" FontSize="{StaticResource FontSizeSmall}" LineHeight="1.45" Margin="0,12,0,0" AutomationId="OutboxSummary" />
+                <Button Text="Şimdi yeniden dene" Style="{StaticResource QuietButton}" Margin="0,14,0,0" Command="{Binding RetryNowCommand}"
+                        IsEnabled="{Binding IsNotBusy}" AutomationId="RetryNow" />
+                <Button Text="Gönderilemeyenleri temizle" Style="{StaticResource LinkButton}" Command="{Binding DismissStuckCommand}"
+                        IsVisible="{Binding HasStuck}" HorizontalOptions="Start" Margin="0,8,0,0" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
 </ContentPage>
