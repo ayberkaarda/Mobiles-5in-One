@@ -85,3 +85,9 @@ paths = [
   '''inecekvar/api/tests/ops/test_bootstrap\.py''',
 ]
 targetRules = ['generic-api-key']
+
+[[allowlists]]
+description = "Runtime-issued tokens listed as must-not-appear values in the patika logging test"
+condition = "AND"
+paths = ['''patika/tests/Patika\.Api\.Tests/LoggingTests\.cs''']
+targetRules = ['generic-api-key']
