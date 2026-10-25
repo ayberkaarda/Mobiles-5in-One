@@ -7,6 +7,8 @@ public enum EmailKind
 {
     VerifyEmail,
     RegistrationAttempt,
+    PasswordReset,
+    DeletionScheduled,
 }
 
 /// <summary>An outgoing message. <see cref="Body"/> may contain a one-time token and is never logged.</summary>
@@ -45,8 +47,8 @@ public sealed class DevelopmentFolderEmailSender(string folder, ILogger<Developm
 }
 
 /// <summary>
-/// Placeholder outside Development until the Resend sender lands: the message is dropped and only
-/// its kind is logged, so registration keeps working without leaking addresses or tokens.
+/// Fallback outside Development when <c>Resend:ApiKey</c> is not set: the message is dropped and only
+/// its kind is logged, so the API keeps working without leaking addresses or tokens.
 /// </summary>
 public sealed class UnconfiguredEmailSender(ILogger<UnconfiguredEmailSender> logger) : IEmailSender
 {
@@ -55,21 +57,4 @@ public sealed class UnconfiguredEmailSender(ILogger<UnconfiguredEmailSender> log
         logger.LogWarning("No email provider is configured; dropped a message of kind {Kind}", message.Kind);
         return Task.CompletedTask;
     }
-}
-
-public static class AuthEmails
-{
-    public static EmailMessage Verification(string to, string token) => new(
-        to,
-        EmailKind.VerifyEmail,
-        "Patika: e-posta adresini doğrula",
-        $"Patika hesabını etkinleştirmek için bu kodu uygulamada gir (24 saat geçerli):\n\n{token}\n\n"
-        + "Bu isteği sen yapmadıysan bu iletiyi yok sayabilirsin.");
-
-    public static EmailMessage RegistrationAttempt(string to) => new(
-        to,
-        EmailKind.RegistrationAttempt,
-        "Patika: hesabın için kayıt denemesi",
-        "Bu e-posta adresiyle zaten bir Patika hesabı var. Yeni bir kayıt denendi; hesabın değişmedi.\n\n"
-        + "Sen değilsen bir şey yapmana gerek yok. Şifreni hatırlamıyorsan uygulamadaki giriş ekranını kullan.");
 }

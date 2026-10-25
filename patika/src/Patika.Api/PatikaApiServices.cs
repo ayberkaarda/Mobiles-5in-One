@@ -5,8 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using Patika.Api.Email;
+using Patika.Api.Features.Account;
 using Patika.Api.Features.Auth;
+using Patika.Api.Features.Devices;
+using Patika.Api.Features.Media;
+using Patika.Api.Features.Urgent;
 using Patika.Api.Logging;
+using Patika.Api.OpenApi;
 using Patika.Api.Security;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Security.Passwords;
@@ -110,19 +115,13 @@ public static class PatikaApiServices
         services.AddSingleton<IExternalIdentityVerifier, GoogleIdTokenVerifier>();
         services.AddScoped<IAuthStore, EfAuthStore>();
         services.AddScoped<AuthHandlers>();
-        services.AddOptions<EmailSettings>().Bind(configuration.GetSection(EmailSettings.SectionName));
-        if (builder.Environment.IsDevelopment())
-        {
-            services.AddSingleton<IEmailSender>(provider => new DevelopmentFolderEmailSender(
-                provider.GetRequiredService<IOptions<EmailSettings>>().Value.DevelopmentOutbox
-                    ?? Path.Combine(Path.GetTempPath(), "patika-dev-mail"),
-                provider.GetRequiredService<ILogger<DevelopmentFolderEmailSender>>()));
-        }
-        else
-        {
-            // The Resend sender replaces this in a later phase.
-            services.AddSingleton<IEmailSender, UnconfiguredEmailSender>();
-        }
+        services.AddPatikaEmail(configuration, builder.Environment);
+        services.AddPatikaAccount();
+        services.AddPatikaSessionVersionCheck();
+        services.AddMediaServices(configuration);
+        services.AddUrgentServices();
+        services.AddDeviceServices();
+        services.AddPatikaOpenApi();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)

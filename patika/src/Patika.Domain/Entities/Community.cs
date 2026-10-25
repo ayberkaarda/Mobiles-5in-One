@@ -8,6 +8,7 @@ public sealed class UrgentPost : Entity
     public required string PhotoKey { get; set; }
     public UrgentPostState State { get; set; }
     public Guid CreatedBy { get; set; }
+    public DateTimeOffset? FanoutAt { get; set; }
     public int NotifiedCount { get; set; }
 }
 

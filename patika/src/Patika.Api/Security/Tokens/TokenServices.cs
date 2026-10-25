@@ -16,6 +16,9 @@ public static class PatikaClaims
     public const string AuthTime = "auth_time";
     public const string AuthMethod = "amr";
 
+    /// <summary>The account session version when the token was minted; a mismatch with the database rejects the token.</summary>
+    public const string SessionVersion = "sv";
+
     // Values for the amr claim (RFC 8176 where one exists).
     public const string PasswordMethod = "pwd";
     public const string ExternalMethod = "fed";
@@ -29,7 +32,7 @@ public interface IAccessTokenIssuer
     /// interactive sign-in; it adds <c>amr</c> and <c>auth_time</c>. Refreshed tokens carry neither,
     /// so they can never satisfy a recent-authentication check.
     /// </summary>
-    (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null);
+    (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0);
 }
 
 public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> settings, TimeProvider clock)
@@ -37,7 +40,7 @@ public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> s
 {
     private readonly JsonWebTokenHandler handler = new() { SetDefaultTimesOnTokenCreation = false };
 
-    public (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null)
+    public (string Token, int ExpiresInSeconds) Issue(Guid userId, ActorRole role, string? authMethod = null, int sessionVersion = 0)
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var lifetime = TimeSpan.FromMinutes(settings.Value.AccessTokenMinutes);
@@ -55,6 +58,8 @@ public sealed class AccessTokenIssuer(JwtSigningKey key, IOptions<JwtSettings> s
                 new Claim(PatikaClaims.Subject, userId.ToString()),
                 new Claim(PatikaClaims.Role, role.ToString()),
                 new Claim("jti", Guid.NewGuid().ToString("N")),
+                new Claim(PatikaClaims.SessionVersion,
+                    sessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture), ClaimValueTypes.Integer32),
             ]),
         };
         if (authMethod is not null)

@@ -26,7 +26,7 @@ public sealed class PostgisFixture : IAsyncLifetime
     {
         await container.StartAsync();
         await using var db = CreateContext();
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
     }
 
     public async ValueTask DisposeAsync() => await container.DisposeAsync();

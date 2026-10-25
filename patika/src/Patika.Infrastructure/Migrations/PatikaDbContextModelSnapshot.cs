@@ -487,6 +487,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("environment");
 
+                    b.Property<Guid>("InstallationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("installation_id");
+
                     b.Property<DateTimeOffset>("LastSeenAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_seen_at");
@@ -506,6 +510,9 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InstallationId")
+                        .IsUnique();
 
                     b.HasIndex("LastSeenAt");
 
@@ -689,6 +696,27 @@ namespace Patika.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("follows", (string)null);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.PushDailyCounter", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<string>("Channel")
+                        .HasColumnType("text")
+                        .HasColumnName("channel");
+
+                    b.Property<int>("Count")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("count");
+
+                    b.HasKey("Day", "Channel");
+
+                    b.ToTable("push_daily_counters", (string)null);
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.RefreshToken", b =>
@@ -978,6 +1006,71 @@ namespace Patika.Infrastructure.Migrations
                     b.ToTable("subscriptions", (string)null);
                 });
 
+            modelBuilder.Entity("Patika.Domain.Entities.Upload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("ContentLength")
+                        .HasColumnType("bigint")
+                        .HasColumnName("content_length");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_code");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Key")
+                        .HasName("uploads_key_key");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_uploads_user_id_created_at");
+
+                    b.ToTable("uploads", null, t =>
+                        {
+                            t.HasCheckConstraint("uploads_content_length_check", "content_length BETWEEN 1 AND 5242880");
+                        });
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.UrgentPost", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1004,6 +1097,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("character varying(10000)")
                         .HasColumnName("description");
 
+                    b.Property<DateTimeOffset?>("FanoutAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fanout_at");
+
                     b.Property<Point>("Location")
                         .IsRequired()
                         .HasColumnType("geography(Point,4326)")
@@ -1029,6 +1126,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_urgent_posts_fanout_pending")
+                        .HasFilter("fanout_at IS NULL");
 
                     b.HasIndex("Location");
 
@@ -1094,6 +1195,12 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("role");
 
+                    b.Property<int>("SessionVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("session_version");
+
                     b.Property<string>("TotpSecretEnc")
                         .HasColumnType("text")
                         .HasColumnName("totp_secret_enc");
@@ -1101,6 +1208,10 @@ namespace Patika.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
+
+                    b.Property<Point>("UrgentHome")
+                        .HasColumnType("geography(Point,4326)")
+                        .HasColumnName("urgent_home");
 
                     b.Property<bool>("UrgentOptIn")
                         .HasColumnType("boolean")
@@ -1118,9 +1229,15 @@ namespace Patika.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("UrgentHome")
+                        .HasDatabaseName("ix_users_urgent_home")
+                        .HasFilter("urgent_opt_in");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("UrgentHome"), "gist");
+
                     b.ToTable("users", null, t =>
                         {
-                            t.HasCheckConstraint("ck_users_urgent_radius", "urgent_radius_m BETWEEN 0 AND 5000");
+                            t.HasCheckConstraint("ck_users_urgent_radius", "urgent_radius_m BETWEEN 500 AND 2000");
                         });
                 });
 
@@ -1308,6 +1425,15 @@ namespace Patika.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Patika.Domain.Entities.Upload", b =>
+                {
+                    b.HasOne("Patika.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Patika.Domain.Entities.UrgentPost", b =>

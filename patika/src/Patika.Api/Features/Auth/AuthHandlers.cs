@@ -27,6 +27,10 @@ public sealed class AuthHandlers(
 {
     public static readonly TimeSpan EmailTokenLifetime = TimeSpan.FromHours(24);
     public static readonly TimeSpan RecentAuthenticationWindow = TimeSpan.FromMinutes(10);
+    public static readonly TimeSpan PasswordResetLifetime = TimeSpan.FromHours(1);
+
+    /// <summary>Minimum duration of every forgot-password response, known address or not.</summary>
+    public static readonly TimeSpan ForgotResponseTime = TimeSpan.FromMilliseconds(400);
 
     /// <summary>
     /// Always 202 with the same body for a well-formed request: a new address gets a verification
@@ -73,6 +77,121 @@ public sealed class AuthHandlers(
         return Accepted();
     }
 
+    /// <summary>
+    /// Always 202 with the same body. A known, active password account gets a single-use reset code
+    /// (1 h); an unknown address gets nothing. Both paths take at least <see cref="ForgotResponseTime"/>,
+    /// and the email is handed over without waiting for the provider beyond that floor, so neither the
+    /// body nor the timing tells the two apart.
+    /// </summary>
+    public async Task<IResult> ForgotPasswordAsync(
+        HttpContext http, ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var started = clock.GetTimestamp();
+        var email = EmailNormalizer.Normalize(request.Email);
+        if (emailLimiter.Limiter.TryAcquire(email) is { } retryAfter)
+        {
+            logger.LogWarning("Password reset throttled for {Email}", email);
+            return RateLimitingSetup.TooManyRequests(http, retryAfter);
+        }
+
+        // The code and its digest are produced on both paths.
+        var code = RefreshTokens.NewToken();
+        var digest = RefreshTokens.Hash(code);
+        var delivery = Task.CompletedTask;
+        var user = await store.FindUserByEmailAsync(email, cancellationToken);
+        if (user is { IsActive: true, PasswordHash: not null })
+        {
+            var now = clock.GetUtcNow();
+            await store.StoreEmailTokenAsync(new EmailTokenRecord(Guid.CreateVersion7(), user.Id, digest,
+                EmailTokenRecord.PasswordReset, now, now + PasswordResetLifetime), cancellationToken);
+            logger.LogInformation("Password reset requested for user {UserId}", user.Id);
+
+            // Not tied to the request: a client that disconnects early must not cancel the email.
+            delivery = SendDetachedAsync(AuthEmails.PasswordReset(email, code));
+        }
+        else
+        {
+            logger.LogInformation("Password reset requested for {Email} without an eligible account", email);
+        }
+
+        var floor = DelayUntilAsync(started, ForgotResponseTime);
+        await Task.WhenAny(delivery, floor);
+        await floor;
+        return TypedResults.Accepted((string?)null, ForgotPasswordAcceptedResponse.Pending);
+    }
+
+    /// <summary>
+    /// Redeems a reset code once: sets the new password and ends every session of the account
+    /// (all refresh families revoked). The breach check runs first so a rejected password keeps the code usable.
+    /// </summary>
+    public async Task<IResult> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (await breachedPasswords.IsBreachedAsync(request.NewPassword, cancellationToken))
+        {
+            return ValidationFilter<ResetPasswordRequest>.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["newPassword"] = ["This password appears in a known data breach. Choose a different one."],
+            }, AuthErrorCodes.PasswordBreached);
+        }
+
+        var hash = await hasher.HashAsync(request.NewPassword, cancellationToken);
+        var userId = await store.TryResetPasswordAsync(
+            RefreshTokens.Hash(request.Token), hash, clock.GetUtcNow(), cancellationToken);
+        if (userId is null)
+        {
+            return Problem(StatusCodes.Status400BadRequest, PasswordResetErrorCodes.ResetInvalid,
+                "The reset code is invalid or has expired.");
+        }
+
+        SessionVersionCache.Shared.Invalidate(userId.Value);
+        logger.LogInformation("User {UserId} reset their password; all sessions revoked", userId);
+        return TypedResults.NoContent();
+    }
+
+    private async Task SendDetachedAsync(EmailMessage message)
+    {
+        try
+        {
+            await emailSender.SendAsync(message, CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            logger.LogError("Sending an email of kind {Kind} failed ({Failure})", message.Kind, exception.GetType().Name);
+        }
+    }
+
+    private async Task DelayUntilAsync(long startedTimestamp, TimeSpan minimum)
+    {
+        // A loop because timers may fire a little early; the floor must hold on every path.
+        for (var remaining = minimum - clock.GetElapsedTime(startedTimestamp);
+             remaining > TimeSpan.Zero;
+             remaining = minimum - clock.GetElapsedTime(startedTimestamp))
+        {
+            await Task.Delay(remaining + TimeSpan.FromMilliseconds(1), clock, CancellationToken.None);
+        }
+    }
+
+    /// <summary>
+    /// A correct sign-in during the deletion grace period cancels the deletion and reactivates the
+    /// account. Returns the active user, or null when the account stays inactive.
+    /// </summary>
+    private async Task<AuthUser?> ActiveOrReactivatedAsync(AuthUser user, CancellationToken cancellationToken)
+    {
+        if (user.IsActive)
+        {
+            return user;
+        }
+
+        if (!await store.TryCancelPendingDeletionAsync(user.Id, clock.GetUtcNow(), cancellationToken))
+        {
+            return null;
+        }
+
+        SessionVersionCache.Shared.Invalidate(user.Id);
+        logger.LogInformation("User {UserId} signed in during the grace period; account deletion cancelled", user.Id);
+        return user with { DeactivatedAt = null };
+    }
+
     public async Task<IResult> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken)
     {
         var userId = await store.TryConsumeEmailTokenAsync(
@@ -85,7 +204,10 @@ public sealed class AuthHandlers(
         }
 
         logger.LogInformation("User {UserId} verified their email address", user.Id);
-        return TypedResults.Ok(await IssueAsync(user, Guid.CreateVersion7(), PatikaClaims.EmailLinkMethod, cancellationToken));
+        return await IssueAsync(user, PatikaClaims.EmailLinkMethod, expectedPasswordHash: null, cancellationToken) is { } tokens
+            ? TypedResults.Ok(tokens)
+            : Problem(StatusCodes.Status400BadRequest, AuthErrorCodes.VerificationInvalid,
+                "The verification code is invalid or has expired.");
     }
 
     public async Task<IResult> LoginAsync(HttpContext http, LoginRequest request, CancellationToken cancellationToken)
@@ -102,14 +224,24 @@ public sealed class AuthHandlers(
         // Always hash, even for unknown users or external-only accounts, so timing does not leak existence.
         // Unverified accounts get the same answer as a wrong password.
         var verified = await hasher.VerifyAsync(request.Password, user?.PasswordHash, cancellationToken);
-        if (user is null || !verified || !user.IsActive || user.EmailVerifiedAt is null)
+        // Unverified and inactive accounts get the same answer as a wrong password; an account in its
+        // deletion grace period is reactivated only after the password has been checked.
+        var active = user is null || !verified || user.EmailVerifiedAt is null
+            ? null
+            : await ActiveOrReactivatedAsync(user, cancellationToken);
+        if (active is null)
         {
             logger.LogInformation("Login failed for {Email}", email);
             return InvalidCredentials();
         }
 
+        user = active;
+
         logger.LogInformation("User {UserId} signed in with password", user.Id);
-        return TypedResults.Ok(await IssueAsync(user, Guid.CreateVersion7(), PatikaClaims.PasswordMethod, cancellationToken));
+        // The hash that was just verified must still be the stored one when the session is issued.
+        return await IssueAsync(user, PatikaClaims.PasswordMethod, user.PasswordHash, cancellationToken) is { } tokens
+            ? TypedResults.Ok(tokens)
+            : InvalidCredentials();
     }
 
     /// <summary>
@@ -147,12 +279,16 @@ public sealed class AuthHandlers(
             user = created;
         }
 
-        if (!user.IsActive)
+        var active = await ActiveOrReactivatedAsync(user, cancellationToken);
+        if (active is null)
         {
             return Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.ExternalTokenInvalid, "Sign-in failed.");
         }
 
-        return TypedResults.Ok(await IssueAsync(user, Guid.CreateVersion7(), PatikaClaims.ExternalMethod, cancellationToken));
+        user = active;
+        return await IssueAsync(user, PatikaClaims.ExternalMethod, expectedPasswordHash: null, cancellationToken) is { } tokens
+            ? TypedResults.Ok(tokens)
+            : Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.ExternalTokenInvalid, "Sign-in failed.");
     }
 
     /// <summary>
@@ -198,9 +334,17 @@ public sealed class AuthHandlers(
         return TypedResults.NoContent();
     }
 
-    internal static bool IsRecentPasswordAuthentication(ClaimsPrincipal principal, DateTimeOffset now)
+    internal static bool IsRecentPasswordAuthentication(ClaimsPrincipal principal, DateTimeOffset now) =>
+        IsRecentAuthentication(principal, now, PatikaClaims.PasswordMethod);
+
+    /// <summary>
+    /// True when the access token was minted by an interactive sign-in with one of
+    /// <paramref name="methods"/> within the last ten minutes. Refreshed tokens never qualify.
+    /// </summary>
+    internal static bool IsRecentAuthentication(ClaimsPrincipal principal, DateTimeOffset now, params string[] methods)
     {
-        if (principal.FindFirstValue(PatikaClaims.AuthMethod) != PatikaClaims.PasswordMethod
+        if (principal.FindFirstValue(PatikaClaims.AuthMethod) is not { } method
+            || !methods.Contains(method, StringComparer.Ordinal)
             || !long.TryParse(principal.FindFirstValue(PatikaClaims.AuthTime), out var seconds))
         {
             return false;
@@ -256,6 +400,13 @@ public sealed class AuthHandlers(
             return RateLimitingSetup.TooManyRequests(http, retryAfter);
         }
 
+        // Read before rotating: a reset that lands after this read revokes the replacement and bumps the
+        // version past the one embedded below; one that landed before it makes the rotation fail.
+        if (await store.GetSessionVersionAsync(user.Id, cancellationToken) is not { } version)
+        {
+            return RefreshInvalid();
+        }
+
         var (refreshToken, record) = NewRefreshToken(user.Id, current.FamilyId, now);
         if (!await store.TryRotateRefreshTokenAsync(current.Id, record, now, cancellationToken))
         {
@@ -264,7 +415,7 @@ public sealed class AuthHandlers(
             return Problem(StatusCodes.Status401Unauthorized, AuthErrorCodes.RefreshReused, "Session is no longer valid.");
         }
 
-        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role);
+        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, sessionVersion: version);
         return TypedResults.Ok(new TokenResponse(accessToken, "Bearer", expiresIn, refreshToken, RefreshLifetimeSeconds));
     }
 
@@ -283,12 +434,22 @@ public sealed class AuthHandlers(
 
     private int RefreshLifetimeSeconds => (int)TimeSpan.FromDays(jwtSettings.Value.RefreshTokenDays).TotalSeconds;
 
-    private async Task<TokenResponse> IssueAsync(
-        AuthUser user, Guid familyId, string authMethod, CancellationToken cancellationToken)
+    /// <summary>
+    /// Starts a new session family. The refresh token is stored under the user-row lock and the access
+    /// token carries the session version read there; null when the account changed in the meantime
+    /// (password replaced, deactivated), in which case nothing was issued.
+    /// </summary>
+    private async Task<TokenResponse?> IssueAsync(
+        AuthUser user, string authMethod, string? expectedPasswordHash, CancellationToken cancellationToken)
     {
-        var (refreshToken, record) = NewRefreshToken(user.Id, familyId, clock.GetUtcNow());
-        await store.AddRefreshTokenAsync(record, cancellationToken);
-        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, authMethod);
+        var (refreshToken, record) = NewRefreshToken(user.Id, Guid.CreateVersion7(), clock.GetUtcNow());
+        if (await store.TryIssueSessionAsync(record, expectedPasswordHash, cancellationToken) is not { } version)
+        {
+            logger.LogWarning("User {UserId} changed during sign-in; no session issued", user.Id);
+            return null;
+        }
+
+        var (accessToken, expiresIn) = accessTokens.Issue(user.Id, user.Role, authMethod, version);
         return new TokenResponse(accessToken, "Bearer", expiresIn, refreshToken, RefreshLifetimeSeconds);
     }
 

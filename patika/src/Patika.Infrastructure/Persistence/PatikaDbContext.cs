@@ -10,6 +10,8 @@ namespace Patika.Infrastructure.Persistence;
 public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbContext(options)
 {
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
+    public DbSet<Upload> Uploads => Set<Upload>();
+    public DbSet<PushDailyCounter> PushDailyCounters => Set<PushDailyCounter>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<EmailToken> EmailTokens => Set<EmailToken>();
@@ -39,6 +41,7 @@ public sealed class PatikaDbContext(DbContextOptions<PatikaDbContext> options) :
     {
         modelBuilder.HasPostgresExtension("postgis");
         ConfigureEntity<User>(modelBuilder, "users");
+        ConfigureEntity<Upload>(modelBuilder, "uploads");
         ConfigureEntity<ExternalLogin>(modelBuilder, "external_logins");
         ConfigureEntity<RefreshToken>(modelBuilder, "refresh_tokens");
         ConfigureEntity<EmailToken>(modelBuilder, "email_tokens");

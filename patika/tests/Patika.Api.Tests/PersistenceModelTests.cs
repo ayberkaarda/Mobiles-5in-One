@@ -23,11 +23,47 @@ public sealed class PersistenceModelTests
         [
             "adoption_posts", "adoption_requests", "animal_photos", "animals",
             "app_store_notifications", "audit_logs", "care_places", "deletion_requests",
-            "device_tokens", "email_tokens", "external_logins", "feedings", "follows", "refresh_tokens",
-            "reports", "sightings", "stations", "subscriptions", "urgent_posts", "users"
+            "device_tokens", "email_tokens", "external_logins", "feedings", "follows", "push_daily_counters", "refresh_tokens",
+            "reports", "sightings", "stations", "subscriptions", "uploads", "urgent_posts", "users"
         ];
 
         Assert.Equal(expected, tables);
+        var expectedColumns = new Dictionary<Type, string[]>
+        {
+            [typeof(Upload)] =
+            [
+                "content_length", "content_type", "created_at", "failure_code", "id", "key",
+                "kind", "processed_at", "state", "updated_at", "user_id"
+            ],
+            [typeof(PushDailyCounter)] = ["channel", "count", "day"],
+            [typeof(DeviceToken)] =
+            [
+                "created_at", "environment", "id", "installation_id", "last_seen_at", "token",
+                "updated_at", "user_id"
+            ],
+            [typeof(UrgentPost)] =
+            [
+                "category", "created_at", "created_by", "description", "fanout_at", "id",
+                "location", "notified_count", "photo_key", "state", "updated_at"
+            ]
+        };
+        foreach (var (type, columns) in expectedColumns)
+        {
+            var entity = context.Model.FindEntityType(type);
+            Assert.NotNull(entity);
+            Assert.Equal(columns, entity.GetProperties()
+                .Select(property => property.GetColumnName())
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray());
+        }
+
+        var deviceToken = context.Model.FindEntityType(typeof(DeviceToken));
+        Assert.NotNull(deviceToken);
+        var installationIndex = Assert.Single(deviceToken.GetIndexes(), index =>
+            index.Properties.Any(property => property.Name == nameof(DeviceToken.InstallationId)));
+        Assert.True(installationIndex.IsUnique);
+        Assert.Equal(nameof(DeviceToken.InstallationId), Assert.Single(installationIndex.Properties).Name);
+
         var station = context.Model.FindEntityType(typeof(Station));
         Assert.NotNull(station);
         Assert.Equal("geography(Point,4326)", station.FindProperty(nameof(Station.Location))?.GetColumnType());
