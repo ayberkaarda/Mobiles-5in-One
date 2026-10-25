@@ -5,8 +5,10 @@ namespace Patika.Contracts.Auth;
 public sealed record ForgotPasswordRequest(
     [property: JsonPropertyName("email")] string Email);
 
+/// <summary>The six-digit code from the reset email, with the address it was sent to.</summary>
 public sealed record ResetPasswordRequest(
-    [property: JsonPropertyName("token")] string Token,
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("code")] string Code,
     [property: JsonPropertyName("newPassword")] string NewPassword);
 
 /// <summary>The only response to a well-formed forgot-password request, whether or not the address has an account.</summary>

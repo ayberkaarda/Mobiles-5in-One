@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Patika.Api.Features.Auth;
 
 namespace Patika.Api.Email;
 
@@ -13,6 +14,7 @@ public static class EmailServiceCollectionExtensions
     {
         services.AddOptions<EmailSettings>().Bind(configuration.GetSection(EmailSettings.SectionName));
         services.AddOptions<ResendSettings>().Bind(configuration.GetSection(ResendSettings.SectionName));
+        services.AddPatikaEmailCodes(configuration);
 
         if (environment.IsDevelopment())
         {

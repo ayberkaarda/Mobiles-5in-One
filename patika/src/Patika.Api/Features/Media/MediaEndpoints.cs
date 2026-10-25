@@ -32,6 +32,7 @@ public static class MediaEndpoints
         services.AddOptions<StorageSettings>().Bind(configuration.GetSection(StorageSettings.SectionName));
         services.AddOptions<MediaSettings>().Bind(configuration.GetSection(MediaSettings.SectionName));
         services.AddSingleton<IUploadPresigner, S3UploadPresigner>();
+        services.AddSingleton<IPhotoUrlResolver, PhotoUrlResolver>();
         services.AddScoped<IUploadLedger, PgUploadLedger>();
         services.AddScoped<ISupporterEntitlement, EfSupporterEntitlement>();
         return services;

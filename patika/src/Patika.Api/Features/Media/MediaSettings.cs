@@ -17,6 +17,12 @@ public sealed class StorageSettings
 
     public string? SecretKey { get; set; }
 
+    /// <summary>
+    /// Optional CDN base serving the processed <c>media/</c> prefix only (never <c>incoming/</c> or
+    /// <c>quarantine/</c>). When set, photo addresses are <c>{base}/media/...</c> instead of presigned GETs.
+    /// </summary>
+    public string? PublicBaseUrl { get; set; }
+
     /// <summary><c>auto</c> for R2; MinIO accepts <c>us-east-1</c>.</summary>
     public string Region { get; set; } = "us-east-1";
 }
@@ -31,6 +37,9 @@ public sealed class MediaSettings
     public int SupporterDailyQuota { get; set; } = 100;
 
     public int PresignMinutes { get; set; } = 5;
+
+    /// <summary>Lifetime of a presigned photo GET when no <c>Storage:PublicBaseUrl</c> is set.</summary>
+    public int PhotoUrlMinutes { get; set; } = 15;
 }
 
 /// <summary>Calendar day in Türkiye (UTC+3 all year since 2016), used for every daily cap.</summary>

@@ -34,7 +34,7 @@ public sealed class EfSessionVersionTests(PostgisFixture database) : IClassFixtu
         Assert.Equal(0, await store.GetSessionVersionAsync(user.Id, Ct));
 
         var code = await IssueResetCodeAsync(store, user.Id, now);
-        Assert.NotNull(await store.TryResetPasswordAsync(RefreshTokens.Hash(code), NewHash, now, Ct));
+        Assert.NotNull(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), NewHash, now, Ct));
         Assert.Equal(1, await store.GetSessionVersionAsync(user.Id, Ct));
 
         Assert.True((await new EfAccountDeletionStore(db).RequestDeletionAsync(user.Id, now, TimeSpan.FromDays(7), Ct))!.Created);
@@ -111,7 +111,7 @@ public sealed class EfSessionVersionTests(PostgisFixture database) : IClassFixtu
             var reset = Task.Run(async () =>
             {
                 await start.Task;
-                return await new EfAuthStore(resetDb).TryResetPasswordAsync(RefreshTokens.Hash(code), NewHash, now, Ct);
+                return await new EfAuthStore(resetDb).TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), NewHash, now, Ct);
             }, Ct);
             start.SetResult();
             var issuedVersion = await login;
@@ -139,10 +139,7 @@ public sealed class EfSessionVersionTests(PostgisFixture database) : IClassFixtu
 
     private static async Task<string> IssueResetCodeAsync(EfAuthStore store, Guid userId, DateTimeOffset now)
     {
-        var code = RefreshTokens.NewToken();
-        await store.StoreEmailTokenAsync(new EmailTokenRecord(Guid.CreateVersion7(), userId, RefreshTokens.Hash(code),
-            EmailTokenRecord.PasswordReset, now, now + AuthHandlers.PasswordResetLifetime), Ct);
-        return code;
+        return await TestEmailCodes.IssueAsync(store, userId, EmailTokenRecord.PasswordReset, now, Ct);
     }
 
     private static RefreshTokenRecord Refresh(Guid userId)

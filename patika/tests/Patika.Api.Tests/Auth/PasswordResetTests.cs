@@ -81,10 +81,10 @@ public sealed class PasswordResetTests : IAsyncLifetime
         await client.RegisterAsync(factory, email);
         var code = await RequestCodeAsync(client, email);
 
-        using var reset = await ResetAsync(client, code, NewPassword);
+        using var reset = await ResetAsync(client, email, code, NewPassword);
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
 
-        using var replay = await ResetAsync(client, code, "ucuncu-bir-sifre-99");
+        using var replay = await ResetAsync(client, email, code, "ucuncu-bir-sifre-99");
         Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
         Assert.Equal(PasswordResetErrorCodes.ResetInvalid, (await replay.ReadProblemAsync()).Code);
 
@@ -103,7 +103,7 @@ public sealed class PasswordResetTests : IAsyncLifetime
         var code = await RequestCodeAsync(client, email);
         store.ExpireResetTokens();
 
-        using var reset = await ResetAsync(client, code, NewPassword);
+        using var reset = await ResetAsync(client, email, code, NewPassword);
 
         Assert.Equal(HttpStatusCode.BadRequest, reset.StatusCode);
         Assert.Equal(PasswordResetErrorCodes.ResetInvalid, (await reset.ReadProblemAsync()).Code);
@@ -112,7 +112,7 @@ public sealed class PasswordResetTests : IAsyncLifetime
     }
 
     [Fact]
-    public void ResetCodesLiveOneHour() => Assert.Equal(TimeSpan.FromHours(1), AuthHandlers.PasswordResetLifetime);
+    public void ResetCodesLiveFifteenMinutes() => Assert.Equal(TimeSpan.FromMinutes(15), AuthHandlers.PasswordResetLifetime);
 
     [Fact]
     public async Task ANewerCodeVoidsTheOlderOne()
@@ -123,9 +123,9 @@ public sealed class PasswordResetTests : IAsyncLifetime
         var first = await RequestCodeAsync(client, email);
         var second = await RequestCodeAsync(client, email);
 
-        using var stale = await ResetAsync(client, first, NewPassword);
+        using var stale = await ResetAsync(client, email, first, NewPassword);
         Assert.Equal(HttpStatusCode.BadRequest, stale.StatusCode);
-        using var fresh = await ResetAsync(client, second, NewPassword);
+        using var fresh = await ResetAsync(client, email, second, NewPassword);
         Assert.Equal(HttpStatusCode.NoContent, fresh.StatusCode);
     }
 
@@ -139,7 +139,7 @@ public sealed class PasswordResetTests : IAsyncLifetime
         var tablet = await LoginTokensAsync(client, email);
         var code = await RequestCodeAsync(client, email);
 
-        using var reset = await ResetAsync(client, code, NewPassword);
+        using var reset = await ResetAsync(client, email, code, NewPassword);
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
 
         foreach (var session in new[] { signUp, phone, tablet })
@@ -163,11 +163,11 @@ public sealed class PasswordResetTests : IAsyncLifetime
         var code = await RequestCodeAsync(client, email);
         factory.Breached.MarkBreached("sizdirilmis-sifre-1");
 
-        using var breached = await ResetAsync(client, code, "sizdirilmis-sifre-1");
+        using var breached = await ResetAsync(client, email, code, "sizdirilmis-sifre-1");
         Assert.Equal(HttpStatusCode.BadRequest, breached.StatusCode);
         Assert.Equal(AuthErrorCodes.PasswordBreached, (await breached.ReadProblemAsync()).Code);
 
-        using var reset = await ResetAsync(client, code, NewPassword);
+        using var reset = await ResetAsync(client, email, code, NewPassword);
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
     }
 
@@ -196,8 +196,8 @@ public sealed class PasswordResetTests : IAsyncLifetime
     {
         using var client = factory.CreateApiClient("198.51.100.9");
 
-        using var badToken = await ResetAsync(client, "kisa", NewPassword);
-        using var shortPassword = await ResetAsync(client, RefreshTokens.NewToken(), "kisa");
+        using var badToken = await ResetAsync(client, NewEmail(), "kisa", NewPassword);
+        using var shortPassword = await ResetAsync(client, NewEmail(), "123456", "kisa");
         using var badEmail = await client.PostAsJsonAsync("/v1/auth/forgot", new ForgotPasswordRequest("adres-degil"), Ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, badToken.StatusCode);
@@ -213,12 +213,12 @@ public sealed class PasswordResetTests : IAsyncLifetime
         var email = NewEmail("gizli");
         await client.RegisterAsync(factory, email);
         var code = await RequestCodeAsync(client, email);
-        using var reset = await ResetAsync(client, code, NewPassword);
+        using var reset = await ResetAsync(client, email, code, NewPassword);
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
 
         var logs = string.Join('\n', factory.Logs.RenderAll());
         Assert.DoesNotContain(email, logs, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(code, logs, StringComparison.Ordinal);
+        Assert.DoesNotMatch($"(?<![0-9]){code}(?![0-9])", logs);
         Assert.DoesNotContain(NewPassword, logs, StringComparison.Ordinal);
     }
 
@@ -240,7 +240,7 @@ public sealed class PasswordResetTests : IAsyncLifetime
     }
 
     internal static string CodeFrom(EmailMessage message) =>
-        message.Body.Split('\n').Select(line => line.Trim()).Single(RefreshTokens.LooksValid);
+        message.Body.Split('\n').Select(line => line.Trim()).Single(EmailCodeHasher.LooksValid);
 
     private async Task<string> RequestCodeAsync(HttpClient client, string email)
     {
@@ -249,8 +249,8 @@ public sealed class PasswordResetTests : IAsyncLifetime
         return CodeFrom(factory.Outbox.For(email).Last(m => m.Kind == EmailKind.PasswordReset));
     }
 
-    private static Task<HttpResponseMessage> ResetAsync(HttpClient client, string code, string password) =>
-        client.PostAsJsonAsync("/v1/auth/reset", new ResetPasswordRequest(code, password), Ct);
+    private static Task<HttpResponseMessage> ResetAsync(HttpClient client, string email, string code, string password) =>
+        client.PostAsJsonAsync("/v1/auth/reset", new ResetPasswordRequest(email, code, password), Ct);
 
     private static async Task<TokenResponse> LoginTokensAsync(HttpClient client, string email)
     {

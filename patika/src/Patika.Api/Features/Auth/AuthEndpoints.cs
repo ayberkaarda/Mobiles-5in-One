@@ -30,6 +30,14 @@ public static class AuthEndpoints
             .Produces<TokenResponse>()
             .Produces<ApiProblemDetails>(StatusCodes.Status400BadRequest, ProblemJson);
 
+        auth.MapPost("/verify-email/resend", (HttpContext http, ResendVerificationRequest request, AuthHandlers handlers, CancellationToken ct) =>
+                handlers.ResendVerificationAsync(http, request, ct))
+            .Validate<ResendVerificationRequest>()
+            .RequirePermission(Permission.AuthSession)
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .Produces<RegisterAcceptedResponse>(StatusCodes.Status202Accepted)
+            .Produces<ApiProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson);
+
         auth.MapPost("/forgot", (HttpContext http, ForgotPasswordRequest request, AuthHandlers handlers, CancellationToken ct) =>
                 handlers.ForgotPasswordAsync(http, request, ct))
             .Validate<ForgotPasswordRequest>()

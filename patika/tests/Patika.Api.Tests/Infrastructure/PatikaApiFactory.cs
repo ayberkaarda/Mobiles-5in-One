@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Patika.Api.Email;
+using Patika.Api.Features.Account;
 using Patika.Api.Features.Auth;
 using Patika.Api.Security.Passwords;
 using Patika.Api.Security.Tokens;
@@ -40,6 +41,9 @@ public sealed class PatikaApiFactory : WebApplicationFactory<Program>
 
     public TestOutbox Outbox { get; } = new();
 
+    /// <summary>Per-user contribution counts for <c>GET /v1/me</c>; accounts default to zero.</summary>
+    public InMemoryAccountStats Stats => field ??= new InMemoryAccountStats(Store);
+
     public Dictionary<string, string?> Settings { get; } = new(StringComparer.Ordinal);
 
     public Action<IServiceCollection>? ExtraServices { get; set; }
@@ -63,6 +67,8 @@ public sealed class PatikaApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            services.RemoveAll<IAccountStatsReader>();
+            services.AddSingleton<IAccountStatsReader>(Stats);
             services.RemoveAll<IAuthStore>();
             services.AddSingleton<IAuthStore>(Store);
             services.RemoveAll<IBreachedPasswordChecker>();
@@ -173,5 +179,27 @@ public sealed class TestOutbox : IEmailSender
     /// <summary>The newest verification code sent to the address.</summary>
     public string VerificationCodeFor(string email) =>
         For(email).Last(m => m.Kind == EmailKind.VerifyEmail).Body
-            .Split('\n').Select(line => line.Trim()).Single(RefreshTokens.LooksValid);
+            .Split('\n').Select(line => line.Trim()).Single(EmailCodeHasher.LooksValid);
+}
+
+/// <summary>
+/// <see cref="IAccountStatsReader"/> over the in-memory users: counts are set per user by the test,
+/// <c>JoinedAt</c> is fixed per user the first time it is read.
+/// </summary>
+public sealed class InMemoryAccountStats(InMemoryAuthStore users) : IAccountStatsReader
+{
+    private readonly ConcurrentDictionary<Guid, AccountStats> stats = new();
+
+    public void Set(Guid userId, int feedings = 0, int sightings = 0, int adoptionsHelped = 0, DateTimeOffset? joinedAt = null) =>
+        stats[userId] = new AccountStats(feedings, sightings, adoptionsHelped, joinedAt ?? DateTimeOffset.UtcNow);
+
+    public Task<AccountStats?> ReadAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (users.Users.All(u => u.Id != userId))
+        {
+            return Task.FromResult<AccountStats?>(null);
+        }
+
+        return Task.FromResult<AccountStats?>(stats.GetOrAdd(userId, _ => new AccountStats(0, 0, 0, DateTimeOffset.UtcNow)));
+    }
 }

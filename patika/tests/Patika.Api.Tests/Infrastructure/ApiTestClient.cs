@@ -23,7 +23,7 @@ public static class ApiTestClient
     {
         using var response = await client.PostRegisterAsync(email, password, displayName);
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        using var verified = await client.VerifyEmailAsync(factory.Outbox.VerificationCodeFor(email));
+        using var verified = await client.VerifyEmailAsync(email, factory.Outbox.VerificationCodeFor(email));
         Assert.Equal(HttpStatusCode.OK, verified.StatusCode);
         return (await verified.Content.ReadFromJsonAsync<TokenResponse>(Ct))!;
     }
@@ -32,8 +32,11 @@ public static class ApiTestClient
         this HttpClient client, string email, string password = StrongPassword, string displayName = "Mahalle Gönüllüsü") =>
         client.PostAsJsonAsync("/v1/auth/register", new RegisterRequest(email, password, displayName), Ct);
 
-    public static Task<HttpResponseMessage> VerifyEmailAsync(this HttpClient client, string code) =>
-        client.PostAsJsonAsync("/v1/auth/verify-email", new VerifyEmailRequest(code), Ct);
+    public static Task<HttpResponseMessage> VerifyEmailAsync(this HttpClient client, string email, string code) =>
+        client.PostAsJsonAsync("/v1/auth/verify-email", new VerifyEmailRequest(email, code), Ct);
+
+    public static Task<HttpResponseMessage> ResendVerificationAsync(this HttpClient client, string email) =>
+        client.PostAsJsonAsync("/v1/auth/verify-email/resend", new ResendVerificationRequest(email), Ct);
 
     public static Task<HttpResponseMessage> LoginAsync(this HttpClient client, string email, string password = StrongPassword) =>
         client.PostAsJsonAsync("/v1/auth/login", new LoginRequest(email, password), Ct);

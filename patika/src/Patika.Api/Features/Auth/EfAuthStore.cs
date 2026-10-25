@@ -67,41 +67,79 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         return await TrySaveAsync(cancellationToken);
     }
 
-    public async Task<Guid?> TryConsumeEmailTokenAsync(
-        byte[] tokenHash, string purpose, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<Guid?> TryRedeemEmailCodeAsync(
+        Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var token = await db.EmailTokens.AsNoTracking()
-            .SingleOrDefaultAsync(t => t.TokenHash == tokenHash && t.Purpose == purpose, cancellationToken);
-        if (token is null)
+        if (await MatchLiveCodeAsync(userId, purpose, matches, now, cancellationToken) is not { } codeId)
         {
+            // Commit: a wrong guess must stay counted.
+            await transaction.CommitAsync(cancellationToken);
             return null;
         }
 
-        // Compare-and-set so that a token can be used once even under concurrent requests.
-        var consumed = await db.EmailTokens
-            .Where(t => t.Id == token.Id && t.UsedAt == null && t.ExpiresAt > now)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(t => t.UsedAt, now)
-                .SetProperty(t => t.UpdatedAt, now), cancellationToken);
-        if (consumed != 1)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            return null;
-        }
-
+        await ConsumeCodeAsync(codeId, now, cancellationToken);
         if (purpose == EmailTokenRecord.VerifyEmail)
         {
             await db.Users
-                .Where(u => u.Id == token.UserId && u.EmailVerifiedAt == null)
+                .Where(u => u.Id == userId && u.EmailVerifiedAt == null)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(u => u.EmailVerifiedAt, now)
                     .SetProperty(u => u.UpdatedAt, now), cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
-        return token.UserId;
+        return userId;
     }
+
+    /// <summary>
+    /// Locks the user's live code of the purpose (row lock, so concurrent guesses serialize and each
+    /// re-reads the attempt count) and checks the presented code. On a mismatch the attempt is counted
+    /// and the code is burned (marked used) once <see cref="EmailCodeHasher.MaxAttempts"/> is reached.
+    /// Returns the code id on a match. Callers commit on both paths.
+    /// </summary>
+    private async Task<Guid?> MatchLiveCodeAsync(
+        Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var rows = await db.Database
+            .SqlQuery<CodeRow>($"""
+                SELECT id AS "Id", token_hash AS "TokenHash" FROM email_tokens
+                WHERE user_id = {userId} AND purpose = {purpose} AND used_at IS NULL AND expires_at > {now}
+                    AND failed_attempts < {EmailCodeHasher.MaxAttempts}
+                ORDER BY created_at DESC
+                LIMIT 1
+                FOR UPDATE
+                """)
+            .ToListAsync(cancellationToken);
+        if (rows.Count != 1)
+        {
+            return null;
+        }
+
+        var row = rows[0];
+        if (matches(row.Id, row.TokenHash))
+        {
+            return row.Id;
+        }
+
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE email_tokens
+            SET failed_attempts = failed_attempts + 1,
+                used_at = CASE WHEN failed_attempts + 1 >= {EmailCodeHasher.MaxAttempts} THEN {now} ELSE used_at END,
+                updated_at = {now}
+            WHERE id = {row.Id}
+            """, cancellationToken);
+        return null;
+    }
+
+    private Task<int> ConsumeCodeAsync(Guid codeId, DateTimeOffset now, CancellationToken cancellationToken) =>
+        db.EmailTokens
+            .Where(t => t.Id == codeId && t.UsedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.UsedAt, now)
+                .SetProperty(t => t.UpdatedAt, now), cancellationToken);
+
+    private sealed record CodeRow(Guid Id, byte[] TokenHash);
 
     public async Task<bool> TryLinkExternalLoginAsync(Guid userId, ExternalLoginKey login, CancellationToken cancellationToken)
     {
@@ -175,12 +213,30 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         return revoked;
     }
 
-    public async Task StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken)
+    public async Task<bool> StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // The user row lock serializes every issuance for this account, so the count and the
+        // invalidation below see all earlier codes and at most one unused code ever exists.
+        var locked = await db.Database
+            .SqlQuery<Guid>($"SELECT id AS \"Value\" FROM users WHERE id = {token.UserId} FOR UPDATE")
+            .ToListAsync(cancellationToken);
+        var since = token.CreatedAt - EmailCodeHasher.IssueWindow;
+        if (locked.Count != 1 || await db.EmailTokens.CountAsync(t => t.UserId == token.UserId
+                && t.Purpose == token.Purpose && t.CreatedAt > since, cancellationToken) >= EmailCodeHasher.MaxIssuedPerWindow)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return false;
+        }
+
+        // Invalidate rather than delete: the rows keep counting towards the daily cap. Codes being
+        // guessed right now hold their row lock, so this waits for them and they re-check used_at.
         await db.EmailTokens
             .Where(t => t.UserId == token.UserId && t.Purpose == token.Purpose && t.UsedAt == null)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.UsedAt, token.CreatedAt)
+                .SetProperty(t => t.UpdatedAt, token.CreatedAt), cancellationToken);
         db.EmailTokens.Add(new EmailToken
         {
             Id = token.Id,
@@ -194,27 +250,24 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
         await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
     public async Task<Guid?> TryResetPasswordAsync(
-        byte[] tokenHash, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, EmailCodeMatcher matches, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var token = await db.EmailTokens.AsNoTracking()
-            .SingleOrDefaultAsync(t => t.TokenHash == tokenHash && t.Purpose == EmailTokenRecord.PasswordReset, cancellationToken);
-        if (token is null)
+        if (await MatchLiveCodeAsync(userId, EmailTokenRecord.PasswordReset, matches, now, cancellationToken) is not { } codeId)
         {
+            // Commit: a wrong guess must stay counted.
+            await transaction.CommitAsync(cancellationToken);
             return null;
         }
 
-        // Compare-and-set: a reset code works once even under concurrent requests.
-        var consumed = await db.EmailTokens
-            .Where(t => t.Id == token.Id && t.UsedAt == null && t.ExpiresAt > now)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(t => t.UsedAt, now)
-                .SetProperty(t => t.UpdatedAt, now), cancellationToken);
+        // The code row is locked, so it is consumed exactly once even under concurrent requests.
+        var consumed = await ConsumeCodeAsync(codeId, now, cancellationToken);
         var updated = consumed != 1 ? 0 : await db.Users
-            .Where(u => u.Id == token.UserId && u.DeactivatedAt == null)
+            .Where(u => u.Id == userId && u.DeactivatedAt == null)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(u => u.PasswordHash, newPasswordHash)
                 .SetProperty(u => u.EmailVerifiedAt, u => u.EmailVerifiedAt ?? now)
@@ -226,12 +279,12 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         }
 
         await db.EmailTokens
-            .Where(t => t.UserId == token.UserId && t.Purpose == EmailTokenRecord.PasswordReset && t.UsedAt == null)
+            .Where(t => t.UserId == userId && t.Purpose == EmailTokenRecord.PasswordReset && t.UsedAt == null)
             .ExecuteDeleteAsync(cancellationToken);
-        await RevokeAllForUserAsync(token.UserId, now, cancellationToken);
-        await BumpSessionVersionAsync(db, token.UserId, cancellationToken);
+        await RevokeAllForUserAsync(userId, now, cancellationToken);
+        await BumpSessionVersionAsync(db, userId, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return token.UserId;
+        return userId;
     }
 
     public async Task<int?> GetSessionVersionAsync(Guid userId, CancellationToken cancellationToken)
