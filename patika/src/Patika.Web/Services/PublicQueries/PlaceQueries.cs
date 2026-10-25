@@ -14,14 +14,29 @@ public sealed class PlaceQueries(PatikaDbContext db, IAdoptionQueries adoptions,
     {
         var province = await db.Provinces.Where(p => p.Slug == provinceSlug).Select(p => new { p.Id, p.Name, p.Slug }).SingleOrDefaultAsync(ct);
         if (province is null) return null;
+        var rows = await Districts(db.Districts.Where(d => d.ProvinceId == province.Id)).ToListAsync(ct);
+        return new ProvinceDetail(province.Name, province.Slug, Sorted(rows, activeFirst: true));
+    }
+
+    public async Task<IReadOnlyList<DistrictListItem>> ListDistrictsAsync(CancellationToken ct = default) =>
+        Sorted(await Districts(db.Districts).ToListAsync(ct), activeFirst: false);
+
+    /// <summary>One statement: each district with its active station and open adoption counts.</summary>
+    private IQueryable<DistrictListItem> Districts(IQueryable<District> districts)
+    {
         var now = clock.GetUtcNow();
-        var rows = await db.Districts.Where(d => d.ProvinceId == province.Id).Select(d => new DistrictListItem(d.Name, d.Slug,
+        return districts.Select(d => new DistrictListItem(d.Name, d.Slug,
             db.Stations.Count(s => s.DistrictId == d.Id && s.Status != StationStatus.Removed),
             db.AdoptionPosts.Count(p => p.DistrictId == d.Id && p.State == AdoptionPostState.Published && p.ClosesAt > now
-                && db.Animals.Any(a => a.Id == p.AnimalId && a.Status != AnimalStatus.Adopted)))).ToListAsync(ct);
+                && db.Animals.Any(a => a.Id == p.AnimalId && a.Status != AnimalStatus.Adopted))));
+    }
+
+    private static DistrictListItem[] Sorted(IEnumerable<DistrictListItem> rows, bool activeFirst)
+    {
         var turkish = StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), ignoreCase: true);
-        return new ProvinceDetail(province.Name, province.Slug, rows
-            .OrderByDescending(d => d.ActiveStations + d.OpenAdoptions > 0).ThenBy(d => d.Name, turkish).ToArray());
+        return activeFirst
+            ? rows.OrderByDescending(d => d.ActiveStations + d.OpenAdoptions > 0).ThenBy(d => d.Name, turkish).ToArray()
+            : rows.OrderBy(d => d.Name, turkish).ToArray();
     }
 
     public async Task<DistrictSummary?> GetDistrictAsync(string provinceSlug, string districtSlug, CancellationToken ct = default)

@@ -45,10 +45,14 @@ public interface IPlaceQueries
     Task<DistrictSummary?> GetDistrictAsync(string provinceSlug, string districtSlug, CancellationToken ct = default);
     /// <summary>The province with every district, active districts first, then by Turkish name; null when the slug is unknown.</summary>
     Task<ProvinceDetail?> GetProvinceAsync(string provinceSlug, CancellationToken ct = default);
+    /// <summary>Every district of every province with its counts, in one query; Turkish name order.</summary>
+    Task<IReadOnlyList<DistrictListItem>> ListDistrictsAsync(CancellationToken ct = default);
 }
 public interface ICarePlaceQueries
 {
-    Task<IReadOnlyList<CarePlaceView>> ListAsync(CarePlaceKind? kind = null, bool? open24h = null, string? districtSlug = null, CancellationToken ct = default);
+    /// <summary>Care places by name; <paramref name="limit"/> caps the rows in SQL for small panels.</summary>
+    Task<IReadOnlyList<CarePlaceView>> ListAsync(CarePlaceKind? kind = null, bool? open24h = null, string? districtSlug = null,
+        int? limit = null, CancellationToken ct = default);
     Task<CarePlaceView?> GetBySlugAsync(string slug, CancellationToken ct = default);
 }
 public interface IImpactQueries

@@ -1,17 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Patika.Domain.Entities;
 using Patika.Web.Routing;
+using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages.Sahiplendirme;
 
+[OutputCache(PolicyName = CachePolicies.Listing)]
 public sealed class IndexModel(IAdoptionQueries adoptions, IPlaceQueries places, TimeProvider clock) : PublicPageModel(clock)
 {
     public const int PageSize = 12;
 
     [FromQuery(Name = "ilce")] public string? District { get; set; }
     [FromQuery(Name = "tur")] public string? Kind { get; set; }
-    [FromQuery(Name = "sayfa")] public int? PageNumber { get; set; }
+    /// <summary>Read as text so "abc", "0", "-1", "007" or an overflowing number is a 404, not a silent page one.</summary>
+    [FromQuery(Name = "sayfa")] public string? PageText { get; set; }
 
     public IReadOnlyList<DistrictListItem> Districts { get; private set; } = [];
     public DistrictListItem? SelectedDistrict { get; private set; }
@@ -28,14 +32,14 @@ public sealed class IndexModel(IAdoptionQueries adoptions, IPlaceQueries places,
             SelectedSpecies = Kind switch { "kedi" => Species.Cat, "kopek" => Species.Dog, _ => null };
             if (SelectedSpecies is null) return NotFound();
         }
-        if (PageNumber is < 1 or > 100000) return NotFound();
-        CurrentPage = PageNumber ?? 1;
-
-        var all = new List<DistrictListItem>();
-        foreach (var province in await places.ListProvincesAsync(ct))
+        if (PageText is not null)
         {
-            if (await places.GetProvinceAsync(province.Slug, ct) is { } detail) all.AddRange(detail.Districts);
+            if (PageText.Length is 0 or > 6 || PageText[0] == '0' || !PageText.All(char.IsAsciiDigit)) return NotFound();
+            CurrentPage = int.Parse(PageText, System.Globalization.CultureInfo.InvariantCulture);
+            if (CurrentPage > 100000) return NotFound();
         }
+
+        var all = await places.ListDistrictsAsync(ct);
         if (!string.IsNullOrEmpty(District))
         {
             SelectedDistrict = all.FirstOrDefault(d => d.Slug == District);
@@ -64,7 +68,7 @@ public sealed class IndexModel(IAdoptionQueries adoptions, IPlaceQueries places,
             $"{where}yuva arayan sokak {what}: {PublicText.Number(Total)} açık sahiplendirme ilanı. Her ilan moderasyondan geçer, 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır.",
             PublicText.Filler);
         Seo(PublicText.Title(PublicText.Capitalize(title)), PublicText.Capitalize(description), Routes.Adoptions,
-            noIndex: Total == 0 || SelectedDistrict is not null || SelectedSpecies is not null || CurrentPage > 1, jsonLd:
+            noIndex: Total == 0 || SelectedDistrict is not null || SelectedSpecies is not null || PageText is not null, jsonLd:
             [ItemList("Sahiplendirme ilanları", Cards.Select(c => (PublicText.AnimalName(c), Routes.Adoption(c.Slug)))), BreadcrumbList()]);
         return Page();
     }

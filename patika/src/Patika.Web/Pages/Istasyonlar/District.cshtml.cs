@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Patika.Web.Routing;
+using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages.Istasyonlar;
 
+[OutputCache(PolicyName = CachePolicies.Listing)]
 public sealed class DistrictModel(IPlaceQueries places, TimeProvider clock) : PublicPageModel(clock)
 {
     public DistrictSummary District { get; private set; } = null!;

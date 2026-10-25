@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.OutputCaching;
 using Patika.Web.Routing;
+using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages;
@@ -7,6 +9,7 @@ namespace Patika.Web.Pages;
 /// Home page. The morning-round story and the map are an illustration (marked [ÖRNEK]); the adoption
 /// tags, care places and the impact sentence come from the public queries.
 /// </summary>
+[OutputCache(PolicyName = CachePolicies.Listing)]
 public sealed class IndexModel(IAdoptionQueries adoptions, ICarePlaceQueries carePlaces, IImpactQueries impact, TimeProvider clock)
     : PublicPageModel(clock)
 {
@@ -29,9 +32,8 @@ public sealed class IndexModel(IAdoptionQueries adoptions, ICarePlaceQueries car
     public async Task OnGetAsync(CancellationToken ct)
     {
         Adoptions = await adoptions.ListAsync(pageSize: 3, ct: ct);
-        var open = await carePlaces.ListAsync(open24h: true, ct: ct);
-        CarePlaces = open.Count >= 3 ? open.Take(3).ToArray()
-            : open.Concat((await carePlaces.ListAsync(ct: ct)).Where(p => !p.Open24h)).Take(3).ToArray();
+        var open = await carePlaces.ListAsync(open24h: true, limit: 3, ct: ct);
+        CarePlaces = open.Count == 3 ? open : [.. open, .. await carePlaces.ListAsync(open24h: false, limit: 3 - open.Count, ct: ct)];
         LastWeek = (await impact.GetAsync(ct)).LastWeek;
 
         Seo("Patika: sokak hayvanları için mahalle gönüllüleri",

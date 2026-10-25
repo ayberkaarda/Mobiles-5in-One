@@ -14,9 +14,16 @@ builder.Services.Configure<RouteOptions>(options =>
     options.LowercaseUrls = true;
     options.AppendTrailingSlash = false;
 });
-builder.Services.AddOutputCache(options => options.AddBasePolicy(policy => policy
-    .With(context => HttpMethods.IsGet(context.HttpContext.Request.Method) && !(context.HttpContext.User.Identity?.IsAuthenticated ?? false))
-    .Expire(TimeSpan.FromMinutes(5)).SetVaryByQuery("*").Tag("public-data")));
+// The API runs in another process, so moderation cannot evict these entries: short lifetimes bound how long
+// a withdrawn or expired post stays visible (docs/public-web-data.md, "Caching").
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(policy => policy
+        .With(context => HttpMethods.IsGet(context.HttpContext.Request.Method) && !(context.HttpContext.User.Identity?.IsAuthenticated ?? false))
+        .Expire(TimeSpan.FromMinutes(5)).SetVaryByQuery("*").Tag("public-data"));
+    options.AddPolicy(CachePolicies.AdoptionDetail, policy => policy.Expire(TimeSpan.FromSeconds(60)));
+    options.AddPolicy(CachePolicies.Listing, policy => policy.Expire(TimeSpan.FromMinutes(2)));
+});
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<StorageSettings>(builder.Configuration.GetSection(StorageSettings.SectionName));
 builder.Services.Configure<MediaSettings>(builder.Configuration.GetSection(MediaSettings.SectionName));
@@ -65,3 +72,4 @@ app.MapRazorPages();
 app.Run();
 
 public partial class Program;
+

@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Patika.Domain.Entities;
 using Patika.Web.Routing;
 using Patika.Web.Seo;
+using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages.BakimYeri;
 
+[OutputCache(PolicyName = CachePolicies.Listing)]
 public sealed class IndexModel(ICarePlaceQueries carePlaces, TimeProvider clock) : PublicPageModel(clock)
 {
     public CarePlaceView Place { get; private set; } = null!;
@@ -36,8 +39,9 @@ public sealed class IndexModel(ICarePlaceQueries carePlaces, TimeProvider clock)
         if (await carePlaces.GetBySlugAsync(slug, ct) is not { } place) return NotFound();
         Place = place;
         Hours = OpeningHours.Parse(place.HoursJson, place.Open24h);
-        IReadOnlyList<CarePlaceView> others = place.DistrictSlug is null ? [] : await carePlaces.ListAsync(districtSlug: place.DistrictSlug, ct: ct);
-        if (others.Count <= 1) others = await carePlaces.ListAsync(open24h: true, ct: ct);
+        // At most five others plus this place itself, read in SQL; a district with no other place falls back to 24 h places.
+        IReadOnlyList<CarePlaceView> others = place.DistrictSlug is null ? [] : await carePlaces.ListAsync(districtSlug: place.DistrictSlug, limit: 6, ct: ct);
+        if (others.Count <= 1) others = await carePlaces.ListAsync(open24h: true, limit: 6, ct: ct);
         Nearby = others.Where(p => p.Slug != place.Slug).OrderByDescending(p => p.Open24h).Take(5).ToArray();
 
         Crumbs = [new("Ana sayfa", Routes.Home), new("Bakım yerleri", Routes.CarePlaces), new(place.Name, Routes.CarePlace(place.Slug))];

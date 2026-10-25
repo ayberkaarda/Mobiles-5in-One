@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Patika.Domain.Entities;
 using Patika.Web.Routing;
+using Patika.Web.Services;
 using Patika.Web.Services.PublicQueries;
 
 namespace Patika.Web.Pages.Sahiplendirme;
 
+[OutputCache(PolicyName = CachePolicies.AdoptionDetail)]
 public sealed class DetailModel(IAdoptionQueries adoptions, TimeProvider clock) : PublicPageModel(clock)
 {
     public AdoptionDetail Post { get; private set; } = null!;
