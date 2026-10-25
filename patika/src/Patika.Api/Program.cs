@@ -12,6 +12,7 @@ using Patika.Api.Features.Media;
 using Patika.Api.Features.Reports;
 using Patika.Api.Features.Stations;
 using Patika.Api.Features.Urgent;
+using Patika.Api.Idempotency;
 using Patika.Api.OpenApi;
 using Patika.Infrastructure;
 using Patika.Infrastructure.Persistence;
@@ -37,13 +38,15 @@ v1.MapHealth();
 v1.MapAuth();
 v1.MapMe();
 v1.MapAccount();
-v1.MapStationEndpoints();
-v1.MapAnimalEndpoints();
-v1.MapAdoptionEndpoints();
+// Create endpoints accept an Idempotency-Key; auth, token and upload routes stay outside this group.
+var idempotent = v1.MapGroup(string.Empty).WithIdempotency();
+idempotent.MapStationEndpoints();
+idempotent.MapAnimalEndpoints();
+idempotent.MapAdoptionEndpoints();
 v1.MapCarePlaceEndpoints();
-v1.MapReportEndpoints();
+idempotent.MapReportEndpoints();
 v1.MapMediaEndpoints();
-v1.MapUrgentEndpoints();
+idempotent.MapUrgentEndpoints();
 v1.MapDeviceEndpoints();
 app.MapPatikaOpenApi();
 

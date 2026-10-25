@@ -5,11 +5,12 @@ namespace Patika.Api.Email;
 /// <summary>Turkish message templates for the auth flows. Bodies are plain text; codes sit on a line of their own.</summary>
 public static class AuthEmails
 {
-    public static EmailMessage Verification(string to, string token) => new(
+    public static EmailMessage Verification(string to, string code) => new(
         to,
         EmailKind.VerifyEmail,
         "Patika: e-posta adresini doğrula",
-        $"Patika hesabını etkinleştirmek için bu kodu uygulamada gir (24 saat geçerli):\n\n{token}\n\n"
+        $"Patika hesabını etkinleştirmek için bu 6 haneli kodu uygulamada gir (15 dakika geçerli):\n\n{code}\n\n"
+        + "Kodu kimseyle paylaşma. Yeni bir kod istersen öncekiler geçersiz olur.\n\n"
         + "Bu isteği sen yapmadıysan bu iletiyi yok sayabilirsin.");
 
     public static EmailMessage RegistrationAttempt(string to) => new(
@@ -19,11 +20,12 @@ public static class AuthEmails
         "Bu e-posta adresiyle zaten bir Patika hesabı var. Yeni bir kayıt denendi; hesabın değişmedi.\n\n"
         + "Sen değilsen bir şey yapmana gerek yok. Şifreni hatırlamıyorsan uygulamadaki giriş ekranını kullan.");
 
-    public static EmailMessage PasswordReset(string to, string token) => new(
+    public static EmailMessage PasswordReset(string to, string code) => new(
         to,
         EmailKind.PasswordReset,
         "Patika: şifre sıfırlama kodu",
-        $"Patika şifreni sıfırlamak için bu kodu uygulamada gir (1 saat geçerli, yalnızca bir kez kullanılabilir):\n\n{token}\n\n"
+        $"Patika şifreni sıfırlamak için bu 6 haneli kodu uygulamada gir (15 dakika geçerli, yalnızca bir kez kullanılabilir):\n\n{code}\n\n"
+        + "Kodu kimseyle paylaşma. Yeni bir kod istersen öncekiler geçersiz olur.\n\n"
         + "Şifren değişince tüm cihazlardaki oturumların kapanır.\n\n"
         + "Bu isteği sen yapmadıysan bu iletiyi yok sayabilirsin; şifren değişmedi.");
 }

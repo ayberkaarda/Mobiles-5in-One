@@ -148,36 +148,30 @@ public sealed class EfAuthStoreTests(PostgisFixture database) : IClassFixture<Po
     }
 
     [Fact]
-    public async Task EmailTokensAreHashedSingleUseAndMarkTheAddressVerified()
+    public async Task EmailCodesAreKeyedHashesSingleUseAndMarkTheAddressVerified()
     {
         await using var db = database.CreateContext();
         var store = new EfAuthStore(db);
         var now = DateTimeOffset.UtcNow;
         var user = new AuthUser(Guid.CreateVersion7(), $"et.{Guid.NewGuid():N}@example.org", null, "Pamuk", ActorRole.User, null, null);
-        var code = RefreshTokens.NewToken();
-        var token = new EmailTokenRecord(Guid.CreateVersion7(), user.Id, RefreshTokens.Hash(code), EmailTokenRecord.VerifyEmail,
-            now, now.AddHours(24));
+        var (code, token) = Auth.TestEmailCodes.New(user.Id, EmailTokenRecord.VerifyEmail, now);
         var expiredUser = user with { Id = Guid.CreateVersion7(), Email = $"ex.{Guid.NewGuid():N}@example.org" };
-        var expiredCode = RefreshTokens.NewToken();
-        var expired = token with
-        {
-            Id = Guid.CreateVersion7(),
-            UserId = expiredUser.Id,
-            TokenHash = RefreshTokens.Hash(expiredCode),
-            ExpiresAt = now.AddSeconds(-1),
-        };
+        var (expiredCode, expired) = Auth.TestEmailCodes.New(expiredUser.Id, EmailTokenRecord.VerifyEmail, now.AddMinutes(-16));
 
         Assert.True(await store.TryCreateUserAsync(user, null, token, Ct));
         Assert.True(await store.TryCreateUserAsync(expiredUser, null, expired, Ct));
 
-        Assert.Null(await store.TryConsumeEmailTokenAsync(RefreshTokens.Hash(code), "reset_password", now, Ct));
-        Assert.Equal(user.Id, await store.TryConsumeEmailTokenAsync(RefreshTokens.Hash(code), EmailTokenRecord.VerifyEmail, now, Ct));
-        Assert.Null(await store.TryConsumeEmailTokenAsync(RefreshTokens.Hash(code), EmailTokenRecord.VerifyEmail, now, Ct));
-        Assert.Null(await store.TryConsumeEmailTokenAsync(RefreshTokens.Hash(expiredCode), EmailTokenRecord.VerifyEmail, now, Ct));
+        var matches = Auth.TestEmailCodes.Matcher(EmailTokenRecord.VerifyEmail, code);
+        Assert.Null(await store.TryRedeemEmailCodeAsync(user.Id, EmailTokenRecord.PasswordReset, matches, now, Ct));
+        Assert.Equal(user.Id, await store.TryRedeemEmailCodeAsync(user.Id, EmailTokenRecord.VerifyEmail, matches, now, Ct));
+        Assert.Null(await store.TryRedeemEmailCodeAsync(user.Id, EmailTokenRecord.VerifyEmail, matches, now, Ct));
+        Assert.Null(await store.TryRedeemEmailCodeAsync(expiredUser.Id, EmailTokenRecord.VerifyEmail,
+            Auth.TestEmailCodes.Matcher(EmailTokenRecord.VerifyEmail, expiredCode), now, Ct));
         Assert.NotNull((await store.FindUserByIdAsync(user.Id, Ct))!.EmailVerifiedAt);
         Assert.Null((await store.FindUserByIdAsync(expiredUser.Id, Ct))!.EmailVerifiedAt);
         var stored = await db.EmailTokens.AsNoTracking().Where(t => t.UserId == user.Id).SingleAsync(Ct);
         Assert.Equal(32, stored.TokenHash.Length);
+        Assert.NotEqual(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(code)), stored.TokenHash);
         Assert.Equal("verify_email", stored.Purpose);
         Assert.NotNull(stored.UsedAt);
     }

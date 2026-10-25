@@ -10,7 +10,7 @@ public sealed class InMemoryAuthStore : IAuthStore
     private readonly Dictionary<Guid, AuthUser> users = [];
     private readonly Dictionary<ExternalLoginKey, Guid> logins = [];
     private readonly Dictionary<Guid, RefreshTokenRecord> tokens = [];
-    private readonly Dictionary<Guid, (EmailTokenRecord Token, DateTimeOffset? UsedAt)> emailTokens = [];
+    private readonly Dictionary<Guid, EmailCodeEntry> emailTokens = [];
 
     /// <summary>When set, every store call throws (used to force a server error).</summary>
     public Exception? FailWith { get; set; }
@@ -71,7 +71,7 @@ public sealed class InMemoryAuthStore : IAuthStore
             users[user.Id] = user;
             if (emailToken is not null)
             {
-                emailTokens[emailToken.Id] = (emailToken, null);
+                emailTokens[emailToken.Id] = new EmailCodeEntry(emailToken);
             }
 
             if (login is not null)
@@ -82,35 +82,135 @@ public sealed class InMemoryAuthStore : IAuthStore
             return true;
         });
 
-    public Task<Guid?> TryConsumeEmailTokenAsync(
-        byte[] tokenHash, string purpose, DateTimeOffset now, CancellationToken cancellationToken) =>
-        Run<Guid?>(() =>
+    public Task<Guid?> TryRedeemEmailCodeAsync(
+        Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now, CancellationToken cancellationToken) =>
+        Run(() =>
         {
-            var match = emailTokens.Values.FirstOrDefault(e => e.Token.TokenHash.AsSpan().SequenceEqual(tokenHash)
-                && e.Token.Purpose == purpose);
-            if (match.Token is null || match.UsedAt is not null || match.Token.ExpiresAt <= now)
-            {
-                return null;
-            }
-
-            emailTokens[match.Token.Id] = (match.Token, now);
-            if (purpose == EmailTokenRecord.VerifyEmail && users.TryGetValue(match.Token.UserId, out var user))
+            var redeemed = RedeemLocked(userId, purpose, matches, now);
+            if (redeemed is not null && purpose == EmailTokenRecord.VerifyEmail && users.TryGetValue(userId, out var user))
             {
                 users[user.Id] = user with { EmailVerifiedAt = user.EmailVerifiedAt ?? now };
             }
 
-            return match.Token.UserId;
+            return redeemed;
         });
 
-    public void ExpireEmailTokens()
+    /// <summary>
+    /// Same rules as the EF store: the newest unused, unexpired code with fewer than
+    /// <see cref="EmailCodeHasher.MaxAttempts"/> wrong guesses; a wrong guess counts and the last one burns it.
+    /// </summary>
+    public Guid? RedeemCode(Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now)
     {
         lock (gate)
         {
-            foreach (var (id, entry) in emailTokens.ToArray())
+            return RedeemLocked(userId, purpose, matches, now);
+        }
+    }
+
+    private Guid? RedeemLocked(Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now)
+    {
+        var live = emailTokens.Values
+            .Where(e => e.Token.UserId == userId && e.Token.Purpose == purpose && e.UsedAt is null
+                && e.Token.ExpiresAt > now && e.FailedAttempts < EmailCodeHasher.MaxAttempts)
+            .OrderByDescending(e => e.Token.CreatedAt)
+            .FirstOrDefault();
+        if (live is null)
+        {
+            return null;
+        }
+
+        if (matches(live.Token.Id, live.Token.TokenHash))
+        {
+            live.UsedAt = now;
+            return userId;
+        }
+
+        live.FailedAttempts++;
+        if (live.FailedAttempts >= EmailCodeHasher.MaxAttempts)
+        {
+            live.UsedAt = now;
+        }
+
+        return null;
+    }
+
+    public Task<bool> StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken) =>
+        Run(() =>
+        {
+            var since = token.CreatedAt - EmailCodeHasher.IssueWindow;
+            if (!users.ContainsKey(token.UserId)
+                || emailTokens.Values.Count(e => e.Token.UserId == token.UserId && e.Token.Purpose == token.Purpose
+                    && e.Token.CreatedAt > since) >= EmailCodeHasher.MaxIssuedPerWindow)
             {
-                emailTokens[id] = (entry.Token with { ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(-1) }, entry.UsedAt);
+                return false;
+            }
+
+            InvalidateUnusedLocked(token.UserId, token.Purpose, token.CreatedAt);
+            emailTokens[token.Id] = new EmailCodeEntry(token);
+            return true;
+        });
+
+    /// <summary>Marks the user's unused codes of the purpose used (the reset path does this after success).</summary>
+    public void RemoveUnusedCodes(Guid userId, string purpose)
+    {
+        lock (gate)
+        {
+            InvalidateUnusedLocked(userId, purpose, DateTimeOffset.UtcNow);
+        }
+    }
+
+    private void InvalidateUnusedLocked(Guid userId, string purpose, DateTimeOffset now)
+    {
+        foreach (var entry in emailTokens.Values.Where(e => e.Token.UserId == userId && e.Token.Purpose == purpose && e.UsedAt is null))
+        {
+            entry.UsedAt = now;
+        }
+    }
+
+    /// <summary>Codes of the purpose that are still unused.</summary>
+    public int LiveCodeCount(string purpose)
+    {
+        lock (gate)
+        {
+            return emailTokens.Values.Count(e => e.Token.Purpose == purpose && e.UsedAt is null);
+        }
+    }
+
+    public int CodeCount(string purpose)
+    {
+        lock (gate)
+        {
+            return emailTokens.Values.Count(e => e.Token.Purpose == purpose);
+        }
+    }
+
+    public int FailedAttempts(Guid userId, string purpose)
+    {
+        lock (gate)
+        {
+            return emailTokens.Values.Where(e => e.Token.UserId == userId && e.Token.Purpose == purpose)
+                .Select(e => e.FailedAttempts).DefaultIfEmpty(0).Max();
+        }
+    }
+
+    public void ExpireEmailTokens(string? purpose = null)
+    {
+        lock (gate)
+        {
+            foreach (var entry in emailTokens.Values.Where(e => purpose is null || e.Token.Purpose == purpose))
+            {
+                entry.Token = entry.Token with { ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(-1) };
             }
         }
+    }
+
+    private sealed class EmailCodeEntry(EmailTokenRecord token)
+    {
+        public EmailTokenRecord Token { get; set; } = token;
+
+        public DateTimeOffset? UsedAt { get; set; }
+
+        public int FailedAttempts { get; set; }
     }
 
     public Task<bool> TryLinkExternalLoginAsync(

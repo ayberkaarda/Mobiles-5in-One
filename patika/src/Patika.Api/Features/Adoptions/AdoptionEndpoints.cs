@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Patika.Api.Features.Media;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
 using Patika.Contracts.Adoptions;
+using Patika.Contracts.Community;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
 using Patika.Infrastructure.Persistence;
@@ -26,6 +29,7 @@ public static class AdoptionEndpoints
             .RequirePermission(Permission.AdoptionRequestsRead).Produces<AdoptionRequestResponse>();
         v1.MapPatch("/adoptions/{id:guid}/requests/{rid:guid}", Reply).Validate<ReplyToAdoptionRequest>()
             .RequirePermission(Permission.AdoptionRequestUpdate).Produces<AdoptionRequestResponse>();
+        v1.MapGet("/me/adoption-requests", MyRequests).RequirePermission(Permission.MeManage);
         return v1;
     }
 
@@ -39,9 +43,48 @@ public static class AdoptionEndpoints
     private static bool Public(AdoptionPost post) => post.State == AdoptionPostState.Published && post.ClosesAt > DateTimeOffset.UtcNow;
     private static AdoptionPostResponse View(AdoptionPost p) => new(p.Id, p.AnimalId, p.Description, p.Requirements, p.District, p.State.ToString(), p.ClosesAt);
     private static AdoptionRequestResponse View(AdoptionRequest r) => new(r.Id, r.PostId, r.Message, r.Reply, r.State.ToString());
+    private static async Task<AdoptionPostResponse[]> EnrichAsync(IReadOnlyList<AdoptionPost> posts, PatikaDbContext db, CancellationToken ct, IPhotoUrlResolver? photos, PhotoSize size = PhotoSize.Medium)
+    {
+        var ids = posts.Select(p => p.AnimalId).ToArray();
+        var animals = await db.Animals.AsNoTracking().Where(a => ids.Contains(a.Id)).ToDictionaryAsync(a => a.Id, ct);
+        var keys = await db.Animals.AsNoTracking().Where(a => ids.Contains(a.Id))
+            .Select(a => new
+            {
+                a.Id,
+                Key = db.AnimalPhotos.Where(p => p.AnimalId == a.Id && p.ModerationState == ModerationState.Approved)
+                .OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).Select(p => p.Key).FirstOrDefault()
+            })
+            .ToDictionaryAsync(a => a.Id, a => a.Key, ct);
+        return posts.Select(p =>
+        {
+            var a = animals[p.AnimalId];
+            return View(p) with
+            {
+                AnimalName = a.Name,
+                Species = a.Species.ToString(),
+                Status = a.Status.ToString(),
+                Sterilized = a.Sterilized,
+                Vaccinated = a.Vaccinated,
+                EarTagged = a.EarTagged,
+                FirstPhotoKey = keys.GetValueOrDefault(a.Id),
+                FirstPhotoUrl = photos?.Resolve(keys.GetValueOrDefault(a.Id), size)
+            };
+        }).ToArray();
+    }
+
+    public static async Task<IResult> MyRequests(HttpContext http, PatikaDbContext db, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId) return Results.Unauthorized();
+        if (page is < 1 or > 100000 || pageSize is < 1 or > 100) return Invalid();
+        var rows = await db.AdoptionRequests.AsNoTracking().Where(r => r.RequesterId == userId)
+            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize + 1).ToListAsync(ct);
+        return Results.Ok(new PageResponse<AdoptionRequestResponse>(rows.Take(pageSize).Select(View).ToArray(), page, pageSize, rows.Count > pageSize));
+    }
+
     private static IResult Invalid() => Results.Problem(statusCode: 400, title: "İstek geçersiz.");
 
-    internal static async Task<IResult> List(PatikaDbContext db, string? district, Species? species, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    internal static async Task<IResult> List(PatikaDbContext db, string? district, Species? species, int page = 1, int pageSize = 20, CancellationToken ct = default, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (page is < 1 or > 100000 || pageSize is < 1 or > 100 || (species.HasValue && !Enum.IsDefined(species.Value))) return Invalid();
         var now = DateTimeOffset.UtcNow;
@@ -50,19 +93,19 @@ public static class AdoptionEndpoints
         if (district is not null) query = query.Where(p => p.District == district);
         if (species is not null) query = query.Where(p => db.Animals.Any(a => a.Id == p.AnimalId && a.Species == species));
         var rows = await query.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
-        return Results.Ok(rows.Select(View));
+        return Results.Ok(await EnrichAsync(rows, db, ct, photos, PhotoSize.Thumbnail));
     }
 
-    internal static async Task<IResult> Get(Guid id, HttpContext http, PatikaDbContext db, CancellationToken ct)
+    internal static async Task<IResult> Get(Guid id, HttpContext http, PatikaDbContext db, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         var post = await db.AdoptionPosts.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id, ct);
         if (post is null) return Results.NotFound();
         var visible = Public(post) && !await db.Animals.AnyAsync(a => a.Id == post.AnimalId && a.Status == AnimalStatus.Adopted, ct);
         if (!visible && !CanManage(ActorFactory.FromPrincipal(http.User), post)) return Results.NotFound();
-        return Results.Ok(View(post));
+        return Results.Ok((await EnrichAsync([post], db, ct, photos))[0]);
     }
 
-    internal static async Task<IResult> Create(Guid id, CreateAdoptionPost body, HttpContext http, PatikaDbContext db, CancellationToken ct)
+    internal static async Task<IResult> Create(Guid id, CreateAdoptionPost body, HttpContext http, PatikaDbContext db, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         var actor = ActorFactory.FromPrincipal(http.User);
         var animal = await db.Animals.SingleOrDefaultAsync(a => a.Id == id, ct);
@@ -82,10 +125,10 @@ public static class AdoptionEndpoints
         };
         db.AdoptionPosts.Add(post);
         await db.SaveChangesAsync(ct);
-        return Results.Created($"/v1/adoptions/{post.Id}", View(post));
+        return Results.Created($"/v1/adoptions/{post.Id}", (await EnrichAsync([post], db, ct, photos))[0]);
     }
 
-    internal static async Task<IResult> Update(Guid id, UpdateAdoptionPost body, HttpContext http, PatikaDbContext db, CancellationToken ct)
+    internal static async Task<IResult> Update(Guid id, UpdateAdoptionPost body, HttpContext http, PatikaDbContext db, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         var post = await db.AdoptionPosts.SingleOrDefaultAsync(p => p.Id == id, ct);
         if (post is null) return Results.NotFound();
@@ -104,7 +147,7 @@ public static class AdoptionEndpoints
         if (post.State == AdoptionPostState.Closed) await AdoptionClosureService.ClosePostAsync(db, post, ct);
         if (actor.IsModeratorOrAbove) db.AuditLogs.Add(new AuditLog { ActorId = actor.UserId, Action = "adoption.update", TargetType = "adoption", TargetId = id });
         await db.SaveChangesAsync(ct);
-        return Results.Ok(View(post));
+        return Results.Ok((await EnrichAsync([post], db, ct, photos))[0]);
     }
 
     internal static async Task<IResult> Request(Guid id, CreateAdoptionRequest body, HttpContext http, PatikaDbContext db, CancellationToken ct)

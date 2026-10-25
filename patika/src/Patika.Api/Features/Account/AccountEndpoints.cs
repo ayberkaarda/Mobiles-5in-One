@@ -22,6 +22,7 @@ public static class AccountEndpoints
     public static IServiceCollection AddPatikaAccount(this IServiceCollection services)
     {
         services.AddScoped<IAccountDeletionStore, EfAccountDeletionStore>();
+        services.AddScoped<IAccountStatsReader, EfAccountStatsReader>();
         return services;
     }
 

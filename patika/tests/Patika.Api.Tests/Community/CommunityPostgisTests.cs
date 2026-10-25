@@ -76,7 +76,10 @@ public sealed class CommunityPostgisTests
         var statuses = await Task.WhenAll(Feed(user.Id), Feed(user.Id));
         Assert.Equal(new int?[] { 201, 409 }, statuses.Order().ToArray());
         Assert.Equal(201, await Feed(other.Id));
-        clock.Now = clock.Now.AddMinutes(30);
+        await using (var receipts = database.CreateContext())
+        {
+            clock.Now = (await receipts.Feedings.Where(f => f.UserId == user.Id).MaxAsync(f => f.CreatedAt, Ct)).AddMinutes(30);
+        }
         Assert.Equal(201, await Feed(user.Id));
         await using var verify = database.CreateContext();
         var saved = await verify.Stations.SingleAsync(x => x.Id == station.Id, Ct);

@@ -2,6 +2,7 @@ using Patika.Infrastructure;
 using Patika.Worker.Jobs;
 using Patika.Worker.Jobs.Accounts;
 using Patika.Worker.Jobs.Adoptions;
+using Patika.Worker.Jobs.Maintenance;
 using Patika.Worker.Jobs.Media;
 using Patika.Worker.Jobs.Push;
 using Quartz;
@@ -13,6 +14,7 @@ builder.Services.AddMediaServices(builder.Configuration);
 builder.Services.AddPushServices(builder.Configuration);
 builder.Services.AddAccountJobServices();
 builder.Services.AddAdoptionJobServices();
+builder.Services.AddMaintenanceJobServices();
 builder.Services.AddQuartz(options =>
 {
     var heartbeatKey = new JobKey("heartbeat");
@@ -28,6 +30,7 @@ builder.Services.AddQuartz(options =>
     options.AddPushJobs();
     options.AddAccountJobs();
     options.AddAdoptionJobs();
+    options.AddMaintenanceJobs();
 });
 builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 

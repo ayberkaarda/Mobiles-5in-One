@@ -71,8 +71,17 @@ public sealed class VerifyEmailRequestValidator : AbstractValidator<VerifyEmailR
 {
     public VerifyEmailRequestValidator()
     {
-        RuleFor(r => r.Token).NotEmpty()
-            .Must(RefreshTokens.LooksValid).WithMessage("Verification code is malformed.");
+        RuleFor(r => r.Email).NotEmpty().MaximumLength(TextRules.MaxEmailLength);
+        RuleFor(r => r.Code).NotEmpty()
+            .Must(EmailCodeHasher.LooksValid).WithMessage("Verification code must be six digits.");
+    }
+}
+
+public sealed class ResendVerificationRequestValidator : AbstractValidator<ResendVerificationRequest>
+{
+    public ResendVerificationRequestValidator()
+    {
+        RuleFor(r => r.Email).PatikaEmail();
     }
 }
 

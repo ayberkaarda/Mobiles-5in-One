@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Patika.Api.Features.Account;
 using Patika.Api.Features.Auth;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Security.RateLimiting;
@@ -32,16 +33,18 @@ public static class MeEndpoints
     }
 
     private static async Task<IResult> GetMeAsync(
-        HttpContext http, IAuthStore store, IAuthorizationService authorization, CancellationToken ct)
+        HttpContext http, IAuthStore store, IAccountStatsReader statsReader, IAuthorizationService authorization,
+        CancellationToken ct)
     {
         var user = await LoadSelfAsync(http, store, authorization, ct);
-        if (user is null)
+        var stats = user is null ? null : await statsReader.ReadAsync(user.Id, ct);
+        if (user is null || stats is null)
         {
             return TypedResults.Unauthorized();
         }
 
         return TypedResults.Ok(new MeResponse(user.Id, user.Email, user.DisplayName, user.Role.ToString(),
-            user.EmailVerifiedAt is not null));
+            user.EmailVerifiedAt is not null, stats.FeedingCount, stats.Badges(), stats.JoinedAt));
     }
 
     private static async Task<IResult> LinkGoogleAsync(

@@ -21,7 +21,7 @@ public sealed record UrgentPostResponse(
     string State,
     int NotifiedCount,
     DateTimeOffset CreatedAt,
-    int? DistanceMeters);
+    int? DistanceMeters, string? PhotoUrl = null);
 
 public sealed record UrgentPostListResponse(IReadOnlyList<UrgentPostResponse> Items);
 

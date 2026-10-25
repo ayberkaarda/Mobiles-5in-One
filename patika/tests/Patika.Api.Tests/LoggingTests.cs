@@ -37,13 +37,17 @@ public sealed class LoggingTests
         Assert.Contains("p***@k***", sample, StringComparison.Ordinal); // the handler logged the address, masked
         foreach (var secret in new[]
         {
-            email, "pamuk.sever", "kedimahallesi", password, "yanlis-sifre-123", factory.Outbox.VerificationCodeFor(email),
+            email, "pamuk.sever", "kedimahallesi", password, "yanlis-sifre-123",
             registered.AccessToken, registered.RefreshToken, loggedIn.AccessToken, loggedIn.RefreshToken,
             registered.AccessToken[..20],
         })
         {
             Assert.DoesNotContain(secret, sample, StringComparison.OrdinalIgnoreCase);
         }
+
+        // Six digits can occur inside timestamps; the code must never appear as a number of its own.
+        var code = factory.Outbox.VerificationCodeFor(email);
+        Assert.DoesNotMatch($"(?<![0-9]){code}(?![0-9])", sample);
 
         Assert.DoesNotContain("Bearer ", sample, StringComparison.Ordinal);
     }

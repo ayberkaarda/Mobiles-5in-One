@@ -5,27 +5,19 @@ using Patika.Api.Tests.Infrastructure;
 namespace Patika.Api.Tests.Auth;
 
 /// <summary>
-/// Wraps the shared <see cref="InMemoryAuthStore"/> and adds password reset tokens and deletion
-/// requests with the same semantics as the EF stores (single use, expiry, grace period, full revocation).
+/// Wraps the shared <see cref="InMemoryAuthStore"/> and adds password reset and deletion requests with
+/// the same semantics as the EF stores (code attempts and burn, single use, expiry, grace period, full revocation).
 /// </summary>
 public sealed class LifecycleAuthStore(InMemoryAuthStore inner) : IAuthStore, IAccountDeletionStore
 {
     private readonly Lock gate = new();
-    private readonly Dictionary<Guid, (EmailTokenRecord Token, DateTimeOffset? UsedAt)> resetTokens = [];
     private readonly Dictionary<Guid, Deletion> deletions = [];
 
     public InMemoryAuthStore Inner => inner;
 
-    public int ResetTokenCount
-    {
-        get
-        {
-            lock (gate)
-            {
-                return resetTokens.Count;
-            }
-        }
-    }
+    public int ResetTokenCount => inner.CodeCount(EmailTokenRecord.PasswordReset);
+
+    public int LiveResetTokenCount => inner.LiveCodeCount(EmailTokenRecord.PasswordReset);
 
     public Deletion? DeletionFor(Guid userId)
     {
@@ -35,16 +27,7 @@ public sealed class LifecycleAuthStore(InMemoryAuthStore inner) : IAuthStore, IA
         }
     }
 
-    public void ExpireResetTokens()
-    {
-        lock (gate)
-        {
-            foreach (var (id, entry) in resetTokens.ToArray())
-            {
-                resetTokens[id] = (entry.Token with { ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(-1) }, entry.UsedAt);
-            }
-        }
-    }
+    public void ExpireResetTokens() => inner.ExpireEmailTokens(EmailTokenRecord.PasswordReset);
 
     public void EndGracePeriod(Guid userId)
     {
@@ -67,9 +50,9 @@ public sealed class LifecycleAuthStore(InMemoryAuthStore inner) : IAuthStore, IA
         AuthUser user, ExternalLoginKey? login, EmailTokenRecord? emailToken, CancellationToken cancellationToken) =>
         inner.TryCreateUserAsync(user, login, emailToken, cancellationToken);
 
-    public Task<Guid?> TryConsumeEmailTokenAsync(
-        byte[] tokenHash, string purpose, DateTimeOffset now, CancellationToken cancellationToken) =>
-        inner.TryConsumeEmailTokenAsync(tokenHash, purpose, now, cancellationToken);
+    public Task<Guid?> TryRedeemEmailCodeAsync(
+        Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now, CancellationToken cancellationToken) =>
+        inner.TryRedeemEmailCodeAsync(userId, purpose, matches, now, cancellationToken);
 
     public Task<bool> TryLinkExternalLoginAsync(Guid userId, ExternalLoginKey login, CancellationToken cancellationToken) =>
         inner.TryLinkExternalLoginAsync(userId, login, cancellationToken);
@@ -87,52 +70,21 @@ public sealed class LifecycleAuthStore(InMemoryAuthStore inner) : IAuthStore, IA
     public Task<int> RevokeFamilyAsync(Guid familyId, DateTimeOffset now, CancellationToken cancellationToken) =>
         inner.RevokeFamilyAsync(familyId, now, cancellationToken);
 
-    public Task StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken)
-    {
-        lock (gate)
-        {
-            foreach (var (id, entry) in resetTokens.ToArray())
-            {
-                if (entry.Token.UserId == token.UserId && entry.Token.Purpose == token.Purpose && entry.UsedAt is null)
-                {
-                    resetTokens.Remove(id);
-                }
-            }
-
-            resetTokens[token.Id] = (token, null);
-        }
-
-        return Task.CompletedTask;
-    }
+    public Task<bool> StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken) =>
+        inner.StoreEmailTokenAsync(token, cancellationToken);
 
     public async Task<Guid?> TryResetPasswordAsync(
-        byte[] tokenHash, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, EmailCodeMatcher matches, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        Guid userId;
         lock (gate)
         {
-            var match = resetTokens.Values.FirstOrDefault(e => e.Token.TokenHash.AsSpan().SequenceEqual(tokenHash)
-                && e.Token.Purpose == EmailTokenRecord.PasswordReset);
-            if (match.Token is null || match.UsedAt is not null || match.Token.ExpiresAt <= now)
+            if (inner.Users.SingleOrDefault(u => u.Id == userId) is not { IsActive: true }
+                || inner.RedeemCode(userId, EmailTokenRecord.PasswordReset, matches, now) is null)
             {
                 return null;
             }
 
-            userId = match.Token.UserId;
-            if (inner.Users.SingleOrDefault(u => u.Id == userId) is not { IsActive: true })
-            {
-                return null;
-            }
-
-            resetTokens[match.Token.Id] = (match.Token, now);
-            foreach (var (id, entry) in resetTokens.ToArray())
-            {
-                if (entry.Token.UserId == userId && entry.UsedAt is null)
-                {
-                    resetTokens.Remove(id);
-                }
-            }
-
+            inner.RemoveUnusedCodes(userId, EmailTokenRecord.PasswordReset);
             inner.Update(userId, u => u with
             {
                 PasswordHash = newPasswordHash,

@@ -32,6 +32,10 @@ public sealed record RefreshTokenRecord(
 
 public sealed record ExternalLoginKey(string Provider, string Subject);
 
+/// <summary>Checks a presented code against the stored digest of the code row <paramref name="codeId"/>.</summary>
+public delegate bool EmailCodeMatcher(Guid codeId, byte[] storedHash);
+
+/// <summary>An email code row. <c>TokenHash</c> is the keyed digest from <see cref="EmailCodeHasher"/>.</summary>
 public sealed record EmailTokenRecord(
     Guid Id,
     Guid UserId,
@@ -58,10 +62,13 @@ public interface IAuthStore
         AuthUser user, ExternalLoginKey? login, EmailTokenRecord? emailToken, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Atomically consumes an unused, unexpired email token of the given purpose and, for
-    /// <see cref="EmailTokenRecord.VerifyEmail"/>, marks the address verified. Returns the user id or null.
+    /// Redeems the user's live code of <paramref name="purpose"/> (newest, unused, unexpired, fewer than
+    /// <see cref="EmailCodeHasher.MaxAttempts"/> wrong guesses) when <paramref name="matches"/> accepts it,
+    /// and for <see cref="EmailTokenRecord.VerifyEmail"/> marks the address verified. A rejected guess
+    /// counts against the code and the last allowed wrong guess burns it. Returns the user id or null.
     /// </summary>
-    Task<Guid?> TryConsumeEmailTokenAsync(byte[] tokenHash, string purpose, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<Guid?> TryRedeemEmailCodeAsync(
+        Guid userId, string purpose, EmailCodeMatcher matches, DateTimeOffset now, CancellationToken cancellationToken);
 
     /// <summary>Links an external login to an existing user; false when the login already exists.</summary>
     Task<bool> TryLinkExternalLoginAsync(Guid userId, ExternalLoginKey login, CancellationToken cancellationToken);
@@ -81,21 +88,24 @@ public interface IAuthStore
     Task<int> RevokeFamilyAsync(Guid familyId, DateTimeOffset now, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Stores a new email token after deleting the user's unused tokens of the same purpose, so only
-    /// the newest code of a purpose can ever be redeemed.
+    /// Stores a new email code after invalidating the user's unused codes of the same purpose (at most
+    /// one live code per user and purpose), serialized per user. Returns false and stores nothing when
+    /// <see cref="EmailCodeHasher.MaxIssuedPerWindow"/> codes of the purpose were already issued within
+    /// <see cref="EmailCodeHasher.IssueWindow"/>, or when the user does not exist.
     /// </summary>
-    Task StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken) =>
+    Task<bool> StoreEmailTokenAsync(EmailTokenRecord token, CancellationToken cancellationToken) =>
         throw new NotSupportedException("This store does not support issuing standalone email tokens.");
 
     /// <summary>
-    /// In one transaction: consumes an unused, unexpired <see cref="EmailTokenRecord.PasswordReset"/> token,
+    /// In one transaction: redeems the user's live <see cref="EmailTokenRecord.PasswordReset"/> code exactly like
+    /// <see cref="TryRedeemEmailCodeAsync"/> (wrong guesses count and burn),
     /// sets the new password hash on the (active) owner, marks the address verified, deletes the
     /// owner's other unused reset tokens and revokes every refresh token of every family the owner
     /// has, and increments the session version so outstanding access tokens stop working. Returns the
     /// user id, or null when the token is unknown, used, expired or the account is inactive.
     /// </summary>
     Task<Guid?> TryResetPasswordAsync(
-        byte[] tokenHash, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken) =>
+        Guid userId, EmailCodeMatcher matches, string newPasswordHash, DateTimeOffset now, CancellationToken cancellationToken) =>
         throw new NotSupportedException("This store does not support password reset.");
 
     /// <summary>

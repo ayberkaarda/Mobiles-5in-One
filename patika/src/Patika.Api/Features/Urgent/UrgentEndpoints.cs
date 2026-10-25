@@ -1,9 +1,12 @@
 using System.Globalization;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Patika.Api.Features.Media;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
+using Patika.Contracts.Community;
 using Patika.Contracts.Errors;
 using Patika.Contracts.Geo;
 using Patika.Contracts.Media;
@@ -11,6 +14,7 @@ using Patika.Contracts.Urgent;
 using Patika.Domain;
 using Patika.Domain.Entities;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Persistence;
 
 namespace Patika.Api.Features.Urgent;
 
@@ -97,11 +101,12 @@ public static class UrgentEndpoints
             .Produces<ApiProblemDetails>(StatusCodes.Status404NotFound, ProblemJson)
             .Produces<ApiProblemDetails>(StatusCodes.Status409Conflict, ProblemJson);
 
+        v1.MapGet("/me/urgent-posts", MyPostsAsync).RequirePermission(Permission.MeManage);
         return v1;
     }
 
     /// <summary><c>GET /v1/urgent?near=lat,lng&amp;radius=</c>; open posts only, nearest first.</summary>
-    private static async Task<IResult> ListNearAsync(string? near, int? radius, IUrgentStore store, CancellationToken ct)
+    private static async Task<IResult> ListNearAsync(string? near, int? radius, IUrgentStore store, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         var query = ParseNear(near, radius ?? UrgentRules.DefaultRadiusMeters);
         var result = query is null ? null : new NearQueryValidator().Validate(query);
@@ -112,15 +117,15 @@ public static class UrgentEndpoints
         }
 
         var posts = await store.NearAsync(new GeoPoint(query.Longitude, query.Latitude), query.RadiusMeters, UrgentRules.MaxResults, ct);
-        return TypedResults.Ok(new UrgentPostListResponse([.. posts.Select(ToResponse)]));
+        return TypedResults.Ok(new UrgentPostListResponse([.. posts.Select(p => ToResponse(p, photos, PhotoSize.Thumbnail))]));
     }
 
-    private static async Task<IResult> GetAsync(Guid id, IUrgentStore store, CancellationToken ct) =>
-        await store.FindAsync(id, ct) is { } post ? TypedResults.Ok(ToResponse(post)) : NotFound();
+    private static async Task<IResult> GetAsync(Guid id, IUrgentStore store, CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null) =>
+        await store.FindAsync(id, ct) is { } post ? TypedResults.Ok(ToResponse(post, photos)) : NotFound();
 
     private static async Task<IResult> CreateAsync(
         HttpContext http, CreateUrgentPostRequest request, IUrgentStore store, IUploadLedger uploads, TimeProvider clock,
-        CancellationToken ct)
+        CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId)
         {
@@ -151,12 +156,12 @@ public static class UrgentEndpoints
         }
 
         // The worker job urgent.fanout picks the post up and computes recipients server-side.
-        return TypedResults.Created($"/v1/urgent/{post.Id}", ToResponse(post));
+        return TypedResults.Created($"/v1/urgent/{post.Id}", ToResponse(post, photos));
     }
 
     private static async Task<IResult> UpdateAsync(
         HttpContext http, Guid id, UpdateUrgentPostRequest request, IUrgentStore store, IAuthorizationService authorization,
-        CancellationToken ct)
+        CancellationToken ct, [FromServices] IPhotoUrlResolver? photos = null)
     {
         if (await store.FindAsync(id, ct) is not { } post)
         {
@@ -177,7 +182,20 @@ public static class UrgentEndpoints
         }
 
         await store.UpdateStateAsync(id, target, ct);
-        return TypedResults.Ok(ToResponse(post with { State = target }));
+        return TypedResults.Ok(ToResponse(post with { State = target }, photos));
+    }
+
+    public static async Task<IResult> MyPostsAsync(HttpContext http, PatikaDbContext db, int page = 1, int pageSize = 20, CancellationToken ct = default, [FromServices] IPhotoUrlResolver? photos = null)
+    {
+        if (ActorFactory.FromPrincipal(http.User).UserId is not { } userId) return TypedResults.Unauthorized();
+        if (page is < 1 or > 100000 || pageSize is < 1 or > 100)
+            return TypedResults.Problem(statusCode: 400, title: "Invalid paging.");
+        var rows = await db.UrgentPosts.AsNoTracking().Where(p => p.CreatedBy == userId)
+            .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize + 1).ToListAsync(ct);
+        var items = rows.Take(pageSize).Select(p => ToResponse(new UrgentPostRecord(p.Id, p.Location, p.Category,
+            p.Description, p.PhotoKey, p.State, p.CreatedBy, p.NotifiedCount, p.CreatedAt), photos, PhotoSize.Thumbnail)).ToArray();
+        return TypedResults.Ok(new PageResponse<UrgentPostResponse>(items, page, pageSize, rows.Count > pageSize));
     }
 
     private static NearQuery? ParseNear(string? near, int radius)
@@ -197,7 +215,7 @@ public static class UrgentEndpoints
         title: "Urgent post not found.", statusCode: StatusCodes.Status404NotFound,
         extensions: new Dictionary<string, object?> { ["code"] = UrgentErrorCodes.NotFound });
 
-    public static UrgentPostResponse ToResponse(UrgentPostRecord post) => new(
+    public static UrgentPostResponse ToResponse(UrgentPostRecord post, IPhotoUrlResolver? photos = null, PhotoSize size = PhotoSize.Medium) => new(
         post.Id,
         new CoordinateDto(post.Location.Latitude, post.Location.Longitude),
         post.Category.ToString(),
@@ -206,5 +224,5 @@ public static class UrgentEndpoints
         post.State.ToString(),
         post.NotifiedCount,
         post.CreatedAt,
-        post.DistanceMeters);
+        post.DistanceMeters, photos?.Resolve(post.PhotoKey, size));
 }

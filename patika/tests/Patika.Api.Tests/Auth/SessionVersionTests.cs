@@ -156,7 +156,7 @@ public sealed class SessionVersionTests : IAsyncLifetime
         using var forgot = await client.PostAsJsonAsync("/v1/auth/forgot", new ForgotPasswordRequest(email), Ct);
         Assert.Equal(HttpStatusCode.Accepted, forgot.StatusCode);
         var code = PasswordResetTests.CodeFrom(factory.Outbox.For(email).Last(m => m.Kind == EmailKind.PasswordReset));
-        using var reset = await client.PostAsJsonAsync("/v1/auth/reset", new ResetPasswordRequest(code, NewPassword), Ct);
+        using var reset = await client.PostAsJsonAsync("/v1/auth/reset", new ResetPasswordRequest(email, code, NewPassword), Ct);
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
     }
 

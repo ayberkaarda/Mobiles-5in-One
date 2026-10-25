@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using Patika.Api.Email;
+using Patika.Api.Features.Auth;
 using Patika.Api.Security.Tokens;
 using Patika.Api.Tests.Infrastructure;
 using Patika.Contracts.Auth;
@@ -47,7 +48,7 @@ public sealed class AuthFlowTests : IAsyncLifetime
         // The existing account is untouched and its owner gets a notice instead of a code.
         Assert.Equal(user, Assert.Single(factory.Store.Users));
         Assert.Equal([EmailKind.VerifyEmail, EmailKind.RegistrationAttempt], factory.Outbox.For(email).Select(m => m.Kind));
-        Assert.DoesNotContain(factory.Outbox.For(email)[1].Body.Split('\n'), line => RefreshTokens.LooksValid(line.Trim()));
+        Assert.DoesNotContain(factory.Outbox.For(email)[1].Body.Split('\n'), line => EmailCodeHasher.LooksValid(line.Trim()));
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public sealed class AuthFlowTests : IAsyncLifetime
         Assert.StartsWith("$argon2id$v=19$m=65536,t=3,p=1$", pending.PasswordHash, StringComparison.Ordinal);
         Assert.Empty(factory.Store.Tokens);
 
-        using var verified = await client.VerifyEmailAsync(factory.Outbox.VerificationCodeFor(email));
+        using var verified = await client.VerifyEmailAsync(email, factory.Outbox.VerificationCodeFor(email));
         Assert.Equal(HttpStatusCode.OK, verified.StatusCode);
         var tokens = (await verified.Content.ReadFromJsonAsync<TokenResponse>(Ct))!;
         Assert.Equal("Bearer", tokens.TokenType);
@@ -84,9 +85,9 @@ public sealed class AuthFlowTests : IAsyncLifetime
         using var registered = await client.PostRegisterAsync(email);
         var code = factory.Outbox.VerificationCodeFor(email);
 
-        using var once = await client.VerifyEmailAsync(code);
-        using var twice = await client.VerifyEmailAsync(code);
-        using var unknown = await client.VerifyEmailAsync(RefreshTokens.NewToken());
+        using var once = await client.VerifyEmailAsync(email, code);
+        using var twice = await client.VerifyEmailAsync(email, code);
+        using var unknown = await client.VerifyEmailAsync(NewEmail("bilinmeyen"), code);
         Assert.Equal(HttpStatusCode.OK, once.StatusCode);
         Assert.Equal(AuthErrorCodes.VerificationInvalid, (await twice.ReadProblemAsync()).Code);
         Assert.Equal(AuthErrorCodes.VerificationInvalid, (await unknown.ReadProblemAsync()).Code);
@@ -94,7 +95,7 @@ public sealed class AuthFlowTests : IAsyncLifetime
         var late = NewEmail();
         using var lateRegistration = await client.PostRegisterAsync(late);
         factory.Store.ExpireEmailTokens();
-        using var expired = await client.VerifyEmailAsync(factory.Outbox.VerificationCodeFor(late));
+        using var expired = await client.VerifyEmailAsync(late, factory.Outbox.VerificationCodeFor(late));
         Assert.Equal(HttpStatusCode.BadRequest, expired.StatusCode);
         Assert.Null(factory.Store.Users.Single(u => u.Email == late).EmailVerifiedAt);
     }

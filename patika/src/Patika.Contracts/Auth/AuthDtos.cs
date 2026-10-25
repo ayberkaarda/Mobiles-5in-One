@@ -27,16 +27,51 @@ public sealed record TokenResponse(
     [property: JsonPropertyName("refreshToken")] string RefreshToken,
     [property: JsonPropertyName("refreshExpiresIn")] int RefreshExpiresIn);
 
+/// <summary>
+/// The signed-in account with its contribution statistics: <c>FeedingCount</c> counts the user's
+/// feedings, <c>Badges</c> lists codes from <see cref="MeBadges"/> in that order, <c>JoinedAt</c> is
+/// when the account was created.
+/// </summary>
 public sealed record MeResponse(
     [property: JsonPropertyName("id")] Guid Id,
     [property: JsonPropertyName("email")] string? Email,
     [property: JsonPropertyName("displayName")] string DisplayName,
     [property: JsonPropertyName("role")] string Role,
-    [property: JsonPropertyName("emailVerified")] bool EmailVerified);
+    [property: JsonPropertyName("emailVerified")] bool EmailVerified,
+    [property: JsonPropertyName("feedingCount")] int FeedingCount,
+    [property: JsonPropertyName("badges")] IReadOnlyList<string> Badges,
+    [property: JsonPropertyName("joinedAt")] DateTimeOffset JoinedAt);
 
+/// <summary>Badge codes on <see cref="MeResponse.Badges"/>, derived from counts.</summary>
+public static class MeBadges
+{
+    /// <summary>At least one feeding.</summary>
+    public const string FirstFeeding = "first_feeding";
 
+    public const string Feedings10 = "feedings_10";
+
+    public const string Feedings50 = "feedings_50";
+
+    public const string Feedings100 = "feedings_100";
+
+    /// <summary>At least one sighting.</summary>
+    public const string FirstSighting = "first_sighting";
+
+    /// <summary>An adoption post created by the user whose animal is now adopted.</summary>
+    public const string FirstAdoptionHelped = "first_adoption_helped";
+}
+
+/// <summary>The six-digit code from the verification email, with the address it was sent to.</summary>
 public sealed record VerifyEmailRequest(
-    [property: JsonPropertyName("token")] string Token);
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("code")] string Code);
+
+/// <summary>
+/// Asks for a new verification code. Always 202 with the same body as registration; when the
+/// address has an unverified account, a new code is sent and the previous one stops working.
+/// </summary>
+public sealed record ResendVerificationRequest(
+    [property: JsonPropertyName("email")] string Email);
 
 public sealed record LinkExternalLoginRequest(
     [property: JsonPropertyName("idToken")] string IdToken);

@@ -1,5 +1,4 @@
 using FluentValidation;
-using Patika.Api.Security.Tokens;
 using Patika.Api.Validation;
 using Patika.Contracts.Auth;
 
@@ -17,8 +16,9 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
 {
     public ResetPasswordRequestValidator()
     {
-        RuleFor(r => r.Token).NotEmpty()
-            .Must(RefreshTokens.LooksValid).WithMessage("Reset code is malformed.");
+        RuleFor(r => r.Email).NotEmpty().MaximumLength(TextRules.MaxEmailLength);
+        RuleFor(r => r.Code).NotEmpty()
+            .Must(EmailCodeHasher.LooksValid).WithMessage("Reset code must be six digits.");
         RuleFor(r => r.NewPassword)
             .NotEmpty()
             .MinimumLength(PasswordRules.MinLength)

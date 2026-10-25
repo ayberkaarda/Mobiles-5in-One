@@ -39,8 +39,8 @@ public sealed class EfPasswordResetTests(PostgisFixture database) : IClassFixtur
         await store.AddRefreshTokenAsync(bystander, Ct);
         var code = await IssueCodeAsync(store, user.Id, now);
 
-        Assert.Equal(user.Id, await store.TryResetPasswordAsync(RefreshTokens.Hash(code), NewHash, now, Ct));
-        Assert.Null(await store.TryResetPasswordAsync(RefreshTokens.Hash(code), "$argon2id$again", now, Ct));
+        Assert.Equal(user.Id, await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), NewHash, now, Ct));
+        Assert.Null(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), "$argon2id$again", now, Ct));
 
         var tokens = await db.RefreshTokens.AsNoTracking().Where(t => t.UserId == user.Id).ToListAsync(Ct);
         Assert.Equal(3, tokens.Count);
@@ -62,7 +62,7 @@ public sealed class EfPasswordResetTests(PostgisFixture database) : IClassFixtur
         var code = await IssueCodeAsync(store, user.Id, now);
 
         var later = now + AuthHandlers.PasswordResetLifetime + TimeSpan.FromSeconds(1);
-        Assert.Null(await store.TryResetPasswordAsync(RefreshTokens.Hash(code), NewHash, later, Ct));
+        Assert.Null(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), NewHash, later, Ct));
 
         Assert.Equal(user.PasswordHash, (await store.FindUserByIdAsync(user.Id, Ct))!.PasswordHash);
         Assert.Null((await db.RefreshTokens.AsNoTracking().SingleAsync(t => t.Id == session.Id, Ct)).RevokedAt);
@@ -75,15 +75,14 @@ public sealed class EfPasswordResetTests(PostgisFixture database) : IClassFixtur
         await using var db = database.CreateContext();
         var store = new EfAuthStore(db);
         var now = DateTimeOffset.UtcNow;
-        var verifyCode = RefreshTokens.NewToken();
-        var user = await CreateUserAsync(store, new EmailTokenRecord(Guid.CreateVersion7(), Guid.Empty,
-            RefreshTokens.Hash(verifyCode), EmailTokenRecord.VerifyEmail, now, now.AddHours(24)));
+        var (verifyCode, verifyRecord) = TestEmailCodes.New(Guid.Empty, EmailTokenRecord.VerifyEmail, now);
+        var user = await CreateUserAsync(store, verifyRecord);
         var first = await IssueCodeAsync(store, user.Id, now);
         var second = await IssueCodeAsync(store, user.Id, now);
 
-        Assert.Null(await store.TryResetPasswordAsync(RefreshTokens.Hash(verifyCode), NewHash, now, Ct));
-        Assert.Null(await store.TryResetPasswordAsync(RefreshTokens.Hash(first), NewHash, now, Ct));
-        Assert.Equal(user.Id, await store.TryResetPasswordAsync(RefreshTokens.Hash(second), NewHash, now, Ct));
+        Assert.Null(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, verifyCode), NewHash, now, Ct));
+        Assert.Null(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, first), NewHash, now, Ct));
+        Assert.Equal(user.Id, await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, second), NewHash, now, Ct));
         Assert.Empty(await db.EmailTokens.AsNoTracking()
             .Where(t => t.UserId == user.Id && t.Purpose == EmailTokenRecord.PasswordReset && t.UsedAt == null).ToListAsync(Ct));
         Assert.NotNull((await store.FindUserByIdAsync(user.Id, Ct))!.EmailVerifiedAt);
@@ -100,7 +99,7 @@ public sealed class EfPasswordResetTests(PostgisFixture database) : IClassFixtur
         await db.Users.Where(u => u.Id == user.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.DeactivatedAt, now), Ct);
 
-        Assert.Null(await store.TryResetPasswordAsync(RefreshTokens.Hash(code), NewHash, now, Ct));
+        Assert.Null(await store.TryResetPasswordAsync(user.Id, TestEmailCodes.Matcher(EmailTokenRecord.PasswordReset, code), NewHash, now, Ct));
         Assert.Null((await db.EmailTokens.AsNoTracking().SingleAsync(t => t.UserId == user.Id, Ct)).UsedAt);
     }
 
@@ -142,10 +141,7 @@ public sealed class EfPasswordResetTests(PostgisFixture database) : IClassFixtur
 
     private static async Task<string> IssueCodeAsync(EfAuthStore store, Guid userId, DateTimeOffset now)
     {
-        var code = RefreshTokens.NewToken();
-        await store.StoreEmailTokenAsync(new EmailTokenRecord(Guid.CreateVersion7(), userId, RefreshTokens.Hash(code),
-            EmailTokenRecord.PasswordReset, now, now + AuthHandlers.PasswordResetLifetime), Ct);
-        return code;
+        return await TestEmailCodes.IssueAsync(store, userId, EmailTokenRecord.PasswordReset, now, Ct);
     }
 
     private static RefreshTokenRecord Refresh(Guid userId, Guid familyId, DateTimeOffset now) =>

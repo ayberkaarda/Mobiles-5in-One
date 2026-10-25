@@ -41,6 +41,7 @@ public static class CommunityMap
                 SELECT id, ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, ST_SnapToGrid(location::geometry, {cell}) AS grid FROM animals
                 WHERE ST_Intersects(location::geometry, ST_MakeEnvelope({box.MinLongitude}, {box.MinLatitude}, {box.MaxLongitude}, {box.MaxLatitude}, 4326))
                 AND ({query.Species}::text IS NULL OR species = {query.Species})
+                AND ({query.StationId}::uuid IS NULL OR station_id = {query.StationId})
             ) AS visible GROUP BY grid ORDER BY ST_X(grid), ST_Y(grid)
             OFFSET {offset} LIMIT {query.PageSize + 1}
             """).ToListAsync(ct);

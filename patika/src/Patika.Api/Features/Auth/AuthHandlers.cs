@@ -21,16 +21,21 @@ public sealed class AuthHandlers(
     IEmailSender emailSender,
     EmailRateLimiter emailLimiter,
     RefreshRateLimiter refreshLimiter,
+    EmailCodeHasher codes,
+    EmailCodeResendLimiter resendLimiter,
     IOptions<JwtSettings> jwtSettings,
     TimeProvider clock,
     ILogger<AuthHandlers> logger)
 {
-    public static readonly TimeSpan EmailTokenLifetime = TimeSpan.FromHours(24);
+    public static readonly TimeSpan EmailTokenLifetime = EmailCodeHasher.Lifetime;
     public static readonly TimeSpan RecentAuthenticationWindow = TimeSpan.FromMinutes(10);
-    public static readonly TimeSpan PasswordResetLifetime = TimeSpan.FromHours(1);
+    public static readonly TimeSpan PasswordResetLifetime = EmailCodeHasher.Lifetime;
 
-    /// <summary>Minimum duration of every forgot-password response, known address or not.</summary>
+    /// <summary>Minimum duration of every forgot-password and resend response, known address or not.</summary>
     public static readonly TimeSpan ForgotResponseTime = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>Minimum duration of a rejected verification code, known address or not.</summary>
+    public static readonly TimeSpan RejectedCodeResponseTime = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
     /// Always 202 with the same body for a well-formed request: a new address gets a verification
@@ -61,9 +66,7 @@ public sealed class AuthHandlers(
             var now = clock.GetUtcNow();
             var user = new AuthUser(Guid.CreateVersion7(), email, hash, request.DisplayName.Trim(), ActorRole.User,
                 EmailVerifiedAt: null, DeactivatedAt: null);
-            var code = RefreshTokens.NewToken();
-            var emailToken = new EmailTokenRecord(Guid.CreateVersion7(), user.Id, RefreshTokens.Hash(code),
-                EmailTokenRecord.VerifyEmail, now, now + EmailTokenLifetime);
+            var (code, emailToken) = NewEmailCode(user.Id, EmailTokenRecord.VerifyEmail, now);
             if (await store.TryCreateUserAsync(user, login: null, emailToken, cancellationToken))
             {
                 logger.LogInformation("User {UserId} registered with {Email}; verification pending", user.Id, email);
@@ -78,8 +81,9 @@ public sealed class AuthHandlers(
     }
 
     /// <summary>
-    /// Always 202 with the same body. A known, active password account gets a single-use reset code
-    /// (1 h); an unknown address gets nothing. Both paths take at least <see cref="ForgotResponseTime"/>,
+    /// Always 202 with the same body. A known, active password account gets a single-use six-digit
+    /// reset code (15 min) that replaces any earlier one; an unknown address gets nothing. Both paths
+    /// take at least <see cref="ForgotResponseTime"/>,
     /// and the email is handed over without waiting for the provider beyond that floor, so neither the
     /// body nor the timing tells the two apart.
     /// </summary>
@@ -95,19 +99,22 @@ public sealed class AuthHandlers(
         }
 
         // The code and its digest are produced on both paths.
-        var code = RefreshTokens.NewToken();
-        var digest = RefreshTokens.Hash(code);
-        var delivery = Task.CompletedTask;
         var user = await store.FindUserByEmailAsync(email, cancellationToken);
+        var (code, record) = NewEmailCode(user?.Id ?? Guid.Empty, EmailTokenRecord.PasswordReset, clock.GetUtcNow());
+        var delivery = Task.CompletedTask;
         if (user is { IsActive: true, PasswordHash: not null })
         {
-            var now = clock.GetUtcNow();
-            await store.StoreEmailTokenAsync(new EmailTokenRecord(Guid.CreateVersion7(), user.Id, digest,
-                EmailTokenRecord.PasswordReset, now, now + PasswordResetLifetime), cancellationToken);
-            logger.LogInformation("Password reset requested for user {UserId}", user.Id);
+            if (await store.StoreEmailTokenAsync(record, cancellationToken))
+            {
+                logger.LogInformation("Password reset requested for user {UserId}", user.Id);
 
-            // Not tied to the request: a client that disconnects early must not cancel the email.
-            delivery = SendDetachedAsync(AuthEmails.PasswordReset(email, code));
+                // Not tied to the request: a client that disconnects early must not cancel the email.
+                delivery = SendDetachedAsync(AuthEmails.PasswordReset(email, code));
+            }
+            else
+            {
+                logger.LogWarning("Daily reset code cap reached for user {UserId}; nothing sent", user.Id);
+            }
         }
         else
         {
@@ -134,9 +141,13 @@ public sealed class AuthHandlers(
             }, AuthErrorCodes.PasswordBreached);
         }
 
+        // Argon2 runs on every path, so a reset for an unknown address costs the same as a wrong code.
         var hash = await hasher.HashAsync(request.NewPassword, cancellationToken);
-        var userId = await store.TryResetPasswordAsync(
-            RefreshTokens.Hash(request.Token), hash, clock.GetUtcNow(), cancellationToken);
+        var user = await store.FindUserByEmailAsync(EmailNormalizer.Normalize(request.Email), cancellationToken);
+        var userId = user is { IsActive: true }
+            ? await store.TryResetPasswordAsync(user.Id, Matcher(EmailTokenRecord.PasswordReset, request.Code), hash,
+                clock.GetUtcNow(), cancellationToken)
+            : BurnEqualWork(EmailTokenRecord.PasswordReset, request.Code);
         if (userId is null)
         {
             return Problem(StatusCodes.Status400BadRequest, PasswordResetErrorCodes.ResetInvalid,
@@ -146,6 +157,66 @@ public sealed class AuthHandlers(
         SessionVersionCache.Shared.Invalidate(userId.Value);
         logger.LogInformation("User {UserId} reset their password; all sessions revoked", userId);
         return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Always 202 with the registration body. An active, unverified password account gets a new
+    /// six-digit code (15 min) and its previous code stops working; any other address gets nothing.
+    /// Limited per address (<see cref="EmailCodeResendLimiter"/>) and per IP, and padded to
+    /// <see cref="ForgotResponseTime"/> on every path.
+    /// </summary>
+    public async Task<IResult> ResendVerificationAsync(
+        HttpContext http, ResendVerificationRequest request, CancellationToken cancellationToken)
+    {
+        var started = clock.GetTimestamp();
+        var email = EmailNormalizer.Normalize(request.Email);
+        if (resendLimiter.Limiter.TryAcquire(email) is { } retryAfter)
+        {
+            logger.LogWarning("Verification resend throttled for {Email}", email);
+            return RateLimitingSetup.TooManyRequests(http, retryAfter);
+        }
+
+        var user = await store.FindUserByEmailAsync(email, cancellationToken);
+        var (code, record) = NewEmailCode(user?.Id ?? Guid.Empty, EmailTokenRecord.VerifyEmail, clock.GetUtcNow());
+        var delivery = Task.CompletedTask;
+        if (user is { IsActive: true, EmailVerifiedAt: null, PasswordHash: not null })
+        {
+            if (await store.StoreEmailTokenAsync(record, cancellationToken))
+            {
+                logger.LogInformation("Verification code resent for user {UserId}", user.Id);
+                delivery = SendDetachedAsync(AuthEmails.Verification(email, code));
+            }
+            else
+            {
+                logger.LogWarning("Daily verification code cap reached for user {UserId}; nothing sent", user.Id);
+            }
+        }
+        else
+        {
+            logger.LogInformation("Verification resend requested for {Email} without a pending account", email);
+        }
+
+        var floor = DelayUntilAsync(started, ForgotResponseTime);
+        await Task.WhenAny(delivery, floor);
+        await floor;
+        return Accepted();
+    }
+
+    private (string Code, EmailTokenRecord Record) NewEmailCode(Guid userId, string purpose, DateTimeOffset now)
+    {
+        var code = EmailCodeHasher.NewCode();
+        var id = Guid.CreateVersion7();
+        return (code, new EmailTokenRecord(id, userId, codes.Hash(id, purpose, code), purpose, now, now + EmailCodeHasher.Lifetime));
+    }
+
+    private EmailCodeMatcher Matcher(string purpose, string code) =>
+        (codeId, storedHash) => codes.Matches(codeId, purpose, code, storedHash);
+
+    /// <summary>The digest work of a code check, for an address without a live code; always null.</summary>
+    private Guid? BurnEqualWork(string purpose, string code)
+    {
+        _ = codes.Matches(Guid.Empty, purpose, code, new byte[32]);
+        return null;
     }
 
     private async Task SendDetachedAsync(EmailMessage message)
@@ -192,13 +263,22 @@ public sealed class AuthHandlers(
         return user with { DeactivatedAt = null };
     }
 
+    /// <summary>
+    /// Redeems the six-digit code sent to the address. An unknown address, a wrong, expired, replaced
+    /// or burned code all get the same 400 body after the same <see cref="RejectedCodeResponseTime"/> floor.
+    /// </summary>
     public async Task<IResult> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken)
     {
-        var userId = await store.TryConsumeEmailTokenAsync(
-            RefreshTokens.Hash(request.Token), EmailTokenRecord.VerifyEmail, clock.GetUtcNow(), cancellationToken);
+        var started = clock.GetTimestamp();
+        var candidate = await store.FindUserByEmailAsync(EmailNormalizer.Normalize(request.Email), cancellationToken);
+        var userId = candidate is { IsActive: true }
+            ? await store.TryRedeemEmailCodeAsync(candidate.Id, EmailTokenRecord.VerifyEmail,
+                Matcher(EmailTokenRecord.VerifyEmail, request.Code), clock.GetUtcNow(), cancellationToken)
+            : BurnEqualWork(EmailTokenRecord.VerifyEmail, request.Code);
         var user = userId is { } id ? await store.FindUserByIdAsync(id, cancellationToken) : null;
         if (user is null || !user.IsActive)
         {
+            await DelayUntilAsync(started, RejectedCodeResponseTime);
             return Problem(StatusCodes.Status400BadRequest, AuthErrorCodes.VerificationInvalid,
                 "The verification code is invalid or has expired.");
         }
