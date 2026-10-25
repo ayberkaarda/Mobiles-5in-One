@@ -1,0 +1,78 @@
+@page "/sahiplendirme"
+@using Patika.Domain.Entities
+@using Patika.Web.Routing
+@model Patika.Web.Pages.Sahiplendirme.IndexModel
+@{
+    var first = (Model.CurrentPage - 1) * IndexModel.PageSize + 1;
+    var last = first + Model.Cards.Count - 1;
+    var kind = Model.SelectedSpecies switch { Species.Cat => "kedi", Species.Dog => "kopek", _ => null };
+}
+<div class="page">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="page-head page-head--filters">
+        <div class="page-head__text">
+            <h1 class="page-title">Yuva arayanlar</h1>
+            <p class="lede">Patika’daki sahiplendirme ilanları, mahalle gönüllülerinin baktığı sokak kedileri ve köpekleri için açılır. Her ilan yayına çıkmadan önce moderasyondan geçer ve 60 gün sonra ya da hayvan yuvasına kavuşunca kapanır. Talep göndermek için uygulamayı kullanırsın.</p>
+        </div>
+        <div class="filters" role="search" aria-label="İlanları süz">
+            <form class="filters__district" method="get" action="@Routes.Adoptions">
+                <label class="field">
+                    <span class="field__label">İlçe</span>
+                    <select class="select" name="ilce">
+                        <option value="">Tüm ilçeler</option>
+                        @foreach (var district in Model.Districts)
+                        {
+                            <option value="@district.Slug" selected="@(district == Model.SelectedDistrict)">@district.Name</option>
+                        }
+                    </select>
+                </label>
+                @if (kind is not null)
+                {
+                    <input type="hidden" name="tur" value="@kind" />
+                }
+                <button class="pill pill--submit" type="submit">Göster</button>
+            </form>
+            <div class="pills" role="group" aria-label="Tür">
+                <a class="pill" href="@Model.SpeciesLink(null)" aria-current="@(kind is null ? "true" : null)">Hepsi</a>
+                <a class="pill" href="@Model.SpeciesLink("kedi")" aria-current="@(kind == "kedi" ? "true" : null)">Kedi</a>
+                <a class="pill" href="@Model.SpeciesLink("kopek")" aria-current="@(kind == "kopek" ? "true" : null)">Köpek</a>
+            </div>
+        </div>
+    </div>
+
+    <p class="count" aria-live="polite"><strong>@PublicText.Number(Model.Total)</strong> açık ilan@(Model.SelectedDistrict is null ? "" : ", " + Model.SelectedDistrict.Name)@(Model.SelectedSpecies is null ? "" : ", " + PublicText.SpeciesLower(Model.SelectedSpecies.Value)).</p>
+
+    @if (Model.Cards.Count == 0)
+    {
+        <div class="empty">
+            <p>Bu süzgeçle şu an açık ilan yok. İlanlar moderasyondan geçtikçe burada görünür.</p>
+            @if (Model.SelectedDistrict is not null || Model.SelectedSpecies is not null)
+            {
+                <a class="link-strong" href="@Routes.Adoptions">Tüm ilanları göster</a>
+            }
+        </div>
+    }
+    else
+    {
+        <ul class="collars">
+            @foreach (var card in Model.Cards)
+            {
+                <partial name="_CollarTag" model="new CollarTag(card, Model.Now)" />
+            }
+        </ul>
+
+        <nav class="pager" aria-label="Sayfalar">
+            <p class="pager__status">@first–@last / @PublicText.Number(Model.Total) ilan</p>
+            <div class="pager__links">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a class="button button--ghost" href="@Model.Link(Model.CurrentPage - 1)" rel="prev">Önceki sayfa</a>
+                }
+                @if (Model.CurrentPage < Model.LastPage)
+                {
+                    <a class="button" href="@Model.Link(Model.CurrentPage + 1)" rel="next">Sonraki sayfa</a>
+                }
+            </div>
+        </nav>
+    }
+</div>

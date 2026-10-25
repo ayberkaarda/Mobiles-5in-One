@@ -1,0 +1,53 @@
+@page "/etki"
+@model Patika.Web.Pages.Etki.IndexModel
+@{
+    var last = Model.Last;
+}
+<div class="page page--loose page--top">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="page-head">
+        <p class="kicker">@PublicText.Week(last.StartsOn, withYear: true) haftası</p>
+        <h1 class="impact-title">Geçen hafta <span class="num">@PublicText.Number(last.Feedings)</span> besleme kaydedildi, <span class="num">@PublicText.Number(last.NewStations)</span> yeni istasyon açıldı ve <span class="num">@PublicText.Number(last.Adoptions)</span> hayvan yuvasına kavuştu.</h1>
+        <p class="note">Sayılar uygulamadaki kayıtlardan, tamamlanan her hafta için hesaplanır. Kimin beslediği, kimin çağrı açtığı gösterilmez.</p>
+    </div>
+
+    <section aria-labelledby="haftalar">
+        <h2 id="haftalar" class="block-title">Son dört hafta</h2>
+        <div class="table-box" role="region" aria-labelledby="haftalar" tabindex="0">
+            <table class="table table--numbers">
+                <thead>
+                    <tr>
+                        <th scope="col">Hafta</th>
+                        <th scope="col" class="num">Besleme</th>
+                        <th scope="col" class="num">Yeni istasyon</th>
+                        <th scope="col" class="num">Yuvaya kavuşan</th>
+                        <th scope="col" class="num">Kapanan acil çağrı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var week in Model.Summary.Weeks.Reverse())
+                    {
+                        <tr>
+                            <th scope="row">@PublicText.Week(week.StartsOn)</th>
+                            <td class="num">@PublicText.Number(week.Feedings)</td>
+                            <td class="num">@PublicText.Number(week.NewStations)</td>
+                            <td class="num">@PublicText.Number(week.Adoptions)</td>
+                            <td class="num">@PublicText.Number(week.UrgentPostsHandled)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="method" aria-labelledby="yontem">
+        <h2 id="yontem" class="block-title">Bu sayılar nasıl hesaplanır?</h2>
+        <ul>
+            <li><strong>Besleme:</strong> uygulamadaki “Beslendi” kayıtları, kaydın zamanına göre.</li>
+            <li><strong>Yeni istasyon:</strong> o hafta haritaya eklenen mama ve su istasyonları.</li>
+            <li><strong>Yuvaya kavuşan:</strong> sahiplendirme ilanı “sahiplenildi” olarak kapanan hayvanlar, sahiplenme tarihine göre.</li>
+            <li><strong>Kapanan acil çağrı:</strong> o hafta açılıp “yardım ulaştı” olarak işaretlenen çağrılar. Gizlenen çağrılar sayılmaz.</li>
+        </ul>
+        <p class="note">@Model.Summary.MethodNote Sayılar alıntılanabilir; lütfen haftayı da belirt.</p>
+    </section>
+</div>

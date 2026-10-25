@@ -1,0 +1,58 @@
+@page "/istasyonlar/{il}"
+@using Patika.Web.Routing
+@model Patika.Web.Pages.Istasyonlar.ProvinceModel
+@{
+    var province = Model.Province;
+}
+<div class="page page--loose">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="page-head">
+        <h1 class="page-title">@PublicText.In(province.Name) mama ve su istasyonları</h1>
+        <p class="lede">Gönüllüler @(PublicText.InRelative(province.Name)) sokak kedileri ve köpekleri için mama ve su istasyonlarına bakıyor. İlçeni seç: her istasyonun son besleme zamanını, yakındaki bakım yerlerini ve yuva arayan hayvanları gör. Kimin beslediği hiçbir zaman gösterilmez.</p>
+    </div>
+
+    <section aria-labelledby="ilceler">
+        <h2 id="ilceler" class="block-title">İstasyonu ya da ilanı olan ilçeler</h2>
+        @if (Model.Active.Count == 0)
+        {
+            <p class="empty">Henüz hiçbir ilçede kayıtlı istasyon ya da açık ilan yok. İlk istasyonu uygulamadan sen ekleyebilirsin.</p>
+        }
+        else
+        {
+            <div class="table-box table-box--narrow" role="region" aria-labelledby="ilceler" tabindex="0">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">İlçe</th>
+                            <th scope="col" class="num">İstasyon</th>
+                            <th scope="col" class="num">Açık ilan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var district in Model.Active)
+                        {
+                            <tr>
+                                <th scope="row"><a href="@Routes.District(province.Slug, district.Slug)">@district.Name</a></th>
+                                <td class="num">@PublicText.Number(district.ActiveStations)</td>
+                                <td class="num">@PublicText.Number(district.OpenAdoptions)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    @if (Model.Quiet.Count > 0)
+    {
+        <section aria-labelledby="diger-ilceler">
+            <h2 id="diger-ilceler" class="block-title">Henüz istasyonu olmayan ilçeler</h2>
+            <ul class="district-links">
+                @foreach (var district in Model.Quiet)
+                {
+                    <li><a href="@Routes.District(province.Slug, district.Slug)">@district.Name</a></li>
+                }
+            </ul>
+        </section>
+    }
+</div>

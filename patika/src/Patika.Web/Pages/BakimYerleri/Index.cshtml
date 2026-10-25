@@ -1,0 +1,66 @@
+@page "/bakim-yerleri"
+@using Patika.Web.Routing
+@model Patika.Web.Pages.BakimYerleri.IndexModel
+@{
+    var kind = Model.Kind is { Length: > 0 } ? Model.Kind : null;
+    var where = Model.Province is null ? "" : PublicText.In(Model.Province) + " ";
+}
+<div class="page">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="page-head">
+        <h1 class="page-title">@PublicText.Capitalize(where + "veteriner ve bakımevleri")</h1>
+        <p class="lede">Yaralı ya da hasta bir sokak hayvanı için en yakın veteriner kliniğini, hayvan barınağını veya belediye bakımevini burada bulursun. 24 saat açık olanlar ayrıca işaretlidir; adres ve telefonu aramadan önce doğrulamanı öneririz.</p>
+    </div>
+
+    <nav class="pills" aria-label="Bakım yerlerini süz">
+        <a class="pill" href="@Model.Link(null, Model.Only24h)" aria-current="@(kind is null ? "true" : null)">Hepsi</a>
+        @foreach (var option in IndexModel.Kinds)
+        {
+            <a class="pill" href="@Model.Link(option.Value, Model.Only24h)" aria-current="@(kind == option.Value ? "true" : null)">@option.Label</a>
+        }
+        <a class="pill pill--check" href="@Model.Link(kind, !Model.Only24h)" aria-current="@(Model.Only24h ? "true" : null)"><span class="pill__box" aria-hidden="true"></span>Yalnız 24 saat açık</a>
+    </nav>
+
+    <p class="count"><strong>@PublicText.Number(Model.Places.Count)</strong> bakım yeri.</p>
+
+    @if (Model.Places.Count == 0)
+    {
+        <div class="empty">
+            <p>Bu süzgeçle eşleşen bakım yeri yok.</p>
+            <a class="link-strong" href="@Routes.CarePlaces">Tüm bakım yerlerini göster</a>
+        </div>
+    }
+    else
+    {
+        <ul class="cards">
+            @foreach (var place in Model.Places)
+            {
+                var tel = PublicText.TelHref(place.Phone);
+                <li class="card">
+                    <div class="badges">
+                        @if (place.Open24h)
+                        {
+                            <span class="badge badge--open">24 saat açık</span>
+                        }
+                        <span class="badge">@PublicText.CareKind(place.Kind)</span>
+                        @if (place.Verified)
+                        {
+                            <span class="badge">Doğrulandı</span>
+                        }
+                    </div>
+                    <h2 class="card__title"><a href="@Routes.CarePlace(place.Slug)">@place.Name</a></h2>
+                    <p>@place.Address</p>
+                    @if (tel is not null)
+                    {
+                        <a class="card__phone" href="@tel">@place.Phone</a>
+                    }
+                    else
+                    {
+                        <p class="card__muted">Telefon bilgisi yok</p>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    <p class="note">Bir bilgi yanlışsa Patika uygulamasından bildirebilirsin. Liste gönüllü bildirimleri ve kamu kayıtlarından derlenir.</p>
+</div>

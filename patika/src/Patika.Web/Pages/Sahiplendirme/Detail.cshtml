@@ -1,0 +1,78 @@
+@page "/sahiplendirme/{slug}"
+@using Patika.Web.Routing
+@model Patika.Web.Pages.Sahiplendirme.DetailModel
+@{
+    var card = Model.Card;
+    var photos = Model.Post.Photos;
+    var kicker = card.DistrictName is null ? PublicText.Species(card.Species) : $"{PublicText.Species(card.Species)}, {card.DistrictName}";
+    var app = Routes.Home + "#uygulama";
+}
+<div class="page">
+    <partial name="_Crumbs" model="Model.Crumbs" />
+    <div class="detail">
+        <div class="gallery">
+            @if (photos.Count == 0)
+            {
+                <div class="gallery__main gallery__main--empty">
+                    <span class="gallery__note">Henüz onaylı fotoğraf yok</span>
+                </div>
+            }
+            else
+            {
+                <img class="gallery__main" src="@photos[0]" alt="@Model.Name, fotoğraf 1" width="800" height="600" fetchpriority="high" />
+                @if (photos.Count > 1)
+                {
+                    <ul class="gallery__thumbs">
+                        @for (var i = 1; i < Math.Min(photos.Count, 4); i++)
+                        {
+                            <li><img src="@photos[i]" alt="@Model.Name, fotoğraf @(i + 1)" width="260" height="260" loading="lazy" /></li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+        <article class="detail__body">
+            <header>
+                <p class="kicker">@kicker</p>
+                <h1 class="detail__title">@Model.Name</h1>
+                <p class="lede lede--tight">@Model.Lede</p>
+            </header>
+            <ul class="health" aria-label="Sağlık durumu">
+                <li class="@(card.Sterilized ? "is-yes" : "is-no")">@(card.Sterilized ? "Kısırlaştırıldı" : "Kısırlaştırılmadı")</li>
+                <li class="@(card.Vaccinated ? "is-yes" : "is-no")">@(card.Vaccinated ? "Aşılı" : "Aşı bekliyor")</li>
+                <li class="@(card.EarTagged ? "is-yes" : "is-no")">@(card.EarTagged ? "Kulak küpeli" : "Küpesiz")</li>
+            </ul>
+            <section class="prose-block" aria-labelledby="hakkinda">
+                <h2 id="hakkinda">Hakkında</h2>
+                <p>@Model.Post.Description</p>
+            </section>
+            @if (!string.IsNullOrWhiteSpace(Model.Post.Requirements))
+            {
+                <section class="prose-block" aria-labelledby="beklentiler">
+                    <h2 id="beklentiler">Beklentiler</h2>
+                    <p>@Model.Post.Requirements</p>
+                </section>
+            }
+            <div class="cta-box">
+                <p>İlan <strong>@PublicText.Date(Model.Post.ClosesAt)</strong> tarihinde kapanır. Talep göndermek ve ilan sahibinin yanıtını almak için Patika uygulamasını kullan.</p>
+                <div class="actions">
+                    <a class="button" href="@app">Uygulamada talep gönder</a>
+                    <a class="link-strong" href="@app">İlanı bildir</a>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    @if (Model.Others.Count > 0)
+    {
+        <section class="related" aria-labelledby="diger">
+            <h2 id="diger" class="block-title">@PublicText.In(card.DistrictName!) yuva arayan diğerleri</h2>
+            <ul class="chips">
+                @foreach (var other in Model.Others)
+                {
+                    <li><a class="name-chip" href="@Routes.Adoption(other.Slug)">@PublicText.AnimalName(other)</a></li>
+                }
+            </ul>
+        </section>
+    }
+</div>
