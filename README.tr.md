@@ -17,7 +17,7 @@ yığını, araçları ve yayın döngüsüyle yaşar; ürünler arasında payla
 
 ## Galeri
 
-Her proje için bir kart. Kartların düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri), [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md), [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) ve [`patika/README.tr.md`](patika/README.tr.md#galeri) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz. Patika'nın henüz web demosu yok.
+Her proje için bir kart. Kartların düzeni aynı: gerçek web ana sayfasının (yerel derleme, örnek veri) bir Android ekranıyla kompoziti ve altında üç Android uygulama ekranı (emülatör, örnek veri). Tam setler [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), [`askida/README.tr.md`](askida/README.tr.md#ekran-görüntüleri), [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md), [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) ve [`patika/README.tr.md`](patika/README.tr.md#galeri) içinde. "web demo" bağlantıları, her projenin gerçek herkese açık sayfalarının yerel derlemelerden alınmış statik görüntülerini (örnek veri) GitHub Pages'te açar ([dizin](https://ayberkaarda.github.io/Mobiles-5in-One/)); giriş, form ve ödeme orada çalışmaz.
 
 <table>
   <tr>
@@ -58,7 +58,7 @@ Her proje için bir kart. Kartların düzeni aynı: gerçek web ana sayfasının
       <img src="patika/docs/design/screenshots/android-harita.png" alt="Patika Android uygulaması: istasyon iğneleri, filtreler ve Beslendi düğmeli istasyon paneliyle harita, örnek veri, emülatör" width="32%">
       <img src="patika/docs/design/screenshots/android-acil.png" alt="Patika Android uygulaması: Acil yardım çağrısı aç düğmesi ve yakındaki bakım yerleriyle koyu acil yardım ekranı, örnek veri, emülatör" width="32%">
       <img src="patika/docs/design/screenshots/destekci-profile.png" alt="Patika Android uygulaması: simüle test satın alımından sonra Patika Destekçi kartı ve rozetiyle profil, emülatör" width="32%"><br>
-      <sub><b>Patika</b>: web ana sayfası ve Android sahiplendirme, harita, acil yardım ve Destekçi ekranları (yerel yığın, örnek veri, simüle ödeme)</sub>
+      <sub><b>Patika</b>: web ana sayfası ve Android sahiplendirme, harita, acil yardım ve Destekçi ekranları (yerel yığın, örnek veri, simüle ödeme) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/patika/">web demo</a></sub>
     </td>
     <td width="50%"></td>
   </tr>

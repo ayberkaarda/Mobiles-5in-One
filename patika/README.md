@@ -10,6 +10,8 @@ Tagline (tr): "Mahallenin patilerini birlikte koruyalım."
 
 Web home page from a local build and Android screens from the `Pixel_8` emulator, both against the local stack with `[ÖRNEK]` sample data. More screens are in the [gallery](#gallery).
 
+Live demo: a [static snapshot of the public web](https://ayberkaarda.github.io/Mobiles-5in-One/patika/) runs on GitHub Pages. It is a local build with `[ÖRNEK]` sample data, not a live service: sign-in, the admin console, the district filter and the app do not work there.
+
 ## Product summary
 
 Patika is a community platform for street animals that connects neighbourhood volunteers. It offers a feeding-station map, "Beslendi" (fed) check-ins, animal profiles, adoption listings, urgent-help posts and a directory of nearby vets and shelters. The name means "footpath" and contains "pati" (paw). The tone is warm and communal, dignified and never guilt-tripping. Volunteer privacy is a product feature: photos lose their location metadata before upload and again on the server, and volunteer positions are never stored.

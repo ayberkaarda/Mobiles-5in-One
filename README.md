@@ -17,7 +17,7 @@ stack, tooling and release cycle; nothing is shared between them.
 
 ## Gallery
 
-One card per project. Each card has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md), in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) and in [`patika/README.md`](patika/README.md#gallery). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Patika has no web demo yet.
+One card per project. Each card has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md), in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) and in [`patika/README.md`](patika/README.md#gallery). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there.
 
 <table>
   <tr>
@@ -58,7 +58,7 @@ One card per project. Each card has the same layout: a composite of the real web
       <img src="patika/docs/design/screenshots/android-harita.png" alt="Patika Android app: map with station pins, filters and the station sheet with the Beslendi button, sample data, emulator" width="32%">
       <img src="patika/docs/design/screenshots/android-acil.png" alt="Patika Android app: dark urgent-help screen with the Acil yardım çağrısı aç button and nearby care places, sample data, emulator" width="32%">
       <img src="patika/docs/design/screenshots/destekci-profile.png" alt="Patika Android app: profile after a simulated test purchase with the Patika Destekçi card and badge, emulator" width="32%"><br>
-      <sub><b>Patika</b>: web home page and Android adoption, map, urgent-help and Destekçi screens (local stack, sample data, simulated billing)</sub>
+      <sub><b>Patika</b>: web home page and Android adoption, map, urgent-help and Destekçi screens (local stack, sample data, simulated billing) · <a href="https://ayberkaarda.github.io/Mobiles-5in-One/patika/">web demo</a></sub>
     </td>
     <td width="50%"></td>
   </tr>
