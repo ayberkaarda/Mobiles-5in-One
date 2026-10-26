@@ -15,5 +15,5 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" />
     <PackageReference Include="NetTopologySuite" />
   </ItemGroup>
-  <ItemGroup><InternalsVisibleTo Include="Patika.Api.Tests" /></ItemGroup>
+  <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /></ItemGroup><ItemGroup><InternalsVisibleTo Include="Patika.Api.Tests" /></ItemGroup>
 </Project>
