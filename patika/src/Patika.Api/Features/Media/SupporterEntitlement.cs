@@ -16,6 +16,6 @@ public sealed class EfSupporterEntitlement(PatikaDbContext db) : ISupporterEntit
     {
         var utc = now.ToUniversalTime();
         return db.Subscriptions.AsNoTracking().AnyAsync(
-            s => s.UserId == userId && s.Status == SubscriptionStatus.Active && s.ExpiresAt > utc, cancellationToken);
+            s => s.UserId == userId && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.InGracePeriod || s.Status == SubscriptionStatus.Canceled) && s.ExpiresAt > utc, cancellationToken);
     }
 }
