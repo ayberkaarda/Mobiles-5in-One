@@ -11,6 +11,7 @@ using Patika.Web.Services.PublicQueries;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPatikaLogging();
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.AddServerHeader = false);
 builder.Services.AddRazorPages();
 // The admin cookie carries the API tokens encrypted with this ring, and antiforgery tokens use it too. It is the
 // Web's own ring (never the API/Worker ring, which also protects TOTP secrets and purchase tokens), persisted so a
@@ -86,11 +87,16 @@ app.Use(async (context, next) =>
     context.Response.Headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()";
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    var media = builder.Configuration["Storage:PublicBaseUrl"] ?? builder.Configuration["Storage:PublicEndpoint"]
-        ?? builder.Configuration["Storage:Endpoint"];
+    // First key that is set and not empty (an env file line KEY= binds as "").
+    var media = new[] { "Storage:PublicBaseUrl", "Storage:PublicEndpoint", "Storage:Endpoint" }
+        .Select(key => builder.Configuration[key]).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     var origin = Uri.TryCreate(media, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
         ? " " + uri.GetLeftPart(UriPartial.Authority) : "";
-    context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; script-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; script-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+    // No cross-origin window or page may hold or embed these responses (ZAP 90004). COEP stays off: photos come from
+    // the media origin, which would then need its own CORP header, and the pages use no cross-origin-isolated API.
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+    context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
     await next(context);
 });
 app.UseWhen(context => !context.Request.Path.StartsWithSegments("/admin"), branch => branch.UseStatusCodePagesWithReExecute("/404"));

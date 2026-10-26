@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog.Core;
 using Serilog.Events;
 using Xunit;
@@ -12,6 +14,13 @@ namespace Patika.Web.Tests;
 
 public sealed class WebHostHardeningTests
 {
+    [Fact]
+    public void KestrelSendsNoServerHeader()
+    {
+        using var factory = Production(Path.Combine(Path.GetTempPath(), "patika-web-keys-" + Guid.NewGuid().ToString("N")));
+        Assert.False(factory.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value.AddServerHeader);
+    }
+
     [Fact]
     public void WebLogsGoThroughTheMaskingPipeline()
     {

@@ -133,6 +133,10 @@ public sealed class NetworkHardeningTests
             Assert.Equal("geolocation=(self), camera=(), microphone=()", response.Headers.GetValues("Permissions-Policy").Single());
             var csp = response.Headers.GetValues("Content-Security-Policy").Single();
             Assert.Contains("script-src 'self';", csp, StringComparison.Ordinal);
+            // ZAP 10055: form-action has no default-src fallback; ZAP 90004: no cross-origin opener.
+            Assert.Contains("form-action 'self';", csp, StringComparison.Ordinal);
+            Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Opener-Policy").Single());
+            Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
             Assert.DoesNotContain("nonce-", csp, StringComparison.Ordinal);
             Assert.DoesNotContain("unsafe-inline", csp, StringComparison.Ordinal);
             var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
