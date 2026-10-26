@@ -34,7 +34,7 @@ a default or that need explanation:
    pub writes it, because removing the line is undone by the next `pub get`.
 8. The Android build needed NDK 28.2.13676358 installed outside the repository. Android Gradle
    Plugin 9 turns `resValue` off, so the flavor app name is set through manifest placeholders.
-9. `composer.json` declares the license `Apache-2.0` (changed from `proprietary` when the repository was licensed under Apache-2.0).
+9. `composer.json` declares the license `Apache-2.0` (changed from `proprietary` when the repository was licensed under Apache-2.0). Note (2026-10-26): the repository was relicensed under MIT, and `composer.json` now declares `MIT`.
 10. Packages deferred, with the phase that adds them:
     - Phase 4 (Flutter): `riverpod_annotation`, `riverpod_generator`, `build_runner`,
       `go_router_builder`, `freezed` (with `freezed_annotation`), `json_serializable` (with
@@ -119,7 +119,7 @@ Superseded by ADR-0007 (the font rows below describe the earlier direction).
 
 ## Open points for the owner
 
-- (Resolved) The `composer.json` license value is now `Apache-2.0`; see the root `LICENSE`.
+- (Resolved) The `composer.json` license value is now `Apache-2.0`; see the root `LICENSE`. Since 2026-10-26 it is `MIT`, after the repository was relicensed under MIT.
 - Decide whether to keep the community MinIO fork for local use or move to another S3-compatible
   service.
 - Pinning `composer:2` and `mlocati/php-extension-installer:2` to exact tags or digests is planned

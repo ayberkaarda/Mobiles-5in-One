@@ -181,4 +181,4 @@ ile denetlenir. Hook'lar `pnpm --dir kadro exec lefthook install` ile elle kurul
 
 ## Lisans
 
-Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](LICENSE).

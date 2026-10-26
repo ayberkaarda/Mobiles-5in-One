@@ -152,4 +152,4 @@ Ayar anahtarları [`docs/ops/env.md`](docs/ops/env.md) içinde.
 
 ## Lisans
 
-Apache License 2.0. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

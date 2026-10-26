@@ -135,4 +135,4 @@ billing). Every environment key is in [`docs/ops/env.md`](docs/ops/env.md). Cont
 
 ## License
 
-This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).
+This project is licensed under the MIT License. See [LICENSE](../LICENSE).

@@ -137,4 +137,4 @@ ulaşır. Tüm ortam değişkenleri [`docs/ops/env.md`](docs/ops/env.md) dosyas�
 
 ## Lisans
 
-Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

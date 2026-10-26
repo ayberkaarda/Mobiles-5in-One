@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Inecek Var Nx workspace: Ionic Angular mobile app and PWA, Angular SSR web, shared libraries.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "packageManager": "pnpm@12.8.1",
   "engines": {
     "node": ">=22.12.0"

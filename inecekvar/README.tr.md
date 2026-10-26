@@ -144,4 +144,4 @@ Caddy `/api/*` isteklerini 57800 portuna iletir; portlar, ortam değişkenleri v
 
 ## Lisans
 
-Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

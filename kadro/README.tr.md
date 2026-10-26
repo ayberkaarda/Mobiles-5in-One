@@ -301,4 +301,4 @@ uyarıları, ZAP API taraması, gerçek alan adında sitemap gönderimi, iOS.
 
 ## Lisans
 
-Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

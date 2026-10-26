@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Kadro monorepo: Expo mobile app, Next.js web + API, pg-boss worker and shared packages.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@12.8.1",
   "engines": {

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Kadro background job runner built on pg-boss.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
