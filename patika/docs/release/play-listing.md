@@ -111,17 +111,17 @@ The full descriptions are 2,114 (tr) and 1,951 (en) characters (`wc -m`, UTF-8, 
 | Asset | Play requirement | Source | Status |
 | --- | --- | --- | --- |
 | App icon | 512 × 512 PNG | [`brand/app-icon/png/patika-icon-512.png`](../../brand/app-icon/png/patika-icon-512.png) | Ready (512 × 512) |
-| Feature graphic | 1024 × 500 JPEG or PNG | none yet | To make from [`brand/logo/patika-lockup.svg`](../../brand/logo/patika-lockup.svg) on Kar Beyazı |
-| Phone screenshots (2 to 8) | 320 to 3840 px per side, long side at most twice the short side | below | Captures are 1080 × 2400 (ratio 2.22): pad or crop to 1080 × 2160 before upload |
+| Feature graphic | 1024 × 500 JPEG or PNG | [`play-assets/feature-graphic-1024x500.png`](play-assets/feature-graphic-1024x500.png) | Ready: [`brand/logo/patika-lockup.svg`](../../brand/logo/patika-lockup.svg) on Kar Beyazı with the line "Sokak hayvanları için mahalle gönüllüleri bir arada" |
+| Phone screenshots (2 to 8) | 320 to 3840 px per side, long side at most twice the short side | [`play-assets/`](play-assets/) | Ready: six 1080 × 1920 (9:16) PNGs, each the 1080 × 2400 capture scaled into a phone frame on Kar Beyazı under its caption |
 
-Screenshots, in listing order (all in [`docs/design/screenshots/`](../design/screenshots/)):
+The graphics are rendered by [`play-assets/render.mjs`](play-assets/render.mjs) (Playwright, Nunito from the Web fonts) from the captures in [`docs/design/screenshots/`](../design/screenshots/); re-run it after new captures. Screenshots, in listing order (file in `play-assets/`, source capture, caption):
 
-1. [`android-harita.png`](../design/screenshots/android-harita.png): map with stations and clusters. Caption: "Mahallendeki mama ve su noktaları".
-2. [`android-acil.png`](../design/screenshots/android-acil.png): urgent help. Caption: "Yaralı bir pati mi gördün? Yakındaki gönüllülere haber ver".
-3. [`android-sahiplen.png`](../design/screenshots/android-sahiplen.png): adoption listings. Caption: "Moderasyonlu sahiplendirme ilanları".
-4. [`android-profil.png`](../design/screenshots/android-profil.png): volunteer profile and badges. Caption: "Beslemelerin ve rozetlerin, sıralama yok".
-5. [`destekci-paywall.png`](../design/screenshots/destekci-paywall.png): Destekçi plans. Caption: "İsteğe bağlı Destekçi aboneliği".
-6. [`destekci-profile.png`](../design/screenshots/destekci-profile.png): supporter badge. Caption: "Destekçi rozeti".
+1. [`01-android-harita-1080x1920.png`](play-assets/01-android-harita-1080x1920.png) from [`android-harita.png`](../design/screenshots/android-harita.png): map with stations and clusters. Caption: "Mahallendeki mama ve su noktaları".
+2. [`02-android-acil-1080x1920.png`](play-assets/02-android-acil-1080x1920.png) from [`android-acil.png`](../design/screenshots/android-acil.png): urgent help. Caption: "Yaralı bir pati mi gördün? Yakındaki gönüllülere haber ver".
+3. [`03-android-sahiplen-1080x1920.png`](play-assets/03-android-sahiplen-1080x1920.png) from [`android-sahiplen.png`](../design/screenshots/android-sahiplen.png): adoption listings. Caption: "Moderasyonlu sahiplendirme ilanları".
+4. [`04-android-profil-1080x1920.png`](play-assets/04-android-profil-1080x1920.png) from [`android-profil.png`](../design/screenshots/android-profil.png): volunteer profile and badges. Caption: "Beslemelerin ve rozetlerin, sıralama yok".
+5. [`05-destekci-paywall-1080x1920.png`](play-assets/05-destekci-paywall-1080x1920.png) from [`destekci-paywall.png`](../design/screenshots/destekci-paywall.png): Destekçi plans. Caption: "İsteğe bağlı Destekçi aboneliği".
+6. [`06-destekci-profile-1080x1920.png`](play-assets/06-destekci-profile-1080x1920.png) from [`destekci-profile.png`](../design/screenshots/destekci-profile.png): supporter badge. Caption: "Destekçi rozeti".
 
 `destekci-test-purchase.png` shows the simulated test-purchase sheet and must not be used in a listing.
 
