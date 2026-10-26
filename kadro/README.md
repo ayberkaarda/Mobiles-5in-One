@@ -217,14 +217,15 @@ pnpm dev                             # web on http://localhost:3000 and the work
 
 Other commands:
 
-| Command                                       | Purpose                                            |
-| --------------------------------------------- | -------------------------------------------------- |
-| `pnpm worker:dev`                             | worker only                                        |
-| `pnpm mobile:start`                           | start the Expo dev server                          |
-| `pnpm lint` / `pnpm typecheck` / `pnpm build` | lint, type-check and build every package           |
-| `pnpm test`                                   | run all tests                                      |
-| `pnpm format` / `pnpm format:check`           | write or check Prettier formatting                 |
-| `docker compose up --build`                   | full stack in containers (web + worker + database) |
+| Command                                       | Purpose                                                                                                                                                         |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm worker:dev`                             | worker only                                                                                                                                                     |
+| `pnpm mobile:start`                           | start the Expo dev server                                                                                                                                       |
+| `pnpm lint` / `pnpm typecheck` / `pnpm build` | lint, type-check and build every package                                                                                                                        |
+| `pnpm test`                                   | run all tests                                                                                                                                                   |
+| `pnpm format` / `pnpm format:check`           | write or check Prettier formatting                                                                                                                              |
+| `docker compose up --build`                   | full stack in containers (web + worker + database)                                                                                                              |
+| `node ops/zap-scan.mjs`                       | OWASP ZAP site and API scans against a disposable local stack (after building web and worker; see [`docs/security/zap-report.md`](docs/security/zap-report.md)) |
 
 ## Environment variables
 
@@ -258,6 +259,7 @@ secrets and audits dependencies. Details:
 - [`docs/security/threat-model.md`](docs/security/threat-model.md)
 - [`docs/security/verification-matrix.md`](docs/security/verification-matrix.md)
 - [`docs/security/history-purge-runbook.md`](docs/security/history-purge-runbook.md)
+- [`docs/security/attack-report.md`](docs/security/attack-report.md) and [`docs/security/zap-report.md`](docs/security/zap-report.md) (attack suite, OWASP ZAP site and API scans with a real database, run manually)
 - [`docs/adr/`](docs/adr/) (security-relevant decisions such as ADR 0011, 0014, 0015, 0019, 0021)
 
 ## Documentation
@@ -291,7 +293,8 @@ secrets and audits dependencies. Details:
 Open proofs, all needing systems that do not exist here: Maestro runs on a device or emulator,
 store and RevenueCat verification, EAS builds and a signed update channel, a hosted origin with
 the Caddy edge and a deploy runbook, production backups, Sentry, provider-side cost alerts, a ZAP
-API scan, a sitemap submission on a real domain, iOS.
+scan of a hosted preview (the local database-backed and API scans ran), a sitemap submission on a
+real domain, iOS.
 
 ## License
 

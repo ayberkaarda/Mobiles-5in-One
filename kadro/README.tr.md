@@ -220,14 +220,15 @@ pnpm dev                             # http://localhost:3000 üzerinde web ve wo
 
 Diğer komutlar:
 
-| Komut                                         | Amaç                                                 |
-| --------------------------------------------- | ---------------------------------------------------- |
-| `pnpm worker:dev`                             | yalnızca worker                                      |
-| `pnpm mobile:start`                           | Expo geliştirme sunucusunu başlatır                  |
-| `pnpm lint` / `pnpm typecheck` / `pnpm build` | tüm paketlerde lint, tip kontrolü ve derleme         |
-| `pnpm test`                                   | tüm testleri çalıştırır                              |
-| `pnpm format` / `pnpm format:check`           | Prettier biçimini yazar veya denetler                |
-| `docker compose up --build`                   | tüm yığın konteynerlerde (web + worker + veritabanı) |
+| Komut                                         | Amaç                                                                                                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm worker:dev`                             | yalnızca worker                                                                                                                                                           |
+| `pnpm mobile:start`                           | Expo geliştirme sunucusunu başlatır                                                                                                                                       |
+| `pnpm lint` / `pnpm typecheck` / `pnpm build` | tüm paketlerde lint, tip kontrolü ve derleme                                                                                                                              |
+| `pnpm test`                                   | tüm testleri çalıştırır                                                                                                                                                   |
+| `pnpm format` / `pnpm format:check`           | Prettier biçimini yazar veya denetler                                                                                                                                     |
+| `docker compose up --build`                   | tüm yığın konteynerlerde (web + worker + veritabanı)                                                                                                                      |
+| `node ops/zap-scan.mjs`                       | tek kullanımlık yerel yığına karşı OWASP ZAP site ve API taramaları (web ve worker derlendikten sonra; bkz. [`docs/security/zap-report.md`](docs/security/zap-report.md)) |
 
 ## Ortam değişkenleri
 
@@ -262,6 +263,7 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 - [`docs/security/threat-model.md`](docs/security/threat-model.md)
 - [`docs/security/verification-matrix.md`](docs/security/verification-matrix.md)
 - [`docs/security/history-purge-runbook.md`](docs/security/history-purge-runbook.md)
+- [`docs/security/attack-report.md`](docs/security/attack-report.md) ve [`docs/security/zap-report.md`](docs/security/zap-report.md) (saldırı test paketi, gerçek veritabanıyla OWASP ZAP site ve API taramaları, elle çalıştırılır)
 - [`docs/adr/`](docs/adr/) (güvenlikle ilgili kararlar: ADR 0011, 0014, 0015, 0019, 0021 gibi)
 
 ## Dokümantasyon
@@ -297,7 +299,8 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 Açık kanıtlar, hepsi burada bulunmayan sistemlere bağlı: bir cihazda ya da emülatörde Maestro
 koşusu, mağaza ve RevenueCat doğrulaması, EAS derlemeleri ve imzalı güncelleme kanalı, Caddy kenarı
 ve yayın runbook'uyla barındırılan bir origin, üretim yedekleri, Sentry, sağlayıcı tarafında maliyet
-uyarıları, ZAP API taraması, gerçek alan adında sitemap gönderimi, iOS.
+uyarıları, barındırılan bir önizlemeye karşı ZAP taraması (veritabanlı yerel tarama ve API taraması
+yapıldı), gerçek alan adında sitemap gönderimi, iOS.
 
 ## Lisans
 
