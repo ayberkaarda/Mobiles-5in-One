@@ -220,6 +220,7 @@ public sealed partial class UrgentDetailViewModel(
 
     public bool HasPost => Post is not null;
 
+    [ObservableProperty] public partial bool OwnSupporter { get; set; }
     public bool CanChangeState => IsMine && (IsOpen || IsHandled);
 
     public ObservableCollection<CarePlaceRow> CarePlaces { get; } = [];
@@ -252,6 +253,7 @@ public sealed partial class UrgentDetailViewModel(
             if (api.Client.Tokens.UserId is not null)
             {
                 IsMine = (await api.MineAsync()).Any(p => p.Id == post.Id);
+                OwnSupporter = IsMine && (await api.Client.SendAsync<Patika.Contracts.Subscriptions.EntitlementResponse>(HttpMethod.Get, "me/entitlement", null, AuthMode.Required))?.Supporter == true;
             }
 
             var places = await api.CarePlacesAsync(post.Location.Latitude, post.Location.Longitude);

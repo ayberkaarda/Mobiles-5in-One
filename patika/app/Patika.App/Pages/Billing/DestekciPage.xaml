@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Patika.App.ViewModels.Billing"
+             x:Class="Patika.App.Pages.Billing.DestekciPage"
+             x:DataType="vm:DestekciViewModel"
+             BackgroundColor="{StaticResource Kar}"
+             Title="Patika Destekçi">
+    <ContentPage.Resources>
+        <Style x:Key="Benefit" TargetType="Label">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+            <Setter Property="LineHeight" Value="1.35" />
+        </Style>
+        <Style x:Key="PlanCard" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="{StaticResource Beyaz}" />
+            <Setter Property="Stroke" Value="{StaticResource Cizgi}" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 20" />
+            <Setter Property="Padding" Value="18,14" />
+        </Style>
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32" Spacing="18">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Birlikte daha çok pati." Style="{StaticResource Display}" FontSize="{StaticResource FontSizeH3}"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Patika ücretsizdir ve öyle kalır. Destekçi olursan sunucu masraflarını birlikte karşılarız."
+                       Style="{StaticResource Lede}" />
+            </VerticalStackLayout>
+
+            <Border Style="{StaticResource Panel}" Padding="18,16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Destekçi olunca" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeBody}"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <Label Text="•  Profilinde ve kendi çağrılarında Destekçi rozeti" Style="{StaticResource Benefit}" />
+                    <Label Text="•  Günde 30 yerine 100 fotoğraf" Style="{StaticResource Benefit}" />
+                    <Label Text="•  Sunucu ve harita masraflarına katkı" Style="{StaticResource Benefit}" />
+                    <Label Text="Reklam yok, Destekçi olmasan da yok." Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Current entitlement, always read from the server. -->
+            <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource NaneSoft}" Padding="18,14" IsVisible="{Binding Supporter}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Patika Destekçi" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeBody}" TextColor="{StaticResource NaneDeep}" />
+                    <Label Text="{Binding EntitlementText}" Style="{StaticResource Small}" />
+                </VerticalStackLayout>
+            </Border>
+            <Label Text="{Binding EntitlementText}" Style="{StaticResource Muted}" IsVisible="{Binding CanPurchase}" />
+
+            <VerticalStackLayout Spacing="10" IsVisible="{Binding CanPurchase}" BindableLayout.ItemsSource="{Binding Plans}"
+                                 SemanticProperties.Description="Plan seçimi">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PlanOption">
+                        <Border Style="{StaticResource PlanCard}" SemanticProperties.Description="{Binding Period}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DestekciViewModel}}, Path=SelectPlanCommand, x:DataType=vm:DestekciViewModel}"
+                                                      CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource Kaldirim}" />
+                                    <Setter Property="BackgroundColor" Value="{StaticResource TekirSoft}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label Text="{Binding Period}" FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeLead}" />
+                                    <Label Text="{Binding Renewal}" Style="{StaticResource Muted}" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                    <Label Text="{Binding Product.Price}" FontFamily="NunitoExtraBold"
+                                           FontSize="{StaticResource FontSizeBody}" HorizontalTextAlignment="End" />
+                                    <Label Text="örnek fiyat" Style="{StaticResource Muted}" FontSize="{StaticResource FontSizeCaption}" HorizontalTextAlignment="End" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding CanPurchase}">
+                <Label Text="Fiyatlar örnektir. Abonelik otomatik yenilenir, Google Play'den istediğin zaman iptal edebilirsin. İptal edersen dönem sonuna kadar Destekçi kalırsın."
+                       Style="{StaticResource Muted}" />
+                <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource TekirSoft}" Padding="14,10">
+                    <Label Text="Test ödemesi — gerçek ücret alınmaz" FontFamily="NunitoSansBold" FontSize="{StaticResource FontSizeSmall}"
+                           TextColor="{StaticResource TekirDeep}" HorizontalTextAlignment="Center" />
+                </Border>
+                <Button Text="Destekçi ol" Style="{StaticResource FedButton}" HeightRequest="56" CornerRadius="28"
+                        Clicked="PurchaseClicked" IsEnabled="{Binding IsNotBusy}" AutomationId="DestekciPurchase" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Tekir}" />
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Style="{StaticResource ErrorText}" />
+            <Label Text="{Binding Notice}" IsVisible="{Binding HasNotice}" Style="{StaticResource Small}" TextColor="{StaticResource NaneDeep}" FontFamily="NunitoSansBold" />
+
+            <Button Text="Satın alımları geri yükle" Style="{StaticResource QuietButton}" Command="{Binding RestoreCommand}"
+                    IsEnabled="{Binding IsNotBusy}" AutomationId="DestekciRestore" />
+            <Button Text="Aboneliği Google Play'de yönet" Style="{StaticResource QuietButton}" Clicked="ManageClicked" />
+
+            <HorizontalStackLayout Spacing="4" HorizontalOptions="Center">
+                <Button Text="Gizlilik" Style="{StaticResource LinkButton}" Clicked="PrivacyClicked" />
+                <Button Text="Kullanım koşulları" Style="{StaticResource LinkButton}" Clicked="TermsClicked" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

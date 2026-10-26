@@ -48,6 +48,8 @@ public sealed partial class ProfileViewModel(PatikaApiClient api, INavigationSer
     [ObservableProperty]
     public partial bool HasBadges { get; set; }
 
+    [ObservableProperty] public partial bool Supporter { get; set; }
+    [ObservableProperty] public partial string SubscriptionText { get; set; } = "";
     public bool IsMember => !IsGuest;
 
     public string Initial => DisplayName is { Length: > 0 } name ? name[..1].ToUpper(AccountText.Turkish) : "";
@@ -58,6 +60,8 @@ public sealed partial class ProfileViewModel(PatikaApiClient api, INavigationSer
     {
         if (api.Tokens.UserId is null)
         {
+            Supporter = false;
+            SubscriptionText = "";
             IsGuest = true;
             DisplayName = "Misafir";
             Since = "Giriş yapınca beslemelerin ve rozetlerin burada görünür.";
@@ -79,9 +83,18 @@ public sealed partial class ProfileViewModel(PatikaApiClient api, INavigationSer
                 Badges.Add(badge);
             }
 
+            var entitlement = await api.SendAsync<Patika.Contracts.Subscriptions.EntitlementResponse>(HttpMethod.Get, "me/entitlement", null, AuthMode.Required);
+            Supporter = entitlement?.Supporter == true;
+            SubscriptionText = entitlement?.ExpiresAt is null
+                ? "Rozet, günde 100 fotoğraf ve sunucu masraflarına katkı."
+                : Patika.App.Services.Billing.SupporterText.Describe(entitlement);
+            if (Supporter) Badges.Add("Destekçi");
             HasBadges = Badges.Count > 0;
         });
     }
+
+    [RelayCommand]
+    private Task OpenDestekciAsync() => navigation.GoToAsync("destekci");
 
     [RelayCommand]
     private Task OpenSettingsAsync() => navigation.GoToAsync(Routes.Settings);
