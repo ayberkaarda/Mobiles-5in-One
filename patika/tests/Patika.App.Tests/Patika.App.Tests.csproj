@@ -25,7 +25,7 @@
   -->
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <Compile Include="../../app/Patika.App/ViewModels/Urgent/**/*.cs;../../app/Patika.App/ViewModels/Account/**/*.cs"
+    <Compile Include="../../app/Patika.App/Services/Billing/**/*.cs;../../app/Patika.App/ViewModels/Billing/**/*.cs;../../app/Patika.App/ViewModels/Urgent/**/*.cs;../../app/Patika.App/ViewModels/Account/**/*.cs"
              LinkBase="AppViewModels" />
   </ItemGroup>
 </Project>

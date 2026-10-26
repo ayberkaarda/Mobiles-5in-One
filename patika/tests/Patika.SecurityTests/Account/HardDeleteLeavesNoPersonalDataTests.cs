@@ -102,7 +102,9 @@ public sealed class HardDeleteLeavesNoPersonalDataTests(AccountDatabaseFixture d
         Assert.True(await check.Sightings.AnyAsync(s => s.AnimalId == target.AnimalId && s.UserId == null, Ct));
         Assert.Equal(1L, (await check.Stations.AsNoTracking().SingleAsync(s => s.Id == target.StationId, Ct)).FeedingsCount);
         Assert.False(await check.Subscriptions.AnyAsync(s => s.UserId == target.UserId, Ct));
-        Assert.True(await check.Subscriptions.AnyAsync(s => s.OriginalTransactionIdHash == target.TransactionHash, Ct));
+        var keptSubscription = await check.Subscriptions.AsNoTracking().SingleAsync(s => s.PurchaseTokenHash == target.TransactionHash, Ct);
+        Assert.Null(keptSubscription.UserId);
+        Assert.Equal("", keptSubscription.ProtectedPurchaseToken);
 
         foreach (var (table, column) in UserColumns)
         {
@@ -321,7 +323,7 @@ public sealed class HardDeleteLeavesNoPersonalDataTests(AccountDatabaseFixture d
             new AdoptionRequest { PostId = helperPost.Id, RequesterId = user.Id, Message = $"talep-{tag}" },
             new AdoptionRequest { PostId = post.Id, RequesterId = helper.Id, Message = $"gelen-{tag}" },
             new Report { TargetType = "station", TargetId = station.Id, ReporterId = user.Id, Reason = $"sikayet-{tag}" },
-            new Subscription { UserId = user.Id, OriginalTransactionIdHash = transactionHash, ProductId = "patika.destek.aylik", ExpiresAt = DateTimeOffset.UtcNow.AddDays(30) });
+            new Subscription { UserId = user.Id, PurchaseTokenHash = transactionHash, ProtectedPurchaseToken = $"sifreli-{tag}", ProductId = "patika_destekci", ExpiresAt = DateTimeOffset.UtcNow.AddDays(30) });
         await db.SaveChangesAsync(Ct);
 
         // The stored urgent home exactly as row_to_json renders it (hex EWKB), so the scan can look for it.
