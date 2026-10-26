@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Patika.Infrastructure.Logging;
 using Patika.Infrastructure.Media;
@@ -11,6 +12,19 @@ using Patika.Web.Services.PublicQueries;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPatikaLogging();
 builder.Services.AddRazorPages();
+// The admin cookie carries the API tokens encrypted with this ring, and antiforgery tokens use it too. It is the
+// Web's own ring (never the API/Worker ring, which also protects TOTP secrets and purchase tokens), persisted so a
+// restart or a second instance does not sign every admin out.
+var webKeys = builder.Services.AddDataProtection().SetApplicationName("Patika.Web");
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+{
+    webKeys.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+}
+else if (builder.Environment.IsProduction())
+{
+    throw new InvalidOperationException("DataProtection:KeysPath must point to persistent storage for the Web key ring.");
+}
+
 builder.Services.AddTrustedNetwork(builder.Configuration);
 builder.Services.AddHsts(options =>
 {

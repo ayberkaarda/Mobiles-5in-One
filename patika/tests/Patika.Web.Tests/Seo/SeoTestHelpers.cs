@@ -19,6 +19,8 @@ internal static class SeoTestHelpers
             builder.UseEnvironment(environment);
             builder.UseSetting("ConnectionStrings:PatikaRead", "Host=localhost;Port=1;Database=unused");
             builder.UseSetting("Web:PublicBaseUrl", BaseUrl);
+            // Production refuses to start without a persistent Web key ring.
+            builder.UseSetting("DataProtection:KeysPath", Path.Combine(Path.GetTempPath(), "patika-web-test-keys"));
         });
 
     public static WebApplicationFactory<Program> WithDatabase(string connectionString) =>
