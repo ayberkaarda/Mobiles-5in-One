@@ -27,7 +27,6 @@ Patika is a community platform for street animals that connects neighbourhood vo
 
 - Donations to individuals or any money flow other than the Destekçi subscription
 - Live chat
-- Android (planned for v2)
 - Vet appointment booking
 - Real-time animal tracking devices
 - Leaderboards
@@ -52,12 +51,27 @@ A repository with a .NET MAUI app project (C#, Android first; iOS is not built o
 
 ## Status
 
-This folder currently contains only a design/spec document; no source code has been written yet.
+The API, Worker, Web and Android app are implemented. Phase 5 adds a simulated Google Play Destekçi subscription; see the local demo and ADR-0010.
 
 ## Getting started
 
-There is no code to install or run yet. The product and technical specification lives in this folder as `03-patika-swift-ios.md`. This README will be updated once development starts.
+Copy `.env.example` to `.env`, configure local storage, then run `docker compose up --build -d`. See [Destekçi demo](docs/demo/destekci.md) and [ADR-0010](docs/adr/0010-play-billing-simulated.md).
 
 ## License
 
 This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).
+
+## Gerçek / simüle
+
+| Yol | Durum |
+| --- | --- |
+| Yetki, kota, token sahipliği, audit, inbox, Worker, PostgreSQL migration | Gerçek uygulama kodu |
+| Play satın alımı ve fiyatlar, aynı cihazda geri yükleme | Simüle; ücret alınmaz |
+| Google Play REST transport ve OIDC/JWKS doğrulaması | Kod mevcut; REST canlı hesapla denenmedi, imzalar yerel RSA testleriyle sınanır |
+| Android native Play Billing Library | Bağlantı yok; PlayBillingClient NotSupported stub, tüm derlemeler FakeBillingClient kullanır |
+| Play Console, Pub/Sub, Google Cloud | Hesap/proje yok; canlı bağlantı denenmedi |
+
+Sunucu: `/v1/subscriptions/verify`, `/v1/me/entitlement`, `/webhooks/play`.
+`/dev/billing/purchases` yalnızca Development+Fake. Production'da Fake için
+`Billing:AllowFake=true` gerekir. API/Worker aynı DataProtection:KeysPath kullanmalıdır.
+[Demo](docs/demo/destekci.md) · [Karar ve sınırlamalar](docs/adr/0010-play-billing-simulated.md).

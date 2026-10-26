@@ -78,3 +78,32 @@ API's per-IP ceiling unless a separately reviewed trusted proxy configuration fo
 ## Required verification
 
 Cover authorization and IDOR cells, rate-limit proxy-header spoofing, JWT tampering, refresh reuse, oversized bodies, MIME spoofing, EXIF removal, webhook forgery/replay, admin CSRF, and admin access without TOTP in the security test suite. Run web and API security scans and record findings, fixes, and retest evidence in the security verification matrix and penetration-test report. Revisit this outline when endpoints, data classes, integrations, or trust boundaries change.
+
+## Google Play billing
+
+Forged receipts and IDOR: the server reads product, base plan, state and expiry from Play,
+serializes token ownership and linked replacements in a database transaction, acknowledges
+before grant, and returns 409 for another owner (including purged ownership). No client event
+grants access. Audit contains subscription ids; purge clears user_id and preserves audit.
+
+Forged/replayed RTDN: RS256 JWKS validation, Google issuer, exact audience and push email,
+verified email, exp/iat with two-minute skew; unique message ids and a streamed 64 KiB limit.
+The Worker re-queries current provider state even for stale deliveries; bodies cannot force
+renewal/revocation. Test notifications and foreign packages grant nothing. JWKS refresh is cached.
+
+Store tokens are hashed for identity and encrypted separately for reconciliation; API and
+Worker share persistent Data Protection keys. Restrict key-ring and database access. Fake
+responses contain no raw token. Never log provider request URLs or bodies. Production refuses
+Fake without explicit AllowFake. Dev purchase seeding only maps in Development+Fake and requires
+authentication/rate limiting. The local compose is intentionally a simulation, not production.
+
+Token leakage through logs: the Play HTTP client has request logging removed because request
+paths carry the token, and request logging records paths, never bodies. Purge clears
+the encrypted token with user_id. Production refuses to start the API or Worker without the
+persistent key ring. A poisoned inbox row cannot stall processing: it is retried and set aside
+after five attempts, and the daily reconcile re-reads the subscription.
+
+Residual limits: no real Play/Cloud account exercised; configured Google bearers need private
+provisioning/refresh. Restore simulates only same-device purchases. Verify does not yet bind the
+Play obfuscated account id, so a leaked unbound token goes to the first account presenting it.
+Account deletion does not cancel the Play subscription. See ADR-0010 and demo.

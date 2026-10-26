@@ -82,3 +82,15 @@ advisory lock (role, suspension, deactivation, session version) and answers 403
 within ten minutes. Moderator/Admin cannot disable TOTP. `/auth/mfa` consumes a five-minute
 single-use challenge after TOTP or a single-use recovery code. All verification paths share
 the persisted per-user five-failure lockout and the existing per-IP auth policy.
+
+## Play subscriptions
+
+| Route | Anonymous | Signed-in user | Boundary |
+| --- | --- | --- | --- |
+| POST /v1/subscriptions/verify | Deny | Own token only | Rate limited; server queries Play; foreign or purged owner returns 409 |
+| GET /v1/me/entitlement | Deny | Own account only | No caller-selected user id |
+| POST /webhooks/play | OIDC required | OIDC required | Google RS256/JWKS, issuer/audience/email/email_verified/exp/iat; 64 KiB; unique message id |
+| POST /dev/billing/purchases | Deny | Allow only Development+Fake | Absent otherwise; rate limited; test purchase only |
+
+Worker re-queries the provider; notification types never decide entitlement. Canceled keeps
+access until expiry. Purged subscriptions retain hashes with user_id=null and cannot be reclaimed.
