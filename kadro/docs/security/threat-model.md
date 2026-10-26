@@ -441,7 +441,7 @@ Each sub-requirement of §6 item 6 has its own control, threat and test so that 
 | Tampered or cross-filter cursor                                           | T-PLT-18                                    | 400 `invalid_cursor`                             |
 | Token page: address bar, history and outgoing requests after load         | T-WEB-01, T-WEB-02                          | no token anywhere; same-origin requests only     |
 
-External scans: an OWASP ZAP baseline ran against a production build without a database (`attack-report.md` §2); the ZAP API scan against a preview URL using `docs/api/openapi.json` and the MobSF static scan of a release APK / IPA were not run.
+External scans: an OWASP ZAP baseline ran against a production build without a database (`attack-report.md` §2); on 2026-10-26 ZAP ran again locally against a seeded database, including active `docs/api/openapi.json` scans anonymous and with a bearer token (`zap-report.md`, 0 FAIL). A hosted ZAP scan against a preview URL was not run. MobSF: see `mobsf-report.md`.
 
 ---
 
