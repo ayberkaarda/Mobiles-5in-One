@@ -24,7 +24,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddPatikaApi();
 builder.Services.AddPlayBilling(builder.Configuration, builder.Environment.IsDevelopment(), builder.Environment.IsProduction());
-builder.Services.AddHttpClient("play-push");
+PlayPushVerifier.RequireConfiguration(builder.Configuration);
+builder.Services.AddBillingAccountIds(builder.Configuration);
+builder.Services.AddHttpClient("play-push", client => client.Timeout = PlayPushVerifier.FetchTimeout);
 builder.Services.AddSingleton(sp => new PlayPushVerifier(sp.GetRequiredService<IHttpClientFactory>().CreateClient("play-push"), builder.Configuration, sp.GetRequiredService<TimeProvider>()));
 builder.Services.AddPatikaInfrastructure(builder.Configuration.GetConnectionString("Patika"));
 

@@ -17,8 +17,35 @@ public sealed record OfferDetails(string BasePlanId);
 public sealed record AutoRenewingPlan(bool AutoRenewEnabled);
 public sealed record PlayLineItem(string ProductId, DateTimeOffset ExpiryTime,
     AutoRenewingPlan? AutoRenewingPlan, OfferDetails? OfferDetails);
+public sealed record ExternalAccountIdentifiers(string? ObfuscatedExternalAccountId, string? ObfuscatedExternalProfileId = null);
 public sealed record PlaySubscription(PlayLineItem[] LineItems, string SubscriptionState,
-    string AcknowledgementState, string? LinkedPurchaseToken = null, JsonElement? TestPurchase = null);
+    string AcknowledgementState, string? LinkedPurchaseToken = null, JsonElement? TestPurchase = null,
+    ExternalAccountIdentifiers? ExternalAccountIdentifiers = null);
+
+/// <summary>Billing policy the API and the Worker share.</summary>
+public sealed class BillingOptions
+{
+    /// <summary>License-tester purchases grant nothing unless this is on (Development, or the local demo).</summary>
+    public bool AllowTestPurchases { get; init; }
+}
+
+/// <summary>
+/// The account id the app hands to Play as <c>obfuscatedExternalAccountId</c>: base64url(HMAC-SHA256(server key, user id)).
+/// Play returns it with the purchase, so a token bought for one Patika account cannot be claimed by another.
+/// </summary>
+public sealed class BillingAccountIds
+{
+    private readonly byte[] key;
+
+    public BillingAccountIds(byte[] key)
+    {
+        if (key.Length < 32) throw new InvalidOperationException("Billing:AccountKey must be at least 32 bytes.");
+        this.key = key;
+    }
+
+    public string For(Guid userId) =>
+        Convert.ToBase64String(HMACSHA256.HashData(key, userId.ToByteArray())).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+}
 
 public interface IPlayDeveloperApi
 {
@@ -117,12 +144,18 @@ public static class BillingTokens
 
 public static class BillingRegistration
 {
+    /// <summary>A slow Play response holds only its own token lock, and for at most this long.</summary>
+    public static readonly TimeSpan PlayTimeout = TimeSpan.FromSeconds(10);
+
     public static IServiceCollection AddPlayBilling(this IServiceCollection services, IConfiguration configuration, bool development, bool production = false)
     {
         var provider = configuration["Billing:Provider"] ?? "Fake";
         if (provider != "Fake" && provider != "Google") throw new InvalidOperationException("Unknown billing provider.");
-        if (production && provider == "Fake" && !configuration.GetValue<bool>("Billing:AllowFake"))
+        // Staging, Testing and every other non-Development host is treated like Production here.
+        if (!development && provider == "Fake" && !configuration.GetValue<bool>("Billing:AllowFake"))
             throw new InvalidOperationException("Fake billing requires Billing:AllowFake outside Development.");
+        if (provider == "Google" && configuration["Billing:PackageName"] != BillingTokens.Package)
+            throw new InvalidOperationException($"Billing:PackageName must be {BillingTokens.Package} for the Google provider.");
         // Purchase tokens are encrypted with the API key ring (ADR-0009); the Worker must read the same ring
         // or reconciliation cannot decrypt them, so Production refuses an ephemeral ring here as well.
         var protection = services.AddDataProtection().SetApplicationName("Patika.Api");
@@ -131,13 +164,17 @@ public static class BillingRegistration
         else if (production)
             throw new InvalidOperationException("DataProtection:KeysPath must point to the persistent key ring shared by the API and Worker.");
         services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(new BillingOptions
+        {
+            AllowTestPurchases = configuration.GetValue<bool?>("Billing:AllowTestPurchases") ?? development,
+        });
         services.AddScoped<FakePlayDeveloperApi>();
         if (provider == "Fake") services.AddScoped<IPlayDeveloperApi>(sp => sp.GetRequiredService<FakePlayDeveloperApi>());
         else
         {
             services.AddSingleton<IGoogleAccessTokenSource, ConfiguredGoogleAccessTokenSource>();
             // Request paths carry the purchase token, so the default HttpClient request logging stays off.
-            services.AddHttpClient<IPlayDeveloperApi, GooglePlayDeveloperApi>().RemoveAllLoggers();
+            services.AddHttpClient<IPlayDeveloperApi, GooglePlayDeveloperApi>(client => client.Timeout = PlayTimeout).RemoveAllLoggers();
         }
         services.AddScoped<SubscriptionService>();
         return services;

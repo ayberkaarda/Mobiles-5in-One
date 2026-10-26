@@ -19,6 +19,8 @@ x-billing: &billing
   # ring the API encrypts purchase tokens with. Only the API and the Worker mount it; Web keeps its own.
   Billing__Provider: Fake
   Billing__AllowFake: "true"
+  # The simulated purchases are test purchases; outside Development they grant only when allowed here.
+  Billing__AllowTestPurchases: "true"
   DataProtection__KeysPath: /keys
 
 services:

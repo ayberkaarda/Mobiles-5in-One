@@ -1,10 +1,12 @@
 using FluentValidation;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Validation;
 using Patika.Contracts.Errors;
 using Patika.Contracts.Media;
 using Patika.Domain.Security;
+using Patika.Infrastructure.Billing;
 using Patika.Infrastructure.Media;
 
 namespace Patika.Api.Features.Media;
@@ -36,6 +38,8 @@ public static class MediaEndpoints
         services.AddSingleton<IPhotoUrlResolver, PhotoUrlResolver>();
         services.AddScoped<IUploadLedger, PgUploadLedger>();
         services.AddScoped<ISupporterEntitlement, EfSupporterEntitlement>();
+        // Hosts without billing configured count no test purchases; AddPlayBilling replaces this with the real policy.
+        services.TryAddSingleton(new BillingOptions());
         return services;
     }
 
