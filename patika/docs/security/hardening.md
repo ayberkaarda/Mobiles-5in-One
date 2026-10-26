@@ -43,7 +43,7 @@ CI (`patika-ci.yml`): `dotnet list package --vulnerable --include-transitive --f
 
 ## Android release (MobSF-facing)
 
-`android:allowBackup="false"`, `android:usesCleartextTraffic="false"` plus a network security config that allows cleartext only for the emulator host in Debug, `Exported` set explicitly on the launcher activity (the FCM service is explicitly non-exported), refresh token and account id in `SecureStorage`, the access token in memory only, no token logging. CI parses the merged Release manifest and fails on `allowBackup`, cleartext, `debuggable` or any activity, service, receiver or provider without an explicit `android:exported`.
+`android:allowBackup="false"` together with `android:dataExtractionRules` (Android 12+, `Resources/xml/data_extraction_rules.xml`: cloud backup and device transfer exclude every domain) and `android:fullBackupContent` (`backup_rules.xml`, the same for Android 6 to 11), `android:usesCleartextTraffic="false"` plus a network security config that allows cleartext only for the emulator host in Debug, `Exported` set explicitly on the launcher activity (the FCM service is explicitly non-exported), refresh token and account id in `SecureStorage`, the access token in memory only, no token logging. CI parses the merged Release manifest and fails on `allowBackup`, a missing `dataExtractionRules` or `fullBackupContent`, cleartext, `debuggable` or any activity, service, receiver or provider without an explicit `android:exported`.
 
 ## Worker safety nets
 

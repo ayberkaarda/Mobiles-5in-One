@@ -173,6 +173,8 @@ jobs:
               app = ET.parse(manifest).getroot().find('application')
               assert app is not None
               assert app.get(android + 'allowBackup') == 'false'
+              assert app.get(android + 'dataExtractionRules') is not None
+              assert app.get(android + 'fullBackupContent') is not None
               assert app.get(android + 'usesCleartextTraffic') == 'false'
               assert app.get(android + 'debuggable', 'false') == 'false'
               for component in app:
