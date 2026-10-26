@@ -11,7 +11,7 @@ Security checklist item 20 (Otomatik yedek). Patika is a portfolio project: the 
 | Photos (`media/`, R2 or MinIO) | Object versioning on the photo bucket (below) | Noncurrent versions expire after 30 days | Restore the previous version of the object |
 | Data Protection key ring (`DataProtection:KeysPath`) | Copied with the volume snapshot of the API host, kept apart from the database dumps | Same as the host snapshots | Mount the copied ring; without it the TOTP secrets and purchase tokens in a restored database cannot be decrypted |
 
-On the backup side the dump never exists in plaintext on disk: `pg_dump` writes into `age` through a pipe. `restore.sh` decrypts into a `mktemp -d` directory created under `umask 077` and removed on exit.
+On the backup side the dump never exists in plaintext on disk: `pg_dump` writes into `age` through a pipe. `restore.sh` decrypts into a `mktemp -d` directory created under `umask 077` and removed on exit. Neither script puts the database password on a command line (`pg_dump --dbname=postgresql://user:password@...` would show it in `ps` and `/proc/*/cmdline`): both write it to a private temporary `PGPASSFILE` and unset `PGPASSWORD` and the URL before any PostgreSQL tool starts. `test-pgpass.sh` checks the URL parsing; the drill checks the result on the real tools.
 
 ## Scripts
 
@@ -21,7 +21,7 @@ All live under [`ops/backup/`](../../ops/backup/). They need `pg_dump`, `pg_rest
 
 | Variable | Required | Meaning |
 | --- | --- | --- |
-| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, or `PATIKA_BACKUP_DATABASE_URL` | yes | Source database (a read-only role is enough) |
+| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` (or `PGSERVICE`), or `PATIKA_BACKUP_DATABASE_URL` | yes | Source database (a read-only role is enough). The URL is split into the libpq variables (only the `sslmode` parameter is supported) and unset, and its password, or `PGPASSWORD`, goes into a temporary `PGPASSFILE` (umask 077, removed by the exit trap; [`pgpass.sh`](../../ops/backup/pgpass.sh)), so no command line or child environment carries the password |
 | `PATIKA_BACKUP_AGE_RECIPIENT` | yes | age public key (`age1...`); the private identity is kept offline |
 | `PATIKA_BACKUP_DIR` | no, `./backups` | Local directory for the encrypted file and its `.sha256` |
 | `PATIKA_BACKUP_S3_URI` | no | For example `s3://patika-backups/db`; when set, the file and checksum are copied with `aws s3 cp` |
@@ -36,6 +36,7 @@ Schedule: once a day from the host's scheduler or a cron job that can reach the 
 
 ```bash
 PGHOST=restore-host PGUSER=postgres PGPASSWORD=... \
+# or PATIKA_RESTORE_SERVER_URL=postgresql://postgres:...@restore-host (moved into a temporary PGPASSFILE like the above)
 PATIKA_BACKUP_AGE_IDENTITY=/secure/patika-backup.agekey \
 PATIKA_RESTORE_DB=patika_restore \
 bash ops/backup/restore.sh patika-20261026T030151Z.dump.age
@@ -67,7 +68,7 @@ The drill:
 2. Migrates the source with `dotnet ef database update`, the same EF migrations the API applies, and seeds [`drill-seed.sql`](../../ops/backup/drill-seed.sql) (synthetic rows, `example.invalid` addresses).
 3. Fingerprints the source with `smoke.sql`.
 4. Generates a throwaway age key pair and creates a versioned bucket.
-5. Runs `backup.sh` with upload. A 40-day-old local file must be pruned in the same run.
+5. Runs `backup.sh` with upload, connecting through a password-bearing `PATIKA_BACKUP_DATABASE_URL`. A 40-day-old local file must be pruned in the same run. Shims in front of `pg_dump` and `pg_restore` record the arguments and the environment each was started with; the drill fails if the password appears in either, if `PGPASSWORD` was inherited, if no `PGPASSFILE` was set or if a `pgpass` file is left in `/tmp`.
 6. Checks that the output is an age file with no plaintext seed markers in it.
 7. Downloads the dump from the bucket and runs `restore.sh` into the second server against the source fingerprint.
 8. Runs five negative tests that must each fail on their named check.
@@ -82,7 +83,7 @@ The workflow starts these containers itself instead of declaring `services:`, so
 
 ## Not in place
 
-- The Worker `backup.verify` job (hourly at minute 40, [`BackupVerify.cs`](../../src/Patika.Worker/Jobs/Ops/BackupVerify.cs)) lists `Backup:Directory` or the `Backup:S3Bucket`/`S3Prefix` with a list-only key, takes the newest `patika-*.dump.age` by the UTC stamp in its name, and logs a warning and mails `Ops:AlertEmail` (once per UTC day) when it is older than `Backup:MaxAgeHours` (26), when there is none, or when the listing fails. It is off until one of the two locations is configured, and no production location exists (portfolio scope). Covered by `BackupVerifyTests`.
+- The Worker `backup.verify` job (hourly at minute 40, [`BackupVerify.cs`](../../src/Patika.Worker/Jobs/Ops/BackupVerify.cs)) lists `Backup:Directory` or the `Backup:S3Bucket`/`S3Prefix` with a list-only key and takes the newest usable `patika-*.dump.age` by the UTC stamp in its name: usable means non-empty, with the `.sha256` sidecar backup.sh writes, and neither the name nor the object time more than 5 minutes in the future (clock skew), so a planted far-future name cannot keep the check quiet. It logs a warning and mails `Ops:AlertEmail` (once per UTC day) when the newest usable backup is older than `Backup:MaxAgeHours` (26), when there is none, when a newer dump is empty or has no sidecar (`backup is invalid`), or when the listing fails; ignored future-dated objects are named in the log and the alert. It is off until one of the two locations is configured, and no production location exists (portfolio scope). Covered by `BackupVerifyTests`.
 - No production schedule, bucket, token or offline identity exists (portfolio scope). The daily run and the R2 lifecycle rule are owner setup.
 - Not exercised: PITR (`pgBackRest` or a managed provider), restoring the Data Protection key ring together with a dump, and R2 itself (the drill uses MinIO through the same S3 API).
 

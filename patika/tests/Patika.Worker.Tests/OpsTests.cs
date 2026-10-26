@@ -24,14 +24,17 @@ public sealed class BackupVerifyTests : IDisposable
 
     public void Dispose() => Directory.Delete(directory, recursive: true);
 
+    private static string NameAt(DateTimeOffset time) => $"db/patika-{time:yyyyMMdd'T'HHmmss'Z'}.dump.age";
+
+    private static BackupCandidate Good(DateTimeOffset time) => new(NameAt(time), time, 4096, HasChecksum: true);
+
     [Theory]
     [InlineData(25.5, false)]
     [InlineData(26.5, true)]
     public async Task NewestBackupOlderThanTwentySixHoursAlertsOnce(double hours, bool stale)
     {
         var alerts = new RecordingOpsAlerts();
-        var newest = Now.AddHours(-hours);
-        var verifier = Verifier(new FakeCatalog(new BackupObject($"db/patika-{newest:yyyyMMdd'T'HHmmss'Z'}.dump.age", newest)), alerts);
+        var verifier = Verifier(new FakeCatalog([Good(Now.AddHours(-hours))]), alerts);
 
         var status = await verifier.VerifyAsync(Ct);
         await verifier.VerifyAsync(Ct);
@@ -45,21 +48,67 @@ public sealed class BackupVerifyTests : IDisposable
     [Fact]
     public async Task MissingBackupsAndFailedListingsAreStale()
     {
-        var empty = await Verifier(new FakeCatalog(null), new RecordingOpsAlerts()).VerifyAsync(Ct);
+        var empty = await Verifier(new FakeCatalog([]), new RecordingOpsAlerts()).VerifyAsync(Ct);
         Assert.True(empty.Stale);
         Assert.Null(empty.Newest);
 
         var alerts = new RecordingOpsAlerts();
-        var failed = await Verifier(new FakeCatalog(null, fail: true), alerts).VerifyAsync(Ct);
+        var failed = await Verifier(new FakeCatalog([], fail: true), alerts).VerifyAsync(Ct);
         Assert.True(failed.Stale);
         Assert.Contains("listing failed", Assert.Single(alerts.Messages).Subject, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AFarFutureNameCannotKeepAStaleBackupQuiet()
+    {
+        var alerts = new RecordingOpsAlerts();
+        var planted = new BackupCandidate("db/patika-29991231T000000Z.dump.age", Now, 4096, HasChecksum: true);
+        var status = await Verifier(new FakeCatalog([Good(Now.AddHours(-30)), planted]), alerts).VerifyAsync(Ct);
+
+        Assert.True(status.Stale);
+        Assert.Equal(1, status.IgnoredFuture);
+        Assert.Equal(NameAt(Now.AddHours(-30)), status.Newest!.Name);
+        Assert.Contains("1 future-dated objects were ignored", Assert.Single(alerts.Messages).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ClockSkewOfUpToFiveMinutesStillCounts()
+    {
+        var within = await Verifier(new FakeCatalog([Good(Now.AddMinutes(4))]), new RecordingOpsAlerts()).VerifyAsync(Ct);
+        Assert.False(within.Stale);
+        Assert.Equal(0, within.IgnoredFuture);
+
+        // A stamp in the past does not help when the store itself dates the object in the future.
+        var futureObject = new BackupCandidate(NameAt(Now.AddHours(-1)), Now.AddMinutes(6), 4096, HasChecksum: true);
+        var skewed = await Verifier(new FakeCatalog([futureObject]), new RecordingOpsAlerts()).VerifyAsync(Ct);
+        Assert.True(skewed.Stale);
+        Assert.Equal(1, skewed.IgnoredFuture);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(4096, false)]
+    public async Task ANewerEmptyOrUnsummedDumpIsReportedAsInvalid(long size, bool hasChecksum)
+    {
+        var alerts = new RecordingOpsAlerts();
+        var older = Good(Now.AddHours(-20));
+        var broken = new BackupCandidate(NameAt(Now.AddHours(-1)), Now.AddHours(-1), size, hasChecksum);
+
+        var status = await Verifier(new FakeCatalog([older, broken]), alerts).VerifyAsync(Ct);
+
+        Assert.True(status.Stale);
+        Assert.Equal(older.Name, status.Newest!.Name);
+        Assert.Equal(broken.Name, status.Invalid!.Name);
+        var alert = Assert.Single(alerts.Messages);
+        Assert.Contains("backup is invalid", alert.Subject, StringComparison.Ordinal);
+        Assert.Contains("empty or has no .sha256 sidecar", alert.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task UnconfiguredCheckIsOffAndSilent()
     {
         var alerts = new RecordingOpsAlerts();
-        var verifier = new BackupVerifier(Options.Create(new BackupSettings()), new FakeCatalog(null), new FixedClock(Now),
+        var verifier = new BackupVerifier(Options.Create(new BackupSettings()), new FakeCatalog([]), new FixedClock(Now),
             alerts, new BackupAlertState(), NullLogger<BackupVerifier>.Instance);
         var status = await verifier.VerifyAsync(Ct);
         Assert.False(status.Configured);
@@ -67,29 +116,37 @@ public sealed class BackupVerifyTests : IDisposable
     }
 
     [Fact]
-    public async Task DirectoryCatalogUsesTheNameStampAndIgnoresOtherFiles()
+    public async Task DirectoryCatalogReadsSizesAndSidecarsAndIgnoresOtherFiles()
     {
         await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261025T030000Z.dump.age"), "x", Ct);
-        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T030151Z.dump.age"), "x", Ct);
-        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T030151Z.dump.age.sha256"), "x", Ct);
+        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T030151Z.dump.age"), "dump", Ct);
+        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T030151Z.dump.age.sha256"), "sum  name", Ct);
+        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T040000Z.dump.age"), "", Ct);
+        await File.WriteAllTextAsync(Path.Combine(directory, "patika-20261026T040000Z.dump.age.sha256"), "sum  name", Ct);
         await File.WriteAllTextAsync(Path.Combine(directory, ".patika-20261026T110000Z.dump.age.partial"), "x", Ct);
         await File.WriteAllTextAsync(Path.Combine(directory, "notes.txt"), "x", Ct);
 
-        var newest = await new DirectoryBackupCatalog(directory).NewestAsync(Ct);
+        var listed = (await new DirectoryBackupCatalog(directory).ListAsync(Ct)).OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
+        var selection = BackupNames.Select(listed, Now);
 
-        Assert.Equal("patika-20261026T030151Z.dump.age", newest!.Name);
-        Assert.Equal(new DateTimeOffset(2026, 10, 26, 3, 1, 51, TimeSpan.Zero), newest.CreatedAt);
-        Assert.Null(await new DirectoryBackupCatalog(Path.Combine(directory, "missing")).NewestAsync(Ct));
+        Assert.Equal(["patika-20261025T030000Z.dump.age", "patika-20261026T030151Z.dump.age", "patika-20261026T040000Z.dump.age"],
+            listed.Select(c => c.Name));
+        Assert.Equal([false, true, true], listed.Select(c => c.HasChecksum));
+        Assert.Equal([1L, 4L, 0L], listed.Select(c => c.Size));
+        Assert.Equal("patika-20261026T030151Z.dump.age", selection.Newest!.Name);
+        Assert.Equal(new DateTimeOffset(2026, 10, 26, 3, 1, 51, TimeSpan.Zero), selection.Newest.CreatedAt);
+        Assert.Equal("patika-20261026T040000Z.dump.age", selection.Invalid!.Name);
+        Assert.Empty(await new DirectoryBackupCatalog(Path.Combine(directory, "missing")).ListAsync(Ct));
     }
 
     private BackupVerifier Verifier(IBackupCatalog catalog, RecordingOpsAlerts alerts) => new(
         Options.Create(new BackupSettings { Directory = directory }), catalog, new FixedClock(Now), alerts,
         new BackupAlertState(), NullLogger<BackupVerifier>.Instance);
 
-    private sealed class FakeCatalog(BackupObject? newest, bool fail = false) : IBackupCatalog
+    private sealed class FakeCatalog(IReadOnlyList<BackupCandidate> objects, bool fail = false) : IBackupCatalog
     {
-        public Task<BackupObject?> NewestAsync(CancellationToken cancellationToken) =>
-            fail ? throw new IOException("unreachable") : Task.FromResult(newest);
+        public Task<IReadOnlyList<BackupCandidate>> ListAsync(CancellationToken cancellationToken) =>
+            fail ? throw new IOException("unreachable") : Task.FromResult(objects);
     }
 }
 

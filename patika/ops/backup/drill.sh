@@ -88,7 +88,7 @@ step "migrate source with the EF migrations"
 
 step "seed synthetic data and fingerprint the source"
 docker exec -i "${src}" psql -U patika -d patika -v ON_ERROR_STOP=1 -q < "${here}/drill-seed.sql"
-for file in backup.sh restore.sh smoke.sql; do put_file "${here}/${file}" "/drill/${file}"; done
+for file in backup.sh restore.sh pgpass.sh smoke.sql; do put_file "${here}/${file}" "/drill/${file}"; done
 docker exec -i "${src}" psql -U patika -d patika -v ON_ERROR_STOP=1 -X -q -tA -F'|' < "${here}/smoke.sql" > "${here}/.drill-expected.txt"
 trap 'rm -f "${here}/.drill-expected.txt"; cleanup' EXIT
 cat "${here}/.drill-expected.txt"
@@ -108,12 +108,35 @@ in_tools "${aws_env[@]}" "${tools}" "${s3[@]}" s3api put-bucket-versioning --buc
   --versioning-configuration Status=Enabled
 echo "versioning: $(in_tools "${aws_env[@]}" "${tools}" "${s3[@]}" s3api get-bucket-versioning --bucket patika-backups --output text)"
 
-step "backup.sh (with an expired local file to prune)"
+step "password-recording shims for pg_dump and pg_restore"
+# Each shim writes the arguments and the environment it was started with, then runs the real tool, so the
+# drill can prove that the database password reaches neither a command line nor an inherited environment.
+for tool in pg_dump pg_restore; do
+  real="$(in_tools "${tools}" sh -c "command -v ${tool}")"
+  in_tools "${tools}" sh -c "mkdir -p /drill/shim && printf '%s\n' '#!/bin/sh' \
+    '{ printf \"argv:\"; printf \" %s\" \"\$@\"; printf \"\\n\"; env; } >> /drill/${tool}.seen' \
+    'exec ${real} \"\$@\"' > /drill/shim/${tool} && chmod +x /drill/shim/${tool}"
+done
+# shellcheck disable=SC2016 # the container's PATH, expanded inside the container
+shim_path="/drill/shim:$(in_tools "${tools}" sh -c 'echo "$PATH"')"
+check_seen() {
+  local tool="$1" seen
+  seen="$(in_tools "${tools}" cat "/drill/${tool}.seen")" || fail "${tool} shim did not run"
+  grep -qF -- "${db_password}" <<<"${seen}" && fail "the database password reached ${tool}'s arguments or environment"
+  grep -q '^PGPASSWORD=' <<<"${seen}" && fail "${tool} inherited PGPASSWORD"
+  grep -q '^PGPASSFILE=' <<<"${seen}" || fail "${tool} got no PGPASSFILE"
+  if in_tools "${tools}" sh -c 'find /tmp -name pgpass 2>/dev/null | grep -q .'; then fail "a temporary pgpass file was left behind"; fi
+  echo "${tool}: password in neither argv nor environment; PGPASSFILE set; no pgpass file left in /tmp"
+}
+
+step "backup.sh with a password-bearing URL (and an expired local file to prune)"
 in_tools "${tools}" sh -c 'touch -d "40 days ago" /drill/out/patika-20000101T000000Z.dump.age /drill/out/patika-20000101T000000Z.dump.age.sha256'
-in_tools "${aws_env[@]}" -e PGHOST="${src}" -e PGUSER=patika -e PGPASSWORD="${db_password}" -e PGDATABASE=patika \
+in_tools "${aws_env[@]}" -e PATH="${shim_path}" \
+  -e PATIKA_BACKUP_DATABASE_URL="postgresql://patika:${db_password}@${src}:5432/patika?sslmode=disable" \
   -e PATIKA_BACKUP_AGE_RECIPIENT="${recipient}" -e PATIKA_BACKUP_DIR=/drill/out \
   -e PATIKA_BACKUP_S3_URI=s3://patika-backups/db -e PATIKA_BACKUP_S3_ENDPOINT="http://${minio}:9000" \
   "${tools}" bash /drill/backup.sh
+check_seen pg_dump
 in_tools "${tools}" sh -c 'ls /drill/out/patika-20000101T000000Z.dump.age 2>/dev/null' && fail "expired local backup was not pruned"
 name="$(in_tools "${tools}" sh -c 'ls /drill/out | grep -E "^patika-[0-9TZ]+\.dump\.age$" | tail -1')"
 [[ -n "${name}" ]] || fail "backup.sh wrote no dump"
@@ -129,8 +152,9 @@ step "download from the bucket and restore.sh into the second server"
 in_tools "${aws_env[@]}" "${tools}" "${s3[@]}" s3 cp --only-show-errors "s3://patika-backups/db/${name}" "/drill/download/${name}"
 in_tools "${aws_env[@]}" "${tools}" "${s3[@]}" s3 cp --only-show-errors "s3://patika-backups/db/${name}.sha256" "/drill/download/${name}.sha256"
 restore_env=(-e PGHOST="${dst}" -e PGUSER=patika -e PGPASSWORD="${db_password}" -e PATIKA_BACKUP_AGE_IDENTITY=/drill/identity.txt)
-in_tools "${restore_env[@]}" -e PATIKA_RESTORE_EXPECT=/drill/expected.txt "${tools}" bash /drill/restore.sh "/drill/download/${name}" \
-  || fail "restore of the downloaded dump failed"
+in_tools "${restore_env[@]}" -e PATH="${shim_path}" -e PATIKA_RESTORE_EXPECT=/drill/expected.txt "${tools}" \
+  bash /drill/restore.sh "/drill/download/${name}" || fail "restore of the downloaded dump failed"
+check_seen pg_restore
 
 expect_failure() {
   local label="$1" pattern="$2" output status

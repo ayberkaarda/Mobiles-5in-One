@@ -8,8 +8,10 @@
 # and then the spatial smoke queries in smoke.sql. With PATIKA_RESTORE_EXPECT pointing at a file of
 # expected smoke rows (for example taken from the source database), any difference fails the run.
 #
-# Target server: the libpq variables (PGHOST, PGPORT, PGUSER, PGPASSWORD); it must have PostGIS
-# available (a postgis/postgis image). Required: PATIKA_BACKUP_AGE_IDENTITY, the identity file path.
+# Target server: the libpq variables (PGHOST, PGPORT, PGUSER, PGSERVICE) or PATIKA_RESTORE_SERVER_URL (a
+# postgresql:// URI without a database); it must have PostGIS available (a postgis/postgis image). A password
+# in the URL or in PGPASSWORD is moved into a private temporary PGPASSFILE (pgpass.sh) inside the work
+# directory, which the EXIT trap removes; no command line carries it. Required: PATIKA_BACKUP_AGE_IDENTITY, the identity file path.
 # Optional: PATIKA_RESTORE_DB (default patika_restore), PATIKA_RESTORE_EXPECT.
 set -euo pipefail
 
@@ -17,7 +19,11 @@ log() { printf 'restore: %s\n' "$*"; }
 fail() { printf 'restore: FAIL %s\n' "$*" >&2; exit 1; }
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=pgpass.sh
+. "${here}/pgpass.sh"
 input="${1:-}"
+server_url="${PATIKA_RESTORE_SERVER_URL:-}"
+unset PATIKA_RESTORE_SERVER_URL
 identity="${PATIKA_BACKUP_AGE_IDENTITY:-}"
 database="${PATIKA_RESTORE_DB:-patika_restore}"
 expect="${PATIKA_RESTORE_EXPECT:-}"
@@ -42,6 +48,9 @@ umask 077
 work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 plain="${work}/patika.dump"
+pgpass_setup "${server_url}" "${work}" \
+  || fail "PATIKA_RESTORE_SERVER_URL is not a postgresql:// URI this script reads (only the sslmode parameter is supported)"
+unset PGDATABASE
 
 age --decrypt --identity "${identity}" --output "${plain}" "${input}" 2>"${work}/age.err" \
   || fail "age could not decrypt $(basename "${input}"): $(head -c 200 "${work}/age.err")"

@@ -39,28 +39,48 @@ public sealed class BackupSettings
     public bool IsConfigured => UsesS3 || !string.IsNullOrWhiteSpace(Directory);
 }
 
+/// <summary>One listed object: its name, the store's timestamp, its size and whether its <c>.sha256</c> sidecar exists.</summary>
+public sealed record BackupCandidate(string Name, DateTimeOffset? ObjectTime, long Size, bool HasChecksum);
+
 public sealed record BackupObject(string Name, DateTimeOffset CreatedAt);
 
 /// <summary>Lists backup objects; only <c>patika-*.dump.age</c> names count.</summary>
 public interface IBackupCatalog
 {
-    Task<BackupObject?> NewestAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<BackupCandidate>> ListAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// The outcome of choosing the newest backup. <see cref="Newest"/> is the newest usable dump (non-empty, with its
+/// <c>.sha256</c> sidecar, not dated in the future). <see cref="Invalid"/> is a newer dump that fails those checks
+/// (empty or without a sidecar, for example a truncated or planted file). <see cref="IgnoredFuture"/> counts names or
+/// object times more than <see cref="BackupNames.ClockSkew"/> ahead of now, which never count as fresh.
+/// </summary>
+public sealed record BackupSelection(BackupObject? Newest, BackupObject? Invalid, int IgnoredFuture);
 
 public static class BackupNames
 {
     private const string Prefix = "patika-";
     private const string Suffix = ".dump.age";
 
+    /// <summary>Allowed difference between the backup host's clock and the Worker's.</summary>
+    public static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(5);
+
+    public static bool IsDump(string name)
+    {
+        var file = name[(name.LastIndexOf('/') + 1)..];
+        return file.StartsWith(Prefix, StringComparison.Ordinal) && file.EndsWith(Suffix, StringComparison.Ordinal);
+    }
+
     /// <summary>The UTC stamp in <c>patika-20261026T030151Z.dump.age</c>; the object time is the fallback.</summary>
     public static DateTimeOffset? Created(string name, DateTimeOffset? objectTime)
     {
-        var file = name[(name.LastIndexOf('/') + 1)..];
-        if (!file.StartsWith(Prefix, StringComparison.Ordinal) || !file.EndsWith(Suffix, StringComparison.Ordinal))
+        if (!IsDump(name))
         {
             return null;
         }
 
+        var file = name[(name.LastIndexOf('/') + 1)..];
         var stamp = file[Prefix.Length..^Suffix.Length];
         return DateTimeOffset.TryParseExact(stamp, "yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture,
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var created)
@@ -68,23 +88,42 @@ public static class BackupNames
             : objectTime;
     }
 
-    public static BackupObject? Newest(IEnumerable<(string Name, DateTimeOffset? ObjectTime)> objects) => objects
-        .Select(o => Created(o.Name, o.ObjectTime) is { } created ? new BackupObject(o.Name, created) : null)
-        .OfType<BackupObject>()
-        .MaxBy(o => o.CreatedAt);
+    public static BackupSelection Select(IEnumerable<BackupCandidate> candidates, DateTimeOffset now)
+    {
+        var latest = now + ClockSkew;
+        var dated = candidates
+            .Select(c => (Candidate: c, Created: Created(c.Name, c.ObjectTime)))
+            .Where(d => d.Created is not null)
+            .ToList();
+        var future = dated.Count(d => d.Created > latest || d.Candidate.ObjectTime > latest);
+        var current = dated.Where(d => d.Created <= latest && !(d.Candidate.ObjectTime > latest)).ToList();
+        var newest = current.Where(d => d.Candidate.Size > 0 && d.Candidate.HasChecksum)
+            .OrderByDescending(d => d.Created)
+            .Select(d => new BackupObject(d.Candidate.Name, d.Created!.Value))
+            .FirstOrDefault();
+        var invalid = current
+            .Where(d => (d.Candidate.Size <= 0 || !d.Candidate.HasChecksum) && (newest is null || d.Created > newest.CreatedAt))
+            .OrderByDescending(d => d.Created)
+            .Select(d => new BackupObject(d.Candidate.Name, d.Created!.Value))
+            .FirstOrDefault();
+        return new BackupSelection(newest, invalid, future);
+    }
 }
 
 public sealed class DirectoryBackupCatalog(string directory) : IBackupCatalog
 {
-    public Task<BackupObject?> NewestAsync(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<BackupCandidate>> ListAsync(CancellationToken cancellationToken)
     {
         if (!System.IO.Directory.Exists(directory))
         {
-            return Task.FromResult<BackupObject?>(null);
+            return Task.FromResult<IReadOnlyList<BackupCandidate>>([]);
         }
 
-        return Task.FromResult(BackupNames.Newest(new DirectoryInfo(directory).EnumerateFiles("patika-*.dump.age")
-            .Select(f => (f.Name, (DateTimeOffset?)new DateTimeOffset(f.LastWriteTimeUtc, TimeSpan.Zero)))));
+        var files = new DirectoryInfo(directory).EnumerateFiles("patika-*").ToDictionary(f => f.Name, StringComparer.Ordinal);
+        return Task.FromResult<IReadOnlyList<BackupCandidate>>([.. files.Values
+            .Where(f => BackupNames.IsDump(f.Name))
+            .Select(f => new BackupCandidate(f.Name, new DateTimeOffset(f.LastWriteTimeUtc, TimeSpan.Zero), f.Length,
+                files.TryGetValue(f.Name + ".sha256", out var sum) && sum.Length > 0))]);
     }
 }
 
@@ -114,31 +153,42 @@ public sealed class S3BackupCatalog : IBackupCatalog, IDisposable
             });
     }
 
-    public async Task<BackupObject?> NewestAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<BackupCandidate>> ListAsync(CancellationToken cancellationToken)
     {
-        var objects = new List<(string, DateTimeOffset?)>();
+        var objects = new Dictionary<string, S3Object>(StringComparer.Ordinal);
         var request = new ListObjectsV2Request { BucketName = bucket, Prefix = prefix + "patika-" };
         ListObjectsV2Response response;
         do
         {
             response = await client.ListObjectsV2Async(request, cancellationToken);
-            objects.AddRange((response.S3Objects ?? []).Select(o =>
-                (o.Key, o.LastModified is { } modified ? new DateTimeOffset(modified.ToUniversalTime(), TimeSpan.Zero) : (DateTimeOffset?)null)));
+            foreach (var item in response.S3Objects ?? []) objects[item.Key] = item;
             request.ContinuationToken = response.NextContinuationToken;
         }
         while (response.IsTruncated == true);
-        return BackupNames.Newest(objects);
+        return [.. objects.Values
+            .Where(o => BackupNames.IsDump(o.Key))
+            .Select(o => new BackupCandidate(o.Key,
+                o.LastModified is { } modified ? new DateTimeOffset(modified.ToUniversalTime(), TimeSpan.Zero) : null,
+                o.Size ?? 0, objects.TryGetValue(o.Key + ".sha256", out var sum) && (sum.Size ?? 0) > 0))];
     }
 
     public void Dispose() => client.Dispose();
 }
 
-public sealed record BackupStatus(bool Configured, BackupObject? Newest, TimeSpan? Age, bool Stale);
+public sealed record BackupStatus(bool Configured, BackupObject? Newest, TimeSpan? Age, bool Stale)
+{
+    /// <summary>A newer dump than <see cref="BackupStatus.Newest"/> that is empty or has no checksum sidecar.</summary>
+    public BackupObject? Invalid { get; init; }
+
+    public int IgnoredFuture { get; init; }
+}
 
 /// <summary>
-/// <c>backup.verify</c> (security checklist item 20): the newest backup must be younger than
-/// <see cref="BackupSettings.MaxAgeHours"/>. A stale or missing backup, or a listing that fails, writes a warning and
-/// mails <c>Ops:AlertEmail</c> once per UTC day.
+/// <c>backup.verify</c> (security checklist item 20): the newest usable backup must be younger than
+/// <see cref="BackupSettings.MaxAgeHours"/>. Usable means non-empty, with the <c>.sha256</c> sidecar backup.sh writes,
+/// and not dated more than <see cref="BackupNames.ClockSkew"/> in the future (a planted far-future name cannot keep
+/// the check quiet). A stale or missing backup, a newer dump that is empty or has no sidecar, or a listing that fails
+/// writes a warning and mails <c>Ops:AlertEmail</c> once per UTC day.
 /// </summary>
 public sealed class BackupVerifier(
     IOptions<BackupSettings> options, IBackupCatalog catalog, TimeProvider clock, IOpsAlerts alerts,
@@ -153,10 +203,10 @@ public sealed class BackupVerifier(
 
         var now = clock.GetUtcNow();
         var limit = TimeSpan.FromHours(options.Value.MaxAgeHours);
-        BackupObject? newest;
+        BackupSelection selection;
         try
         {
-            newest = await catalog.NewestAsync(cancellationToken);
+            selection = BackupNames.Select(await catalog.ListAsync(cancellationToken), now);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -166,20 +216,35 @@ public sealed class BackupVerifier(
             return new BackupStatus(true, null, null, true);
         }
 
-        var age = newest is null ? (TimeSpan?)null : now - newest.CreatedAt;
-        if (newest is not null && age <= limit)
+        if (selection.IgnoredFuture > 0)
         {
-            logger.LogInformation("backup.verify: newest backup is {AgeHours:0.0} h old", age.Value.TotalHours);
-            return new BackupStatus(true, newest, age, false);
+            logger.LogWarning("backup.verify: ignored {Count} backup objects dated more than {SkewMinutes} minutes in the future",
+                selection.IgnoredFuture, BackupNames.ClockSkew.TotalMinutes);
         }
 
-        var text = newest is null
-            ? string.Create(CultureInfo.InvariantCulture, $"No backup found; the limit is {options.Value.MaxAgeHours} h.")
-            : string.Create(CultureInfo.InvariantCulture,
-                $"The newest backup {newest.Name} is {age!.Value.TotalHours:0.0} h old; the limit is {options.Value.MaxAgeHours} h.");
+        var newest = selection.Newest;
+        var age = newest is null ? (TimeSpan?)null : now - newest.CreatedAt;
+        if (newest is not null && age <= limit && selection.Invalid is null)
+        {
+            logger.LogInformation("backup.verify: newest backup is {AgeHours:0.0} h old", age.Value.TotalHours);
+            return new BackupStatus(true, newest, age, false) { IgnoredFuture = selection.IgnoredFuture };
+        }
+
+        var text = selection.Invalid is { } invalid
+            ? string.Create(CultureInfo.InvariantCulture,
+                $"The newest backup object {invalid.Name} is empty or has no .sha256 sidecar; the newest usable one is {(newest is null ? "missing" : $"{newest.Name}, {age!.Value.TotalHours:0.0} h old")}.")
+            : newest is null
+                ? string.Create(CultureInfo.InvariantCulture, $"No usable backup found; the limit is {options.Value.MaxAgeHours} h.")
+                : string.Create(CultureInfo.InvariantCulture,
+                    $"The newest backup {newest.Name} is {age!.Value.TotalHours:0.0} h old; the limit is {options.Value.MaxAgeHours} h.");
+        if (selection.IgnoredFuture > 0)
+        {
+            text += string.Create(CultureInfo.InvariantCulture, $" {selection.IgnoredFuture} future-dated objects were ignored.");
+        }
+
         logger.LogWarning("backup.verify: {Detail}", text);
-        await AlertAsync(now, "backup.verify: backup is stale", text, cancellationToken);
-        return new BackupStatus(true, newest, age, true);
+        await AlertAsync(now, selection.Invalid is null ? "backup.verify: backup is stale" : "backup.verify: backup is invalid", text, cancellationToken);
+        return new BackupStatus(true, newest, age, true) { Invalid = selection.Invalid, IgnoredFuture = selection.IgnoredFuture };
     }
 
     private Task AlertAsync(DateTimeOffset now, string subject, string text, CancellationToken cancellationToken) =>

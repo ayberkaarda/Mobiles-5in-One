@@ -62,7 +62,8 @@ jobs:
       - name: Shell syntax and shellcheck
         run: |
           for script in ops/backup/*.sh; do bash -n "$script"; done
-          docker run --rm -v "$PWD/ops/backup:/mnt" -w /mnt "$SHELLCHECK_IMAGE" -x -S style backup.sh restore.sh drill.sh
+          docker run --rm -v "$PWD/ops/backup:/mnt" -w /mnt "$SHELLCHECK_IMAGE" -x -S style backup.sh restore.sh drill.sh pgpass.sh test-pgpass.sh
+          bash ops/backup/test-pgpass.sh
 
       - name: Run restore drill
         shell: bash

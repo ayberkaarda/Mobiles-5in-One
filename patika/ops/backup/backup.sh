@@ -7,10 +7,16 @@
 # PATIKA_BACKUP_RETENTION_DAYS are pruned; the bucket keeps its own 30-day lifecycle rule because the
 # upload credential is write-only and cannot delete.
 #
-# Connection: the libpq variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE) or
-# PATIKA_BACKUP_DATABASE_URL (a postgresql:// URI). Required: PATIKA_BACKUP_AGE_RECIPIENT, the age
-# public key (age1...). The private identity stays offline and is only needed by restore.sh.
+# Connection: the libpq variables (PGHOST, PGPORT, PGUSER, PGDATABASE, PGSERVICE) or
+# PATIKA_BACKUP_DATABASE_URL (a postgresql:// URI). The password never reaches a command line: a password in
+# the URL or in PGPASSWORD is moved into a private temporary PGPASSFILE (pgpass.sh) that the EXIT trap removes,
+# and PGPASSWORD is unset before pg_dump starts. Required: PATIKA_BACKUP_AGE_RECIPIENT, the age public key
+# (age1...). The private identity stays offline and is only needed by restore.sh.
 set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=pgpass.sh
+. "${here}/pgpass.sh"
 
 log() { printf 'backup: %s\n' "$*"; }
 fail() { printf 'backup: FAIL %s\n' "$*" >&2; exit 1; }
@@ -21,6 +27,8 @@ retention_days="${PATIKA_BACKUP_RETENTION_DAYS:-30}"
 s3_uri="${PATIKA_BACKUP_S3_URI:-}"
 s3_endpoint="${PATIKA_BACKUP_S3_ENDPOINT:-}"
 database_url="${PATIKA_BACKUP_DATABASE_URL:-}"
+# The URL may carry the password: keep it in this shell only, never in a child's environment.
+unset PATIKA_BACKUP_DATABASE_URL
 
 [[ "${recipient}" == age1* ]] || fail "PATIKA_BACKUP_AGE_RECIPIENT must be an age public key (age1...)"
 [[ "${retention_days}" =~ ^[0-9]+$ ]] || fail "PATIKA_BACKUP_RETENTION_DAYS must be a whole number of days"
@@ -36,12 +44,13 @@ mkdir -p "${out_dir}"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 name="patika-${stamp}.dump.age"
 partial="${out_dir}/.${name}.partial"
-trap 'rm -f "${partial}"' EXIT
+secrets="$(mktemp -d)"
+trap 'rm -f "${partial}"; rm -rf "${secrets}"' EXIT
 
+# Only non-secret connection parameters end up in the environment; the password goes to ${secrets}/pgpass.
+pgpass_setup "${database_url}" "${secrets}" \
+  || fail "PATIKA_BACKUP_DATABASE_URL is not a postgresql:// URI this script reads (only the sslmode parameter is supported)"
 dump_args=(--format=custom --compress=6)
-if [[ -n "${database_url}" ]]; then
-  dump_args+=("--dbname=${database_url}")
-fi
 
 # pipefail makes a pg_dump failure fail the pipeline even though age exits 0 on a short input.
 pg_dump "${dump_args[@]}" | age --encrypt --recipient "${recipient}" --output "${partial}" \
