@@ -47,6 +47,32 @@
             </VerticalStackLayout>
 
             <VerticalStackLayout IsVisible="{Binding IsMember}" Spacing="20">
+                <Border Style="{StaticResource Panel}" BackgroundColor="{StaticResource TekirSoft}" Padding="18,14"
+                        SemanticProperties.Description="Patika Destekçi" AutomationId="DestekciEntry">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenDestekciCommand}" />
+                    </Border.GestureRecognizers>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Supporter}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource NaneSoft}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="2">
+                            <Label FontFamily="NunitoExtraBold" FontSize="{StaticResource FontSizeBody}" TextColor="{StaticResource TekirDeep}"
+                                   Text="Patika Destekçi ol">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding Supporter}" Value="True">
+                                        <Setter Property="Text" Value="Patika Destekçi" />
+                                        <Setter Property="TextColor" Value="{StaticResource NaneDeep}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                            <Label Text="{Binding SubscriptionText}" Style="{StaticResource Small}" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="›" FontSize="28" TextColor="{StaticResource SisDeep}" VerticalOptions="Center" />
+                    </Grid>
+                </Border>
                 <Border Style="{StaticResource Panel}">
                     <VerticalStackLayout Spacing="6">
                         <Label Text="{Binding FeedingCount}" Style="{StaticResource Count}" LineHeight="1" />

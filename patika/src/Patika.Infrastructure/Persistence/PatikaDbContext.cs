@@ -34,7 +34,7 @@ public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbCont
     public DbSet<CarePlace> CarePlaces => Set<CarePlace>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
-    public DbSet<AppStoreNotification> AppStoreNotifications => Set<AppStoreNotification>();
+    public DbSet<PlayNotification> PlayNotifications => Set<PlayNotification>();
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<DeletionRequest> DeletionRequests => Set<DeletionRequest>();
@@ -72,8 +72,10 @@ public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbCont
         ConfigureEntity<UrgentPost>(modelBuilder, "urgent_posts");
         ConfigureEntity<CarePlace>(modelBuilder, "care_places");
         ConfigureEntity<DeviceToken>(modelBuilder, "device_tokens");
+        ConfigureEntity<Patika.Infrastructure.Billing.FakePlayPurchase>(modelBuilder, "fake_play_purchases");
+        modelBuilder.Entity<Patika.Infrastructure.Billing.FakePlayPurchase>().HasIndex(x => x.TokenHash).IsUnique();
         ConfigureEntity<Subscription>(modelBuilder, "subscriptions");
-        ConfigureEntity<AppStoreNotification>(modelBuilder, "app_store_notifications");
+        ConfigureEntity<PlayNotification>(modelBuilder, "play_notifications");
         ConfigureEntity<Report>(modelBuilder, "reports");
         ConfigureEntity<AuditLog>(modelBuilder, "audit_logs");
         ConfigureEntity<DeletionRequest>(modelBuilder, "deletion_requests");
@@ -82,7 +84,7 @@ public class PatikaDbContext(DbContextOptions<PatikaDbContext> options) : DbCont
         modelBuilder.Entity<User>().HasIndex(user => user.AppleSub).IsUnique();
         modelBuilder.Entity<Follow>().HasIndex(follow => new { follow.UserId, follow.AnimalId }).IsUnique();
         modelBuilder.Entity<DeviceToken>().HasIndex(token => token.Token).IsUnique();
-        modelBuilder.Entity<AppStoreNotification>().HasIndex(notification => notification.NotificationUuid).IsUnique();
+        modelBuilder.Entity<PlayNotification>().HasIndex(notification => notification.MessageId).IsUnique();
         ConfigureLocation(modelBuilder.Entity<Station>());
         ConfigureLocation(modelBuilder.Entity<Animal>());
         ConfigureLocation(modelBuilder.Entity<UrgentPost>());

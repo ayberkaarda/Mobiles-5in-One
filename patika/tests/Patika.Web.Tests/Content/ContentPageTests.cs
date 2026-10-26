@@ -143,6 +143,8 @@ public sealed class ContentPageTests
         Assert.Contains("Hesabımı sil", html, StringComparison.Ordinal);
         Assert.Contains("7 gün", html, StringComparison.Ordinal);
         Assert.Contains("[DESTEK E-POSTA ADRESİ]", html, StringComparison.Ordinal);
+        // Deleting the account does not stop a Play subscription, and a purged subscription cannot be reclaimed.
+        Assert.Contains("aboneliğini durdurmaz", System.Net.WebUtility.HtmlDecode(html), StringComparison.Ordinal);
         Assert.DoesNotContain("<input", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<button", html, StringComparison.Ordinal);
     }

@@ -34,7 +34,7 @@ public sealed class PersistenceTests
         [
             "users", "refresh_tokens", "email_tokens", "external_logins", "stations", "feedings",
             "animals", "animal_photos", "sightings", "follows", "adoption_posts", "adoption_requests",
-            "urgent_posts", "care_places", "device_tokens", "subscriptions", "app_store_notifications",
+            "urgent_posts", "care_places", "device_tokens", "subscriptions", "play_notifications", "fake_play_purchases",
             "reports", "audit_logs", "deletion_requests", "uploads", "push_daily_counters", "idempotency_keys",
             "provinces", "districts", "moderation_decisions", "admin_access_tokens", "totp_recovery_codes", "care_place_imports"
         ];

@@ -18,6 +18,10 @@ public static class AccountRegistration
     public static MauiAppBuilder AddUrgentAndAccount(this MauiAppBuilder builder)
     {
         var services = builder.Services;
+        services.AddSingleton<Patika.App.Services.Billing.IBillingPurchaseStore, Patika.App.Pages.Billing.SecureBillingPurchaseStore>();
+        services.AddSingleton<Patika.App.Services.Billing.IBillingClient, Patika.App.Services.Billing.FakeBillingClient>();
+        services.AddTransient<Patika.App.Services.Billing.ISubscriptionApi, Patika.App.Services.Billing.SubscriptionApi>();
+        services.AddTransient<Patika.App.ViewModels.Billing.DestekciViewModel>().AddTransient<Patika.App.Pages.Billing.DestekciPage>();
 
         // Push: FCM when this build carries google-services.json, otherwise a no-op provider.
         services.AddSingleton<IPushTokenProvider>(_ => (IPushTokenProvider?)FcmPushTokenProvider.TryCreate() ?? new NoPushTokenProvider());
@@ -89,6 +93,7 @@ public static class AccountRegistration
     {
         [Routes.UrgentNew] = typeof(UrgentCreatePage),
         [Routes.UrgentSettings] = typeof(UrgentAlertSettingsPage),
+        ["destekci"] = typeof(Patika.App.Pages.Billing.DestekciPage),
         [Routes.Settings] = typeof(AccountSettingsPage),
         [Routes.DeleteAccount] = typeof(AccountDeletionPage),
         [UrgentRoutes.Detail] = typeof(UrgentDetailPage),

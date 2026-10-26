@@ -131,6 +131,7 @@ public static class RateLimitingSetup
                     "external:" + ClientIp(context),
                     _ => KeyedRateLimiter.SlidingOptions(10, TimeSpan.FromMinutes(15), 15)));
 
+            options.AddPolicy("subscriptions", context => RateLimitPartition.GetSlidingWindowLimiter("billing:" + ClientIp(context), _ => KeyedRateLimiter.SlidingOptions(20, TimeSpan.FromMinutes(15), 15)));
             options.AddPolicy(RateLimitPolicies.Verify, context =>
                 RateLimitPartition.GetSlidingWindowLimiter(
                     "verify:" + ClientIp(context),

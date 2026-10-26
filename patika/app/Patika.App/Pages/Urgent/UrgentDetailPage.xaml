@@ -34,6 +34,10 @@
                     <Button Text="Yol tarifi al" Style="{StaticResource QuietButton}" HeightRequest="52" Command="{Binding DirectionsCommand}"
                             SemanticProperties.Hint="Harita uygulamasında çağrının yerini açar" />
 
+                    <Border Style="{StaticResource Chip}" BackgroundColor="{StaticResource NaneSoft}" HorizontalOptions="Start"
+                            IsVisible="{Binding OwnSupporter}" SemanticProperties.Description="Destekçi rozeti">
+                        <Label Text="Destekçi" Style="{StaticResource ChipLabel}" TextColor="{StaticResource NaneDeep}" />
+                    </Border>
                     <Border Style="{StaticResource Panel}" IsVisible="{Binding CanChangeState}">
                         <VerticalStackLayout Spacing="10">
                             <Label Text="Bu çağrı senin" FontFamily="NunitoExtraBold" FontSize="17" SemanticProperties.HeadingLevel="Level2" />

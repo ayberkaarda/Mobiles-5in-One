@@ -14,7 +14,23 @@ x-app: &app
     minio-init:
       condition: service_completed_successfully
 
+x-billing: &billing
+  # Local simulation only (ADR-0010): the fake Play store, allowed explicitly, and the Data Protection key
+  # ring the API encrypts purchase tokens with. Only the API and the Worker mount it; Web keeps its own.
+  Billing__Provider: Fake
+  Billing__AllowFake: "true"
+  # The simulated purchases are test purchases; outside Development they grant only when allowed here.
+  Billing__AllowTestPurchases: "true"
+  DataProtection__KeysPath: /keys
+
 services:
+  billing-keys-init:
+    image: mcr.microsoft.com/dotnet/runtime:10.0
+    user: root
+    volumes:
+      - billing-keys:/keys
+    entrypoint: [sh, -c, 'chown 1654:1654 /keys && chmod 770 /keys']
+    restart: "no"
   postgres:
     image: postgis/postgis:17-3.5
     environment:
@@ -70,8 +86,17 @@ services:
     build:
       context: .
       dockerfile: src/Patika.Api/Dockerfile
+    depends_on:
+      billing-keys-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    volumes:
+      - billing-keys:/keys
     environment:
-      <<: *app-env
+      <<: [*app-env, *billing]
       ASPNETCORE_HTTP_PORTS: "8080"
       # Host the app loads photos and PUTs uploads from; URLs are signed for this host. 10.0.2.2 is the
       # Android emulator's alias for this machine (the Debug app allows cleartext only there).
@@ -102,16 +127,23 @@ services:
   worker:
     <<: *app
     depends_on:
+      billing-keys-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
       api:
         condition: service_healthy
+    volumes:
+      - billing-keys:/keys
+    environment:
+      <<: [*app-env, *billing]
     build:
       context: .
       dockerfile: src/Patika.Worker/Dockerfile
 
 volumes:
+  billing-keys:
   postgres-data:
   minio-data:

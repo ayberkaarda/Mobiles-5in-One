@@ -379,54 +379,6 @@ namespace Patika.Infrastructure.Migrations
                     b.ToTable("animal_photos", (string)null);
                 });
 
-            modelBuilder.Entity("Patika.Domain.Entities.AppStoreNotification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("NotificationUuid")
-                        .HasColumnType("uuid")
-                        .HasColumnName("notification_uuid");
-
-                    b.Property<DateTimeOffset?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("processed_at");
-
-                    b.Property<DateTimeOffset>("ReceivedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("received_at");
-
-                    b.Property<string>("Subtype")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("subtype");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("type");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NotificationUuid")
-                        .IsUnique();
-
-                    b.HasIndex("ProcessedAt", "ReceivedAt");
-
-                    b.ToTable("app_store_notifications", (string)null);
-                });
-
             modelBuilder.Entity("Patika.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -983,6 +935,68 @@ namespace Patika.Infrastructure.Migrations
                     b.ToTable("moderation_decisions", (string)null);
                 });
 
+            modelBuilder.Entity("Patika.Domain.Entities.PlayNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("EventAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("event_at");
+
+                    b.Property<string>("MessageId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payload_hash");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("PurchaseTokenHash")
+                        .HasColumnType("text")
+                        .HasColumnName("purchase_token_hash");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId")
+                        .IsUnique();
+
+                    b.HasIndex("ProcessedAt", "ReceivedAt");
+
+                    b.ToTable("play_notifications", (string)null);
+                });
+
             modelBuilder.Entity("Patika.Domain.Entities.Province", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1293,6 +1307,19 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("Acknowledged")
+                        .HasColumnType("boolean")
+                        .HasColumnName("acknowledged");
+
+                    b.Property<bool>("AutoRenewing")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_renewing");
+
+                    b.Property<string>("BasePlanId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("base_plan_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1306,21 +1333,30 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
-                    b.Property<Guid?>("LastNotificationUuid")
-                        .HasColumnType("uuid")
-                        .HasColumnName("last_notification_uuid");
+                    b.Property<DateTimeOffset>("LastEventAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_event_at");
 
-                    b.Property<string>("OriginalTransactionIdHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("original_transaction_id_hash");
+                    b.Property<string>("LinkedPurchaseTokenHash")
+                        .HasColumnType("text")
+                        .HasColumnName("linked_purchase_token_hash");
 
                     b.Property<string>("ProductId")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("product_id");
+
+                    b.Property<string>("ProtectedPurchaseToken")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("protected_purchase_token");
+
+                    b.Property<string>("PurchaseTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("purchase_token_hash");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1337,10 +1373,10 @@ namespace Patika.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("OriginalTransactionIdHash", "Environment")
+                    b.HasIndex("PurchaseTokenHash")
                         .IsUnique();
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("Status", "ExpiresAt");
 
@@ -1650,6 +1686,44 @@ namespace Patika.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("ck_users_urgent_radius", "urgent_radius_m BETWEEN 500 AND 2000");
                         });
+                });
+
+            modelBuilder.Entity("Patika.Infrastructure.Billing.FakePlayPurchase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("package_name");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("response_json");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("fake_play_purchases", (string)null);
                 });
 
             modelBuilder.Entity("Patika.Infrastructure.Persistence.Configurations.IdempotencyKey", b =>

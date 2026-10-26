@@ -1,10 +1,12 @@
 using Patika.Infrastructure;
+using Patika.Infrastructure.Billing;
 using Patika.Worker.Jobs;
 using Patika.Worker.Jobs.Accounts;
 using Patika.Worker.Jobs.Adoptions;
 using Patika.Worker.Jobs.Maintenance;
 using Patika.Worker.Jobs.Media;
 using Patika.Worker.Jobs.Push;
+using Patika.Worker.Jobs.Subscriptions;
 using Quartz;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -13,6 +15,8 @@ builder.Services.AddPatikaInfrastructure(builder.Configuration.GetConnectionStri
 builder.Services.AddMediaServices(builder.Configuration);
 builder.Services.AddPushServices(builder.Configuration);
 builder.Services.AddAccountJobServices();
+builder.Services.AddPlayBilling(builder.Configuration, builder.Environment.IsDevelopment(), builder.Environment.IsProduction());
+builder.Services.AddScoped<SubscriptionProcessor>();
 builder.Services.AddAdoptionJobServices();
 builder.Services.AddMaintenanceJobServices();
 builder.Services.AddQuartz(options =>
@@ -31,6 +35,7 @@ builder.Services.AddQuartz(options =>
     options.AddAccountJobs();
     options.AddAdoptionJobs();
     options.AddMaintenanceJobs();
+    options.AddSubscriptionJobs();
 });
 builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 

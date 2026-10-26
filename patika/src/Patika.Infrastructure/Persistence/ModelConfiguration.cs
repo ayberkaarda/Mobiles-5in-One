@@ -210,20 +210,20 @@ public sealed class SubscriptionConfiguration : IEntityTypeConfiguration<Subscri
 {
     public void Configure(EntityTypeBuilder<Subscription> entity)
     {
-        entity.Property(row => row.OriginalTransactionIdHash).HasMaxLength(64);
+        entity.Property(row => row.PurchaseTokenHash).HasMaxLength(64);
         entity.Property(row => row.ProductId).HasMaxLength(255);
-        entity.HasIndex(row => new { row.OriginalTransactionIdHash, row.Environment }).IsUnique();
+        entity.HasIndex(row => row.PurchaseTokenHash).IsUnique();
         entity.HasIndex(row => new { row.Status, row.ExpiresAt });
         entity.HasOne<User>().WithMany().HasForeignKey(row => row.UserId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
-public sealed class AppStoreNotificationConfiguration : IEntityTypeConfiguration<AppStoreNotification>
+public sealed class PlayNotificationConfiguration : IEntityTypeConfiguration<PlayNotification>
 {
-    public void Configure(EntityTypeBuilder<AppStoreNotification> entity)
+    public void Configure(EntityTypeBuilder<PlayNotification> entity)
     {
         entity.Property(row => row.Type).HasMaxLength(100);
-        entity.Property(row => row.Subtype).HasMaxLength(100);
+        entity.Property(row => row.MessageId).HasMaxLength(255);
         entity.HasIndex(row => new { row.ProcessedAt, row.ReceivedAt });
     }
 }
