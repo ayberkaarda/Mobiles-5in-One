@@ -2,7 +2,10 @@ English | [Türkçe](README.tr.md)
 
 # İnecek Var
 
-Tagline (tr): "Dolmuş nereden geçer? Mahalle bilir."
+[![Inecek Var CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-ci.yml)
+[![Inecek Var Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-security.yml)
+
+"Dolmuş nereden geçer? Mahalle bilir."
 
 <img src="docs/screenshots/route-sign/web-home.png" alt="Inecek Var web home page: the name, the red from-to board, the street scene with the dolmuş, the labelled sample city and the three steps on a route line, local build, sample data" width="100%">
 
@@ -12,7 +15,39 @@ Web home page from a local build and Android screens from the `Pixel_8` emulator
 
 ## Product summary
 
-İnecek Var is a crowdsourced route map for dolmuş, minibus and servis lines in Turkish cities, where official data is often missing. Passengers can look up lines, stops, fares and hours, plan A to B trips with transfers, and download offline city packs. Neighbourhood contributors record rides as GPS traces and propose or edit lines, and moderators review and publish them. The name is the phrase passengers shout to stop a dolmuş. The tone is street-smart, playful and clear.
+İnecek Var is a crowdsourced route map for dolmuş, minibus and servis lines in Turkish cities, where
+official data is often missing. Passengers look up lines, stops, fares and hours, plan A to B trips
+with transfers, and download offline city packs; neighbourhood contributors record rides as GPS
+traces and propose or edit lines, and moderators review and publish them. The name is the phrase
+passengers shout to stop a dolmuş. The tone is street-smart, playful and clear. The project is an
+Nx workspace (Ionic and Angular app and PWA, Angular SSR web) with a FastAPI backend.
+
+## Status
+
+Portfolio project. All seven planned phases (0 to 6) are merged to `main` (pull requests #118 to
+#128): foundation; data model, dual authentication and the security baseline; domain, moderation,
+traces, planner, city packs, export and account deletion; the Ionic app and PWA; the Angular SSR
+SEO and GEO pages with the moderation and admin UI behind a TOTP step-up; RevenueCat and Resend
+webhooks with entitlements and nightly jobs; hardening and release readiness. After the phases came
+a test flake fix, the gallery and web home page, the visual redesign (ADR-0059) and its route-sign
+restyle (#138).
+
+| Area                                          | State                                                                                                                                         |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| API, web, app and PWA, moderation, admin      | Real code; web e2e and mobile e2e suites run against the real local stack                                                                    |
+| Android                                       | Capacitor shell, run on the `Pixel_8` emulator for the screenshots; the Android CI job is manual                                             |
+| Plus subscription (RevenueCat), email (Resend) | Webhooks, reconciliation and the suppression list tested with fixtures; no real accounts, no store purchase                                 |
+| Maps                                          | MapLibre with PMTiles; no hosted basemap is configured, so the app and the web lead with the stop diagram (ADR-0059)                          |
+| Backups                                       | Encrypted backups and the `Inecek Var restore drill` workflow (last run on GitHub Actions passed on 2026-10-20); no R2 bucket                 |
+| Hosting, domain, TLS and HSTS preload, Sentry, iOS | Not set up; the production Caddyfile is not exercised                                                                                   |
+| Legal texts                                   | Samples, with the open items in [`docs/release/legal-open-items.md`](docs/release/legal-open-items.md)                                        |
+
+The final verification matrix ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+has 15 rows done, 8 partial and 0 not started; the partial rows need hosting, the domain and TLS,
+R2, provider accounts, GitHub runs of the workflows, iOS and owner decisions. The phase 6 gate
+([ADR-0058](docs/adr/0058-phase-6-gate.md)) recorded 1195 API tests passed with 0 skipped; after the
+redesign ([ADR-0059](docs/adr/0059-visual-redesign.md)) the web e2e suite reads 65 passed and the
+mobile e2e suite 11 passed on the real stack.
 
 ## MVP features
 
@@ -28,63 +63,82 @@ Web home page from a local build and Android screens from the `Pixel_8` emulator
 - In-app and web account deletion; contributions stay under the licence, anonymized.
 - Website: city hubs, line and stop pages, guides, legal pages and a moderation/admin UI.
 
-## Out of scope
+Out of scope: real-time vehicle tracking, ticketing, ride-hailing, official-data claims, ads,
+driver accounts, push notifications (planned for v2), routing across cities.
 
-- Real-time vehicle tracking
-- Ticketing
-- Ride-hailing
-- Official-data claims
-- Ads
-- Driver accounts
-- Push notifications (planned for v2)
-- Routing across cities
+## Technology stack
 
-## Planned technology stack
+| Layer            | Technology                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Mobile and PWA   | Ionic 9.0.7, Angular 22.2, Capacitor 8.5 (Android shell)                            |
+| Web              | Angular SSR 22.2 on Express                                                         |
+| Maps             | MapLibre GL JS 6.11 with PMTiles 4.5; server-rendered SVG route maps on public pages |
+| Monorepo tooling | Nx 23.3, pnpm 12, Vitest, Playwright, ESLint, Prettier                              |
+| Backend API      | FastAPI 0.143 on Python 3.12, Pydantic 2.14                                         |
+| Database         | PostgreSQL 16 with PostGIS 3.5, SQLAlchemy 2.1, Alembic 1.20                        |
+| Cache and jobs   | Redis 7.4, arq 0.25 workers                                                         |
+| Object storage   | S3-compatible (MinIO locally, Cloudflare R2 planned)                                |
+| Subscriptions    | RevenueCat (native only)                                                            |
 
-| Layer | Technology |
-|---|---|
-| Mobile and PWA | Ionic 9, Angular, Capacitor |
-| Web | Angular SSR |
-| Maps | MapLibre GL JS with PMTiles |
-| Monorepo tooling | Nx, pnpm |
-| Backend API | FastAPI (Python 3.12+), Pydantic v2 |
-| Database | PostgreSQL with PostGIS, SQLAlchemy 2, Alembic |
-| Cache and jobs | Redis, arq workers |
-| Object storage | S3-compatible (Cloudflare R2) |
-| Subscriptions | RevenueCat (native only) |
+Resolved versions and the reasoning are in [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
 
-## Planned architecture
+## Architecture
 
-An Nx workspace with `apps/mobile` (Ionic and Angular, also served as a PWA), `apps/web` (Angular SSR) and shared `libs/` for UI, domain types and the API client, plus a separate Python `api/` project. The route planner builds a per-city graph in memory on publish and caches results. Web and PWA clients use a cookie session, while native clients use bearer tokens, behind one auth interface. Public line, stop and city pages are server-rendered, with route maps drawn as SVG so they need no client-side map code. Raw GPS traces are private to their owner and moderators and are deleted 30 days after the derived line version is published.
-
-## Status
-
-Phases 0 to 6 are built and merged into `main` (pull requests #118, #119, #120 and #121, #123, #126, #127 and #128), followed by a test flake fix (#129), the gallery and web home page (#130) and the visual redesign of the app and the web (#131, ADR-0059). Phase 6 (hardening and release readiness) added: the attack suite and the stored-XSS sweep, ZAP and MobSF scans, dependency audits and static scans in a security workflow, encrypted backups with a weekly restore drill and tamper checks, cost guards with the planner degrade mode and the log scrub, the store copy, privacy labels and release checklist, the history-purge runbook (not executed), the web account deletion panel and the first-run bootstrap, and the independent review fixes. The gate is `docs/adr/0058-phase-6-gate.md`, the final report `docs/handoffs/final-report.md` and the final matrix `docs/security/verification-matrix.md`: 15 of 23 items done, 8 partial, 0 not started, so not 23 of 23; the partial rows need hosting, the domain and TLS, R2, provider accounts, GitHub runs of the workflows, iOS and owner decisions. The phase 6 gate recorded API 1195 passed (0 skipped), web e2e 64 and mobile e2e 10 on the real stack, clean scans and audits and a restore drill with six negative runs; after the redesign the workspace tests read domain 4, data-access 110, ui 55, web 801 and mobile 475, with web e2e 65 and mobile e2e 11 (ADR-0059). Not exercised: real hosting, TLS and HSTS preload, R2, RevenueCat, Resend and Sentry accounts, iOS and macOS, the production Caddyfile, legal texts and owner decisions. The final report is `docs/handoffs/final-report.md`. A static web demo snapshot is published at https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/. Phase 5 (API only), pull request #127: the RevenueCat webhook with nightly REST reconciliation and server-side Plus entitlement for packs beyond the first city, RevenueCat subscriber deletion at account erasure, the Resend webhook with a hashed suppression list that the mailer consults, and idempotent nightly jobs with a dry-run switch. The gate is `docs/adr/0050-webhooks-and-entitlements.md` and the report `docs/handoffs/phase-5-report.md`. Not exercised in phase 5: real RevenueCat and Resend accounts and payloads signed by them, a store purchase, cron firing over real time. Phase 4 is merged into `main` (pull request #126): the Angular SSR web with city, line, stop and route pages and server-rendered SVG maps, five guides, FAQ, open-data and legal pages, sitemaps, robots, JSON-LD, SVG Open Graph images, `llms.txt`, app association files, and the client-only `/admin` moderation and admin area with a TOTP step-up (API side: TOTP enrolment, session-bound step-up, admin routes). The phase 4 gate is `docs/adr/0042-phase-4-gate.md` and the report `docs/handoffs/phase-4-report.md`: moderation e2e green against the real API, JSON-LD valid on 8 page types, Lighthouse 100 in performance, accessibility and best practices on 5 pages, SEO 100 on 2 pages and 66 on the 3 sample-city pages, which are `noindex` by design. Not exercised in phase 4: real TLS and HSTS preload, Search Console and Rich Results, iOS universal links, a real authenticator app, hosted Caddy, a CDN. Phases 0 to 3 are built: the API core with dual auth (phase 1), domain, moderation, planner, packs, exports and deletion (phase 2), and the Ionic app and PWA (phase 3: search and map, line and stop pages, planner, offline packs, sign-in and contributor tools, favourites, settings with account deletion, the Plus paywall behind a store adapter, app links, Turkish and English). The phase 3 gate is `docs/adr/0036-phase-3-gate.md` and the report `docs/handoffs/phase-3-report.md`. Not exercised in phase 3: iOS (no macOS host), a real RevenueCat account and store purchase, verified app links (no public `assetlinks.json` yet), the app against a running API on the emulator, a real PMTiles basemap. Phase 0 (foundation) set up the base. The folder holds the Nx workspace with `apps/mobile` (Ionic 9 on Capacitor, Android project committed), `apps/web` (Angular SSR) and the `libs/` ui, domain and data-access libraries; the FastAPI project in `api/` with a `/v1/health` endpoint and a PostGIS connectivity test; the local Docker Compose stack (PostGIS, Redis, MinIO, Mailpit, Caddy); the brand tokens and logo set; the ADRs, the env reference and the security drafts in `docs/`; and the `inecekvar-ci.yml` workflow. Resolved versions and the Phase 0 evidence are in `docs/adr/0001-stack-and-versions.md`.
-
-Not exercised so far: iOS (no macOS host), the CI workflow on GitHub Actions (the branch is not pushed), the lefthook hooks themselves, the APK on an emulator or device, the dev servers behind Caddy, and wiring the brand icons into the SSR favicon and the Android launcher.
+An Nx workspace with `apps/mobile` (Ionic and Angular, also served as a PWA), `apps/web` (Angular
+SSR) and shared `libs/` for UI, domain types and the API client, plus a separate Python `api/`
+project. The route planner builds a per-city graph in memory on publish and caches results. Web and
+PWA clients use a cookie session, while native clients use bearer tokens, behind one auth
+interface. Public line, stop and city pages are server-rendered, with route maps drawn as SVG so
+they need no client-side map code. Raw GPS traces are private to their owner and moderators and are
+deleted 30 days after the derived line version is published.
 
 ## Getting started
 
-The product and technical specification lives in this folder as `05-inecekvar-ionic-angular.md`. Requirements: Node 22, pnpm 12, uv, Docker; JDK 21 for the Android build. Run the Phase 0 gates as in ADR-0001, from `inecekvar/`:
+Requirements: Node 22, pnpm 12, uv, Docker; JDK 21 for the Android build. From `inecekvar/`
+(Compose runs only the data and proxy services: PostGIS, Redis, MinIO, Mailpit, Caddy):
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm exec prettier --check .
-pnpm nx run-many -t lint test build --skip-nx-cache
 docker compose up -d
+pnpm exec prettier --check .
+pnpm nx run-many -t lint test build
+pnpm nx serve web        # or: pnpm nx serve mobile
 ```
 
-and from `inecekvar/api/`:
+From `inecekvar/api/`:
 
 ```sh
 uv sync --locked
-uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
+uv run alembic upgrade head
+uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests alembic
 uv run pytest
 uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1
 ```
 
-Compose runs only the data and proxy services; the API and the dev servers run on the host. Ports and environment keys are listed in `docs/ops/env.md`.
+Caddy proxies `/api/*` to port 57800; ports, environment keys and the first-run bootstrap
+(`python -m app.ops.bootstrap`) are in [`docs/ops/env.md`](docs/ops/env.md). Contributor rules are
+in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## CI
+
+- `Inecek Var CI`: workspace (brand tokens, Prettier, `nx run-many -t lint test build`), API (ruff,
+  mypy, pytest, OpenAPI contract), checks (Compose validation, full-history gitleaks) and a manual
+  Android debug build.
+- `Inecek Var Security`: full-history gitleaks, `pnpm audit` and `pip-audit` (high and critical),
+  OSV scan of both lockfiles, Bandit, Semgrep project rules and a CycloneDX SBOM.
+- `Inecek Var restore drill`: an encrypted backup restored into a fresh PostGIS 16 with MinIO and age.
+
+## Documentation
+
+- Product and technical specification: [`05-inecekvar-ionic-angular.md`](05-inecekvar-ionic-angular.md)
+- Architecture decisions: [`docs/adr/`](docs/adr/); phase gates in ADR-0036, ADR-0042, ADR-0050 and ADR-0058
+- Reports: [final report](docs/handoffs/final-report.md) and the [phase reports](docs/handoffs/)
+- API: [`docs/api/openapi.json`](docs/api/openapi.json)
+- Security: [verification matrix](docs/security/verification-matrix.md), [threat model](docs/security/threat-model.md), [authorization matrix](docs/security/authorization-matrix.md), [attack report](docs/security/attack-report.md), [pentest report](docs/security/pentest-report.md), [XSS sweep](docs/security/xss-sweep.md), [scan reports](docs/security/scan-reports/), [dependency audit](docs/security/dependency-audit.md), [history-purge runbook](docs/security/history-purge-runbook.md)
+- Operations: [environment](docs/ops/env.md), [background jobs](docs/ops/background-jobs.md), [backup and restore](docs/ops/backup-restore.md), [cost alerts](docs/ops/cost-alerts.md), [logging](docs/ops/logging.md)
+- Release: [release checklist](docs/release/release-checklist.md), [store listing](docs/release/store-listing.en.md), [privacy labels](docs/release/privacy-labels.md), [signing](docs/release/signing.md), [PMTiles recipe](docs/release/pmtiles-recipe.md)
+- SEO and GEO: [checklist](docs/seo/checklist.md), [ASO](docs/seo/aso.md)
 
 ## License
 
-This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).
+This project is licensed under the MIT License. See [LICENSE](../LICENSE).

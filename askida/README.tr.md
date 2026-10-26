@@ -2,11 +2,43 @@
 
 # Askıda
 
-Slogan: "İyilik askıda kalmasın."
+[![Askida CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-ci.yml)
+[![Askida Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-security.yml)
 
-## Ürün özeti
+"İyilik askıda kalmasın."
 
-Askıda, Türkiye'deki "askıda ekmek" geleneğinden doğan bir iyilik ağı. Bağışçılar ekmek, çorba, yemek ya da kırtasiye gibi gündelik ihtiyaçları doğrulanmış mahalle esnafında önceden öder; ihtiyacı olan kişi hesap açmadan, anonim kalarak tek kullanımlık bir kodla askıdan alır. Tek bir mobil uygulama üç modda çalışır: bağışçı, esnaf ve alan. Dil sıcak, saygılı ve sadedir; acıma ya da hayır afişi duygusallığı yoktur.
+Askıda, Türkiye'deki "askıda ekmek" geleneğinden doğan bir iyilik ağı. Bağışçılar ekmek, çorba,
+yemek ya da kırtasiye gibi gündelik ihtiyaçları doğrulanmış mahalle esnafında önceden öder;
+ihtiyacı olan kişi hesap açmadan, anonim kalarak tek kullanımlık bir kodla askıdan alır. Tek bir
+Flutter uygulaması üç modda çalışır (bağışçı, esnaf, alan); Laravel sunucusu API'yi, herkese açık
+web sitesini ve yönetim panelini sunar. Dil sıcak, saygılı ve sadedir; acındırma yoktur. Herkese
+açık sayfaların statik bir [web demosu](https://ayberkaarda.github.io/Mobiles-5in-One/askida/)
+GitHub Pages'te yayında; orada giriş, formlar ve ödeme çalışmaz.
+
+## Durum
+
+Portföy projesi. Planlanan yedi fazın hepsi (0 ile 6) `main`'e birleşti: temel kurulum; veri
+katmanı, kimlik doğrulama ve güvenlik temeli; dükkânlar, hesaplar ve askılar; ödemeler, webhook'lar,
+hakedişler ve yönetim paneli; Flutter uygulaması; SEO ve GEO ile herkese açık web; sertleştirme ve
+yayına hazırlık (saldırı testleri, kalıcı XSS taraması, ZAP ve MobSF taramaları, bağımlılık
+denetimleri, geri yükleme tatbikatlı şifreli yedekler, maliyet korumaları, yayın ve mağaza
+dokümanları).
+
+| Alan                                                                 | Durum                                                                                                                                                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sunucu, API, web sayfaları, Filament paneli, kuyruklar, veritabanı   | Gerçek kod; yerelde Docker'da ve test paketlerinde çalışıyor                                                                                                                  |
+| Flutter uygulaması                                                   | Gerçek uygulama; yerel yığına karşı `Pixel_8` Android emülatöründe çalıştırıldı. iOS derlenmedi (macOS gerekir)                                                               |
+| Ödemeler (iyzico)                                                    | Gerçek iyzico adaptörü, kaydedilmiş sağlayıcı yanıtlarıyla test edildi; yerel çalıştırmalar `PAYMENT_PROVIDER=fake` ve sahte bir ödeme sayfası kullanır; üye işyeri hesabı yok |
+| Cihaz doğrulama (Play Integrity, DeviceCheck)                        | Platform channel kodu var; gerçek bir doğrulama çalıştırılmadı                                                                                                                |
+| Yedekler                                                             | Şifreli veritabanı arşivleri ve `Askida restore drill` iş akışı (GitHub Actions'taki son koşu 2026-10-19'da geçti); üretim bucket'ı yok                                       |
+| Barındırma, alan adı, TLS, mağaza kaydı, hata izleme                 | Kurulmadı                                                                                                                                                                     |
+| Hukuki metinler                                                      | Örnek metinler, öyle etiketli                                                                                                                                                 |
+
+Nihai doğrulama matrisi ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+23 maddenin 14'ünü tamam, 9'unu kısmi olarak notlandırır, her birinin gerekçesiyle; kısmi olanlar
+(geçmiş temizliği, HTTPS, sırların hash'lenmesi, temiz loglar, webhook imzaları, paket denetimi,
+yedekler, harcama uyarıları, saldırgan gözüyle test) burada bulunmayan sistemlere bağlı. Aynı
+doküman 2985 sunucu testinin ve 591 Flutter testinin geçtiğini kaydeder.
 
 ## MVP özellikleri
 
@@ -22,35 +54,9 @@ Askıda, Türkiye'deki "askıda ekmek" geleneğinden doğan bir iyilik ağı. Ba
 - Uygulama içinden ve web'den hesap silme; alan kişi için anonim "Verilerimi sıfırla".
 - Web sitesi: tanıtım ve nasıl çalışır sayfaları, doğrulanmış dükkân rehberi, etki sayfası, rehber yazıları, yasal sayfalar ve yönetim paneli.
 
-## Kapsam dışı
-
-- Kişilere nakit bağış
-- Alan kişi için hesap veya profil
-- Sohbet
-- Alan kişilerin puanlanması
-- Eczane ve tıbbi ürünler
-- Çoklu para birimi
-- Teslimat
-- Reklam
-- Kurumsal bağışçı fatura portalı (v2'de düşünülüyor)
-
-## Teknoloji yığını
-
-| Katman             | Teknoloji                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Mobil uygulama     | Flutter 3.47.6 ve Dart 3.13.5 (iOS ve Android), Riverpod 3.4.3, go_router 18.0.2; drift sonraki bir fazda eklenecek |
-| Backend API        | PHP 8.3.35 üzerinde Laravel 13.34.0 (yalnızca Docker'da), Sanctum 4.3.3                                             |
-| Yönetim paneli     | Filament 3.3.55                                                                                                     |
-| Veritabanı         | PostgreSQL 16.9 + PostGIS 3.5.2                                                                                     |
-| Kuyruk ve önbellek | Redis 7.4.11, Horizon 5.50.0                                                                                        |
-| Nesne depolama     | S3 uyumlu (Cloudflare R2)                                                                                           |
-| Ödeme              | iyzico pazaryeri ödemeleri (Checkout Form ve alt üye işyeri)                                                        |
-| Web                | Laravel Blade, sunucu tarafı render                                                                                 |
-| Cihaz doğrulama    | Play Integrity (Android) ve DeviceCheck (iOS), platform channel ile                                                 |
-
-## Mimari
-
-İki ana kökü olan bir monorepo: Flutter istemcisi için `app/`, Laravel backend için `server/`; yanında `brand/` ve `docs/`. Flutter uygulaması tek kod tabanında bağışçı, esnaf ve alan modlarını barındırır. Backend, `/api/v1` altında sürümlü bir JSON API sunar, Blade web sitesini render eder ve Filament yönetim panelini barındırır. Para, TRY cinsinden kuruş (tam sayı) olarak tutulur; platform parayı elinde tutmaz, ödeme bağışçıdan ödeme sağlayıcı üzerinden esnafa akar. Alan kişinin anonimliği temel bir ilkedir: hesap yok, kimliği bağışçıya ya da esnafa gösterilmez, kesin konumu saklanmaz.
+Kapsam dışı: kişilere nakit bağış, alan kişi için hesap veya profil, sohbet, alan kişilerin
+puanlanması, eczane ve tıbbi ürünler, çoklu para birimi, teslimat, reklam, kurumsal bağışçı fatura
+portalı (v2'de düşünülüyor).
 
 ## Ekran görüntüleri
 
@@ -84,40 +90,78 @@ sürümde hata gösterdiği için alınmadı. Açıklamalar, çekim ayrıntılar
 | --- | --- | --- | --- | --- |
 | <img src="docs/release/screenshots/20-donor-settings.png" width="160" alt="Giriş yapmış bağışçının ayarları"> | <img src="docs/release/screenshots/21-donor-delete-account.png" width="160" alt="Hesap silme ekranı"> | <img src="docs/release/screenshots/22-merchant-home-dark.png" width="160" alt="Koyu görünümde esnaf paneli"> | <img src="docs/release/screenshots/23-merchant-redemptions-dark.png" width="160" alt="Koyu görünümde verilenler kaydı"> | <img src="docs/release/screenshots/24-merchant-catalog-en.png" width="160" alt="İngilizce arayüzde ürünler ekranı"> |
 
-## Durum
+## Teknoloji yığını
 
-Phase 0 ile Phase 6 arası bir portfolyo projesi olarak uygulandı: Laravel sunucusu (kimlik doğrulama,
-dükkânlar ve doğrulama, askı ve kullanım, sahte sağlayıcıyla ödemeler, aktarımlar, yönetim paneli,
-herkese açık web sayfaları, açık veri, yedekler, maliyet korumaları), üç modlu Flutter uygulaması
-(Android emülatöründe doğrulandı, iOS için macOS gerektiğinden derlenmedi) ve güvenlik çalışmaları
-(saldırı paketi, kalıcı XSS taraması, ZAP ve MobSF taramaları, bağımlılık denetimleri). Nihai doğrulama
-matrisi 23 maddenin 14'ünü tamam, 9'unu kısmi olarak notlandırıyor, her birinin gerekçesiyle:
-[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Hiçbir şey yayınlanmadı:
-alan adı, mağaza kaydı veya ödeme sağlayıcı hesabı yok, hukuki metinler örnek olarak etiketli.
-Çözümlenen sürümler [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md)
-dosyasında kayıtlı.
+| Katman             | Teknoloji                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| Mobil uygulama     | Flutter 3.47.6 ve Dart 3.13.5, Riverpod 3.4.3, go_router 18.0.2, drift 2.35.1        |
+| Backend API        | PHP 8.3 üzerinde Laravel 13.34.0 (yalnızca Docker'da), Sanctum 4.3.3                 |
+| Yönetim paneli     | Filament 3.3.55                                                                      |
+| Veritabanı         | PostgreSQL 16.9 + PostGIS 3.5.2                                                      |
+| Kuyruk ve önbellek | Redis 7.4.11, Horizon 5.50.0                                                         |
+| Nesne depolama     | S3 uyumlu (yerelde MinIO, Cloudflare R2 planlandı)                                   |
+| Ödeme              | iyzico pazaryeri ödemeleri (Checkout Form ve alt üye işyeri), yerelde sahte sağlayıcı |
+| Web                | Laravel Blade, sunucu tarafı render                                                  |
+| Cihaz doğrulama    | Play Integrity (Android) ve DeviceCheck (iOS), platform channel ile                  |
+
+Çözümlenen sürümler ve gerekçeleri [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında.
+
+## Mimari
+
+İki ana kök: Flutter istemcisi için `app/`, Laravel backend için `server/`; yanında `brand/` ve
+`docs/`. Backend, `/api/v1` altında sürümlü bir JSON API sunar, Blade web sitesini render eder ve
+Filament yönetim panelini barındırır. Para, TRY cinsinden kuruş (tam sayı) olarak tutulur; platform
+parayı elinde tutmaz, ödeme bağışçıdan ödeme sağlayıcı üzerinden esnafa akar. Alan kişinin
+anonimliği temel bir ilkedir: hesap yok, kimliği bağışçıya ya da esnafa gösterilmez, kesin konumu
+saklanmaz.
 
 ## Kurulum
 
-Ürün ve teknik tanım bu klasörde `04-askida-flutter.md` dosyasında duruyor. Katkı kuralları ve tüm
-komutlar [`CONTRIBUTING.md`](CONTRIBUTING.md) dosyasında.
-
-Sunucu (Docker gerekir; PHP yalnızca konteynerlerin içinde çalışır), bu klasörden:
+Sunucu (Docker gerekir; PHP yalnızca konteynerlerin içinde çalışır), bu klasörden. İlk açılışta
+sunucu konteyneri Composer paketlerini kurar ve `.env.example` dosyasından `server/.env` oluşturur:
 
 ```sh
 docker compose up -d --wait
+docker compose exec server php artisan migrate --seed
 docker compose exec server php artisan test
 ```
 
-Uygulama (Flutter SDK gerekir), `app/` içinden:
+Ardından web http://localhost:58080, Mailpit http://localhost:58025 adresinde çalışır.
+
+Uygulama (Flutter SDK gerekir), `app/` içinden. drift kodu `build_runner` ile oluşturulur, depoda tutulmaz:
 
 ```sh
 flutter pub get
+dart run build_runner build --delete-conflicting-outputs
 flutter analyze
 flutter test
-dart format --set-exit-if-changed .
+flutter build apk --debug --flavor dev --dart-define-from-file=env/example.json
 ```
+
+Katkı kuralları ve kalan komutlar (PHPStan, Pint, Horizon) [`CONTRIBUTING.md`](CONTRIBUTING.md)
+dosyasında; ortam değişkenleri [`docs/ops/env.md`](docs/ops/env.md) dosyasında.
+
+## CI
+
+- `Askida CI`: sunucu (Pint, PHPStan, atlanan testleri hata sayan test paketi), uygulama (biçim,
+  analiz, test, debug APK), marka token'ları, tüm geçmişte gitleaks ile yer tutucu grep'i ve
+  bilgilendirme amaçlı Lighthouse.
+- `Askida Security`: tüm geçmişte gitleaks, Composer denetimi, `composer.lock` ve `pubspec.lock`
+  için OSV taraması, CycloneDX SBOM, bilgilendirme amaçlı `flutter pub outdated` ve OWASP ZAP.
+- `Askida restore drill`: şifreli bir veritabanı arşivini işe özel bir MinIO bucket'ına yazar ve
+  yeni bir PostGIS'e geri yükler.
+
+## Dokümantasyon
+
+- Ürün ve teknik tanım: [`04-askida-flutter.md`](04-askida-flutter.md)
+- Mimari kararlar: [`docs/adr/`](docs/adr/)
+- API: [`docs/api/openapi.yaml`](docs/api/openapi.yaml) ve [`docs/api/README.md`](docs/api/README.md)
+- Güvenlik: [doğrulama matrisi](docs/security/verification-matrix.md), [tehdit modeli](docs/security/threat-model.md), [yetkilendirme matrisi](docs/security/authorization-matrix.md), [saldırı raporu](docs/security/attack-report.md), [pentest raporu](docs/security/pentest-report.md), [XSS taraması](docs/security/xss-sweep.md), [ZAP](docs/security/zap-report.md) ve [MobSF](docs/security/mobsf-report.md) raporları, [bağımlılık denetimi](docs/security/dependency-audit.md), [geçmiş temizleme runbook'u](docs/security/history-purge-runbook.md)
+- Operasyon: [yayın](docs/ops/deploy.md), [ortam](docs/ops/env.md), [yedekleme ve geri yükleme](docs/ops/backup-restore.md), [maliyet uyarıları](docs/ops/cost-alerts.md)
+- Yayın: [mağaza metni](docs/release/store-listing.tr.md), [gizlilik etiketleri](docs/release/privacy-labels.md), [imzalama](docs/release/signing.md), [ekran görüntüleri](docs/release/screenshots/README.md)
+- SEO ve GEO: [kontrol listesi](docs/seo/seo-geo-checklist.md), [ASO](docs/seo/aso.md)
+- Devir notları: [`docs/handoffs/`](docs/handoffs/)
 
 ## Lisans
 
-Bu proje Apache License 2.0 ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

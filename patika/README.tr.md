@@ -2,7 +2,9 @@
 
 # Patika
 
-Slogan: "Mahallenin patilerini birlikte koruyalım."
+[![Patika CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/patika-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/patika-ci.yml)
+
+"Mahallenin patilerini birlikte koruyalım."
 
 <img src="docs/design/screenshots/web-home-1440.png" alt="Patika web ana sayfası: Moda sabah turu haritalı giriş, dört duraklı tur çizelgesi, sahiplendirme kartları, yakındaki bakım yerleriyle koyu acil yardım bölümü ve haftalık etki satırı, yerel derleme, örnek veri" width="100%">
 
@@ -14,7 +16,21 @@ Canlı demo: [herkese açık webin statik görüntüsü](https://ayberkaarda.git
 
 ## Ürün özeti
 
-Patika, mahalle gönüllülerini buluşturan bir sokak hayvanları topluluk platformu. Mama istasyonu haritası, "Beslendi" check-in'leri, hayvan profilleri, sahiplendirme ilanları, acil yardım gönderileri ve yakındaki veteriner ile bakımevi rehberi sunar. Ad "patika" yolundan geliyor ve içinde "pati" geçiyor. Dil sıcak ve "biz" diliyle yazılır, saygılıdır, suçluluk duygusu yaratmaz. Gönüllü gizliliği ürünün bir özelliğidir: fotoğrafların konum bilgisi yüklemeden önce ve sunucuda yeniden silinir, gönüllü konumları hiç saklanmaz.
+Patika, mahalle gönüllülerini buluşturan bir sokak hayvanları topluluk platformu. Mama istasyonu haritası, "Beslendi" check-in'leri, hayvan profilleri, sahiplendirme ilanları, acil yardım gönderileri ve yakındaki veteriner ile bakımevi rehberi sunar. Ad "patika" yolundan geliyor ve içinde "pati" geçiyor. Dil sıcak ve "biz" diliyle yazılır, saygılıdır, suçluluk duygusu yaratmaz. Gönüllü gizliliği ürünün bir özelliğidir: fotoğrafların konum bilgisi yüklemeden önce ve sunucuda yeniden silinir, gönüllü konumları hiç saklanmaz. Kod tek bir .NET 10 çözümüdür: ASP.NET Core API, yönetim
+paneliyle Razor Pages web, bir Worker ve .NET MAUI Android uygulaması.
+
+## Durum
+
+Portföy projesi. Planlanan yedi fazın hepsi (0 ile 6) `main`'e birleşti (pull request #134, #135,
+#139 ve #141 ile #147 arası): temel kurulum; API çekirdeği, kimlik doğrulama ve güvenlik temeli;
+domain API, medya ve bildirim; mobil için API ve Android uygulaması; yönetim paneliyle SEO ve GEO
+web; simüle Play aboneliği; sertleştirme ve yayına hazırlık. 7. faz yok. Neyin gerçek, neyin simüle
+olduğu [Gerçek / simüle](#gerçek--simüle) bölümünde.
+
+[`docs/handoffs/phase-6-report.md`](docs/handoffs/phase-6-report.md) içindeki son koşu
+`dotnet test Patika.slnx` için 1.456 geçen ve 0 başarısız test kaydeder (Api 511, App 223, Domain
+51, Security 480 ve taşınmış bir PostGIS'e karşı geçen 2 atlanmış test, Web 123, Worker 68).
+Güvenlik doğrulama matrisi 23 maddenin 19'unu tamam, 4'ünü kısmi gösterir ([Güvenlik](#güvenlik)).
 
 ## Özellikler
 
@@ -88,7 +104,7 @@ Patika bir portfolyo projesi: barındırılan bir servis, mağaza hesabı ya da 
 
 ## Yerelde çalıştırma
 
-Gerekenler: .NET SDK 10.0.402 (`global.json`), Docker; uygulama için MAUI Android iş yükü, JDK 21 ve bir Android emülatörü.
+Gerekenler: .NET SDK 10.0.400 ya da sonraki bir 10.0.4xx yaması (`global.json`), Docker; uygulama için MAUI Android iş yükü, JDK 21 ve bir Android emülatörü.
 
 ```sh
 cp .env.example .env              # varsayılan Development; yerelde gizli bilgi gerekmez
@@ -116,10 +132,24 @@ Ayar anahtarları [`docs/ops/env.md`](docs/ops/env.md) içinde.
 
 23 maddenin hepsi [doğrulama matrisinde](docs/security/verification-matrix.md) kanıtıyla eşlendi: 19 tamam, 4 kısmi (HTTPS, Play webhook'u, yedekler ve saldırgan gibi test maddesi; her birinde kanıtın bir kısmı gerçek bir alan adı, Play hesabı veya bulut deposu istiyor). Ayrıca: [pentest raporu](docs/security/pentest-report.md), [tehdit modeli](docs/security/threat-model.md), [yetki matrisi](docs/security/authorization-matrix.md), [sertleştirme notları](docs/security/hardening.md), [ZAP](docs/security/scans/zap.md) ve [MobSF](docs/security/scans/mobsf.md) sonuçları, [geçmiş temizleme kılavuzu](docs/security/history-purge-runbook.md). Operasyon: [yedek ve geri yükleme](docs/ops/backup-restore.md), [maliyet uyarıları](docs/ops/cost-alerts.md), [loglama](docs/ops/logging.md). Yayın belgeleri: [Play listesi](docs/release/play-listing.md), [Veri Güvenliği](docs/release/data-safety.md), [imzalama](docs/release/signing.md).
 
-## Durum
+## CI
 
-0 ile 5 arasındaki aşamalar birleştirildi; 6. aşama (sertleştirme, taramalar ve yayına hazırlık) sonuncusu. Son rapor: [`docs/handoffs/phase-6-report.md`](docs/handoffs/phase-6-report.md).
+- `Patika CI`: backend (restore, derleme, bitmemiş kod işareti grep'i, `dotnet test`,
+  `dotnet format`), Android (zafiyetli paket kontrolü, CycloneDX envanteri, Release derlemesi,
+  birleşmiş yayın manifest kontrolü), Compose doğrulaması, Web ve yönetim girişine ZAP baseline ve
+  tüm geçmişte gitleaks taraması. `patika/` değiştiğinde bir kapı işi tüm işlerin geçmesini ister.
+- `Patika restore drill` (PostGIS 17, MinIO, age): haftalık zamanlanmış; GitHub Actions'ta kayıtlı
+  bir koşusu henüz yok. Aynı tatbikat yerelde `ops/backup/drill.sh` ile çalışır.
+
+## Dokümantasyon
+
+- Ürün tanımı: [`03-patika-swift-ios.md`](03-patika-swift-ios.md) (ilk olarak Swift ve iOS için yazıldı; içindeki not .NET MAUI ve Android'e geçişi kaydeder, bkz. [ADR-0001](docs/adr/0001-stack-and-versions.md))
+- Mimari kararlar: [`docs/adr/`](docs/adr/) (ADR-0001 ile ADR-0010)
+- Faz raporları: [`docs/handoffs/`](docs/handoffs/), sonuncusu [`phase-6-report.md`](docs/handoffs/phase-6-report.md)
+- Herkese açık web veri kuralları: [`docs/public-web-data.md`](docs/public-web-data.md)
+- Tasarım ve ekran görüntüleri: [`docs/design/`](docs/design/); simüle ödeme demosu: [`docs/demo/destekci.md`](docs/demo/destekci.md)
+- Katkı kuralları: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## Lisans
 
-Apache License 2.0. Bkz. [LICENSE](../LICENSE).
+Bu proje MIT Lisansı ile lisanslanmıştır. Bkz. [LICENSE](../LICENSE).

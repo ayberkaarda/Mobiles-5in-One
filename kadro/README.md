@@ -2,22 +2,38 @@ English | [Türkçe](README.tr.md)
 
 # Kadro
 
+[![Kadro CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-ci.yml)
+[![Kadro Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-security.yml)
+
 Match organizer for amateur pitch football (halı saha). Build your squad, find the missing player,
-split the pitch fee. No money moves inside the app; the captain only tracks who has paid.
+split the pitch fee. No money moves inside the app; the captain only tracks who has paid. One
+TypeScript monorepo holds the Expo app, the Next.js web and REST API, the pg-boss worker and the
+shared packages. A static [web demo](https://ayberkaarda.github.io/Mobiles-5in-One/kadro/) of the
+public pages runs on GitHub Pages; sign-in and forms do not work there.
 
 ## Status
 
-Portfolio project, in development. Phases 0 to 5 are merged to `main`; Phase 6 (hardening and
-release readiness) is mostly merged. The domain API, the mobile app, the marketing and SEO pages,
-the Kadro Pro subscription and the staff admin panel all exist in code with automated tests.
+Portfolio project. All seven planned phases (0 to 6) are merged to `main`: data model and
+security core, domain API and worker jobs, the mobile app, the marketing and SEO pages, the Kadro
+Pro subscription with the staff admin panel, and the hardening and release work (attack suite,
+MobSF scan, dependency audit, restore drill, cost guard, history-purge runbook, store copy, privacy
+labels, SEO and GEO checklist). The dual-scheme redesign (light and dark, ADR-0084) came after.
 
-Open items are mainly proof that needs systems this repository does not have: the mobile Maestro
-flows have never run on a device or emulator, the paywall and purchase flows have not been checked
-against real App Store or Google Play accounts, there is no deployed origin (the Caddy edge and the
-`deploy.md` runbook are not written), and the production backup path, error monitoring and cost
-alerts are designed but not configured at providers. The security verification matrix lists 13 of
-23 items as done and 10 as partial, each with the missing proof named. The legal pages are sample
-texts for a portfolio project, labelled as such, not reviewed legal text.
+What is real and what is not:
+
+| Area                                                         | State                                                                                                                                                                                           |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API, web pages, admin panel, worker, database, authorization | Real code, run locally in Docker and in the test suites; `Kadro CI` and `Kadro Security` run on every change to `kadro/`                                                                        |
+| Mobile app                                                   | Real Expo app; the screenshots come from an Android emulator. The 11 Maestro flows in `apps/mobile/.maestro/flows/` have no recorded run (the manual `Kadro mobile e2e` workflow has never run) |
+| Kadro Pro (RevenueCat)                                       | Webhook, reconciliation and entitlements tested with fixtures and a local fake server; no store account, nothing purchased                                                                      |
+| Apple and Google sign-in, push, email                        | Code paths with tests; not run against the real providers                                                                                                                                       |
+| Backups                                                      | `ops/restore-drill.sh` and the `Kadro restore drill` workflow restore a local PostGIS dump (last run on GitHub Actions passed on 2026-10-19); no production bucket                              |
+| Hosting, domain, TLS, Sentry, provider cost alerts, iOS      | Not set up; there is no Caddy edge configuration or deploy runbook in the repository                                                                                                            |
+| Legal texts                                                  | Sample texts, labelled as such, not reviewed                                                                                                                                                    |
+
+The security verification matrix ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+lists 13 of 23 items as done and 10 as partial, each with the missing proof named. Lighthouse lab
+LCP is 2.5 to 2.7 s on some pages, just above the 2.5 s target (ADR-0084).
 
 `apps/mobile` is the Expo app (Turkish and English screens), `apps/worker` runs the pg-boss jobs
 (reminders, push, email, uploads, venue import, deletion, billing, `cost.guard`), and `apps/web`
@@ -109,7 +125,7 @@ The screenshots show sample data labelled `[ÖRNEK]`: the web pages come from a 
 
 "Implemented" means the code, the API contract and automated tests exist on `main`. Mobile rows
 carry the label "device flows not verified": the screens are covered by unit and component tests,
-but the Maestro flows (`apps/mobile/.maestro/`) have not been run on a device or emulator.
+but no run of the Maestro flows (`apps/mobile/.maestro/`) on a device or emulator is recorded.
 
 | Feature                                                                                                  | Status                                                                                                     |
 | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -135,13 +151,13 @@ chat, video, ads, leagues and tournaments, languages other than Turkish and Engl
 
 ## Technology stack
 
-- Mobile: Expo (React Native), Expo Router, TypeScript
-- Web and API: Next.js (App Router), REST under `/api/v1`
-- Database: PostgreSQL 16 with PostGIS, Drizzle ORM and SQL migrations
-- Background jobs: pg-boss (worker app)
-- Validation and contracts: zod
+- Mobile: Expo 57 (React Native 0.86), Expo Router, TypeScript 6
+- Web and API: Next.js 16 (App Router), REST under `/api/v1`
+- Database: PostgreSQL 16 with PostGIS 3.5, Drizzle ORM 0.45 and SQL migrations
+- Background jobs: pg-boss 12 (worker app)
+- Validation and contracts: zod 4
 - Passwords: Argon2id; access tokens: ES256 JWT; refresh tokens with rotation
-- Tooling: pnpm workspaces, Turborepo, Vitest, ESLint, Prettier
+- Tooling: Node.js 22, pnpm 12 workspaces, Turborepo, Vitest, Playwright, ESLint, Prettier
 
 Exact pinned versions and the reasoning behind them are in
 [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
@@ -222,7 +238,14 @@ Apps fail fast at boot when a required variable is missing or invalid.
 
 `pnpm test` runs the Vitest suites of every package. The database tests (`@kadro/db`) and the web
 API tests (`@kadro/web`) start a disposable PostGIS container, so a running Docker daemon is
-required; without one they fail with an explicit message.
+required; without one they fail with an explicit message. The admin panel has a Playwright suite
+(`pnpm --filter @kadro/web test:e2e`).
+
+CI workflows in [`../.github/workflows`](../.github/workflows/): `Kadro CI` runs lint, typecheck,
+build and the tests, with Lighthouse as an informational job; `Kadro Security` scans the full
+history with gitleaks, audits dependencies (high and critical) and runs the secret and placeholder
+greps; `Kadro restore drill` dumps a seeded PostGIS and restores it into a fresh container;
+`Kadro mobile e2e` (Maestro on an Android emulator) is manual and has not been run.
 
 ## Security approach
 
@@ -249,6 +272,7 @@ secrets and audits dependencies. Details:
 - [`docs/release/`](docs/release/): store listing, backup drill, cost alerts
 - [`docs/seo/`](docs/seo/): SEO and GEO checklist
 - [`docs/handoffs/`](docs/handoffs/): hand-off notes between packages
+- [`docs/screenshots/README.md`](docs/screenshots/README.md): screenshot sets and how they were taken
 
 ## Roadmap
 
@@ -259,13 +283,16 @@ secrets and audits dependencies. Details:
 - Phase 4, web SEO pages, marketing site and public listings: done, merged
 - Phase 5, Kadro Pro subscription, webhook and admin area: done, merged (store purchases not
   verified against real stores)
-- Phase 6, hardening and release readiness: mostly merged (security verification matrix, threat
-  model, attack report, SEO and GEO checklist, cost guard, store listing drafts). Open: Maestro
-  runs on a device, store and RevenueCat verification, EAS builds and a signed update channel, a
-  hosted origin with the Caddy edge and `deploy.md`, production backups, error monitoring,
-  provider-side cost alerts, MobSF and ZAP API results, a sitemap submission on a real domain,
-  and a repository-wide placeholder grep gate.
+- Phase 6, hardening and release readiness: done, merged (verification matrix, threat model,
+  attack report, MobSF report, dependency audit, restore drill, cost guard, history-purge runbook,
+  ASO, store listing and privacy labels, SEO and GEO checklist, placeholder grep in CI)
+- After the phases: the dual-scheme redesign of the app and the web (ADR-0084)
+
+Open proofs, all needing systems that do not exist here: Maestro runs on a device or emulator,
+store and RevenueCat verification, EAS builds and a signed update channel, a hosted origin with
+the Caddy edge and a deploy runbook, production backups, Sentry, provider-side cost alerts, a ZAP
+API scan, a sitemap submission on a real domain, iOS.
 
 ## License
 
-This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE).
+This project is licensed under the MIT License. See [LICENSE](../LICENSE).
