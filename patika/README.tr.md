@@ -10,6 +10,8 @@ Slogan: "Mahallenin patilerini birlikte koruyalım."
 
 Web ana sayfası yerel derlemeden, Android ekranları `Pixel_8` emülatöründen; ikisi de yerel yığına karşı, `[ÖRNEK]` verilerle. Diğer ekranlar [galeride](#galeri).
 
+Canlı demo: [herkese açık webin statik görüntüsü](https://ayberkaarda.github.io/Mobiles-5in-One/patika/) GitHub Pages'te. Yerel derlemeden, `[ÖRNEK]` verilerle alındı; canlı bir hizmet değil: giriş, yönetim paneli, ilçe filtresi ve uygulama orada çalışmaz.
+
 ## Ürün özeti
 
 Patika, mahalle gönüllülerini buluşturan bir sokak hayvanları topluluk platformu. Mama istasyonu haritası, "Beslendi" check-in'leri, hayvan profilleri, sahiplendirme ilanları, acil yardım gönderileri ve yakındaki veteriner ile bakımevi rehberi sunar. Ad "patika" yolundan geliyor ve içinde "pati" geçiyor. Dil sıcak ve "biz" diliyle yazılır, saygılıdır, suçluluk duygusu yaratmaz. Gönüllü gizliliği ürünün bir özelliğidir: fotoğrafların konum bilgisi yüklemeden önce ve sunucuda yeniden silinir, gönüllü konumları hiç saklanmaz.
