@@ -82,7 +82,7 @@ The workflow starts these containers itself instead of declaring `services:`, so
 
 ## Not in place
 
-- There is no Worker `backup.verify` job, so nothing alerts on a stale backup yet. The intended check lists the bucket with a list-only token and alerts when the newest `patika-*.dump.age` is older than 26 hours.
+- The Worker `backup.verify` job (hourly at minute 40, [`BackupVerify.cs`](../../src/Patika.Worker/Jobs/Ops/BackupVerify.cs)) lists `Backup:Directory` or the `Backup:S3Bucket`/`S3Prefix` with a list-only key, takes the newest `patika-*.dump.age` by the UTC stamp in its name, and logs a warning and mails `Ops:AlertEmail` (once per UTC day) when it is older than `Backup:MaxAgeHours` (26), when there is none, or when the listing fails. It is off until one of the two locations is configured, and no production location exists (portfolio scope). Covered by `BackupVerifyTests`.
 - No production schedule, bucket, token or offline identity exists (portfolio scope). The daily run and the R2 lifecycle rule are owner setup.
 - Not exercised: PITR (`pgBackRest` or a managed provider), restoring the Data Protection key ring together with a dump, and R2 itself (the drill uses MinIO through the same S3 API).
 

@@ -10,12 +10,12 @@ Security checklist item 22 (Harcama uyarısı kur). Patika is a portfolio projec
 | Managed PostgreSQL + PostGIS with PITR | Managed provider | 25 USD/month | DB size 70% of the plan's storage; connections 80% of the plan limit | 90% storage: grow the plan or prune (`idempotency_keys`, `email_tokens` are already pruned hourly) |
 | Object storage (photos + backups) | Cloudflare R2 | 10 GB is in the free tier; 5 USD/month planned beyond it | 80% of 10 GB; Class A operations 80% of the free monthly allowance | Uploads are already capped per user per day (below) |
 | Egress for photos | R2 (no egress fee) behind the CDN | 0 USD | CDN request volume 2x the 7-day average | Lower `Media:PhotoUrlMinutes` caching misses by setting `Storage:PublicBaseUrl` to the CDN |
-| Transactional email | Resend | Free tier (3,000 emails/month, 100/day) | 70/day or 2,000/month | 100/day: registration codes queue behind the provider's limit; move to the paid plan |
+| Transactional email | Resend | Free tier (3,000 emails/month, 100/day) | 70/day or 2,000/month | Application cap `CostGuard:MaxEmailsPerDay` (default 5,000; set it to the plan's daily limit, 100 on the free tier): further sends that day are skipped and `cost.guard` alerts; move to the paid plan |
 | Push | Firebase Cloud Messaging | Free | Worker cost guard soft cap (5,000 sends/day) | Cost guard hard cap (20,000 sends/day) |
 | Google Play | Play Console | 25 USD one-time registration; 15% service fee on Destekçi subscription revenue | n/a | n/a |
 | Error reporting | None configured (no Sentry in the code) | 0 | n/a | n/a |
 
-Alert routing: provider billing alerts go to the owner's email. The Worker's cost guard writes a warning log line (below), which the log pipeline must turn into a notification; there is no email from the Worker yet.
+Alert routing: provider billing alerts go to the owner's email. The Worker's `cost.guard` and `backup.verify` jobs write a warning log line and mail the same count-only text to `Ops:AlertEmail` through the API's email transport (Resend; the Development folder sender locally). The alert mail bypasses the email cap on purpose, so an alert about the cap is never stopped by it; each alert fires at most once per local day and kind.
 
 ## Application caps implemented
 
@@ -26,7 +26,8 @@ Alert routing: provider billing alerts go to the owner's email. The Worker's cos
 | Urgent fan-out radius | 2,000 m ceiling (saved home area, rounded to 3 decimals) | `Push:MaxRadiusMeters` (`PushSender.cs`), `DeviceRules.MaxRadiusMeters` and `HomeAreaDecimals` in [`src/Patika.Api/Features/Devices/DeviceEndpoints.cs`](../../src/Patika.Api/Features/Devices/DeviceEndpoints.cs) lines 19-22; `ck_users_urgent_radius` 500..2000 |
 | Stale devices skipped | not seen for 60 days | `Push:StaleDeviceDays`, `PushSender.cs` line 57 |
 | Late fan-out skipped | posts older than 60 minutes when first seen (after an outage) | `Push:FanoutWindowMinutes`, `PushSender.cs` line 60 |
-| `cost.guard` push budget | soft 5,000/day pauses non-critical sends; hard 20,000/day stops urgent sends too | `Push:CostGuard:DailyCap` / `CriticalDailyCap`, `PushSender.cs` lines 75-82; atomic counter in `push_daily_counters` ([`PushCostGuard.cs`](../../src/Patika.Worker/Jobs/Push/PushCostGuard.cs) lines 19-64); `cost.guard` job every 5 minutes raises one alert per day ([`PushJobs.cs`](../../src/Patika.Worker/Jobs/Push/PushJobs.cs) lines 15-30 and 95-101) |
+| `cost.guard` push budget | soft 5,000/day pauses non-critical sends; hard 20,000/day stops urgent sends too | `CostGuard:MaxPushesPerDay` (or `Push:CostGuard:DailyCap`) / `Push:CostGuard:CriticalDailyCap`, [`PushSender.cs`](../../src/Patika.Worker/Jobs/Push/PushSender.cs) `CostGuardSettings`; atomic counter in `push_daily_counters` channel `push` ([`PushCostGuard.cs`](../../src/Patika.Worker/Jobs/Push/PushCostGuard.cs)); `cost.guard` job every 5 minutes raises one alert per local day and kind ([`PushJobs.cs`](../../src/Patika.Worker/Jobs/Push/PushJobs.cs) `CostGuardJob`, `CostGuardAlertState`) |
+| Email budget | 5,000/day across every email kind; each send reserves one unit first, a transport exception returns it; at the cap the send is skipped and a count-only warning is logged | `CostGuard:MaxEmailsPerDay` (API and Worker), [`BudgetedEmailSender.cs`](../../src/Patika.Api/Email/BudgetedEmailSender.cs) wrapping every transport; counter `push_daily_counters` channel `email` ([`DailySendBudget.cs`](../../src/Patika.Infrastructure/Security/DailySendBudget.cs)); the Worker's `cost.guard` alerts at the cap |
 | Photo uploads per user per local day | 30; 100 with an active Destekçi entitlement | `Media:DailyQuota` / `SupporterDailyQuota`, [`src/Patika.Infrastructure/Media/MediaSettings.cs`](../../src/Patika.Infrastructure/Media/MediaSettings.cs) lines 34-37; advisory-locked ledger in [`UploadLedger.cs`](../../src/Patika.Api/Features/Media/UploadLedger.cs) |
 | Upload size and type | 1 byte to 5 MB; JPEG, PNG, WebP; the presigned PUT signs `Content-Length` and `Content-Type` | `MediaKeys.MaxUploadBytes`, [`src/Patika.Contracts/Media/MediaKeys.cs`](../../src/Patika.Contracts/Media/MediaKeys.cs) line 15; validator in [`MediaEndpoints.cs`](../../src/Patika.Api/Features/Media/MediaEndpoints.cs) lines 24-25 |
 | Presigned URL lifetime | PUT 5 minutes, photo GET 15 minutes | `Media:PresignMinutes`, `Media:PhotoUrlMinutes` (`MediaSettings.cs`) |
@@ -39,14 +40,14 @@ Alert routing: provider billing alerts go to the owner's email. The Worker's cos
 
 ## What the cost guard does not cover
 
-- Email: the guard counts pushes only. Email volume is bounded per account (above) but has no global daily counter or pause.
-- The alert is a log line, `cost.guard: {Sent} pushes on {Day} reached the daily cap {Cap}; non-critical sends are paused` (`LoggingCostAlertNotifier`, `PushCostGuard.cs` lines 109-117). `ICostAlertNotifier` is the seam for an email sender; none is wired.
+- The email cap pauses every kind, including verification and password reset codes: there are no non-critical emails today, so at the cap new sign-ups wait for the next local day. Set the cap to the provider's daily limit so Patika stops before the provider rejects mail.
+- The alert lines are `cost.guard: {Sent} pushes on {Day} reached the daily cap {Cap}; non-critical sends are paused` and `cost.guard: {Count} emails on {Day} reached the daily cap {Cap}; email sends are paused` (`CostAlertNotifier`, `PushCostGuard.cs`); the API also logs `cost.guard: email daily cap {Cap} reached on {Day}; sends paused` for each skipped send. No recipient, subject or body is ever logged or mailed.
 - The "alerted today" state is per Worker process (`CostGuardAlertState`), so a restart can alert twice on one day. With one Worker instance (ADR-0002) that is acceptable.
 - Rate limits are in memory per API instance. Running more than one instance needs the shared store from ADR-0002.
 
 ## Verification
 
-The guard and fan-out caps are covered by `CostGuardTests`, `UrgentFanoutTests` and `FanoutPostgisTests` in `tests/Patika.Worker.Tests`, and the upload quota by `PresignTests` in `tests/Patika.Api.Tests`. Run on 2026-10-26 while writing this document:
+The guard and fan-out caps are covered by `CostGuardTests`, `OpsAlertTests` (one mail per day and kind to the ops address, counts only), `UrgentFanoutTests` and `FanoutPostgisTests` in `tests/Patika.Worker.Tests`, the email budget by `EmailBudgetTests` (fake transport stops at the cap, failed sends return their unit) and `EmailBudgetPersistenceTests` (concurrent reservations on PostgreSQL never pass the cap, a new local day has its own budget) in `tests/Patika.Api.Tests`, and the upload quota by `PresignTests`. Phase 6 gate run on 2026-10-26: Worker 59/59, API 491/491. Earlier run while writing this document: Run on 2026-10-26 while writing this document:
 
 ```text
 dotnet test tests/Patika.Worker.Tests --filter "FullyQualifiedName~Push|FullyQualifiedName~Fanout|FullyQualifiedName~CostGuard"

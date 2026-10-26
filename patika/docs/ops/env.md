@@ -25,8 +25,10 @@ Columns: **Prod** = must be set in Production (the app refuses to start, or the 
 | `Jwt:RefreshTokenDays` | Refresh token lifetime | no | no | `30` |
 | `Auth:EmailCodes:Key` | Dedicated HMAC key for email codes (base64, at least 32 bytes); empty means HKDF from the JWT key | no | yes | `base64:32 bytes` |
 | `Google:ClientIds` (array) | Android OAuth client ids accepted as Google ID token `aud` (ADR-0005, ADR-0008) | only for Google sign-in | no | `Google__ClientIds__0=1234-abc.apps.googleusercontent.com` |
-| `Network:KnownProxies` (array) | Reverse proxy IPs whose `X-Forwarded-For` is trusted (one hop) | yes behind a proxy | no | `Network__KnownProxies__0=10.0.0.2` |
-| `Network:KnownNetworks` (array) | Trusted proxy CIDR ranges | no | no | `10.0.0.0/24` |
+| `Network:TrustedProxies` (array) | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` / `X-Forwarded-Proto` is processed (one hop); empty processes none. Replaces the old `Network:KnownProxies` / `KnownNetworks`, which are no longer read | yes behind a proxy | no | `Network__TrustedProxies__0=10.0.0.2`, `Network__TrustedProxies__1=10.0.0.0/24` |
+| `Network:BffAddress` | Socket address of the Web admin console; only that peer may send `X-Patika-Client-Ip` (docs/security/hardening.md) | with the admin console | no | `172.30.57.10` |
+| `Network:BffSharedKey` | Shared key the Web sends in `X-Patika-Bff-Key`; compared as SHA-256 digests in fixed time. Same value in the Web | with the admin console | yes | 32+ random bytes, base64 |
+| `CostGuard:MaxEmailsPerDay` | Daily email cap across all kinds (local day, UTC+3); at the cap sends are skipped with a warning and the Worker alerts | no | no | `5000` |
 | `Cors:Enabled` | CORS is off by default (no browser client) | no | no | `false` |
 | `Cors:AllowedOrigins` (array) | Allowlist when CORS is enabled | no | no | `https://patika.app` |
 | `Email:DevelopmentOutbox` | Folder for the Development email sender | no (Development only) | no | `/tmp/patika-dev-mail` |
@@ -55,7 +57,7 @@ Columns: **Prod** = must be set in Production (the app refuses to start, or the 
 | `Billing:Rtdn:Email` | Expected push service-account email | with `Google` | no | `rtdn-push@project.iam.gserviceaccount.com` |
 | `Billing:Rtdn:JwksUrl` | Google OIDC JWKS (required to be set with `Google`) | with `Google` | no | `https://www.googleapis.com/oauth2/v3/certs` |
 | `Billing:AccountKey` | HMAC key for the obfuscated Play account id (base64, at least 32 bytes); empty means HKDF from the JWT key | no | yes | `base64:32 bytes` |
-| `Logging:LogLevel:*` | Present in `appsettings.json` but not used by the API: Serilog levels are set in code (`PatikaApiServices.cs`) | no | no | n/a |
+| `Logging:LogLevel:*` | Present in `appsettings.json` but not used by the API, the Worker or the Web: Serilog levels are set in code (`PatikaLogging.cs`) | no | no | n/a |
 
 Sources: [`PatikaApiServices.cs`](../../src/Patika.Api/PatikaApiServices.cs), [`JwtSettings.cs`](../../src/Patika.Api/Security/Tokens/JwtSettings.cs), [`HttpHardening.cs`](../../src/Patika.Api/Security/HttpHardening.cs), [`EmailCodes.cs`](../../src/Patika.Api/Features/Auth/EmailCodes.cs), [`ExternalIdentity.cs`](../../src/Patika.Api/Features/Auth/ExternalIdentity.cs), [`EmailSender.cs`](../../src/Patika.Api/Email/EmailSender.cs), [`ResendEmailSender.cs`](../../src/Patika.Api/Email/ResendEmailSender.cs), [`MediaSettings.cs`](../../src/Patika.Infrastructure/Media/MediaSettings.cs), [`PlayDeveloperApi.cs`](../../src/Patika.Infrastructure/Billing/PlayDeveloperApi.cs), [`PlayPushVerifier.cs`](../../src/Patika.Api/Features/Subscriptions/PlayPushVerifier.cs), [`BillingAccountKey.cs`](../../src/Patika.Api/Features/Subscriptions/BillingAccountKey.cs), [`Program.cs`](../../src/Patika.Api/Program.cs).
 
@@ -67,7 +69,9 @@ Sources: [`PatikaApiServices.cs`](../../src/Patika.Api/PatikaApiServices.cs), [`
 | `Storage:Endpoint`, `Storage:Bucket`, `Storage:AccessKey`, `Storage:SecretKey`, `Storage:Region` | Media processing and photo removal ([`ObjectStore.cs`](../../src/Patika.Worker/Jobs/Media/ObjectStore.cs)) | yes | keys yes | as API |
 | `Push:Fcm:ProjectId` | Firebase project for FCM HTTP v1; empty means the logging sender (no pushes) | yes for push | no | `patika-prod` |
 | `Push:Fcm:ServiceAccountJson` | FCM service-account JSON, single line | yes for push | yes | `{"type":"service_account",...}` |
-| `Push:CostGuard:DailyCap` | Soft daily push cap; non-critical sends pause | no | no | `5000` |
+| `CostGuard:MaxPushesPerDay` | Soft daily push cap; non-critical sends pause. Overrides `Push:CostGuard:DailyCap` when set | no | no | `5000` |
+| `CostGuard:MaxEmailsPerDay` | The API's email cap, read here for the `cost.guard` email alert; keep it equal to the API value | no | no | `5000` |
+| `Push:CostGuard:DailyCap` | Same soft cap under the push section (older key) | no | no | `5000` |
 | `Push:CostGuard:CriticalDailyCap` | Hard daily push cap | no | no | `20000` |
 | `Push:MaxDevicesPerPost` | Urgent fan-out per post (clamped to 500 in code) | no | no | `500` |
 | `Push:MaxRadiusMeters` | Fan-out radius ceiling | no | no | `2000` |
@@ -76,8 +80,15 @@ Sources: [`PatikaApiServices.cs`](../../src/Patika.Api/PatikaApiServices.cs), [`
 | `Push:SendParallelism` | Concurrent FCM sends | no | no | `8` |
 | `DataProtection:KeysPath` | Same ring as the API (reconcile decrypts purchase tokens). Production refuses to start without it | yes | yes | `/keys` |
 | `Billing:*` | Same keys and checks as the API (`AddPlayBilling`); `Billing:Google:AccessToken` is used by the daily reconcile | as API | as API | as API |
+| `Ops:AlertEmail` | Operator mailbox for `cost.guard` and `backup.verify` alerts; empty means the warning log line is the only alert | recommended | no | `ops@patika.app` |
+| `Resend:ApiKey`, `Resend:From`, `Resend:ReplyTo`, `Resend:BaseAddress` | Transport for the ops alert mail (same keys as the API); unset outside Development drops the mail with a warning | with `Ops:AlertEmail` | key yes | as API |
+| `Email:DevelopmentOutbox` | Development folder for the ops alert mail | no | no | `/tmp/patika-dev-mail` |
+| `Backup:Directory` | `backup.verify`: folder with `patika-*.dump.age` (the backup host's `PATIKA_BACKUP_DIR`, mounted read-only) | one of the two | no | `/backups` |
+| `Backup:S3Endpoint`, `Backup:S3Bucket`, `Backup:S3Prefix`, `Backup:S3Region` | `backup.verify` against the backup bucket instead of a folder | one of the two | no | `https://<account>.r2.cloudflarestorage.com`, `patika-backups`, `db`, `auto` |
+| `Backup:S3AccessKey`, `Backup:S3SecretKey` | A list-only key for that bucket | with `S3Bucket` | yes | `...` |
+| `Backup:MaxAgeHours` | Alert when the newest backup is older than this | no | no | `26` |
 
-Sources: [`PushSender.cs`](../../src/Patika.Worker/Jobs/Push/PushSender.cs), [`MediaJobs.cs`](../../src/Patika.Worker/Jobs/Media/MediaJobs.cs), [`Program.cs`](../../src/Patika.Worker/Program.cs).
+Sources: [`PushSender.cs`](../../src/Patika.Worker/Jobs/Push/PushSender.cs), [`PushJobs.cs`](../../src/Patika.Worker/Jobs/Push/PushJobs.cs), [`OpsAlerts.cs`](../../src/Patika.Worker/Jobs/Ops/OpsAlerts.cs), [`BackupVerify.cs`](../../src/Patika.Worker/Jobs/Ops/BackupVerify.cs), [`MediaJobs.cs`](../../src/Patika.Worker/Jobs/Media/MediaJobs.cs), [`PatikaWorkerHost.cs`](../../src/Patika.Worker/PatikaWorkerHost.cs).
 
 ## Web (`src/Patika.Web`)
 
@@ -90,8 +101,11 @@ Sources: [`PushSender.cs`](../../src/Patika.Worker/Jobs/Push/PushSender.cs), [`M
 | `Storage:PublicBaseUrl`, `Storage:PublicEndpoint`, `Storage:Endpoint` | Photo URLs and the CSP `img-src` origin (first one set wins) | yes | no | `https://cdn.patika.app` |
 | `Storage:AccessKey`, `Storage:SecretKey`, `Storage:Bucket`, `Storage:Region` | Presigned photo GETs when no `PublicBaseUrl` | when no CDN | keys yes | as API |
 | `Media:PhotoUrlMinutes` | Presigned GET lifetime | no | no | `15` |
+| `DataProtection:KeysPath` | The Web's own persistent key ring (admin cookie with the encrypted API tokens, antiforgery). A different directory from the API/Worker ring. Production refuses to start without it | yes | yes (the files) | `/keys` (compose volume `web-keys`) |
+| `Network:TrustedProxies` (array) | As in the API: the reverse proxy in front of the Web, so the admin console sees and forwards the real browser address | yes behind a proxy | no | `10.0.0.2` |
+| `Network:BffSharedKey` | Sent to the API with the browser address; must equal the API value. Empty means the console forwards nothing and all admins share the Web host's per-IP limits | with the admin console | yes | as API |
 
-Sources: [`Program.cs`](../../src/Patika.Web/Program.cs), [`SiteUrls.cs`](../../src/Patika.Web/Seo/SiteUrls.cs), [`AdminSession.cs`](../../src/Patika.Web/Services/Admin/AdminSession.cs), [`CarePlaceQueries.cs`](../../src/Patika.Web/Services/PublicQueries/CarePlaceQueries.cs). The Web registers no persistent Data Protection ring, so the admin cookie and antiforgery tokens do not survive a restart or span instances; with one instance (ADR-0002) admins sign in again after a deploy.
+Sources: [`Program.cs`](../../src/Patika.Web/Program.cs), [`SiteUrls.cs`](../../src/Patika.Web/Seo/SiteUrls.cs), [`AdminSession.cs`](../../src/Patika.Web/Services/Admin/AdminSession.cs), [`CarePlaceQueries.cs`](../../src/Patika.Web/Services/PublicQueries/CarePlaceQueries.cs). Since phase 6 the Web persists its own Data Protection ring (`DataProtection:KeysPath`), so admin sessions survive a restart.
 
 ## Android app (`app/Patika.App`)
 
@@ -111,9 +125,6 @@ No secrets ship in the APK. Settings are embedded resources read by [`AppSetting
 
 `PATIKA_BACKUP_AGE_RECIPIENT`, `PATIKA_BACKUP_DIR`, `PATIKA_BACKUP_S3_URI`, `PATIKA_BACKUP_S3_ENDPOINT`, `PATIKA_BACKUP_RETENTION_DAYS`, `PATIKA_BACKUP_DATABASE_URL`, `PATIKA_BACKUP_AGE_IDENTITY` (secret, offline), `PATIKA_RESTORE_DB`, `PATIKA_RESTORE_EXPECT`, plus the libpq `PG*` variables and `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (secret). See [backup-restore.md](backup-restore.md).
 
-## Compose and `.env.example` mismatches
+## Compose and `.env.example`
 
-Found while building this list; not fixed here because `docker-compose.yml` and `.env.example` are outside this change.
-
-- `.env.example` has keys no code reads: `API_BASE_URL`, `WEB_BASE_URL`, `Email__ResendApiKey` (the code reads `Resend__ApiKey`, also listed), `Push__FcmProjectId` and `Push__FcmCredentialsJson` (the code reads `Push__Fcm__ProjectId` and `Push__Fcm__ServiceAccountJson`, also listed) and `Redis__ConnectionString` (no Redis client in the code). `Jwt__SigningKey` appears twice.
-- `docker-compose.yml` passes `API_BASE_URL: http://api:8080` to the Web service, but the Web reads `Admin:ApiBaseUrl`, so the compose admin console falls back to `https://localhost:7001` unless `Admin__ApiBaseUrl` is set in `.env`.
+Matched to the keys above in phase 6: `.env.example` lists only keys the code reads (the unused `API_BASE_URL`, `WEB_BASE_URL`, `Email__ResendApiKey`, `Push__FcmProjectId`, `Push__FcmCredentialsJson`, `Redis__ConnectionString` and the duplicate `Jwt__SigningKey` are gone). `docker-compose.yml` gives the Web `Admin__ApiBaseUrl: http://api:8080`, its own `web-keys` key ring volume, the fixed address `172.30.57.10` on the compose network and the shared `Network__BffSharedKey`, which the API accepts from that address (`Network__BffAddress`).

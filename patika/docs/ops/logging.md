@@ -2,26 +2,26 @@
 
 Security checklist item 14 (Logları temizle). This describes what the code does today, then a log sample captured from a real local run.
 
-## API pipeline
+## Pipeline (API, Worker and Web)
 
-Configured in [`src/Patika.Api/PatikaApiServices.cs`](../../src/Patika.Api/PatikaApiServices.cs) (`AddSerilog`, lines 43-56, and `UseSerilogRequestLogging`, lines 186-193):
+Configured once in [`src/Patika.Infrastructure/Logging/PatikaLogging.cs`](../../src/Patika.Infrastructure/Logging/PatikaLogging.cs) (`AddPatikaLogging`) and used by the API (`PatikaApiServices.cs`), the Worker (`PatikaWorkerHost.cs`) and the Web (`Program.cs`) since phase 6. The API adds `UseSerilogRequestLogging` (`PatikaApiServices.cs`):
 
-- Output: one compact JSON object per line on stdout (`RenderedCompactJsonFormatter`). Levels: Information; `Microsoft.*` and `System.*` at Warning, except `Microsoft.Hosting.Lifetime`.
+- Output: one compact JSON object per line on stdout (`RenderedCompactJsonFormatter`). Levels: Information; `Microsoft.*`, `System.*` and `Quartz.*` at Warning, except `Microsoft.Hosting.Lifetime`.
 - Every line carries `@tr`/`@sp` (trace and span ids), `RequestId`, `RequestPath` and `ConnectionId` from the log context. Problem responses carry the same trace id (`traceId`), so a user-reported error maps to its log lines.
 - Request log: `HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed} ms`. Path only: no query string, headers or bodies for any route, so `/v1/auth/*` and `/v1/uploads/*` bodies are never logged.
-- [`MaskingEnricher`](../../src/Patika.Api/Logging/MaskingEnricher.cs) runs last on every event, recursively through structured values, sequences and dictionaries:
+- [`MaskingEnricher`](../../src/Patika.Infrastructure/Logging/MaskingEnricher.cs) runs last on every event, recursively through structured values, sequences and dictionaries:
   - any property whose name contains `password`, `token`, `authorization`, `cookie`, `secret`, `credential`, `apikey` or `signingkey` becomes `[redacted]`;
   - email addresses in any string become `a***@d***` (first character of the local part and of the domain);
   - JWT-shaped strings (`eyJ...`) become `[redacted]`;
   - coordinate pairs with 4 or more decimals in any string are rounded to 3 decimals (about 110 m), and numeric properties named `lat`, `lng`, `lon`, `latitude` or `longitude` are rounded to 3 decimals.
-- [`ExceptionScrubbingSink`](../../src/Patika.Api/Logging/ExceptionScrubbingSink.cs) sits in front of every sink: each exception, including inner and aggregate exceptions, is replaced by its type name, a masked message and the stack trace, because database errors can quote user data.
+- [`ExceptionScrubbingSink`](../../src/Patika.Infrastructure/Logging/ExceptionScrubbingSink.cs) sits in front of every sink: each exception, including inner and aggregate exceptions, is replaced by its type name, a masked message and the stack trace, because database errors can quote user data.
 - Handlers log identifiers, not content: user ids, masked emails, kinds and counts. `EmailMessage.Body` (which holds one-time codes) is never logged (`src/Patika.Api/Email/EmailSender.cs`).
 - The Play Developer API HttpClient has its default request logging removed (`RemoveAllLoggers()`), because the request path carries the purchase token ([`PlayDeveloperApi.cs`](../../src/Patika.Infrastructure/Billing/PlayDeveloperApi.cs) lines 176-177).
 
 ## Worker and Web
 
-- The Worker and the Web app use the default .NET console logger. They do **not** run `MaskingEnricher` or `ExceptionScrubbingSink`.
-- Worker log statements carry only ids, counts and exception type names (for example `Hard delete purged {Purged} of {Due} due accounts`, `urgent.fanout capped by cost.guard: {Granted} of {Recipients} devices`, `Quarantined upload {PhotoKey}: {FailureCode}`). Unhandled job exceptions are written by Quartz with their full message; the sample below shows one (an S3 connection error naming the storage host). A database exception there could quote a value, so moving the Worker onto the API's Serilog pipeline is an open item.
+- The Worker and the Web run the same pipeline as the API (above), so `MaskingEnricher` and `ExceptionScrubbingSink` apply to their lines too, including Quartz's unhandled job exceptions, whose messages are masked before any sink sees them. Covered by `WorkerHostLoggingTests` (the real Worker registrations) and `WebHostHardeningTests` (the Web host): an email, a token property and a JWT never reach the captured line, coordinates are rounded.
+- Worker log statements carry only ids, counts and exception type names (for example `Hard delete purged {Purged} of {Due} due accounts`, `urgent.fanout capped by cost.guard: {Granted} of {Recipients} devices`, `Quarantined upload {PhotoKey}: {FailureCode}`, `cost.guard: {Count} emails on {Day} reached the daily cap {Cap}`, `backup.verify: {Detail}`).
 - Web logs only framework events and errors; the admin area talks to the API, which does the logging of admin actions (plus the `audit_logs` table).
 
 ## Mobile app
@@ -81,13 +81,10 @@ The request bodies (coordinates, note, urgent description) and the response bodi
 {"@t":"2026-10-26T02:52:37.8089760Z","@m":"HTTP \"POST\" \"/v1/auth/login\" responded 401 in 184.3 ms","@i":"2bf6b665","@tr":"10d3324bbfddaa238f872fca7178b6ed","@sp":"2dff881d9d11d60e","RequestId":"0HNPJ1GNKUCI6:00000001","RequestMethod":"POST","RequestPath":"/v1/auth/login","StatusCode":401,"Elapsed":184.2963,"SourceContext":"Serilog.AspNetCore.RequestLoggingMiddleware","ConnectionId":"0HNPJ1GNKUCI6"}
 ```
 
-Worker, same database, 45-second run (`dotnet run --project src/Patika.Worker`, `DOTNET_ENVIRONMENT=Development`, storage endpoint deliberately unreachable). `urgent.fanout` processed both open urgent posts (`fanout_at` set, `notified_count` 0, no registered devices) without logging; the only application-level output was the Quartz failure of `media.process`, first lines shown:
+Worker, first sample (before phase 6, default console logger): a 45-second run with the storage endpoint deliberately unreachable wrote the Quartz failure of `media.process` as plain multi-line text. Re-run on 2026-10-26 after the Worker moved onto the shared pipeline (`DOTNET_ENVIRONMENT=Development`, PostGIS in Docker, storage at `127.0.0.1:9`, 45 s): 7 lines, all compact JSON; the job failure now arrives as a scrubbed exception (`@x` holds the type, the masked message and code locations only), start of the line:
 
-```text
-fail: Quartz.Core.JobRunShell[0]
-      Job DEFAULT.media.process threw an unhandled Exception: 
-      System.Net.Http.HttpRequestException: Hedef makine etkin olarak reddettiğinden bağlantı kurulamadı. (127.0.0.1:9)
-       ---> System.Net.Sockets.SocketException (10061): Hedef makine etkin olarak reddettiğinden bağlantı kurulamadı.
+```json
+{"@t":"2026-10-26T03:47:48.7400840Z","@m":"Job DEFAULT.media.process threw an unhandled Exception: ","@i":"bfd051b9","@l":"Error","@x":"System.Net.Http.HttpRequestException: Hedef makine etkin olarak reddettiğinden bağlantı kurulamadı. (127.0.0.1:9) ---> System.Net.Sockets.SocketException: Hedef makine etkin olarak reddettiğinden bağlantı kurulamadı. ...
 ```
 
-In the Worker log, `grep -cE "40\.98[0-9]{3,}|29\.02[0-9]{3,}|@example.org"` returned 0.
+In both Worker logs, `grep -cE "40\.98[0-9]{3,}|29\.02[0-9]{3,}|@example.org|eyJ"` returned 0.
