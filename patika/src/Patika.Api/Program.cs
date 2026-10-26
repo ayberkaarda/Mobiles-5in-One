@@ -61,7 +61,11 @@ idempotent.MapReportEndpoints();
 v1.MapMediaEndpoints();
 idempotent.MapUrgentEndpoints();
 v1.MapDeviceEndpoints();
-app.MapPatikaOpenApi();
+// The API description is served in Development, or where OpenApi:Enabled is set (a scan run); never by default.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("OpenApi:Enabled"))
+{
+    app.MapPatikaOpenApi();
+}
 
 app.Run();
 
