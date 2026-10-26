@@ -2,11 +2,42 @@ English | [Türkçe](README.tr.md)
 
 # Askıda
 
-Tagline (tr): "İyilik askıda kalmasın."
+[![Askida CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-ci.yml)
+[![Askida Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/askida-security.yml)
 
-## Product summary
+"İyilik askıda kalmasın."
 
-Askıda is a pay-it-forward network built on the Turkish "askıda ekmek" (bread on the hook) tradition. Donors prepay everyday items such as bread, soup, meals or stationery at verified local shops. Recipients collect them anonymously with a one-time code, without creating an account. One mobile app serves three modes: donor, merchant (esnaf) and recipient. The tone is warm, dignified and plain, never pitying.
+Askıda is a pay-it-forward network built on the Turkish "askıda ekmek" (bread on the hook)
+tradition. Donors prepay everyday items such as bread, soup, meals or stationery at verified local
+shops; recipients collect them anonymously with a one-time code, without creating an account. One
+Flutter app serves three modes (donor, merchant, recipient); a Laravel server provides the API, the
+public web and the admin panel. The tone is warm, dignified and plain, never pitying. A static
+[web demo](https://ayberkaarda.github.io/Mobiles-5in-One/askida/) of the public pages runs on GitHub
+Pages; sign-in, forms and payments do not work there.
+
+## Status
+
+Portfolio project. All seven planned phases (0 to 6) are merged to `main`: foundation; data layer,
+authentication and the security baseline; shops, accounts and hooks; payments, webhooks, payouts
+and the admin panel; the Flutter app; the public web with SEO and GEO; hardening and release
+readiness (attack suite, stored-XSS sweep, ZAP and MobSF scans, dependency audits, encrypted
+backups with a restore drill, cost guards, release and store documents).
+
+| Area                                                     | State                                                                                                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server, API, web pages, Filament admin, queues, database | Real code, run locally in Docker and in the test suites                                                                                                |
+| Flutter app                                              | Real app, run on the `Pixel_8` Android emulator against the local stack; iOS is not built (needs macOS)                                                |
+| Payments (iyzico)                                        | A real iyzico adapter tested against recorded provider responses; local runs use `PAYMENT_PROVIDER=fake` and a fake checkout page; no merchant account |
+| Device attestation (Play Integrity, DeviceCheck)         | Platform-channel code exists; no real attestation has been exercised                                                                                   |
+| Backups                                                  | Encrypted database archives and the `Askida restore drill` workflow (last run on GitHub Actions passed on 2026-10-19); no production bucket             |
+| Hosting, domain, TLS, store listing, error tracking      | Not set up                                                                                                                                             |
+| Legal texts                                              | Sample texts, labelled as such                                                                                                                         |
+
+The final verification matrix ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+grades 14 of 23 items done and 9 partial, each with its reason; the partial ones (history purge,
+HTTPS, secret hashing, clean logs, webhook signatures, package audit, backups, spend alerts,
+attacker-style testing) need systems that do not exist here. The same document records 2985 server
+tests and 591 Flutter tests passing.
 
 ## MVP features
 
@@ -22,35 +53,9 @@ Askıda is a pay-it-forward network built on the Turkish "askıda ekmek" (bread 
 - In-app and web account deletion; an anonymous "reset my data" option for recipients.
 - Website: marketing and how-it-works pages, verified-shop directory, impact page, guides, legal pages and an admin panel.
 
-## Out of scope
-
-- Cash donations to individuals
-- Recipient accounts or profiles
-- Chat
-- Ratings of recipients
-- Pharmacy or medical items
-- Multi-currency
-- Delivery
-- Ads
-- Corporate donor invoicing portal (planned for v2)
-
-## Technology stack
-
-| Layer              | Technology                                                                                                             |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Mobile app         | Flutter 3.47.6 and Dart 3.13.5 (iOS and Android), Riverpod 3.4.3, go_router 18.0.2; drift is planned for a later phase |
-| Backend API        | Laravel 13.34.0 on PHP 8.3.35 (Docker only), Sanctum 4.3.3                                                             |
-| Admin panel        | Filament 3.3.55                                                                                                        |
-| Database           | PostgreSQL 16.9 with PostGIS 3.5.2                                                                                     |
-| Queues and cache   | Redis 7.4.11, Horizon 5.50.0                                                                                           |
-| Object storage     | S3-compatible (Cloudflare R2)                                                                                          |
-| Payments           | iyzico marketplace payments (Checkout Form and sub-merchants)                                                          |
-| Web                | Laravel Blade, server-side rendered                                                                                    |
-| Device attestation | Play Integrity (Android) and DeviceCheck (iOS) via platform channels                                                   |
-
-## Architecture
-
-A monorepo with two main roots: `app/` for the Flutter client and `server/` for the Laravel backend, plus `brand/` and `docs/`. The Flutter app is a single codebase with donor, merchant and recipient modes. The backend exposes a versioned JSON API under `/api/v1`, serves the Blade website and hosts the Filament admin. Money is stored as integer minor units (kuruş) in TRY; the platform never holds funds, since payments flow from the donor through the payment provider to the merchant. Recipient anonymity is a core invariant: no accounts, no recipient identity shown to donors or merchants, and no precise recipient location stored.
+Out of scope: cash donations to individuals, recipient accounts or profiles, chat, ratings of
+recipients, pharmacy or medical items, multi-currency, delivery, ads, a corporate donor invoicing
+portal (planned for v2).
 
 ## Screenshots
 
@@ -85,39 +90,77 @@ Captions, capture details and the capture command are in
 | --- | --- | --- | --- | --- |
 | <img src="docs/release/screenshots/20-donor-settings.png" width="160" alt="Settings of a signed-in donor"> | <img src="docs/release/screenshots/21-donor-delete-account.png" width="160" alt="Account deletion screen"> | <img src="docs/release/screenshots/22-merchant-home-dark.png" width="160" alt="Merchant home in the dark scheme"> | <img src="docs/release/screenshots/23-merchant-redemptions-dark.png" width="160" alt="Redemption log in the dark scheme"> | <img src="docs/release/screenshots/24-merchant-catalog-en.png" width="160" alt="Catalog screen in English"> |
 
-## Status
+## Technology stack
 
-Phases 0 to 6 are implemented as a portfolio project: the Laravel server (authentication, shops and
-verification, hooks and redemption, payments with a fake provider, payouts, admin panel, public
-web pages, open data, backups, cost guards), the Flutter app for the three modes (Android emulator
-verified, iOS not built because it needs macOS) and the security work (attack suite, stored-XSS sweep,
-ZAP and MobSF scans, dependency audits). The final verification matrix grades 14 of 23 items done
-and 9 partial, each with its reason:
-[`docs/security/verification-matrix.md`](docs/security/verification-matrix.md). Nothing is published:
-there is no domain, store listing or payment provider account, and the legal texts are labelled
-samples. Resolved versions are recorded in
-[`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
+| Layer              | Technology                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| Mobile app         | Flutter 3.47.6 and Dart 3.13.5, Riverpod 3.4.3, go_router 18.0.2, drift 2.35.1        |
+| Backend API        | Laravel 13.34.0 on PHP 8.3 (Docker only), Sanctum 4.3.3                               |
+| Admin panel        | Filament 3.3.55                                                                       |
+| Database           | PostgreSQL 16.9 with PostGIS 3.5.2                                                    |
+| Queues and cache   | Redis 7.4.11, Horizon 5.50.0                                                          |
+| Object storage     | S3-compatible (MinIO locally, Cloudflare R2 planned)                                  |
+| Payments           | iyzico marketplace payments (Checkout Form and sub-merchants), a fake provider locally |
+| Web                | Laravel Blade, server-side rendered                                                   |
+| Device attestation | Play Integrity (Android) and DeviceCheck (iOS) via platform channels                  |
+
+Resolved versions and the reasoning are in [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md).
+
+## Architecture
+
+Two main roots: `app/` for the Flutter client and `server/` for the Laravel backend, plus `brand/`
+and `docs/`. The backend exposes a versioned JSON API under `/api/v1`, serves the Blade website and
+hosts the Filament admin. Money is stored as integer minor units (kuruş) in TRY; the platform never
+holds funds, since payments flow from the donor through the payment provider to the merchant.
+Recipient anonymity is a core invariant: no accounts, no recipient identity shown to donors or
+merchants, and no precise recipient location stored.
 
 ## Getting started
 
-The product and technical specification lives in this folder as `04-askida-flutter.md`. Contributor
-rules and all commands are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-Server (needs Docker; PHP runs only inside the containers), from this folder:
+Server (needs Docker; PHP runs only inside the containers), from this folder. On first start the
+server container installs the Composer packages and creates `server/.env` from `.env.example`:
 
 ```sh
 docker compose up -d --wait
+docker compose exec server php artisan migrate --seed
 docker compose exec server php artisan test
 ```
 
-App (needs the Flutter SDK), from `app/`:
+The web then runs on http://localhost:58080 and Mailpit on http://localhost:58025.
+
+App (needs the Flutter SDK), from `app/`. The drift code is generated, not committed:
 
 ```sh
 flutter pub get
+dart run build_runner build --delete-conflicting-outputs
 flutter analyze
 flutter test
-dart format --set-exit-if-changed .
+flutter build apk --debug --flavor dev --dart-define-from-file=env/example.json
 ```
+
+Contributor rules and the remaining commands (PHPStan, Pint, Horizon) are in
+[`CONTRIBUTING.md`](CONTRIBUTING.md); environment keys are in [`docs/ops/env.md`](docs/ops/env.md).
+
+## CI
+
+- `Askida CI`: server (Pint, PHPStan, the test suite with skipped tests counted as failures), app
+  (format, analyze, test, debug APK), brand tokens, a placeholder grep with full-history gitleaks,
+  and Lighthouse as an informational job.
+- `Askida Security`: full-history gitleaks, Composer audit, OSV scan of `composer.lock` and
+  `pubspec.lock`, a CycloneDX SBOM, and informational `flutter pub outdated` and OWASP ZAP jobs.
+- `Askida restore drill`: writes an encrypted database archive to a job-local MinIO bucket and
+  restores it into a fresh PostGIS.
+
+## Documentation
+
+- Product and technical specification: [`04-askida-flutter.md`](04-askida-flutter.md)
+- Architecture decisions: [`docs/adr/`](docs/adr/)
+- API: [`docs/api/openapi.yaml`](docs/api/openapi.yaml) and [`docs/api/README.md`](docs/api/README.md)
+- Security: [verification matrix](docs/security/verification-matrix.md), [threat model](docs/security/threat-model.md), [authorization matrix](docs/security/authorization-matrix.md), [attack report](docs/security/attack-report.md), [pentest report](docs/security/pentest-report.md), [XSS sweep](docs/security/xss-sweep.md), [ZAP](docs/security/zap-report.md) and [MobSF](docs/security/mobsf-report.md) reports, [dependency audit](docs/security/dependency-audit.md), [history-purge runbook](docs/security/history-purge-runbook.md)
+- Operations: [deploy](docs/ops/deploy.md), [environment](docs/ops/env.md), [backup and restore](docs/ops/backup-restore.md), [cost alerts](docs/ops/cost-alerts.md)
+- Release: [store listing](docs/release/store-listing.en.md), [privacy labels](docs/release/privacy-labels.md), [signing](docs/release/signing.md), [screenshots](docs/release/screenshots/README.md)
+- SEO and GEO: [checklist](docs/seo/seo-geo-checklist.md), [ASO](docs/seo/aso.md)
+- Hand-off notes: [`docs/handoffs/`](docs/handoffs/)
 
 ## License
 
