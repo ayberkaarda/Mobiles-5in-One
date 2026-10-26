@@ -55,6 +55,26 @@ The system includes the .NET MAUI mobile client, Minimal API, Razor Pages site a
   and require processed media. Hidden urgent rows are visible only in explicit management queries.
 - Oversized or misleading media upload and resource exhaustion through map queries.
 
+## Admin console
+
+The Web console is a BFF: API access/refresh tokens stay inside an encrypted Data Protection
+authentication ticket (`PatikaAdmin`, HttpOnly, Secure, SameSite Strict, `/admin`). Thirty-minute
+sliding sessions have an independently checked eight-hour absolute lifetime; refresh failures and
+`admin_access_revoked` end the local session. Deployments must persist the Web key ring. Pending
+MFA challenges live in server memory for five minutes behind random browser handles.
+
+Web policies require Moderator/Admin and MFA; users, audit and CSV additionally require Admin.
+The API remains authoritative for current role, session version and every write. All POSTs require
+antiforgery. Sensitive forms send TOTP and a reason to the BFF, which obtains action/target-bound
+step-up and uses it only server-side in the same request. Re-uploaded CSV bytes must match the
+preview hash and are revalidated by the API; no temporary uploads are retained.
+
+All admin responses are no-store, noindex/nofollow and frame-denied; output caching excludes the
+path. A self-only CSP and Razor encoding prevent stored content from becoming executable markup.
+No API data uses raw HTML. Private photos are HTTPS links with noreferrer. Existing robots rules
+exclude `/admin`; admin pages are never sitemap entries. BFF-originated TOTP traffic shares the
+API's per-IP ceiling unless a separately reviewed trusted proxy configuration forwards client IPs.
+
 ## Required verification
 
 Cover authorization and IDOR cells, rate-limit proxy-header spoofing, JWT tampering, refresh reuse, oversized bodies, MIME spoofing, EXIF removal, webhook forgery/replay, admin CSRF, and admin access without TOTP in the security test suite. Run web and API security scans and record findings, fixes, and retest evidence in the security verification matrix and penetration-test report. Revisit this outline when endpoints, data classes, integrations, or trust boundaries change.

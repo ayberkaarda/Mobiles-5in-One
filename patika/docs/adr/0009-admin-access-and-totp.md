@@ -102,6 +102,56 @@ Account purge clears the TOTP secret, enrolment, step and lockout counters and t
 deletes the user's recovery codes and admin access tokens. The hourly maintenance job deletes admin
 access tokens (MFA challenges and step-up tokens) that expired more than a day ago.
 
+## Web BFF addendum (P4-D)
+
+Patika.Web serves the Turkish console at `/admin` using Razor Pages and its own layout and CSS.
+`Admin:ApiBaseUrl` is the API origin (for example `https://api.patika.app/`); the client adds `/v1`.
+The Web read context is never used by the console. Every administrative read and write goes through
+the API, including logout, which revokes the refresh token before clearing the local ticket.
+
+The `PatikaAdmin` cookie contains a Data Protection encrypted authentication ticket with the access
+and refresh tokens in authentication properties. It is HttpOnly, Secure, SameSite Strict, scoped to
+`/admin`, and slides for 30 minutes. An original issued-at claim survives refresh and renewal;
+cookie validation rejects it at eight hours using the injected TimeProvider. Access tokens within
+one minute of expiry are refreshed server-side; failed refresh clears the session. Concurrent
+requests share a refresh rotation through a one-minute in-process cache keyed by the previous
+token's SHA-256 digest. Use sticky routing for this cache and pending logins in multi-instance
+deployments, or replace both with shared coordination before removing stickiness. Persist and
+share the Web host's Data Protection key ring across instances using the hosting platform's key
+storage configuration. API and Web keys need not be shared with each other. If the API is unreachable
+at logout, the BFF still clears its cookie; remote revocation cannot be confirmed in that case.
+
+The password/MFA interstitial holds the API challenge only in a five-minute server memory entry;
+the browser receives a random handle, never that API challenge. Restarting the Web process loses
+pending logins; multi-instance hosts need sticky routing for this short flow. Elevated users without
+TOTP are refused and directed to enrol in the mobile app. No QR dependency is added.
+
+CSV commit requires re-uploading the original file. The BFF previews those bytes again, checks the
+submitted preview hash, obtains step-up for `CsvCommit` and that hash, and sends the same file to
+commit. It stores no uploaded file on disk or in a cookie. The API revalidates and deduplicates it.
+Role, suspend, unsuspend and urgent restore similarly obtain an action/target-bound step-up and
+perform the action within the same browser POST; no step-up token appears in HTML. Native forms
+and expandable verification panels work without JavaScript. The API's 2000-row limit takes
+precedence over the older 1000-row artboard copy.
+
+All POST forms use antiforgery. The entire `/admin` path, including redirects, failures and unknown
+routes, is no-store, noindex/nofollow and frame-denied with a restrictive self-only CSP. Output-cache
+base policy excludes the path. Existing robots rules disallow it and the sitemap has no admin pages.
+Razor encodes all API content. Private photo URLs open in a separate, noreferrer HTTPS link rather
+than expanding the console CSP to arbitrary image origins. Pending-only adoption/photo queues do
+not expose published records; the takedown form accepts the reported content id explicitly.
+
+The BFF does not forward browser-controlled proxy headers. The API's per-IP TOTP ceiling of 100
+per 15 minutes is consequently shared by this Web host; the API also enforces its per-user
+20-per-15-minute budget and persisted lockout. The same applies to the per-IP `auth` bucket
+(5 sign-in requests per 15 minutes): every console sign-in uses two of them, so all moderators and
+admins together get about two sign-ins per 15 minutes until the Web host is a trusted proxy that
+forwards the client address. Proxy trust and forwarding can be configured in a later deployment
+change once the proxy chain is known.
+
+The console shows the last 12 hex digits of ids (full id in the title attribute), because
+time-ordered ids created close together share their leading digits.
+
 ## Known limits
 
 Accepted for now; phase 6 hardening revisits them.

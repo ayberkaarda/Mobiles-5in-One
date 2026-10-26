@@ -42,6 +42,23 @@ Additional constraints: moderators can review adoption, urgent, photo, and repor
 
 ## Admin API (P4-D)
 
+### Admin console (Web BFF)
+
+| Web page / action | Guest / User / Trusted | Moderator with MFA | Admin with MFA |
+| --- | --- | --- | --- |
+| `/admin/giris` | Login form; no console session for User/Trusted | Password then TOTP | Password then TOTP |
+| `/admin` queue, decisions, published-content takedown | Deny | Allow | Allow |
+| Urgent restore | Deny | Bound step-up | Bound step-up |
+| `/admin/csv` preview / commit | Deny | 403 | Allow / bound step-up |
+| `/admin/kullanicilar` search | Deny | 403 | Allow; masked email |
+| Role, suspend, unsuspend | Deny | 403 | Bound step-up |
+| `/admin/denetim` | Deny | 403 | Allow |
+| `/admin/cikis` | Login redirect | POST with antiforgery | POST with antiforgery |
+
+Unenrolled Moderator/Admin accounts receive enrolment instructions instead of a console cookie.
+Manage navigation is hidden from moderators and server policy still returns 403 for direct URLs.
+All writes use antiforgery and the API's current authorization checks; no Web database writes occur.
+
 All paths below start with `/v1`. Anonymous callers get 401; User and Trusted get 403.
 Moderator/Admin without MFA get 403 `mfa_required`. The bearer handler reads the current DB role
 on every request, making demotion immediate. Every write also re-reads the caller under the admin
