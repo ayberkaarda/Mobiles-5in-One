@@ -128,7 +128,7 @@ docker compose exec server php artisan test
 
 The web then runs on http://localhost:58080 and Mailpit on http://localhost:58025.
 
-App (needs the Flutter SDK), from `app/`. The drift code is generated, not committed:
+App (needs the Flutter SDK), from `app/`. The drift code is built by `build_runner` and not committed:
 
 ```sh
 flutter pub get

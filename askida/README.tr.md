@@ -128,7 +128,7 @@ docker compose exec server php artisan test
 
 Ardından web http://localhost:58080, Mailpit http://localhost:58025 adresinde çalışır.
 
-Uygulama (Flutter SDK gerekir), `app/` içinden. drift kodu üretilir, depoda tutulmaz:
+Uygulama (Flutter SDK gerekir), `app/` içinden. drift kodu `build_runner` ile oluşturulur, depoda tutulmaz:
 
 ```sh
 flutter pub get
