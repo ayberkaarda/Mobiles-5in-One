@@ -22,6 +22,7 @@ public static class PatikaWorkerHost
         builder.Services.AddPatikaInfrastructure(builder.Configuration.GetConnectionString("Patika"));
         builder.Services.AddMediaServices(builder.Configuration);
         builder.Services.AddOpsAlerts(builder.Configuration, builder.Environment);
+        builder.Services.AddBackupVerify(builder.Configuration);
         builder.Services.AddPushServices(builder.Configuration);
         builder.Services.AddAccountJobServices();
         builder.Services.AddPlayBilling(builder.Configuration, builder.Environment.IsDevelopment(), builder.Environment.IsProduction());
@@ -41,6 +42,7 @@ public static class PatikaWorkerHost
                     .RepeatForever()));
             options.AddMediaJobs();
             options.AddPushJobs();
+            options.AddBackupVerifyJob();
             options.AddAccountJobs();
             options.AddAdoptionJobs();
             options.AddMaintenanceJobs();
