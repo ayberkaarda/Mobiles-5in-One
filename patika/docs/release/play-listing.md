@@ -33,7 +33,7 @@ MAMA VE SU NOKTALARI
 
 HAYVAN PROFİLLERİ VE SAHİPLENDİRME
 • Mahallenin tanıdık hayvanları için profil: tür, kısırlaştırma, aşı, küpe bilgisi ve görülme kayıtları.
-• Takip ettiğiniz hayvanlarla ilgili güncellemeleri alın.
+• Hayvanları takip edin, takip listenizden kolayca bulun.
 • Sahiplendirme ilanları moderasyondan geçer; başvurular yalnızca ilan sahibine görünür.
 
 ACİL YARDIM
@@ -83,7 +83,7 @@ FEEDING STATIONS
 
 ANIMAL PROFILES AND ADOPTION
 • Profiles for the neighbourhood's familiar animals: species, sterilised, vaccinated, ear-tagged, and a sighting log.
-• Follow an animal to get its updates.
+• Follow animals and find them again in your list.
 • Adoption listings are moderated; requests are visible only to the person who posted the listing.
 
 URGENT HELP
@@ -104,7 +104,7 @@ If you want to support Patika, a monthly or yearly Destekçi subscription adds a
 Patika is a volunteer community tool, not a veterinary service or an official rescue unit. In an emergency, also contact your municipality's veterinary service.
 ```
 
-The full descriptions are 2,114 (tr) and 1,939 (en) characters (`wc -m`, UTF-8, without the final newline).
+The full descriptions are 2,114 (tr) and 1,951 (en) characters (`wc -m`, UTF-8, without the final newline).
 
 ## Graphics
 
