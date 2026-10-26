@@ -16,6 +16,9 @@ public sealed record DocHeading(int Level, string Id, string Text);
 /// </summary>
 public static class MarkdownLite
 {
+    public static Microsoft.AspNetCore.Html.IHtmlContent InlineContent(string text) =>
+        new Microsoft.AspNetCore.Html.HtmlString(Inline(text));
+
     public static (string Html, IReadOnlyList<DocHeading> Headings) Render(string markdown)
     {
         var html = new StringBuilder();

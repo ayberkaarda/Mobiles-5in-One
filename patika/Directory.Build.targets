@@ -1,0 +1,24 @@
+<Project>
+  <UsingTask TaskName="PatikaCheckRazor" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        foreach (var file in Files)
+        {
+            if (Regex.IsMatch(File.ReadAllText(file.ItemSpec), @"\bHtml\s*\.\s*Raw\s*\("))
+                Log.LogError("PATIKA001: Html.Raw is forbidden in Razor views: " + file.ItemSpec);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="PatikaRazorSafety" BeforeTargets="CoreCompile" Condition="'$(MSBuildProjectName)' == 'Patika.Web'">
+    <ItemGroup>
+      <_PatikaRazor Include="$(MSBuildProjectDirectory)/Pages/**/*.cshtml;$(MSBuildProjectDirectory)/Areas/**/*.cshtml" />
+    </ItemGroup>
+    <PatikaCheckRazor Files="@(_PatikaRazor)" />
+  </Target>
+</Project>

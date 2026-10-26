@@ -59,6 +59,6 @@ else
 <meta name="twitter:image:alt" content="@imageAlt" />
 @foreach (var item in jsonLd)
 {
-    @* Written raw: the script tag helper would re-encode the type attribute. JsonLd.Serialize leaves no '<'. *@
-    @Html.Raw("<script type=\"application/ld+json\">" + JsonLd.Serialize(item) + "</script>\n")
+    @* A data block, never executed: no nonce, so the page stays cacheable. JsonLd.Serialize leaves no '<'. *@
+    @JsonLd.Script(item)
 }

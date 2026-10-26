@@ -22,6 +22,11 @@ internal static class PublicDataPreparation
         var pendingSlugs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in entries)
         {
+            foreach (var property in entry.Properties.Where(p => p.Metadata.ClrType == typeof(string)
+                && p.Metadata.Name is "DisplayName" or "Name" or "Note" or "Description" or "Requirements" or "Message" or "Reply" or "Reason" or "Address" or "HiddenReason"))
+            {
+                if (property.CurrentValue is string text) property.CurrentValue = UserText.Clean(text);
+            }
             string? district = entry.Entity switch
             {
                 Station s => s.District,
