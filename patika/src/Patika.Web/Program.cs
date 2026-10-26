@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Patika.Infrastructure.Logging;
 using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 using Patika.Web.Seo;
@@ -7,6 +8,7 @@ using Patika.Web.Services.Admin;
 using Patika.Web.Services.PublicQueries;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddPatikaLogging();
 builder.Services.AddRazorPages();
 builder.Services.AddAdminConsole(builder.Configuration);
 builder.Services.AddProblemDetails();

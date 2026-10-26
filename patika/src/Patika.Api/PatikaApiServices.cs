@@ -11,7 +11,7 @@ using Patika.Api.Features.Auth;
 using Patika.Api.Features.Devices;
 using Patika.Api.Features.Media;
 using Patika.Api.Features.Urgent;
-using Patika.Api.Logging;
+using Patika.Infrastructure.Logging;
 using Patika.Api.OpenApi;
 using Patika.Api.Security;
 using Patika.Api.Security.Authorization;
@@ -19,9 +19,6 @@ using Patika.Api.Security.Passwords;
 using Patika.Api.Security.RateLimiting;
 using Patika.Api.Security.Tokens;
 using Serilog;
-using Serilog.Core;
-using Serilog.Events;
-using Serilog.Formatting.Compact;
 
 namespace Patika.Api;
 
@@ -40,21 +37,7 @@ public static class PatikaApiServices
             kestrel.Limits.MaxRequestBodySize = HttpHardening.MaxRequestBodyBytes;
         });
 
-        // Every sink (console plus any registered in DI, such as test capture) sits behind the
-        // exception scrubber, and the masking enricher runs last, so no sink sees raw user data.
-        services.AddSerilog((provider, logger) => logger
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-            .MinimumLevel.Override("System", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .Enrich.With<MaskingEnricher>()
-            .WriteTo.Sink(new ExceptionScrubbingSink(
-            [
-                .. provider.GetServices<ILogEventSink>(),
-                new LoggerConfiguration().WriteTo.Console(new RenderedCompactJsonFormatter()).CreateLogger(),
-            ])),
-            preserveStaticLogger: true);
+        services.AddPatikaLogging();
 
         services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
         {

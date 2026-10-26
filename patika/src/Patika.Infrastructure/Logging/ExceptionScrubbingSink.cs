@@ -2,7 +2,7 @@ using System.Text;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Patika.Api.Logging;
+namespace Patika.Infrastructure.Logging;
 
 /// <summary>
 /// Front sink for every configured sink. Exception messages (including inner and aggregate

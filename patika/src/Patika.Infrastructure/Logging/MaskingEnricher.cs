@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Patika.Api.Logging;
+namespace Patika.Infrastructure.Logging;
 
 /// <summary>
 /// Last enricher in the pipeline: masks email addresses (<c>a***@d***</c>), drops credential-bearing
