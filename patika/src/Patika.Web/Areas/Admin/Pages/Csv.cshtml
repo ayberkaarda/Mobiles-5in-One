@@ -1,0 +1,32 @@
+@page "/admin/csv"
+@model CsvModel
+@{ ViewData["Title"] = "Bakım yerlerini içe aktar"; }
+<header class="admin-heading"><h1>Bakım yerlerini içe aktar</h1>
+    <p>CSV dosyası şu sütunları içermeli: <code>name, kind, latitude, longitude, address, phone, open24h</code>. İsteğe bağlı: <code>district, website</code>. Tür: Vet, Shelter veya MunicipalCare. UTF-8, en çok 2000 satır, 1 MiB.</p>
+</header>
+<form method="post" enctype="multipart/form-data" class="admin-card admin-form">
+    <label>CSV dosyası<input asp-for="File" type="file" accept=".csv,text/csv" required /></label>
+    <button>Önizle</button>
+</form>
+@if (Model.Preview is { } preview)
+{
+    var errors = preview.Rows.Count(row => row.Status != "valid");
+    <p class="@(errors > 0 ? "admin-alert" : "admin-notice")" role="status">@(preview.Rows.Count - errors) satır hazır, @errors satırda hata var. Hatalı satırlar düzeltilene kadar içe aktarma yapılmaz.</p>
+    <div class="admin-table"><table><thead><tr><th scope="col">Satır</th><th scope="col">Ad</th><th scope="col">Tür</th><th scope="col">Konum</th><th scope="col">24 saat</th><th scope="col">Durum</th></tr></thead><tbody>
+        @foreach (var row in preview.Rows)
+        {
+            var valid = row.Status == "valid";
+            <tr class="@(valid ? null : "admin-row-error")"><td data-label="Satır">@row.Row</td><td data-label="Ad">@row.Fields?.Name</td><td data-label="Tür">@row.Fields?.Kind</td><td data-label="Konum">@AdminText.Coordinates(row.Fields?.Latitude, row.Fields?.Longitude)</td><td data-label="24 saat">@(row.Fields?.Open24h == true ? "Evet" : "Hayır")</td><td data-label="Durum"><span class="@(valid ? "admin-ok" : "admin-bad")">@(valid ? "Hazır" : "Hata")</span> @string.Join(" · ", row.Errors.Select(AdminText.CsvError))</td></tr>
+        }
+    </tbody></table></div>
+    @if (errors == 0)
+    {
+        <form method="post" enctype="multipart/form-data" class="admin-card admin-form">
+            <input type="hidden" name="commit" value="true" /><input asp-for="PreviewHash" type="hidden" />
+            <p>Kaydetmek için önizlediğin dosyayı yeniden seç. Dosya değiştiyse yeniden önizlemen gerekir.</p>
+            <label>Aynı CSV dosyası<input name="File" type="file" accept=".csv,text/csv" required /></label>
+            <partial name="_StepUp" /><button>Doğrula ve içe aktar</button>
+            <p class="admin-muted">İçe aktarılan kayıtlar “doğrulanmadı” olarak eklenir; işlem denetim kaydına yazılır.</p>
+        </form>
+    }
+}

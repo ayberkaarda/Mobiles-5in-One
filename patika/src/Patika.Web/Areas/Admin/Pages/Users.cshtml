@@ -1,0 +1,21 @@
+@page "/admin/kullanicilar"
+@model UsersModel
+@{ ViewData["Title"] = "Kullanıcılar"; }
+<header class="admin-heading"><h1>Kullanıcılar</h1><p>Rol değişikliği ve askıya alma için yeniden doğrulama gerekir.</p></header>
+<form method="get" class="admin-search"><label asp-for="Q">Tam e-posta veya kimlik başlangıcı</label><input asp-for="Q" maxlength="254" /><button>Ara</button></form>
+<div class="admin-table"><table><thead><tr><th scope="col">Kullanıcı</th><th scope="col">Rol</th><th scope="col">Katkılar</th><th scope="col">İşlem</th></tr></thead><tbody>
+@foreach (var user in Model.Users)
+{
+    <tr><td data-label="Kullanıcı"><strong>@user.Email</strong><br /><code>@user.Id</code><br />@user.CreatedAt.ToString("dd.MM.yyyy")</td><td data-label="Rol">@AdminText.Role(user.Role)<br />@(user.TotpEnabled ? "İki adımlı doğrulama açık" : "İki adımlı doğrulama kapalı")</td><td data-label="Katkılar">@user.AdoptionCount ilan · @user.UrgentCount acil · @user.RejectionCount ret</td>
+        <td data-label="İşlem"><details><summary>Yetki ve hesap işlemleri</summary>
+            <form method="post" class="admin-form">
+                <input type="hidden" name="TargetId" value="@user.Id" /><input type="hidden" name="Q" value="@Model.Q" />
+                <label>İşlem<select name="Operation"><option value="role">Rol değiştir</option><option value="suspend">Askıya al</option><option value="unsuspend">Askıyı kaldır</option></select></label>
+                <label>Yeni rol<select name="Role">@foreach (var role in new[] { "User", "Trusted", "Moderator", "Admin" }) { <option value="@role" selected="@(role == user.Role)">@AdminText.Role(role)</option> }</select></label>
+                <label>Askı bitişi (isteğe bağlı, UTC)<input name="Until" type="datetime-local" /></label>
+                <partial name="_StepUp" /><button>Doğrula ve kaydet</button>
+            </form>
+        </details></td></tr>
+}
+</tbody></table></div>
+@if (Model.Users.Count == 0) { <p class="admin-note">Arama için tam e-posta adresi veya kimlik başlangıcı gir.</p> }

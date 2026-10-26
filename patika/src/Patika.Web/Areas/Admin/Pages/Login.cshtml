@@ -1,0 +1,36 @@
+@page "/admin/giris"
+@model LoginModel
+@{ ViewData["Title"] = "Yönetim girişi"; }
+<div class="admin-login">
+    <section class="admin-card @(Model.Challenge.Length > 0 ? "admin-completed" : "")" aria-labelledby="password-heading">
+        <img src="~/img/patika-lockup.svg" alt="Patika" width="120" height="36" />
+        <p class="admin-muted">Adım 1 / 2@(Model.Challenge.Length > 0 ? ", tamamlandı" : "")</p>
+        <h1 id="password-heading">Yönetim alanı</h1>
+        @if (Model.Challenge.Length == 0)
+        {
+            <form method="post" class="admin-form">
+                <label asp-for="Email">E-posta</label><input asp-for="Email" type="email" autocomplete="username" required maxlength="254" />
+                <label asp-for="Password">Şifre</label><input id="Password" name="Password" type="password" autocomplete="current-password" required maxlength="256" />
+                <button type="submit">Devam et</button>
+            </form>
+        }
+        else { <p>E-posta ve şifre doğrulandı.</p> }
+        @if (Model.NeedsEnrolment) { <p>Patika uygulamasında hesap güvenliğinden doğrulama uygulamanı bağla. Ardından buradan yeniden giriş yap.</p> }
+    </section>
+    @if (Model.Challenge.Length > 0)
+    {
+        <section class="admin-card admin-verification" aria-labelledby="mfa-heading">
+            <p class="admin-eyebrow">Adım 2 / 2</p>
+            <h2 id="mfa-heading">Doğrulama kodu</h2>
+            <p>Doğrulama uygulamandaki 6 haneli kodu gir. Kod 30 saniyede bir yenilenir.</p>
+            <form method="post" class="admin-form">
+                <input asp-for="Challenge" type="hidden" />
+                <label for="Code">Kod</label><input id="Code" name="Code" class="admin-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" />
+                <details><summary>Kurtarma kodu kullan</summary><label for="RecoveryCode">Kurtarma kodu</label><input id="RecoveryCode" name="RecoveryCode" autocomplete="off" maxlength="64" /></details>
+                <button type="submit">Giriş yap</button>
+            </form>
+            <a href="/admin/giris">Yeniden başla</a>
+            <p class="admin-note">Yönetim oturumu 30 dakika işlem yapılmazsa kapanır. Her giriş ve karar denetim kaydına yazılır.</p>
+        </section>
+    }
+</div>
