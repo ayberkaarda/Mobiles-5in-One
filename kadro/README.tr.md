@@ -2,22 +2,39 @@
 
 # Kadro
 
+[![Kadro CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-ci.yml)
+[![Kadro Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/kadro-security.yml)
+
 Halı saha maçları için organizasyon uygulaması. Kadronu kur, eksik oyuncuyu bul, saha ücretini böl.
-Uygulama içinde para hareketi olmaz; kaptan yalnızca kimin ödediğini takip eder.
+Uygulama içinde para hareketi olmaz; kaptan yalnızca kimin ödediğini takip eder. Tek bir TypeScript
+monoreposunda Expo uygulaması, Next.js web ve REST API, pg-boss worker'ı ve ortak paketler bulunur.
+Herkese açık sayfaların statik bir [web demosu](https://ayberkaarda.github.io/Mobiles-5in-One/kadro/)
+GitHub Pages'te yayında; orada giriş ve formlar çalışmaz.
 
 ## Durum
 
-Portföy projesi, geliştirme aşamasında. Phase 0 ile Phase 5 arası `main`'e birleşti; Phase 6
-(sertleştirme ve yayına hazırlık) büyük ölçüde birleşti. Domain API, mobil uygulama, tanıtım ve SEO
-sayfaları, Kadro Pro aboneliği ve ekip yönetim paneli kodda ve otomatik testlerle mevcut.
+Portföy projesi. Planlanan yedi fazın hepsi (0 ile 6) `main`'e birleşti: veri modeli ve güvenlik
+çekirdeği, domain API ve worker işleri, mobil uygulama, tanıtım ve SEO sayfaları, ekip yönetim
+paneliyle birlikte Kadro Pro aboneliği, sertleştirme ve yayına hazırlık işleri (saldırı testleri,
+MobSF taraması, bağımlılık denetimi, geri yükleme tatbikatı, cost guard, geçmiş temizleme runbook'u,
+mağaza metinleri, gizlilik etiketleri, SEO ve GEO kontrol listesi). Ardından açık ve koyu görünümlü
+yeniden tasarım (ADR-0084) geldi.
 
-Açık kalanlar çoğunlukla bu deponun sahip olmadığı sistemler gerektiren kanıtlar: mobil Maestro
-akışları bir cihazda ya da emülatörde hiç çalıştırılmadı, paywall ve satın alma akışları gerçek App
-Store veya Google Play hesaplarına karşı denenmedi, yayında bir origin yok (Caddy kenar
-yapılandırması ve `deploy.md` runbook'u yazılmadı), üretim yedekleme yolu, hata izleme ve maliyet
-uyarıları tasarlandı ama sağlayıcılarda yapılandırılmadı. Güvenlik doğrulama matrisi 23 maddenin
-13'ünü tamam, 10'unu kısmi gösterir; eksik kanıt her satırda yazılıdır. Hukuki sayfalar portföy
-projesi için örnek metindir, öyle etiketlenmiştir; hukuki incelemeden geçmiş metin değildir.
+Neyin gerçek, neyin olmadığı:
+
+| Alan                                                                  | Durum                                                                                                                                                                                                           |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API, web sayfaları, yönetim paneli, worker, veritabanı, yetkilendirme | Gerçek kod; yerelde Docker'da ve test paketlerinde çalışıyor. `Kadro CI` ve `Kadro Security`, `kadro/` altındaki her değişiklikte çalışır                                                                       |
+| Mobil uygulama                                                        | Gerçek Expo uygulaması; ekran görüntüleri Android emülatöründen. `apps/mobile/.maestro/flows/` altındaki 11 Maestro akışının kayıtlı bir koşusu yok (elle tetiklenen `Kadro mobile e2e` iş akışı hiç çalışmadı) |
+| Kadro Pro (RevenueCat)                                                | Webhook, mutabakat ve yetkiler fixture'larla ve yerel sahte bir sunucuyla test edildi; mağaza hesabı yok, hiçbir satın alma yapılmadı                                                                           |
+| Apple ve Google ile giriş, push, e-posta                              | Kod yolları ve testleri var; gerçek sağlayıcılara karşı çalıştırılmadı                                                                                                                                          |
+| Yedekler                                                              | `ops/restore-drill.sh` ve `Kadro restore drill` iş akışı yerel bir PostGIS dökümünü geri yükler (GitHub Actions'taki son koşu 2026-10-19'da geçti); üretim bucket'ı yok                                         |
+| Barındırma, alan adı, TLS, Sentry, sağlayıcı maliyet uyarıları, iOS   | Kurulmadı; depoda Caddy kenar yapılandırması ya da yayın runbook'u yok                                                                                                                                          |
+| Hukuki metinler                                                       | Örnek metinler, öyle etiketli, incelenmedi                                                                                                                                                                      |
+
+Güvenlik doğrulama matrisi ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+23 maddenin 13'ünü tamam, 10'unu kısmi gösterir; eksik kanıt her satırda yazılıdır. Lighthouse
+laboratuvar LCP değeri bazı sayfalarda 2,5 ile 2,7 sn, yani 2,5 sn hedefinin biraz üstünde (ADR-0084).
 
 `apps/mobile` Expo uygulaması (Türkçe ve İngilizce ekranlar), `apps/worker` pg-boss işlerini
 çalıştırır (hatırlatma, push, e-posta, yükleme, saha içe aktarma, hesap silme, faturalama,
@@ -110,8 +127,8 @@ Ekran görüntüleri `[ÖRNEK]` etiketli örnek veriyi gösterir: web sayfaları
 
 "Uygulandı", kodun, API sözleşmesinin ve otomatik testlerin `main` üzerinde bulunduğu anlamına gelir.
 Mobil satırlarda "cihaz akışları doğrulanmadı" etiketi vardır: ekranlar birim ve bileşen testleriyle
-kapsanır, ancak Maestro akışları (`apps/mobile/.maestro/`) bir cihazda ya da emülatörde
-çalıştırılmadı.
+kapsanır, ancak Maestro akışlarının (`apps/mobile/.maestro/`) bir cihazda ya da emülatörde kayıtlı
+bir koşusu yok.
 
 | Özellik                                                                                                               | Durum                                                                                                        |
 | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -137,13 +154,13 @@ entegrasyonu, canlı sohbet, video, reklam, lig ve turnuvalar, Türkçe ve İngi
 
 ## Teknoloji yığını
 
-- Mobil: Expo (React Native), Expo Router, TypeScript
-- Web ve API: Next.js (App Router), `/api/v1` altında REST
-- Veritabanı: PostGIS'li PostgreSQL 16, Drizzle ORM ve SQL migration'ları
-- Arka plan işleri: pg-boss (worker uygulaması)
-- Doğrulama ve sözleşmeler: zod
+- Mobil: Expo 57 (React Native 0.86), Expo Router, TypeScript 6
+- Web ve API: Next.js 16 (App Router), `/api/v1` altında REST
+- Veritabanı: PostGIS 3.5'li PostgreSQL 16, Drizzle ORM 0.45 ve SQL migration'ları
+- Arka plan işleri: pg-boss 12 (worker uygulaması)
+- Doğrulama ve sözleşmeler: zod 4
 - Şifreler: Argon2id; erişim token'ları: ES256 JWT; rotasyonlu refresh token'lar
-- Araçlar: pnpm workspaces, Turborepo, Vitest, ESLint, Prettier
+- Araçlar: Node.js 22, pnpm 12 workspaces, Turborepo, Vitest, Playwright, ESLint, Prettier
 
 Sabitlenmiş sürümler ve gerekçeleri
 [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında.
@@ -224,7 +241,15 @@ asla girmez. Zorunlu bir değişken eksik veya geçersizse uygulamalar açılı�
 
 `pnpm test` her paketin Vitest testlerini çalıştırır. Veritabanı testleri (`@kadro/db`) ve web API
 testleri (`@kadro/web`) geçici bir PostGIS konteyneri başlatır; bu yüzden çalışan bir Docker daemon
-gerekir. Docker yoksa testler açık bir hata mesajıyla başarısız olur.
+gerekir. Docker yoksa testler açık bir hata mesajıyla başarısız olur. Yönetim panelinin bir
+Playwright paketi vardır (`pnpm --filter @kadro/web test:e2e`).
+
+[`../.github/workflows`](../.github/workflows/) altındaki CI iş akışları: `Kadro CI` lint, tip
+kontrolü, derleme ve testleri çalıştırır, Lighthouse bilgilendirme amaçlı ayrı bir iştir;
+`Kadro Security` tüm geçmişi gitleaks ile tarar, bağımlılıkları denetler (yüksek ve kritik) ve sır
+ile yer tutucu grep'lerini çalıştırır; `Kadro restore drill` örnek veriyle doldurulan bir PostGIS'in
+dökümünü alıp yeni bir konteynere geri yükler; `Kadro mobile e2e` (Android emülatöründe Maestro)
+elle tetiklenir ve hiç çalıştırılmadı.
 
 ## Güvenlik yaklaşımı
 
@@ -251,6 +276,7 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 - [`docs/release/`](docs/release/): mağaza metinleri, yedek tatbikatı, maliyet uyarıları
 - [`docs/seo/`](docs/seo/): SEO ve GEO kontrol listesi
 - [`docs/handoffs/`](docs/handoffs/): paketler arası devir notları
+- [`docs/screenshots/README.md`](docs/screenshots/README.md): ekran görüntüsü setleri ve nasıl alındıkları
 
 ## Yol haritası
 
@@ -262,12 +288,16 @@ taşır. CI, tüm geçmişi sır için tarar ve bağımlılıkları denetler. Ay
 - Phase 4, web SEO sayfaları, tanıtım sitesi ve herkese açık listeler: tamam, birleşti
 - Phase 5, Kadro Pro aboneliği, webhook ve yönetim paneli: tamam, birleşti (mağaza satın alımları
   gerçek mağazalara karşı doğrulanmadı)
-- Phase 6, sertleştirme ve yayına hazırlık: büyük ölçüde birleşti (güvenlik doğrulama matrisi,
-  tehdit modeli, saldırı raporu, SEO ve GEO kontrol listesi, cost guard, mağaza metni taslakları).
-  Açık: cihazda Maestro çalıştırması, mağaza ve RevenueCat doğrulaması, EAS derlemeleri ve imzalı
-  güncelleme kanalı, Caddy kenarı ve `deploy.md` ile yayında bir origin, üretim yedekleri, hata
-  izleme, sağlayıcı tarafında maliyet uyarıları, MobSF ve ZAP API sonuçları, gerçek alan adında
-  sitemap gönderimi ve depo genelinde yer tutucu grep kapısı.
+- Phase 6, sertleştirme ve yayına hazırlık: tamam, birleşti (doğrulama matrisi, tehdit modeli,
+  saldırı raporu, MobSF raporu, bağımlılık denetimi, geri yükleme tatbikatı, cost guard, geçmiş
+  temizleme runbook'u, ASO, mağaza metinleri ve gizlilik etiketleri, SEO ve GEO kontrol listesi,
+  CI'da yer tutucu grep'i)
+- Fazlardan sonra: uygulamanın ve webin açık ve koyu görünümlü yeniden tasarımı (ADR-0084)
+
+Açık kanıtlar, hepsi burada bulunmayan sistemlere bağlı: bir cihazda ya da emülatörde Maestro
+koşusu, mağaza ve RevenueCat doğrulaması, EAS derlemeleri ve imzalı güncelleme kanalı, Caddy kenarı
+ve yayın runbook'uyla barındırılan bir origin, üretim yedekleri, Sentry, sağlayıcı tarafında maliyet
+uyarıları, ZAP API taraması, gerçek alan adında sitemap gönderimi, iOS.
 
 ## Lisans
 
