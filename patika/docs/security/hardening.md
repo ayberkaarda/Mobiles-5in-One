@@ -15,9 +15,11 @@ What the server, Web and Android build enforce beyond the feature code, why, and
 | Header | API | Web |
 | --- | --- | --- |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` outside Development | same |
-| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` | `default-src 'self'; script-src 'self'; img-src 'self' <media origin>; object-src 'none'; base-uri 'self'; frame-ancestors 'none'` |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` | `default-src 'self'; script-src 'self'; img-src 'self' <media origin>; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` |
 | `Permissions-Policy` | `geolocation=(self), camera=(), microphone=()` | same |
 | `X-Content-Type-Options`, `Referrer-Policy` | `nosniff`, `no-referrer` | `nosniff`, `strict-origin-when-cross-origin` |
+| `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | CORP `same-origin` | both `same-origin` (phase 6 ZAP baseline; COEP stays off) |
+| `Server` | not sent | not sent |
 
 ### Decision: no inline script and no nonce, so public pages stay cacheable
 
