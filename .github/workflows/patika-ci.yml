@@ -139,21 +139,12 @@ jobs:
         working-directory: patika
         shell: bash
         run: |
+          # The parser must reject empty, truncated and failed reports before it is trusted with the real one.
+          bash ops/ci/test-vulnerable-packages.sh
           dotnet restore Patika.slnx
-          dotnet list Patika.slnx package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/patika-vulnerabilities.json"
-          python3 - "$RUNNER_TEMP/patika-vulnerabilities.json" <<'PY'
-          import json, sys
-          report = json.load(open(sys.argv[1]))
-          def inspect(value):
-              if isinstance(value, dict):
-                  if str(value.get('severity', '')).lower() in ('high', 'critical'):
-                      raise SystemExit('High/Critical package vulnerability found')
-                  for child in value.values(): inspect(child)
-              elif isinstance(value, list):
-                  for child in value: inspect(child)
-          if report.get('problems'): raise SystemExit('Package audit did not complete')
-          inspect(report)
-          PY
+          dotnet list Patika.slnx package --vulnerable --include-transitive --format json --output-version 1 > "$RUNNER_TEMP/patika-vulnerabilities.json"
+          expected="$(dotnet sln Patika.slnx list | grep -c '\.csproj$')"
+          python3 ops/ci/check-vulnerable-packages.py "$RUNNER_TEMP/patika-vulnerabilities.json" "$expected"
       - name: Create CycloneDX inventory
         working-directory: patika
         run: |

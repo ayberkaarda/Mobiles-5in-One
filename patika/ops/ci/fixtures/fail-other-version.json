@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "projects": [
+    {
+      "path": "a.csproj"
+    },
+    {
+      "path": "b.csproj"
+    }
+  ]
+}

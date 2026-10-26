@@ -39,7 +39,7 @@ Guard rails: `StoredTextSafetyTests` fails if any page (public, admin, 404) cont
 
 ## Supply chain (item 19)
 
-CI (`patika-ci.yml`): `dotnet list package --vulnerable --include-transitive --format json` over the whole solution fails on any High or Critical advisory or an incomplete audit; a pinned CycloneDX 6.3.1 SBOM is uploaded as the `patika-sbom` artifact; `git grep` rejects `TODO|FIXME|lorem|YOUR_` in `src/` and `app/` (the legal drafts in `src/Patika.Web/Content` say "Taslak" on purpose and are not matched); Dependabot watches NuGet under `/patika` and the workflow actions.
+CI (`patika-ci.yml`): `dotnet list package --vulnerable --include-transitive --format json --output-version 1` over the whole solution, checked by [`ops/ci/check-vulnerable-packages.py`](../../ops/ci/check-vulnerable-packages.py): it fails on any High or Critical advisory, on reported `problems`, on a report that is not version 1, has no `projects` or lists fewer projects than `dotnet sln list` (so an empty or truncated report never passes); the step first runs the parser against the fixtures in `ops/ci/fixtures` (`test-vulnerable-packages.sh`: `{}`, missing and empty projects, too few projects, problems, a High advisory, a Moderate-only pass); a pinned CycloneDX 6.3.1 SBOM is uploaded as the `patika-sbom` artifact; `git grep` rejects `TODO|FIXME|lorem|YOUR_` in `src/` and `app/` (the legal drafts in `src/Patika.Web/Content` say "Taslak" on purpose and are not matched); Dependabot watches NuGet under `/patika` and the workflow actions.
 
 ## Android release (MobSF-facing)
 

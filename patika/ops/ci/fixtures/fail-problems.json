@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "problems": [
+    {
+      "level": "error",
+      "text": "Unable to load the service index for source"
+    }
+  ],
+  "projects": [
+    {
+      "path": "src/Patika.Api/Patika.Api.csproj"
+    },
+    {
+      "path": "src/Patika.Web/Patika.Web.csproj"
+    }
+  ]
+}
