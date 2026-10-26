@@ -37,6 +37,16 @@ public sealed class UrgentEndpointTests
     }
 
     [Fact]
+    public async Task ControlsAndBidiOverridesAreStrippedBeforeStoringUrgentText()
+    {
+        await using var host = await FeatureHost.StartAsync();
+        var (userId, client) = await host.SignInAsync();
+        using var response = await CreateAsync(client, OwnedPhoto(host, userId), new CoordinateDto(40.99, 29.03),
+            "Sick", "Visible\u202e\u0001 urgent description");
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("Visible urgent description", Assert.Single(host.Stores.Urgent.Posts.Values).Description);
+    }
+    [Fact]
     public async Task ThreeUrgentPostsPerDayThenTheFourthIsRefused()
     {
         await using var host = await FeatureHost.StartAsync();
@@ -86,7 +96,6 @@ public sealed class UrgentEndpointTests
     [InlineData(40.99, 29.03, "Lost", "Yaralı bir kedi, arka bacağı kanıyor")]
     [InlineData(40.99, 29.03, "injured", "Yaralı bir kedi, arka bacağı kanıyor")]
     [InlineData(40.99, 29.03, "Sick", "kısa")]
-    [InlineData(40.99, 29.03, "Sick", "Yaralı‮ kedi, arka bacağı kanıyor")]
     public async Task InvalidPostsAreRejected(double lat, double lng, string category, string description)
     {
         await using var host = await FeatureHost.StartAsync();

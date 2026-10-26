@@ -1,0 +1,52 @@
+# Code hardening (phase 6)
+
+What the server, Web and Android build enforce beyond the feature code, why, and which test proves it. Configuration keys are listed in [env.md](../ops/env.md); spend caps and alert routing in [cost-alerts.md](../ops/cost-alerts.md); log masking in [logging.md](../ops/logging.md).
+
+## Client address and the admin console (checklist item 5)
+
+- `Network:TrustedProxies` (IPs or CIDRs) is the only list whose `X-Forwarded-For` / `X-Forwarded-Proto` is processed, one hop, in both the API and the Web ([`TrustedNetwork.cs`](../../src/Patika.Infrastructure/Security/TrustedNetwork.cs)). An empty list processes no forwarded header: ASP.NET Core would otherwise treat empty `KnownProxies`/`KnownIPNetworks` as "trust every peer". The older `Network:KnownProxies` / `Network:KnownNetworks` keys are no longer read.
+- The Web admin console calls the API server-side, so every admin would share one per-IP sign-in bucket. The Web therefore sends its own verified client address in `X-Patika-Client-Ip` with `X-Patika-Bff-Key`. The API takes that address only when the socket peer equals `Network:BffAddress` **and** the key matches `Network:BffSharedKey` (SHA-256 digests compared in fixed time), before forwarded headers run, so a forwarded claim can never decide which peer is the console. A missing, wrong or foreign-peer key is ignored and the request counts against the real peer.
+- Misconfiguration fails loudly instead of silently giving every admin one bucket: the API refuses to start when only one of `Network:BffAddress` / `Network:BffSharedKey` is set, when the address is not a literal IP (a host name never equals a socket peer) or when the key is shorter than 32 characters; the Web refuses a short key too. A valid key from a peer other than `Network:BffAddress` logs a warning naming that peer (the key itself is never logged). At startup the Web calls `GET /v1/health/bff`, which echoes only whether the claim was accepted, and logs `bff.check`; `/healthz/bff` on the Web repeats it from the host or in Development.
+- The headers are added by one `DelegatingHandler` (`BffClientAddressHandler`) on the `PatikaAdmin` client, so console calls (`AdminApi`) and cookie refreshes (`AdminRefresh`) both carry the browser's address; a refresh no longer lands in the Web host's shared bucket.
+- Tests: `RateLimitTests` (spoofed XFF from an untrusted peer, blank proxy entry, BFF claim without key / with a wrong key / from another peer, two admins behind the console get separate buckets), `BffConfigurationTests` (startup validation, the wrong-peer warning, `/health/bff`), `NetworkHardeningTests` (the Web forwards only its verified client address, on console calls and on refreshes; two admins refreshing land in separate API buckets).
+
+## Security headers (item 9)
+
+| Header | API | Web |
+| --- | --- | --- |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` outside Development | same |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` | `default-src 'self'; script-src 'self'; img-src 'self' <media origin>; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` |
+| `Permissions-Policy` | `geolocation=(self), camera=(), microphone=()` | same |
+| `X-Content-Type-Options`, `Referrer-Policy` | `nosniff`, `no-referrer` | `nosniff`, `strict-origin-when-cross-origin` |
+| `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` | CORP `same-origin` | both `same-origin` (phase 6 ZAP baseline; COEP stays off) |
+| `Server` | not sent | not sent |
+
+### Decision: no inline script and no nonce, so public pages stay cacheable
+
+The public site and the admin console ship **no JavaScript at all** (no `wwwroot/js`, no inline handlers; the admin mobile menu is a native `<details>`). The only `<script>` elements are JSON-LD blocks, `type="application/ld+json"`. Browsers treat a script element whose type is not a JavaScript MIME type as a data block and never execute it, and CSP `script-src` is only checked for scripts that would run, so JSON-LD needs neither a nonce nor `'unsafe-inline'`. Checked in Chromium on the running Web: a guide page with JSON-LD under `script-src 'self'` raises no `securitypolicyviolation` event and the block's JSON stays readable (see the gate notes of 2026-10-26).
+
+A per-request nonce would have made every HTML response unique and forced `Cache-Control: no-store` plus an output-cache bypass, throwing away the phase 4 caching (60 s / 2 min / 5 min, [public-web-data.md](../public-web-data.md#caching)) that the SEO and performance budget relies on. So: `script-src 'self'`, no nonce, output cache unchanged. Admin pages are excluded from the output cache and sent `no-store` by `AdminSession` as before.
+
+Guard rails: `StoredTextSafetyTests` fails if any page (public, admin, 404) contains a `<script>` tag other than a bare `<script type="application/ld+json">`; `NetworkHardeningTests` asserts the exact `script-src 'self'`, no nonce, and that a second request for a public page is answered from the output cache (`Age` header). If inline script is ever needed, add a nonce **only** to that page and exclude only that page from the output cache.
+
+## Stored text (item 16)
+
+- `UserText.Clean` ([`UserText.cs`](../../src/Patika.Domain/UserText.cs)) works on Unicode scalar values (`EnumerateRunes`), so supplementary characters such as the U+E0000 tag block are classified whole: it removes C0/C1 controls and format characters (bidi overrides and isolates, zero-width spaces, BOM, tags), turns line breaks, tabs and line/paragraph separators into a space, keeps ZERO WIDTH JOINER and NON-JOINER only between two visible characters (emoji sequences, Persian and Indic scripts; never at the edges or in a run) and turns a lone surrogate into U+FFFD. It runs on every string of every request contract, whatever the property is called ([`RequestText.cs`](../../src/Patika.Api/Validation/RequestText.cs): a filter on the whole `/v1` group, repeated in the validation filter), so endpoints without a validator and fields added later are covered; only properties marked `[Verbatim]` (passwords and opaque tokens, the list pinned by `RequestTextTests`) reach the server byte for byte. Every save cleans the human-readable entity fields again (`PublicDataPreparation`: `DisplayName`, `Name`, `Note`, `Description`, `Requirements`, `Message`, `Reply`, `Reason`, `Address`, `HiddenReason`, `District`), so CSV imports and admin writes are covered. Tests: `UserTextTests`, `RequestTextTests`.
+- Rendering: Razor encodes everything; `Html.Raw` is banned in `Patika.Web` (below). Markdown documents are rendered by the encoding `MarkdownLite` renderer from embedded files only. JSON-LD is written by `JsonLd.Serialize`, whose encoder escapes `<`, `>`, `&` and quotes, plus an explicit `<` to `\u003c` pass, so a stored `</script>` cannot close the block. Care-place websites accept `https://` only.
+- Test: `StoredTextSafetyTests` stores six payloads (`<script>`, attribute breakout, `javascript:` URL, `</title><script>`, `</script><script>`, bidi and control characters) through the API into every rendered user-text field and checks every public page, JSON-LD block, OG tags, the sitemap, the admin pages and the API JSON.
+
+## Banned APIs (item 15)
+
+`BannedSymbols.txt` (Microsoft.CodeAnalysis.BannedApiAnalyzers, warnings are errors) bans `FromSqlRaw`, `ExecuteSqlRaw(Async)`, `SqlQueryRaw` and both `IHtmlHelper.Raw` overloads. The analyzer does not see Razor views, so `Directory.Build.targets` adds the `PATIKA001` build error for `Html.Raw(` in any `Patika.Web` `.cshtml`. Both were checked by compiling a deliberately bad file (four RS0030 errors; one PATIKA001 error) and are part of the phase 6 mutation checks.
+
+## Supply chain (item 19)
+
+CI (`patika-ci.yml`): `dotnet list package --vulnerable --include-transitive --format json --output-version 1` over the whole solution, checked by [`ops/ci/check-vulnerable-packages.py`](../../ops/ci/check-vulnerable-packages.py): it fails on any High or Critical advisory, on reported `problems`, on a report that is not version 1, has no `projects` or lists fewer projects than `dotnet sln list` (so an empty or truncated report never passes); the step first runs the parser against the fixtures in `ops/ci/fixtures` (`test-vulnerable-packages.sh`: `{}`, missing and empty projects, too few projects, problems, a High advisory, a Moderate-only pass); a pinned CycloneDX 6.3.1 SBOM is uploaded as the `patika-sbom` artifact; `git grep` rejects `TODO|FIXME|lorem|YOUR_` in `src/` and `app/` (the legal drafts in `src/Patika.Web/Content` say "Taslak" on purpose and are not matched); Dependabot watches NuGet under `/patika` and the workflow actions.
+
+## Android release (MobSF-facing)
+
+`android:allowBackup="false"` together with `android:dataExtractionRules` (Android 12+, `Resources/xml/data_extraction_rules.xml`: cloud backup and device transfer exclude every domain) and `android:fullBackupContent` (`backup_rules.xml`, the same for Android 6 to 11), `android:usesCleartextTraffic="false"` plus a network security config that allows cleartext only for the emulator host in Debug, `Exported` set explicitly on the launcher activity (the FCM service is explicitly non-exported), refresh token and account id in `SecureStorage`, the access token in memory only, no token logging. CI parses the merged Release manifest and fails on `allowBackup`, a missing `dataExtractionRules` or `fullBackupContent`, cleartext, `debuggable` or any activity, service, receiver or provider without an explicit `android:exported`.
+
+## Worker safety nets
+
+`cost.guard` (non-critical and urgent push budgets, non-critical and security email budgets; alerts at 80 percent and at the cap, once per local day, budget and level, mailed to `Ops:AlertEmail`), `backup.verify` (newest `patika-*.dump.age` older than 26 h alerts), purchase token retention (terminal subscription rows 90 days after they end or after the account purge, with any successor's copy of the hash in `linked_purchase_token_hash`; paused and on-hold rows stay; notification token hashes after 90 days). Details in [cost-alerts.md](../ops/cost-alerts.md) and [backup-restore.md](../ops/backup-restore.md).

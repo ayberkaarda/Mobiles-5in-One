@@ -169,11 +169,24 @@ public sealed class TestOutbox : IEmailSender
 
     public IReadOnlyList<EmailMessage> Messages => [.. messages];
 
-    public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    /// <summary>When set, every send reports this result instead of being captured (a budget skip, for example).</summary>
+    public EmailSendResult? NextResult { get; set; }
+
+    /// <summary>What <see cref="IEmailSender.PausedForAsync"/> answers.</summary>
+    public TimeSpan? PausedFor { get; set; }
+
+    public Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
+        if (NextResult is { } result)
+        {
+            return Task.FromResult(result);
+        }
+
         messages.Enqueue(message);
-        return Task.CompletedTask;
+        return Task.FromResult(EmailSendResult.Sent);
     }
+
+    public Task<TimeSpan?> PausedForAsync(EmailKind kind, CancellationToken cancellationToken) => Task.FromResult(PausedFor);
 
     public IReadOnlyList<EmailMessage> For(string email) =>
         [.. messages.Where(m => string.Equals(m.To, email, StringComparison.OrdinalIgnoreCase))];

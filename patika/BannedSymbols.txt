@@ -5,3 +5,5 @@ M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Object[]);Use ExecuteSqlAsync or ExecuteSqlInterpolatedAsync with an interpolated string.
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Collections.Generic.IEnumerable{System.Object},System.Threading.CancellationToken);Use ExecuteSqlAsync or ExecuteSqlInterpolatedAsync with an interpolated string.
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.SqlQueryRaw``1(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Object[]);Use SqlQuery with an interpolated string.
+M:Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper.Raw(System.String);Use Razor encoding or a typed encoding renderer.
+M:Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper.Raw(System.Object);Use Razor encoding or a typed encoding renderer.

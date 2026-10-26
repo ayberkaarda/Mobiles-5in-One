@@ -1,0 +1,92 @@
+name: Patika restore drill
+
+# Weekly backup and restore drill (security checklist item 20, patika/docs/ops/backup-restore.md).
+# patika/ops/backup/drill.sh owns every container it uses: a source PostGIS migrated with the EF
+# migrations (dotnet ef database update) and seeded with synthetic rows, a second PostGIS as the
+# fresh restore target, a MinIO bucket with versioning and a tools container (PostgreSQL 17 client,
+# age, aws CLI). It runs backup.sh (pg_dump -Fc | age, upload), downloads the dump, runs restore.sh
+# into the second server, diffs the spatial smoke rows against the source and fails on any
+# mismatch; five negative runs must each fail on their named check. The same script runs locally
+# (Git Bash or Linux), which is why the containers are not declared as job services.
+#
+# Scope: mechanics only. No production bucket, credential or age identity exists in this repository;
+# every key and password is created by the script at run time and never printed. Actions are pinned
+# to commit SHAs and images to digests.
+
+on:
+  schedule:
+    - cron: "40 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patika-restore-drill-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: patika
+
+jobs:
+  drill:
+    name: Patika restore drill (PostGIS 17, MinIO, age)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PG_IMAGE: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+      TOOLS_BASE: postgres:17-bookworm@sha256:858bb5e98eed02eb8cafbcdc007f9a65d1b613972028944a8ec2133ccaf80d27
+      MINIO_IMAGE: pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+      SHELLCHECK_IMAGE: koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # Same pin as patika-ci.yml; global.json (10.0.400, latestPatch) accepts it.
+          dotnet-version: 10.0.402
+
+      - name: Pull images
+        run: |
+          for image in "$PG_IMAGE" "$TOOLS_BASE" "$MINIO_IMAGE" "$SHELLCHECK_IMAGE"; do
+            docker pull --quiet "$image"
+          done
+
+      - name: Shell syntax and shellcheck
+        run: |
+          for script in ops/backup/*.sh; do bash -n "$script"; done
+          docker run --rm -v "$PWD/ops/backup:/mnt" -w /mnt "$SHELLCHECK_IMAGE" -x -S style backup.sh restore.sh drill.sh pgpass.sh test-pgpass.sh
+          bash ops/backup/test-pgpass.sh
+
+      - name: Run restore drill
+        shell: bash
+        env:
+          PATIKA_DRILL_PG_IMAGE: ${{ env.PG_IMAGE }}
+          PATIKA_DRILL_TOOLS_BASE: ${{ env.TOOLS_BASE }}
+          PATIKA_DRILL_MINIO_IMAGE: ${{ env.MINIO_IMAGE }}
+        run: |
+          set -o pipefail
+          {
+            echo "run: ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT}, commit ${GITHUB_SHA}"
+            echo "started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            docker --version
+          } | tee restore-drill-output.txt
+          bash ops/backup/drill.sh 2>&1 | tee -a restore-drill-output.txt
+          echo "finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a restore-drill-output.txt
+          grep -q '^RESULT: restore drill passed$' restore-drill-output.txt
+
+      - name: Upload drill output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: patika-restore-drill-output
+          path: patika/restore-drill-output.txt
+          retention-days: 30
+          if-no-files-found: error

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Web;
 using Amazon.S3.Model;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Patika.Contracts.Media;
 using Patika.Infrastructure.Media;
@@ -35,6 +36,28 @@ public sealed class PhotoUrlResolverTests
         Assert.Equal("900", query["X-Amz-Expires"]);
         Assert.NotNull(query["X-Amz-Signature"]);
         Assert.Equal(15, new MediaSettings().PhotoUrlMinutes);
+    }
+
+    [Fact]
+    public void EmptyEnvironmentValuesCountAsNotSet()
+    {
+        // `cp .env.example .env` leaves lines like Storage__PublicEndpoint= which bind as "".
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Storage:Endpoint"] = "http://minio:9000",
+            ["Storage:PublicEndpoint"] = "",
+            ["Storage:PublicBaseUrl"] = " ",
+            ["Storage:AccessKey"] = "test-access",
+            ["Storage:SecretKey"] = "test-secret-value",
+        }).Build();
+        var settings = new StorageSettings();
+        configuration.GetSection(StorageSettings.SectionName).Bind(settings);
+
+        Assert.Null(settings.PublicEndpoint);
+        Assert.Null(settings.PublicBaseUrl);
+        using var resolver = Resolver(settings);
+        var url = new Uri(resolver.Resolve(MediaKeys.PhotoKey("station", Guid.CreateVersion7()))!);
+        Assert.Equal("minio", url.Host);
     }
 
     [Theory]

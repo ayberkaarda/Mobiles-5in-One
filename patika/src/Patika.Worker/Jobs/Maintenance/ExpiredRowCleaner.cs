@@ -74,11 +74,15 @@ public sealed class ExpiredRowCleaner(PatikaDbContext db, TimeProvider clock, IL
 }
 
 [DisallowConcurrentExecution]
-public sealed class ExpiredRowCleanupJob(ExpiredRowCleaner cleaner) : IJob
+public sealed class ExpiredRowCleanupJob(ExpiredRowCleaner cleaner, BillingTokenRetention billing) : IJob
 {
     public const string Name = "maintenance.expired_rows";
 
-    public Task Execute(IJobExecutionContext context) => cleaner.CleanAsync(context.CancellationToken);
+    public async Task Execute(IJobExecutionContext context)
+    {
+        await cleaner.CleanAsync(context.CancellationToken);
+        await billing.PurgeAsync(context.CancellationToken);
+    }
 }
 
 public static class MaintenanceJobs
@@ -87,6 +91,7 @@ public static class MaintenanceJobs
     {
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ExpiredRowCleaner>();
+        services.AddScoped<BillingTokenRetention>();
         return services;
     }
 

@@ -32,6 +32,7 @@ public sealed class AdminApi(IHttpClientFactory clients, IHttpContextAccessor ac
     private async Task<T?> SendAsync<T>(HttpMethod method, string path, HttpContent? content, string? step, CancellationToken ct)
     {
         using var client = clients.CreateClient("PatikaAdmin");
+        // The browser address and the BFF key are added by BffClientAddressHandler on the PatikaAdmin client.
         using var request = new HttpRequestMessage(method, "v1" + path) { Content = content };
         var ticket = await accessor.HttpContext!.AuthenticateAsync(AdminSession.Scheme);
         var token = ticket.Properties?.GetTokenValue("access_token");

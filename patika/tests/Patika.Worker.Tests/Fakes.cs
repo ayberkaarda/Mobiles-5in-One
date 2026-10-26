@@ -112,11 +112,11 @@ public sealed class InMemoryPushCounters : IPushCounterStore
 
 public sealed class RecordingAlertNotifier : ICostAlertNotifier
 {
-    public List<CostGuardStatus> Alerts { get; } = [];
+    public List<(BudgetUsage Usage, CostAlertLevel Level)> Alerts { get; } = [];
 
-    public Task AlertAsync(CostGuardStatus status, CancellationToken cancellationToken)
+    public Task AlertAsync(DateOnly day, BudgetUsage usage, CostAlertLevel level, CancellationToken cancellationToken)
     {
-        Alerts.Add(status);
+        Alerts.Add((usage, level));
         return Task.CompletedTask;
     }
 }

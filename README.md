@@ -13,11 +13,11 @@ stack, tooling and release cycle; nothing is shared between them.
 | [`askida`](askida/)       | Pay-it-forward network: donors prepay everyday items at verified local shops, recipients collect with a one-time code | Flutter, Laravel, PostgreSQL + PostGIS, Redis, iyzico                          | All planned phases merged (real-world proofs partly open) | 100%     |
 | [`cetele`](cetele/)       | Offline-first digital credit ledger (veresiye defteri) for small shop owners                                          | Kotlin (Jetpack Compose), Spring Boot, PostgreSQL                              | All 7 phases merged (server, Android app, billing, public site, hardening; real-world proofs open) | 100%     |
 | [`inecekvar`](inecekvar/) | Crowdsourced dolmus / minibus route map for Turkish cities with A to B planning and offline city packs                | Ionic (Angular + Capacitor), Angular SSR, FastAPI, PostgreSQL + PostGIS, Redis | All 7 phases merged (API, Ionic app and PWA, SSR web and admin, webhooks, hardening; real-world proofs partly open) | 100%     |
-| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | .NET MAUI (C#), ASP.NET Core, PostgreSQL + PostGIS                             | Design document only, no code                             | 0%       |
+| [`patika`](patika/)       | Community platform for street animals: feeding-station map, check-ins, adoption listings, vet directory               | .NET 10 MAUI (Android), ASP.NET Core, PostgreSQL + PostGIS                     | All 7 phases merged (API, Android app, SEO web and admin, simulated Play billing, hardening; real-world proofs partly open) | 100%     |
 
 ## Gallery
 
-One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. Each of the four application cards has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md) and in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Only the Patika card is a placeholder, for a product that is still in the design stage.
+One card per project. Each card has the same layout: a composite of the real web home page (a local build, sample data) with one Android screen, and below it three Android app screens (emulator, sample data). The full sets are in [`kadro/docs/screenshots/README.md`](kadro/docs/screenshots/README.md), in [`askida/README.md`](askida/README.md#screenshots) in [`cetele/docs/release/screenshots`](cetele/docs/release/screenshots/README.md), in [`inecekvar/docs/screenshots`](inecekvar/docs/screenshots/route-sign/) and in [`patika/README.md`](patika/README.md#gallery). The "web demo" links open static snapshots of each project's real public pages from local builds with sample data, hosted on GitHub Pages ([index](https://ayberkaarda.github.io/Mobiles-5in-One/)); sign-in, forms and payments do not work there. Patika has no web demo yet.
 
 <table>
   <tr>
@@ -54,8 +54,11 @@ One card per project. Kadro, Askıda, Cetele and Inecek Var have applications. E
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/readme/patika.png" alt="Patika card: in design stage, no app yet" width="100%"><br>
-      <sub><b>Patika</b>: in design stage, no app yet</sub>
+      <img src="docs/readme/patika.png" alt="Patika card: web home page with the hero and the illustrated Moda morning-round map, and the Android adoption list with the Pamuk and Karabaş tag cards, local stack, sample data" width="100%"><br>
+      <img src="patika/docs/design/screenshots/android-harita.png" alt="Patika Android app: map with station pins, filters and the station sheet with the Beslendi button, sample data, emulator" width="32%">
+      <img src="patika/docs/design/screenshots/android-acil.png" alt="Patika Android app: dark urgent-help screen with the Acil yardım çağrısı aç button and nearby care places, sample data, emulator" width="32%">
+      <img src="patika/docs/design/screenshots/destekci-profile.png" alt="Patika Android app: profile after a simulated test purchase with the Patika Destekçi card and badge, emulator" width="32%"><br>
+      <sub><b>Patika</b>: web home page and Android adoption, map, urgent-help and Destekçi screens (local stack, sample data, simulated billing)</sub>
     </td>
     <td width="50%"></td>
   </tr>
@@ -108,11 +111,11 @@ hardening, scans, backups, cost guards and release documents. The final security
 15 of 23 done and 8 partial, not 23 of 23: the partial rows need hosting, the domain and TLS, R2,
 provider accounts, GitHub runs of the workflows, iOS and owner decisions. A web demo snapshot is on
 [GitHub Pages](https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/).
-Patika is still a single specification document with no application code.
+Patika has all 7 phases (0 to 6) merged into `main`: a .NET 10 solution with the ASP.NET Core API (auth with Argon2id, ES256 tokens, refresh families and TOTP, stations, feedings, animals, adoption, urgent posts with geofenced push, media pipeline, account deletion), the Razor Pages public web with SEO and GEO pages and the admin console with TOTP step-up, the Worker, the .NET MAUI Android app, a simulated Google Play Destekçi subscription, and the phase 6 hardening, ZAP and MobSF scans, backups with a restore drill, cost guards and release documents. The final matrix stands at 19 of 23 done and 4 partial ([verification matrix](patika/docs/security/verification-matrix.md)); the partial rows need a domain with TLS, a Play Console app and cloud storage.
 
 ### Progress
 
-Last updated: 2026-10-13 (written after the merge of Inecek Var phases 5 and 6 and the Inecek Var visual redesign). The figures are estimates, refreshed whenever a batch of work merges.
+Last updated: 2026-10-26 (written with the merge of Patika phase 6). The figures are estimates, refreshed whenever a batch of work merges.
 
 | Project     | Progress | Basis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -120,7 +123,7 @@ Last updated: 2026-10-13 (written after the merge of Inecek Var phases 5 and 6 a
 | `askida`    | 100%     | Phases 0 to 6 merged: 7 of 7 phases, weighted equally (foundation; data layer, authentication and security baseline; shops, accounts and hooks; payments, webhooks, payouts and admin panel; Flutter app; public web, SEO and GEO; hardening and release readiness): 7/7 = 100%. 100% means the planned work is merged, not that every control is proven in production: 9 of 23 security items stay partial ([verification matrix](askida/docs/security/verification-matrix.md)); real payments, real attestation, store accounts, a hosted origin and iOS are not exercised. |
 | `cetele`    | 100%     | All 7 phases merged, weighted equally (foundation; server core, authentication and security baseline; sync, ledger, reminders and media; Android app; billing, webhooks and admin; public web SEO and GEO; hardening and release readiness): 7/7 = 100% of the planned phases. The verification matrix has 12 rows done, 11 partial and 0 not started: the partial rows need external gates (Play account, physical device, domain, legal review) that cannot be closed from this repository. Verified on the JVM and in CI; the debug app was run on an Android emulator against a local server only to take the README screenshots (sign-in, sync of sample data, three screens), no physical device and no end-to-end flow run, no real Play account (Play Developer API, RTDN and Play Integrity ran against fakes and recorded fixtures), and real PDF output, biometrics and camera are not exercised. |
 | `inecekvar` | 100%     | Phases 0 to 6 merged into `main`, seven phases weighted equally (PRs #118, #119, #120 and #121, #123, #126, #127, #128: foundation; data model, authentication and security baseline; domain, moderation, traces, planner, city packs, export and account deletion; the Ionic app and PWA; the Angular SSR SEO/GEO pages and the moderation and admin UI with TOTP step-up; RevenueCat and Resend webhooks, entitlements, suppression list, nightly jobs; hardening and release readiness: attack suite and XSS sweep, ZAP and MobSF, dependency audits, encrypted backups and the restore drill, cost guards and degrade mode, release documents, web account deletion, the final verification matrix): 7/7 = 100%. After the phases came a test flake fix (#129), the gallery and web home page (#130) and the visual redesign of the app and the web (#131). 100% means the planned work is merged, not that every control is proven in production: the final matrix (`inecekvar/docs/security/verification-matrix.md`) has 15 rows done, 8 partial and 0 not started, so not 23 of 23; the partial rows need hosting, the domain and TLS, R2, provider accounts, GitHub runs of the security workflows, iOS and owner decisions. Not exercised: iOS, production hosting, TLS and HSTS preload, R2, real RevenueCat, Resend and Sentry accounts, the production Caddyfile, legal texts and owner decisions (see `inecekvar/docs/handoffs/final-report.md`). |
-| `patika`    | 0%       | Specification only; no code yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `patika`    | 100%     | Phases 0 to 6 merged, seven phases weighted equally (foundation; API core, auth and security baseline; domain API, media and push; API for mobile and the Android app; web SEO/GEO and the admin console; simulated Play subscription; hardening and release readiness): 7/7 = 100%. 100% means the planned work is merged, not that every control is proven in production: 4 of 23 security items stay partial; Google Play, Pub/Sub, FCM, Resend, hosting, TLS, R2 and iOS are not exercised.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Progress means merged into `main`; work that is only on a branch or in an open pull request is not
 counted. 100% means all phases are merged; real-world verification is tracked separately.
@@ -136,7 +139,7 @@ kadro/               Kadro monorepo (pnpm workspaces + Turborepo)
 askida/              Askıda: Laravel server (Docker), Flutter app, brand package, ADRs, spec
 cetele/              Cetele: Spring Boot server, Android app, brand package, ADRs, spec
 inecekvar/           Inecek Var: Nx workspace (Ionic/Angular app, Angular SSR web), FastAPI api, ADRs, spec
-patika/              design document
+patika/              Patika: .NET solution (API, Web, Worker), MAUI Android app, ADRs, spec
 ```
 
 ## Documentation per project
@@ -150,7 +153,7 @@ patika/              design document
 
 ## Development
 
-Kadro, Askıda, Cetele and Inecek Var are buildable; Patika has no code. Cetele has no root-level commands: its Android and server builds run from `cetele/android` and `cetele/server` (see [`cetele/README.md`](cetele/README.md)). Kadro: work from inside `kadro/`:
+All five projects are buildable. Patika builds from `patika/` with `dotnet build Patika.slnx` (see [`patika/README.md`](patika/README.md)). Cetele has no root-level commands: its Android and server builds run from `cetele/android` and `cetele/server` (see [`cetele/README.md`](cetele/README.md)). Kadro: work from inside `kadro/`:
 
 ```sh
 cd kadro

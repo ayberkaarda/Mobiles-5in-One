@@ -188,7 +188,7 @@ public static class RateLimitingSetup
         await TooManyRequests(context, retryAfter).ExecuteAsync(context);
     }
 
-    private static void SetRetryAfter(HttpContext context, TimeSpan retryAfter)
+    internal static void SetRetryAfter(HttpContext context, TimeSpan retryAfter)
     {
         var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
         context.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);

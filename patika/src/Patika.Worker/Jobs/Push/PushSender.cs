@@ -60,6 +60,12 @@ public sealed class PushSettings
     public int FanoutWindowMinutes { get; set; } = 60;
 
     public int SendParallelism { get; set; } = 8;
+
+    /// <summary>Urgent devices one author's posts may reach per local day; the rest of a post is deferred.</summary>
+    public int MaxDevicesPerAuthorPerDay { get; set; } = 1_000;
+
+    /// <summary>A deferred fan-out is retried after the daily budgets reset while the post is open and younger than this.</summary>
+    public int DeferredFanoutHours { get; set; } = 24;
 }
 
 public sealed class FcmSettings
@@ -74,9 +80,15 @@ public sealed class FcmSettings
 
 public sealed class CostGuardSettings
 {
-    /// <summary>Daily pushes after which non-critical sends pause and an alert is raised.</summary>
+    /// <summary>Daily non-critical emails (top-level <c>CostGuard:MaxEmailsPerDay</c>, shared with the API).</summary>
+    public int MaxEmailsPerDay { get; set; } = 5_000;
+
+    /// <summary>Daily security-critical emails (top-level <c>CostGuard:MaxCriticalEmailsPerDay</c>, shared with the API).</summary>
+    public int MaxCriticalEmailsPerDay { get; set; } = 20_000;
+
+    /// <summary>Daily non-critical pushes; at this count they pause and an alert is raised.</summary>
     public int DailyCap { get; set; } = 5_000;
 
-    /// <summary>Absolute daily ceiling, critical sends included.</summary>
+    /// <summary>Daily urgent pushes, counted separately from non-critical ones; past it fan-out is deferred.</summary>
     public int CriticalDailyCap { get; set; } = 20_000;
 }

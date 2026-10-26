@@ -20,9 +20,9 @@
         <article class="doc-body">
             @if (guide.Answer is not null)
             {
-                <p class="doc-answer"><strong>Kısaca:</strong> @Html.Raw(MarkdownLite.Inline(guide.Answer))</p>
+                <p class="doc-answer"><strong>Kısaca:</strong> @MarkdownLite.InlineContent(guide.Answer)</p>
             }
-            @Html.Raw(guide.Html)
+            @guide.BodyContent
             @if (guide.Faq.Count > 0)
             {
                 <section class="doc-faq" aria-labelledby="sss">
@@ -30,7 +30,7 @@
                     @foreach (var item in guide.Faq)
                     {
                         <h3>@item.Question</h3>
-                        <p>@Html.Raw(MarkdownLite.Inline(item.Answer))</p>
+                        <p>@MarkdownLite.InlineContent(item.Answer)</p>
                     }
                 </section>
             }

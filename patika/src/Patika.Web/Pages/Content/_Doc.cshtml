@@ -16,7 +16,7 @@
         }
         @if (Model.Answer is not null)
         {
-            <p class="doc-answer">@Html.Raw(MarkdownLite.Inline(Model.Answer))</p>
+            <p class="doc-answer">@MarkdownLite.InlineContent(Model.Answer)</p>
         }
         @if (Model.Faq.Count > 0)
         {
@@ -24,11 +24,11 @@
                 @foreach (var item in Model.Faq)
                 {
                     <h2 id="@Slug.From(item.Question)">@item.Question</h2>
-                    <p>@Html.Raw(MarkdownLite.Inline(item.Answer))</p>
+                    <p>@MarkdownLite.InlineContent(item.Answer)</p>
                 }
             </section>
         }
-        @Html.Raw(Model.Html)
+        @Model.BodyContent
     </article>
     @if (toc.Length > 1)
     {

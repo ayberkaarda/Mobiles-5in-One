@@ -41,7 +41,8 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 
 app.UsePatikaApi();
 app.MapHealth();
-var v1 = app.MapGroup("/v1");
+// Every request contract on /v1 has its strings cleaned (UserText.Clean) before any endpoint filter or handler runs.
+var v1 = app.MapGroup("/v1").AddEndpointFilter<Patika.Api.Validation.RequestTextFilter>();
 v1.MapHealth();
 v1.MapAuth();
 v1.MapTotp();
@@ -60,7 +61,11 @@ idempotent.MapReportEndpoints();
 v1.MapMediaEndpoints();
 idempotent.MapUrgentEndpoints();
 v1.MapDeviceEndpoints();
-app.MapPatikaOpenApi();
+// The API description is served in Development, or where OpenApi:Enabled is set (a scan run); never by default.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("OpenApi:Enabled"))
+{
+    app.MapPatikaOpenApi();
+}
 
 app.Run();
 

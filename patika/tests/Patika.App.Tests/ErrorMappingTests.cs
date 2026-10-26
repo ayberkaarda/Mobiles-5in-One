@@ -22,6 +22,7 @@ public sealed class ErrorMappingTests
     [InlineData("feeding_cooldown", 409, "Bu istasyonu yakın zamanda besledin. 30 dakika sonra yeniden kaydedebilirsin.")]
     [InlineData("rate_limited", 429, "Çok fazla deneme yapıldı. Biraz bekleyip yeniden dene.")]
     [InlineData("urgent_daily_cap", 429, "Bugün en fazla 3 acil çağrı açabilirsin.")]
+    [InlineData("email_unavailable", 503, "Şu an e-posta gönderemiyoruz. Biraz sonra yeniden dene.")]
     public async Task Problem_codes_map_to_Turkish_messages(string code, int status, string expected)
     {
         var api = Client(_ => Http.Done(Http.Problem(status, code, "English server title")), out _);

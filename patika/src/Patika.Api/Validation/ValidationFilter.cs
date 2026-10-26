@@ -14,6 +14,9 @@ public sealed class ValidationFilter<T>(IValidator<T> validator) : IEndpointFilt
             return ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["A request body is required."] });
         }
 
+        // Every string of the contract is cleaned, except [Verbatim] passwords and opaque tokens. The /v1 group filter
+        // already did this; repeating it here keeps a validated endpoint safe wherever it is mapped (cleaning is idempotent).
+        RequestText.Clean(argument);
         var result = await validator.ValidateAsync(argument, context.HttpContext.RequestAborted);
         if (result.IsValid)
         {

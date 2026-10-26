@@ -9,3 +9,14 @@ TestResults/
 *.p8
 *.p12
 *.mobileprovision
+# Release signing and provider credentials (docs/release/signing.md, docs/ops/env.md): never committed.
+*.keystore
+*.jks
+appsettings.Production.json
+*service-account*.json
+google-services.json
+# Data Protection key rings (DataProtection:KeysPath) and local backups.
+keys/
+key-*.xml
+backups/
+*.dump.age

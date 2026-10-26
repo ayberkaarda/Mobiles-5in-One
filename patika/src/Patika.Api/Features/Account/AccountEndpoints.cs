@@ -35,7 +35,8 @@ public static class AccountEndpoints
             .RequireRateLimiting(RateLimitPolicies.External)
             .Produces<AccountDeletionResponse>(StatusCodes.Status202Accepted)
             .Produces<ApiProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)
-            .Produces<ApiProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson);
+            .Produces<ApiProblemDetails>(StatusCodes.Status403Forbidden, ProblemJson)
+            .Produces<ApiProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemJson);
         return endpoints;
     }
 
@@ -64,6 +65,13 @@ public static class AccountEndpoints
                 "Sign in again to delete your account.");
         }
 
+        // The confirmation is security mail: when its budget is used up nothing is scheduled and the
+        // client gets 503 email_unavailable with Retry-After instead of a 202 without a confirmation.
+        if (user.Email is not null && await emailSender.PausedForAsync(EmailKind.DeletionScheduled, ct) is { } paused)
+        {
+            return AuthHandlers.EmailUnavailable(http, paused);
+        }
+
         var schedule = await deletionStore.RequestDeletionAsync(user.Id, now, DeletionGracePeriod, ct);
         if (schedule is null)
         {
@@ -83,8 +91,14 @@ public static class AccountEndpoints
             if (user.Email is not null)
             {
                 // The account is already deactivated; a client disconnect must not cancel the confirmation.
-                await emailSender.SendAsync(AccountEmails.DeletionScheduled(user.Email, schedule.ExecuteAfter),
+                var sent = await emailSender.SendAsync(AccountEmails.DeletionScheduled(user.Email, schedule.ExecuteAfter),
                     CancellationToken.None);
+                if (sent.Skipped)
+                {
+                    // Only when the budget ran out between the pre-check and the send; the deletion stands.
+                    logger.LogError("Deletion confirmation for user {UserId} was skipped by the email budget ({Status})",
+                        user.Id, sent.Status);
+                }
             }
         }
 

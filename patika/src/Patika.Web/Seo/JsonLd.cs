@@ -9,6 +9,14 @@ namespace Patika.Web.Seo;
 /// <summary>Schema.org objects for JSON-LD, and the only serializer allowed to write them into a page.</summary>
 public static class JsonLd
 {
+    /// <summary>
+    /// A JSON-LD data block. Browsers never execute <c>application/ld+json</c>, so CSP <c>script-src 'self'</c>
+    /// does not apply and the block needs no nonce, which keeps public pages cacheable. <see cref="Serialize"/>
+    /// leaves no <c>&lt;</c>, so stored text cannot close the element.
+    /// </summary>
+    public static Microsoft.AspNetCore.Html.IHtmlContent Script(object item) =>
+        new Microsoft.AspNetCore.Html.HtmlString("<script type=\"application/ld+json\">" + Serialize(item) + "</script>\n");
+
     private static readonly JsonSerializerOptions Options = new()
     {
         // Keeps Turkish letters readable; the encoder still escapes &lt; &gt; &amp; and quotes.
@@ -21,7 +29,7 @@ public static class JsonLd
     /// element (&lt;/script&gt;) or open a comment. '&lt;' is only legal inside JSON strings, where < is equal.
     /// </summary>
     public static string Serialize(object item) =>
-        JsonSerializer.Serialize(item, item.GetType(), Options).Replace("<", "\u003c", StringComparison.Ordinal);
+        JsonSerializer.Serialize(item, item.GetType(), Options).Replace("<", @"\u003c", StringComparison.Ordinal);
 
     public static Dictionary<string, object?> Organization(SiteUrls urls) => new()
     {

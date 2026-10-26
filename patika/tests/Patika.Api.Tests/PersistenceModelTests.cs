@@ -44,8 +44,8 @@ public sealed class PersistenceModelTests
             ],
             [typeof(UrgentPost)] =
             [
-                "category", "created_at", "created_by", "description", "fanout_at", "hidden_at", "hidden_reason", "id",
-                "location", "notified_count", "photo_key", "state", "updated_at"
+                "category", "created_at", "created_by", "description", "fanout_at", "fanout_offset", "fanout_retry_at",
+                "hidden_at", "hidden_reason", "id", "location", "notified_count", "photo_key", "state", "updated_at"
             ]
         };
         foreach (var (type, columns) in expectedColumns)

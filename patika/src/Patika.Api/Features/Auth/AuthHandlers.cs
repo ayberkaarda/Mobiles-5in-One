@@ -51,6 +51,11 @@ public sealed class AuthHandlers(
             return RateLimitingSetup.TooManyRequests(http, retryAfter);
         }
 
+        if (await PausedAsync(http, EmailKind.VerifyEmail, cancellationToken) is { } paused)
+        {
+            return paused;
+        }
+
         if (await breachedPasswords.IsBreachedAsync(request.Password, cancellationToken))
         {
             return ValidationFilter<RegisterRequest>.ValidationProblem(new Dictionary<string, string[]>
@@ -71,15 +76,35 @@ public sealed class AuthHandlers(
             if (await store.TryCreateUserAsync(user, login: null, emailToken, cancellationToken))
             {
                 logger.LogInformation("User {UserId} registered with {Email}; verification pending", user.Id, email);
-                await emailSender.SendAsync(AuthEmails.Verification(email, code), cancellationToken);
-                return Accepted();
+                var sent = await emailSender.SendAsync(AuthEmails.Verification(email, code), cancellationToken);
+                return sent.Skipped ? EmailUnavailable(http, sent.RetryAfter) : Accepted();
             }
         }
 
         logger.LogInformation("Registration attempt for an existing account {Email}", email);
-        await emailSender.SendAsync(AuthEmails.RegistrationAttempt(email), cancellationToken);
-        return Accepted();
+        var notice = await emailSender.SendAsync(AuthEmails.RegistrationAttempt(email), cancellationToken);
+        return notice.Skipped ? EmailUnavailable(http, notice.RetryAfter) : Accepted();
     }
+
+    /// <summary>
+    /// 503 <c>email_unavailable</c> with <c>Retry-After</c>: the code or notice could not be sent because a
+    /// budget is used up. Never a 2xx, so the client does not wait for a message that is not coming.
+    /// </summary>
+    internal static IResult EmailUnavailable(HttpContext http, TimeSpan? retryAfter)
+    {
+        RateLimitingSetup.SetRetryAfter(http, retryAfter ?? TimeSpan.FromMinutes(15));
+        return Problem(StatusCodes.Status503ServiceUnavailable, AuthErrorCodes.EmailUnavailable,
+            "Email delivery is paused. Try again later.");
+    }
+
+    /// <summary>
+    /// The uniform pre-check for endpoints that send to some addresses and not others: when the daily
+    /// budget for <paramref name="kind"/> is used up every caller gets the 503, known address or not.
+    /// </summary>
+    private async Task<IResult?> PausedAsync(HttpContext http, EmailKind kind, CancellationToken cancellationToken) =>
+        await emailSender.PausedForAsync(kind, cancellationToken) is { } paused
+            ? EmailUnavailable(http, paused)
+            : null;
 
     /// <summary>
     /// Always 202 with the same body. A known, active password account gets a single-use six-digit
@@ -97,6 +122,11 @@ public sealed class AuthHandlers(
         {
             logger.LogWarning("Password reset throttled for {Email}", email);
             return RateLimitingSetup.TooManyRequests(http, retryAfter);
+        }
+
+        if (await PausedAsync(http, EmailKind.PasswordReset, cancellationToken) is { } paused)
+        {
+            return paused;
         }
 
         // The code and its digest are produced on both paths.
@@ -177,6 +207,11 @@ public sealed class AuthHandlers(
             return RateLimitingSetup.TooManyRequests(http, retryAfter);
         }
 
+        if (await PausedAsync(http, EmailKind.VerifyEmail, cancellationToken) is { } paused)
+        {
+            return paused;
+        }
+
         var user = await store.FindUserByEmailAsync(email, cancellationToken);
         var (code, record) = NewEmailCode(user?.Id ?? Guid.Empty, EmailTokenRecord.VerifyEmail, clock.GetUtcNow());
         var delivery = Task.CompletedTask;
@@ -224,7 +259,12 @@ public sealed class AuthHandlers(
     {
         try
         {
-            await emailSender.SendAsync(message, CancellationToken.None);
+            // The endpoint already answered the same way for every address, so a skip found only now
+            // (the budget ran out between the pre-check and this send) cannot change the response.
+            if ((await emailSender.SendAsync(message, CancellationToken.None)).Skipped)
+            {
+                logger.LogWarning("An email of kind {Kind} was skipped by the email budget after the pre-check", message.Kind);
+            }
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {

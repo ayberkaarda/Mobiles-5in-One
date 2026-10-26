@@ -29,7 +29,8 @@ services:
     user: root
     volumes:
       - billing-keys:/keys
-    entrypoint: [sh, -c, 'chown 1654:1654 /keys && chmod 770 /keys']
+      - web-keys:/web-keys
+    entrypoint: [sh, -c, 'chown 1654:1654 /keys /web-keys && chmod 770 /keys /web-keys']
     restart: "no"
   postgres:
     image: postgis/postgis:17-3.5
@@ -103,6 +104,10 @@ services:
       Storage__PublicEndpoint: ${Storage__PublicEndpoint:-http://10.0.2.2:9000}
       # Local stack only: apply EF migrations on startup. Production runs them as a separate step.
       Database__MigrateOnStartup: "true"
+      # The admin console (web) forwards the real client address for per-IP sign-in limits; the API accepts it
+      # only from the web container's fixed address with the shared key (docs/ops/env.md, "Network").
+      Network__BffAddress: 172.30.57.10
+      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key-for-compose-only}
     healthcheck:
       test: [CMD-SHELL, "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.0\r\n\r\n\" >&3 && grep -q \"200 OK\" <&3'"]
       interval: 5s
@@ -117,10 +122,27 @@ services:
     build:
       context: .
       dockerfile: src/Patika.Web/Dockerfile
+    depends_on:
+      billing-keys-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      default:
+        ipv4_address: 172.30.57.10
+    volumes:
+      - web-keys:/keys
     environment:
       <<: *app-env
       ASPNETCORE_HTTP_PORTS: "8080"
-      API_BASE_URL: http://api:8080
+      Admin__ApiBaseUrl: http://api:8080
+      # Photo URLs and the CSP img-src origin for a browser on this machine (the API signs for the emulator alias).
+      Storage__PublicEndpoint: ${Web__StoragePublicEndpoint:-http://localhost:9000}
+      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key-for-compose-only}
+      # The Web's own key ring (admin cookie, antiforgery), never the API/Worker ring.
+      DataProtection__KeysPath: /keys
     ports:
       - "127.0.0.1:5001:8080"
 
@@ -143,7 +165,14 @@ services:
       context: .
       dockerfile: src/Patika.Worker/Dockerfile
 
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.57.0/24
+
 volumes:
   billing-keys:
+  web-keys:
   postgres-data:
   minio-data:

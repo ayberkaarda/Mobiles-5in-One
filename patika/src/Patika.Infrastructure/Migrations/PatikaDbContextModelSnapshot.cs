@@ -1513,6 +1513,14 @@ namespace Patika.Infrastructure.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("fanout_at");
 
+                    b.Property<int>("FanoutOffset")
+                        .HasColumnType("integer")
+                        .HasColumnName("fanout_offset");
+
+                    b.Property<DateTimeOffset?>("FanoutRetryAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fanout_retry_at");
+
                     b.Property<DateTimeOffset?>("HiddenAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("hidden_at");
@@ -1552,6 +1560,10 @@ namespace Patika.Infrastructure.Migrations
                         .HasDatabaseName("ix_urgent_posts_fanout_pending")
                         .HasFilter("fanout_at IS NULL");
 
+                    b.HasIndex("FanoutRetryAt")
+                        .HasDatabaseName("ix_urgent_posts_fanout_retry")
+                        .HasFilter("fanout_retry_at IS NOT NULL");
+
                     b.HasIndex("Location");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Location"), "gist");
@@ -1564,6 +1576,8 @@ namespace Patika.Infrastructure.Migrations
 
                     b.ToTable("urgent_posts", null, t =>
                         {
+                            t.HasCheckConstraint("ck_urgent_posts_fanout_offset", "fanout_offset BETWEEN 0 AND 500");
+
                             t.HasCheckConstraint("ck_urgent_posts_notified_count", "notified_count BETWEEN 0 AND 500");
                         });
                 });

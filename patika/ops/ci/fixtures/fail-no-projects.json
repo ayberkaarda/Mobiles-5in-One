@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [],
+  "projects": []
+}

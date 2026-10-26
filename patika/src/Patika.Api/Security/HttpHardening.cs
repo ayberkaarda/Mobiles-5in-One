@@ -1,20 +1,8 @@
 using System.Diagnostics;
-using System.Net;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.HttpOverrides;
+using Patika.Infrastructure.Security;
 
 namespace Patika.Api.Security;
-
-public sealed class NetworkSettings
-{
-    public const string SectionName = "Network";
-
-    /// <summary>Addresses of reverse proxies whose <c>X-Forwarded-*</c> headers are trusted.</summary>
-    public string[] KnownProxies { get; set; } = [];
-
-    /// <summary>CIDR ranges of trusted reverse proxies.</summary>
-    public string[] KnownNetworks { get; set; } = [];
-}
 
 public sealed class CorsSettings
 {
@@ -33,28 +21,12 @@ public static class HttpHardening
 
     public static IServiceCollection AddPatikaHttpHardening(this IServiceCollection services, IConfiguration configuration)
     {
-        var network = configuration.GetSection(NetworkSettings.SectionName).Get<NetworkSettings>() ?? new NetworkSettings();
-        var proxies = TrustedProxies(network);
-        var networks = TrustedNetworks(network);
-        services.Configure<ForwardedHeadersOptions>(options =>
+        services.AddTrustedNetwork(configuration);
+        services.AddHsts(options =>
         {
-            // With no trusted proxy configured, forwarded headers are never processed. Empty lists in
-            // ForwardedHeadersOptions would otherwise mean "trust every peer".
-            options.ForwardedHeaders = proxies.Length + networks.Length == 0
-                ? ForwardedHeaders.None
-                : ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-            options.ForwardLimit = 1;
-            options.KnownProxies.Clear();
-            options.KnownIPNetworks.Clear();
-            foreach (var proxy in proxies)
-            {
-                options.KnownProxies.Add(proxy);
-            }
-
-            foreach (var range in networks)
-            {
-                options.KnownIPNetworks.Add(range);
-            }
+            options.MaxAge = TimeSpan.FromDays(730);
+            options.IncludeSubDomains = true;
+            options.Preload = true;
         });
 
         var cors = configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>() ?? new CorsSettings();
@@ -68,19 +40,6 @@ public static class HttpHardening
 
         return services;
     }
-
-    /// <summary>True when at least one trusted proxy or network is configured.</summary>
-    public static bool HasTrustedProxies(IConfiguration configuration)
-    {
-        var network = configuration.GetSection(NetworkSettings.SectionName).Get<NetworkSettings>() ?? new NetworkSettings();
-        return TrustedProxies(network).Length + TrustedNetworks(network).Length > 0;
-    }
-
-    private static IPAddress[] TrustedProxies(NetworkSettings network) =>
-        [.. network.KnownProxies.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => IPAddress.Parse(p.Trim()))];
-
-    private static System.Net.IPNetwork[] TrustedNetworks(NetworkSettings network) =>
-        [.. network.KnownNetworks.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => System.Net.IPNetwork.Parse(n.Trim()))];
 
     public static bool IsCorsEnabled(IConfiguration configuration) =>
         configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>()?.Enabled == true;
@@ -99,6 +58,7 @@ public static class HttpHardening
                 headers["Referrer-Policy"] = "no-referrer";
                 headers.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'";
                 headers["Cross-Origin-Resource-Policy"] = "same-origin";
+                headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()";
                 headers.Remove("Server");
                 headers.Remove("X-Powered-By");
                 return Task.CompletedTask;

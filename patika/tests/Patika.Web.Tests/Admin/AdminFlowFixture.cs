@@ -37,7 +37,7 @@ internal sealed class AdminFlow : IAsyncDisposable
     public HttpClient Browser { get; }
     public string Code => ApiTotp.Code(Secret, Clock.Now.ToUnixTimeSeconds() / 30);
 
-    public AdminFlow(AdminFlowFixture fixture)
+    public AdminFlow(AdminFlowFixture fixture, Action<IServiceCollection>? configureApi = null)
     {
         this.fixture = fixture;
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -53,6 +53,7 @@ internal sealed class AdminFlow : IAsyncDisposable
             {
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));
                 services.AddSingleton(Protection);
+                configureApi?.Invoke(services);
             });
         });
         Web = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>

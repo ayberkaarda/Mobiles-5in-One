@@ -6,25 +6,28 @@ public sealed class StorageSettings
     public const string SectionName = "Storage";
 
     /// <summary>Endpoint the API and worker talk to, for example <c>http://minio:9000</c>.</summary>
-    public string? Endpoint { get; set; }
+    public string? Endpoint { get; set => field = Blank(value); }
 
     /// <summary>Endpoint the phone uploads to; the presigned signature covers this host. Defaults to <see cref="Endpoint"/>.</summary>
-    public string? PublicEndpoint { get; set; }
+    public string? PublicEndpoint { get; set => field = Blank(value); }
 
     public string Bucket { get; set; } = "patika-local";
 
-    public string? AccessKey { get; set; }
+    public string? AccessKey { get; set => field = Blank(value); }
 
-    public string? SecretKey { get; set; }
+    public string? SecretKey { get; set => field = Blank(value); }
 
     /// <summary>
     /// Optional CDN base serving the processed <c>media/</c> prefix only (never <c>incoming/</c> or
     /// <c>quarantine/</c>). When set, photo addresses are <c>{base}/media/...</c> instead of presigned GETs.
     /// </summary>
-    public string? PublicBaseUrl { get; set; }
+    public string? PublicBaseUrl { get; set => field = Blank(value); }
 
     /// <summary><c>auto</c> for R2; MinIO accepts <c>us-east-1</c>.</summary>
     public string Region { get; set; } = "us-east-1";
+
+    // An empty environment value (KEY= in an env file) binds as "", which means "not set", never an address.
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 public sealed class MediaSettings

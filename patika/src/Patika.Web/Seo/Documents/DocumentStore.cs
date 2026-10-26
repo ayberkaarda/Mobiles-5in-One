@@ -12,6 +12,9 @@ public sealed record ContentDoc(
 {
     /// <summary>Reading time at about 180 words a minute, at least one minute.</summary>
     public int ReadingMinutes => Math.Max(1, (int)Math.Round(WordCount / 180.0));
+
+    // Html is produced exclusively by the encoding Markdown renderer from embedded documents.
+    public Microsoft.AspNetCore.Html.IHtmlContent BodyContent => new Microsoft.AspNetCore.Html.HtmlString(Html);
 }
 
 /// <summary>

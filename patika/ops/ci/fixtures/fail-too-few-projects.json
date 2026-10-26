@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [],
+  "projects": [
+    {
+      "path": "src/Patika.Api/Patika.Api.csproj"
+    }
+  ]
+}

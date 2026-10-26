@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using Patika.Api.Logging;
 using Patika.Api.Tests.Infrastructure;
 using Patika.Contracts.Auth;
+using Patika.Infrastructure.Logging;
 using Serilog.Events;
 using Serilog.Parsing;
 using Xunit;

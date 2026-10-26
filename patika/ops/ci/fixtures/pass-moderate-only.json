@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [],
+  "projects": [
+    {
+      "path": "src/Patika.Api/Patika.Api.csproj",
+      "frameworks": [
+        {
+          "framework": "net10.0",
+          "transitivePackages": [
+            {
+              "id": "Example.Moderate",
+              "resolvedVersion": "1.0.0",
+              "vulnerabilities": [
+                {
+                  "severity": "Moderate",
+                  "advisoryurl": "https://github.com/advisories/GHSA-1111-1111-1111"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/Patika.Web/Patika.Web.csproj"
+    }
+  ]
+}
