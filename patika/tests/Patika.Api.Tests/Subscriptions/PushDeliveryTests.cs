@@ -23,6 +23,9 @@ public sealed class PushDeliveryTests(PostgisFixture fixture) : IClassFixture<Po
     [InlineData("normal", "app.patika.android", 1)]
     [InlineData("test", "app.patika.android", 1)]
     [InlineData("normal", "other.package", 0)]
+    [InlineData("one_time", "app.patika.android", 1)]
+    [InlineData("voided", "app.patika.android", 1)]
+    [InlineData("voided_product", "app.patika.android", 1)]
     public async Task SignedDeliveryPersistsOnceAndIgnoresOtherPackages(string type, string package, int count)
     {
         using var rsa = RSA.Create(2048); var key = new RsaSecurityKey(rsa) { KeyId = "local" };
@@ -51,8 +54,15 @@ public sealed class PushDeliveryTests(PostgisFixture fixture) : IClassFixture<Po
         });
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
         var id = Guid.NewGuid().ToString();
-        object payload = type == "test" ? new { packageName = package, testNotification = new { version = "1.0" } }
-            : new { packageName = package, subscriptionNotification = new { notificationType = 2, purchaseToken = "local-token" } };
+        object payload = type switch
+        {
+            "test" => new { packageName = package, testNotification = new { version = "1.0" } },
+            "one_time" => new { packageName = package, oneTimeProductNotification = new { notificationType = 1, purchaseToken = "local-one-time", sku = "other" } },
+            // productType 1 is a subscription, 2 a one-time product.
+            "voided" => new { packageName = package, voidedPurchaseNotification = new { purchaseToken = "local-voided", orderId = "GPA.1", productType = 1, refundType = 1 } },
+            "voided_product" => new { packageName = package, voidedPurchaseNotification = new { purchaseToken = "local-voided", orderId = "GPA.2", productType = 2, refundType = 1 } },
+            _ => (object)new { packageName = package, subscriptionNotification = new { notificationType = 2, purchaseToken = "local-token" } },
+        };
         var envelope = new { message = new { messageId = id, data = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(payload)) } };
         using var first = await client.PostAsJsonAsync("/webhooks/play", envelope, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
@@ -61,8 +71,20 @@ public sealed class PushDeliveryTests(PostgisFixture fixture) : IClassFixture<Po
         await using var db = fixture.CreateContext();
         var rows = await db.PlayNotifications.Where(x => x.MessageId == id).ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(count, rows.Count);
-        if (type == "test") Assert.NotNull(rows.Single().ProcessedAt);
-        if (type == "normal" && count == 1) Assert.Null(rows.Single().ProcessedAt);
+        if (count == 0) return;
+        var row = rows.Single();
+        if (type is "normal" or "voided")
+        {
+            // A subscription change, a voided one included, waits for the worker to re-read Play.
+            Assert.Null(row.ProcessedAt);
+            Assert.Equal(BillingTokens.Hash(type == "voided" ? "local-voided" : "local-token"), row.PurchaseTokenHash);
+        }
+        else
+        {
+            // Stored and acknowledged so Pub/Sub stops retrying, but nothing to refresh.
+            Assert.NotNull(row.ProcessedAt);
+            Assert.Null(row.PurchaseTokenHash);
+        }
     }
     [Fact]
     public async Task SignedButOversizedOrMalformedBodiesAreRejectedWithoutStoring()

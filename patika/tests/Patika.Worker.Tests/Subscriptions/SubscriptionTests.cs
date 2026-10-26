@@ -9,6 +9,10 @@ namespace Patika.Worker.Tests.Subscriptions;
 
 public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixture<WorkerPostgisFixture>
 {
+    // The service compares this with what Play returns; the key behind it is the API's concern.
+    private const string Account = "acct-worker";
+    private static readonly BillingOptions Options = new() { AllowTestPurchases = true };
+
     [Theory]
     [InlineData("CANCELED", SubscriptionStatus.Canceled, true)]
     [InlineData("EXPIRED", SubscriptionStatus.Expired, false)]
@@ -21,13 +25,13 @@ public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixt
         await using var db = fixture.CreateContext();
         var user = new User { DisplayName = "Gönüllü" }; db.Users.Add(user); await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var protection = new EphemeralDataProtectionProvider(); var fake = new FakePlayDeveloperApi(db, protection);
-        var service = new SubscriptionService(db, fake, protection, TimeProvider.System);
+        var service = new SubscriptionService(db, fake, protection, TimeProvider.System, Options);
         var processor = new SubscriptionProcessor(db, service, TimeProvider.System);
         var token = Guid.NewGuid().ToString();
         var purchase = new PlaySubscription([new(BillingTokens.Product, DateTimeOffset.UtcNow.AddDays(30), new(true), new("aylik"))],
-            "SUBSCRIPTION_STATE_ACTIVE", "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED");
+            "SUBSCRIPTION_STATE_ACTIVE", "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED", ExternalAccountIdentifiers: new(Account));
         await fake.SeedAsync(BillingTokens.Package, token, purchase, TestContext.Current.CancellationToken);
-        await service.VerifyAsync(user.Id, new(BillingTokens.Product, "aylik", token), TestContext.Current.CancellationToken);
+        await service.VerifyAsync(user.Id, Account, new(BillingTokens.Product, "aylik", token), TestContext.Current.CancellationToken);
         await fake.SeedAsync(BillingTokens.Package, token, purchase with { SubscriptionState = "SUBSCRIPTION_STATE_" + state }, TestContext.Current.CancellationToken);
         db.PlayNotifications.Add(new PlayNotification
         {
@@ -65,7 +69,7 @@ public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixt
         db.Subscriptions.Add(row); await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         await fake.SeedAsync(BillingTokens.Package, token, new([new(BillingTokens.Product, row.ExpiresAt, new(true), new("aylik"))],
             "SUBSCRIPTION_STATE_ACTIVE", "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED"), TestContext.Current.CancellationToken);
-        var service = new SubscriptionService(db, fake, protection, TimeProvider.System);
+        var service = new SubscriptionService(db, fake, protection, TimeProvider.System, Options);
         await new SubscriptionProcessor(db, service, TimeProvider.System).ReconcileAsync(TestContext.Current.CancellationToken);
         Assert.Equal(SubscriptionStatus.Expired, (await db.Subscriptions.AsNoTracking().SingleAsync(x => x.Id == row.Id, TestContext.Current.CancellationToken)).Status);
         Assert.True(await db.AuditLogs.AnyAsync(x => x.TargetId == row.Id && x.Action == "subscription.revoked", TestContext.Current.CancellationToken));
@@ -99,7 +103,7 @@ public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixt
         var other = new User { DisplayName = "Komşu" }; db.Users.Add(other); await db.SaveChangesAsync(Ct);
         var token = Guid.NewGuid().ToString();
         await fake.SeedAsync(BillingTokens.Package, token, Active(), Ct);
-        await service.VerifyAsync(other.Id, new(BillingTokens.Product, "aylik", token), Ct);
+        await service.VerifyAsync(other.Id, Account, new(BillingTokens.Product, "aylik", token), Ct);
         await fake.SeedAsync(BillingTokens.Package, token, Active() with { SubscriptionState = "SUBSCRIPTION_STATE_ON_HOLD" }, Ct);
         var failing = Notification(broken, "2");
         failing.ReceivedAt = DateTimeOffset.UtcNow.AddMinutes(-1);
@@ -136,10 +140,48 @@ public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixt
         Assert.Equal(SubscriptionStatus.Canceled, (await db.Subscriptions.AsNoTracking().SingleAsync(x => x.UserId == user.Id, Ct)).Status);
     }
 
+    [Fact]
+    public async Task BasePlanChangeUnderTheSameTokenFollowsPlayWhenThePlanIsKnown()
+    {
+        await using var db = fixture.CreateContext();
+        var (service, fake, user, token) = await VerifiedAsync(db);
+        var processor = new SubscriptionProcessor(db, service, TimeProvider.System);
+        var yearly = Active() with { LineItems = [new(BillingTokens.Product, DateTimeOffset.UtcNow.AddDays(365), new(true), new("yillik"))] };
+        await fake.SeedAsync(BillingTokens.Package, token, yearly, Ct);
+        db.PlayNotifications.Add(Notification(token, "7"));
+        await db.SaveChangesAsync(Ct);
+        await processor.ProcessAsync(Ct);
+        var row = await db.Subscriptions.AsNoTracking().SingleAsync(x => x.UserId == user.Id, Ct);
+        Assert.Equal("yillik", row.BasePlanId);
+        Assert.True(row.ExpiresAt > DateTimeOffset.UtcNow.AddDays(300));
+        Assert.True((await service.EntitlementAsync(user.Id, Ct)).Supporter);
+
+        // A plan this app does not sell is not adopted; the row is left as it was.
+        await fake.SeedAsync(BillingTokens.Package, token, yearly with { LineItems = [new(BillingTokens.Product, DateTimeOffset.UtcNow.AddDays(30), new(true), new("haftalik"))] }, Ct);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RefreshAsync(BillingTokens.Hash(token), DateTimeOffset.UtcNow, Ct));
+        Assert.Equal("yillik", (await db.Subscriptions.AsNoTracking().SingleAsync(x => x.UserId == user.Id, Ct)).BasePlanId);
+    }
+
+    [Fact]
+    public async Task VoidedSubscriptionIsRefreshedAndRevokesWithoutAnActor()
+    {
+        await using var db = fixture.CreateContext();
+        var (service, fake, user, token) = await VerifiedAsync(db);
+        await fake.SeedAsync(BillingTokens.Package, token, Active() with { SubscriptionState = "SUBSCRIPTION_STATE_REVOKED" }, Ct);
+        db.PlayNotifications.Add(Notification(token, "voided"));
+        await db.SaveChangesAsync(Ct);
+        await new SubscriptionProcessor(db, service, TimeProvider.System).ProcessAsync(Ct);
+        var row = await db.Subscriptions.AsNoTracking().SingleAsync(x => x.UserId == user.Id, Ct);
+        Assert.Equal(SubscriptionStatus.Revoked, row.Status);
+        Assert.False((await service.EntitlementAsync(user.Id, Ct)).Supporter);
+        var revoke = await db.AuditLogs.SingleAsync(x => x.TargetId == row.Id && x.Action == "subscription.revoked", Ct);
+        Assert.Null(revoke.ActorId);
+    }
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static PlaySubscription Active() => new([new(BillingTokens.Product, DateTimeOffset.UtcNow.AddDays(30), new(true), new("aylik"))],
-        "SUBSCRIPTION_STATE_ACTIVE", "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED");
+        "SUBSCRIPTION_STATE_ACTIVE", "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED", ExternalAccountIdentifiers: new(Account));
 
     private static PlayNotification Notification(string token, string type) => new()
     {
@@ -156,10 +198,10 @@ public sealed class SubscriptionTests(WorkerPostgisFixture fixture) : IClassFixt
     {
         var user = new User { DisplayName = "Destekçi" }; db.Users.Add(user); await db.SaveChangesAsync(Ct);
         var protection = new EphemeralDataProtectionProvider(); var fake = new FakePlayDeveloperApi(db, protection);
-        var service = new SubscriptionService(db, fake, protection, TimeProvider.System);
+        var service = new SubscriptionService(db, fake, protection, TimeProvider.System, Options);
         var token = Guid.NewGuid().ToString();
         await fake.SeedAsync(BillingTokens.Package, token, Active(), Ct);
-        await service.VerifyAsync(user.Id, new(BillingTokens.Product, "aylik", token), Ct);
+        await service.VerifyAsync(user.Id, Account, new(BillingTokens.Product, "aylik", token), Ct);
         return (service, fake, user, token);
     }
 }

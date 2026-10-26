@@ -60,6 +60,8 @@ public sealed class PatikaApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:SigningKey", SigningKey);
         builder.UseSetting("Google:ClientIds:0", FakeExternalIdentityVerifier.ClientId);
         builder.UseSetting("ConnectionStrings:Patika", "Host=127.0.0.1;Port=1;Database=none;Timeout=1");
+        // Testing is not Development, so the simulated store has to be allowed explicitly.
+        builder.UseSetting("Billing:AllowFake", "true");
         foreach (var (key, value) in Settings)
         {
             builder.UseSetting(key, value);

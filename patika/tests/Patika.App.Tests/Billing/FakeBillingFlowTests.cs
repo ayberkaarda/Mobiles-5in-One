@@ -18,14 +18,18 @@ public sealed class FakeBillingFlowTests
         {
             Assert.NotNull(request.Bearer);
             if (request.Path == "/dev/billing/purchases")
+            {
+                // The server-issued account id travels with the purchase, as Play keeps obfuscatedExternalAccountId.
+                Assert.Contains("acct-1", request.Body);
                 return Http.Done(Http.Json(HttpStatusCode.OK, new FakePurchaseResponse("test-purchase")));
+            }
             if (request.Path == "/v1/subscriptions/verify")
             {
                 Assert.Contains("test-purchase", request.Body);
                 granted = true;
             }
             else Assert.Equal("/v1/me/entitlement", request.Path);
-            return Http.Done(Http.Json(HttpStatusCode.OK, new EntitlementResponse(granted, null, granted ? "Active" : null)));
+            return Http.Done(Http.Json(HttpStatusCode.OK, new EntitlementResponse(granted, null, granted ? "Active" : null, "acct-1")));
         });
         using var http = new HttpClient(handler);
         var tokens = new TokenManager(new MemoryTokenStore(), TimeProvider.System);

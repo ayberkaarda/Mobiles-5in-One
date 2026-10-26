@@ -48,6 +48,7 @@ internal sealed class AdminFlow : IAsyncDisposable
             builder.ConfigureLogging(logging => logging.ClearProviders().AddConsole());
             builder.UseSetting("Jwt:SigningKey", signingKey);
             builder.UseSetting("ConnectionStrings:Patika", fixture.Database.ConnectionString);
+            builder.UseSetting("Billing:AllowFake", "true");
             builder.ConfigureServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));

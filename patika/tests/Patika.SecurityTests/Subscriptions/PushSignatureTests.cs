@@ -78,7 +78,7 @@ public sealed class PushSignatureTests
     {
         // The Worker decrypts tokens the API encrypted; without the shared persistent ring reconciliation breaks.
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        { ["Billing:Provider"] = provider, ["Billing:AllowFake"] = "true" }).Build();
+        { ["Billing:Provider"] = provider, ["Billing:AllowFake"] = "true", ["Billing:PackageName"] = BillingTokens.Package }).Build();
         var services = new ServiceCollection();
         if (production) Assert.Throws<InvalidOperationException>(() => services.AddPlayBilling(config, false, true));
         else services.AddPlayBilling(config, false, false);

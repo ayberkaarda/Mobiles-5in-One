@@ -43,6 +43,12 @@ public sealed class SupporterTextTests
         Assert.Contains("başka bir Patika hesabına bağlı", vm.ErrorMessage);
     }
 
+    [Theory]
+    [InlineData("purchase_not_found", "Google Play")]
+    [InlineData("test_purchase_not_allowed", "Test ödemeleri")]
+    public void StoreFailuresHaveTheirOwnText(string code, string expected) =>
+        Assert.Contains(expected, SupporterText.Failure(code));
+
     [Fact]
     public async Task RestoreContinuesPastARejectedPurchase()
     {
@@ -85,7 +91,7 @@ public sealed class SupporterTextTests
         public event EventHandler<BillingPurchase>? PurchaseUpdated { add { } remove { } }
         public Task<IReadOnlyList<BillingProduct>> QueryProducts() => Task.FromResult<IReadOnlyList<BillingProduct>>(
             [new("patika_destekci", "aylik", "Aylık", "₺49,99 / ay"), new("patika_destekci", "yillik", "Yıllık", "₺449,99 / yıl")]);
-        public Task<BillingPurchase> LaunchPurchase(BillingProduct product) => Task.FromResult(new BillingPurchase(product.ProductId, product.BasePlanId, "test"));
+        public Task<BillingPurchase> LaunchPurchase(BillingProduct product, string accountId) => Task.FromResult(new BillingPurchase(product.ProductId, product.BasePlanId, "test"));
         public Task<IReadOnlyList<BillingPurchase>> QueryPurchases() => Task.FromResult(Purchases);
     }
 
@@ -95,7 +101,7 @@ public sealed class SupporterTextTests
         public ApiException? Fail { get; init; }
         public string? RejectToken { get; init; }
         public List<string> Verified { get; } = [];
-        public Task<EntitlementResponse> Entitlement() => Task.FromResult(current);
+        public Task<EntitlementResponse> Entitlement() => Task.FromResult(current with { BillingAccountId = "acct-1" });
         public Task<EntitlementResponse> Verify(BillingPurchase purchase)
         {
             Verified.Add(purchase.PurchaseToken);

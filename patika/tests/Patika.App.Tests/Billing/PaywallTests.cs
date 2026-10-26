@@ -16,6 +16,7 @@ public sealed class PaywallTests
         Assert.Equal("aylik", vm.SelectedProduct?.BasePlanId); Assert.False(vm.Supporter);
         await vm.PurchaseCommand.ExecuteAsync(null);
         Assert.Equal("success", vm.State); Assert.True(vm.Supporter); Assert.StartsWith("Destekçisin.", vm.EntitlementText); Assert.False(vm.CanPurchase);
+        Assert.Equal("acct-1", fake.AccountId);
         api.Response = new(false, null, "Expired");
         await vm.LoadAsync(); Assert.False(vm.Supporter);
         await vm.RestoreCommand.ExecuteAsync(null);
@@ -50,16 +51,21 @@ public sealed class PaywallTests
         public TaskCompletionSource<IReadOnlyList<BillingProduct>>? ProductsPending { get; set; }
         public TaskCompletionSource<BillingPurchase>? PurchasePending { get; set; }
         public Task<IReadOnlyList<BillingProduct>> QueryProducts() => ProductsPending?.Task ?? Task.FromResult(Products);
-        public Task<BillingPurchase> LaunchPurchase(BillingProduct product) => Fail
-            ? throw new InvalidOperationException("Test ödemesi tamamlanmadı.")
-            : PurchasePending?.Task ?? Task.FromResult(new BillingPurchase(product.ProductId, product.BasePlanId, "test"));
+        public string? AccountId { get; private set; }
+        public Task<BillingPurchase> LaunchPurchase(BillingProduct product, string accountId)
+        {
+            AccountId = accountId;
+            return Fail
+                ? throw new InvalidOperationException("Test ödemesi tamamlanmadı.")
+                : PurchasePending?.Task ?? Task.FromResult(new BillingPurchase(product.ProductId, product.BasePlanId, "test"));
+        }
         public Task<IReadOnlyList<BillingPurchase>> QueryPurchases() => Task.FromResult<IReadOnlyList<BillingPurchase>>([new("patika_destekci", "aylik", "test")]);
     }
     private sealed class ApiFake : ISubscriptionApi
     {
         public EntitlementResponse Response { get; set; } = new(false, null, null);
         public int Verifications { get; private set; }
-        public Task<EntitlementResponse> Entitlement() => Task.FromResult(Response);
+        public Task<EntitlementResponse> Entitlement() => Task.FromResult(Response with { BillingAccountId = "acct-1" });
         public Task<EntitlementResponse> Verify(BillingPurchase purchase)
         {
             Verifications++; Response = new(true, DateTimeOffset.UtcNow.AddDays(30), "Active"); return Task.FromResult(Response);
