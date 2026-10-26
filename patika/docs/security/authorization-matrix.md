@@ -87,9 +87,9 @@ the persisted per-user five-failure lockout and the existing per-IP auth policy.
 
 | Route | Anonymous | Signed-in user | Boundary |
 | --- | --- | --- | --- |
-| POST /v1/subscriptions/verify | Deny | Own token only | Rate limited; server queries Play; foreign or purged owner returns 409 |
-| GET /v1/me/entitlement | Deny | Own account only | No caller-selected user id |
-| POST /webhooks/play | OIDC required | OIDC required | Google RS256/JWKS, issuer/audience/email/email_verified/exp/iat; 64 KiB; unique message id |
+| POST /v1/subscriptions/verify | Deny | Own token only | Rate limited; server queries Play; account id must match the caller; foreign, purged or unbound returns 409 (audited) |
+| GET /v1/me/entitlement | Deny | Own account only | No caller-selected user id; returns the caller's billing account id |
+| POST /webhooks/play | OIDC required | OIDC required | Google RS256/JWKS, header screened before key fetch, refresh throttled with backoff; issuer/audience/email/email_verified/exp/iat; 64 KiB; unique message id |
 | POST /dev/billing/purchases | Deny | Allow only Development+Fake | Absent otherwise; rate limited; test purchase only |
 
 Worker re-queries the provider; notification types never decide entitlement. Canceled keeps

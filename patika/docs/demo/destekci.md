@@ -8,7 +8,8 @@ Kararlar ve sınırlar: [ADR-0010](../adr/0010-play-billing-simulated.md).
 
 **Compose ile:** `patika/` içinde `.env.example` dosyasını `.env` olarak kopyala, yerel depolama
 değerlerini doldur ve `docker compose up --build -d` çalıştır. API migration uygular. Compose
-yalnızca API ve Worker için `Billing__Provider=Fake`, `Billing__AllowFake=true` ve ortak
+yalnızca API ve Worker için `Billing__Provider=Fake`, `Billing__AllowFake=true`,
+`Billing__AllowTestPurchases=true` (test alımları Development dışında ancak bu ayarla hak verir) ve ortak
 `billing-keys` volume'unu (`DataProtection__KeysPath=/keys`) ayarlar. Worker Production
 ortamında çalışır; AllowFake olmadan ve key ring olmadan başlamaz.
 
@@ -49,15 +50,18 @@ kabul eder; demo sırasında aşarsan API'yi yeniden başlat.
 
 ```bash
 B=http://127.0.0.1:5000
+# Play, uygulamanın satın almaya verdiği hesap kimliğini (obfuscatedExternalAccountId) saklar; sahte mağaza da.
+A=$(curl -s $B/v1/me/entitlement -H "Authorization: Bearer $ACCESS" | sed -E 's/.*"billingAccountId":"([^"]+)".*/\1/')
 P=$(curl -s -X POST $B/dev/billing/purchases -H "Authorization: Bearer $ACCESS" \
-  -H 'Content-Type: application/json' -d '{"basePlanId":"aylik"}' | sed -E 's/.*"purchaseToken":"([^"]+)".*/\1/')
+  -H 'Content-Type: application/json' -d "{\"basePlanId\":\"aylik\",\"obfuscatedAccountId\":\"$A\"}" | sed -E 's/.*"purchaseToken":"([^"]+)".*/\1/')
 curl -s -X POST $B/v1/subscriptions/verify -H "Authorization: Bearer $ACCESS" -H 'Content-Type: application/json' \
   -d "{\"productId\":\"patika_destekci\",\"basePlanId\":\"aylik\",\"purchaseToken\":\"$P\"}"
 curl -s $B/v1/me/entitlement -H "Authorization: Bearer $ACCESS"
 ```
 
-Aynı token'ı başka hesapla doğrulamak `409 purchase_owned_elsewhere`, yanlış plan ya da bitmiş
-alım `400 invalid_purchase` döner. Dev uç noktası yalnızca Development + Fake'de vardır.
+Aynı token'ı başka hesapla doğrulamak ya da başka hesabın kimliğiyle alınmış bir alımı doğrulamak
+`409 purchase_owned_elsewhere` döner ve `subscription.claim_rejected` audit kaydı bırakır; yanlış
+plan ya da bitmiş alım `400 invalid_purchase`, mağazada olmayan token `400 purchase_not_found` döner. Dev uç noktası yalnızca Development + Fake'de vardır.
 
 ## 4. İmzalı bildirim (RTDN) ve Worker
 

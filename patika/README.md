@@ -72,6 +72,7 @@ This project is licensed under the Apache License 2.0. See [LICENSE](../LICENSE)
 | Play Console, Pub/Sub, Google Cloud | Hesap/proje yok; canlı bağlantı denenmedi |
 
 Sunucu: `/v1/subscriptions/verify`, `/v1/me/entitlement`, `/webhooks/play`.
-`/dev/billing/purchases` yalnızca Development+Fake. Production'da Fake için
-`Billing:AllowFake=true` gerekir. API/Worker aynı DataProtection:KeysPath kullanmalıdır.
+`/dev/billing/purchases` yalnızca Development+Fake. Development dışındaki her ortamda Fake için
+`Billing:AllowFake=true` gerekir; test alımları orada yalnızca `Billing:AllowTestPurchases=true` ile hak verir.
+API/Worker aynı DataProtection:KeysPath kullanmalıdır.
 [Demo](docs/demo/destekci.md) · [Karar ve sınırlamalar](docs/adr/0010-play-billing-simulated.md).
