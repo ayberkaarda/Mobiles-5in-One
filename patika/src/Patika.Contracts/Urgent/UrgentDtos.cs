@@ -30,9 +30,9 @@ public sealed record UrgentPostListResponse(IReadOnlyList<UrgentPostResponse> It
 /// <c>InstallationId</c> is a UUID the app creates once per install and keeps; a token can only move
 /// between accounts when the same installation presents it.
 /// </summary>
-public sealed record RegisterDeviceRequest(string Token, Guid InstallationId, string? Environment);
+public sealed record RegisterDeviceRequest([property: Verbatim] string Token, Guid InstallationId, string? Environment);
 
-public sealed record UnregisterDeviceRequest(string Token);
+public sealed record UnregisterDeviceRequest([property: Verbatim] string Token);
 
 /// <summary>
 /// Urgent-help opt-in. <c>HomeArea</c> is a saved approximate area (rounded to 3 decimals, about

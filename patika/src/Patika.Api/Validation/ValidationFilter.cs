@@ -14,13 +14,9 @@ public sealed class ValidationFilter<T>(IValidator<T> validator) : IEndpointFilt
             return ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["A request body is required."] });
         }
 
-        // Only human-readable fields; credentials, tokens, keys and identifiers remain byte-for-byte intact.
-        foreach (var property in typeof(T).GetProperties().Where(p => p.PropertyType == typeof(string) && p.CanWrite
-            && p.Name is "DisplayName" or "Name" or "Note" or "Description" or "Requirements" or "Message" or "Reply" or "Reason" or "District"))
-        {
-            if (property.GetValue(argument) is string text)
-                property.SetValue(argument, Patika.Domain.UserText.Clean(text));
-        }
+        // Every string of the contract is cleaned, except [Verbatim] passwords and opaque tokens. The /v1 group filter
+        // already did this; repeating it here keeps a validated endpoint safe wherever it is mapped (cleaning is idempotent).
+        RequestText.Clean(argument);
         var result = await validator.ValidateAsync(argument, context.HttpContext.RequestAborted);
         if (result.IsValid)
         {

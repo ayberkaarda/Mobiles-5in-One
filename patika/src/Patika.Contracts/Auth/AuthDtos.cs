@@ -4,21 +4,21 @@ namespace Patika.Contracts.Auth;
 
 public sealed record RegisterRequest(
     [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("password")] string Password,
+    [property: JsonPropertyName("password"), Verbatim] string Password,
     [property: JsonPropertyName("displayName")] string DisplayName);
 
 public sealed record LoginRequest(
     [property: JsonPropertyName("email")] string Email,
-    [property: JsonPropertyName("password")] string Password);
+    [property: JsonPropertyName("password"), Verbatim] string Password);
 
 public sealed record GoogleSignInRequest(
-    [property: JsonPropertyName("idToken")] string IdToken);
+    [property: JsonPropertyName("idToken"), Verbatim] string IdToken);
 
 public sealed record RefreshRequest(
-    [property: JsonPropertyName("refreshToken")] string RefreshToken);
+    [property: JsonPropertyName("refreshToken"), Verbatim] string RefreshToken);
 
 public sealed record LogoutRequest(
-    [property: JsonPropertyName("refreshToken")] string RefreshToken);
+    [property: JsonPropertyName("refreshToken"), Verbatim] string RefreshToken);
 
 public sealed record TokenResponse(
     [property: JsonPropertyName("accessToken")] string AccessToken,
@@ -74,7 +74,7 @@ public sealed record ResendVerificationRequest(
     [property: JsonPropertyName("email")] string Email);
 
 public sealed record LinkExternalLoginRequest(
-    [property: JsonPropertyName("idToken")] string IdToken);
+    [property: JsonPropertyName("idToken"), Verbatim] string IdToken);
 
 /// <summary>
 /// The only response to a well-formed registration, whether or not the address already has an

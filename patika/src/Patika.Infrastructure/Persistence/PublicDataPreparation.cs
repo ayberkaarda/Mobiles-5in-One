@@ -23,7 +23,7 @@ internal static class PublicDataPreparation
         foreach (var entry in entries)
         {
             foreach (var property in entry.Properties.Where(p => p.Metadata.ClrType == typeof(string)
-                && p.Metadata.Name is "DisplayName" or "Name" or "Note" or "Description" or "Requirements" or "Message" or "Reply" or "Reason" or "Address" or "HiddenReason"))
+                && p.Metadata.Name is "DisplayName" or "Name" or "Note" or "Description" or "Requirements" or "Message" or "Reply" or "Reason" or "Address" or "HiddenReason" or "District"))
             {
                 if (property.CurrentValue is string text) property.CurrentValue = UserText.Clean(text);
             }
