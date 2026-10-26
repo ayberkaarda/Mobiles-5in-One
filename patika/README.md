@@ -2,7 +2,9 @@ English | [Türkçe](README.tr.md)
 
 # Patika
 
-Tagline (tr): "Mahallenin patilerini birlikte koruyalım."
+[![Patika CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/patika-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/patika-ci.yml)
+
+"Mahallenin patilerini birlikte koruyalım."
 
 <img src="docs/design/screenshots/web-home-1440.png" alt="Patika web home page: the hero with the illustrated Moda morning-round map, the four-stop round timeline, adoption cards, the dark urgent-help section with nearby care places and the weekly impact line, local build, sample data" width="100%">
 
@@ -14,7 +16,21 @@ Live demo: a [static snapshot of the public web](https://ayberkaarda.github.io/M
 
 ## Product summary
 
-Patika is a community platform for street animals that connects neighbourhood volunteers. It offers a feeding-station map, "Beslendi" (fed) check-ins, animal profiles, adoption listings, urgent-help posts and a directory of nearby vets and shelters. The name means "footpath" and contains "pati" (paw). The tone is warm and communal, dignified and never guilt-tripping. Volunteer privacy is a product feature: photos lose their location metadata before upload and again on the server, and volunteer positions are never stored.
+Patika is a community platform for street animals that connects neighbourhood volunteers. It offers a feeding-station map, "Beslendi" (fed) check-ins, animal profiles, adoption listings, urgent-help posts and a directory of nearby vets and shelters. The name means "footpath" and contains "pati" (paw). The tone is warm and communal, dignified and never guilt-tripping. Volunteer privacy is a product feature: photos lose their location metadata before upload and again on the server, and volunteer positions are never stored. The code is one .NET 10 solution: an ASP.NET Core API,
+a Razor Pages web with the admin console, a Worker and a .NET MAUI Android app.
+
+## Status
+
+Portfolio project. All seven planned phases (0 to 6) are merged to `main` (pull requests #134,
+#135, #139 and #141 to #147): foundation; API core, authentication and the security baseline; the domain API, media and
+push; the API for mobile and the Android app; the SEO and GEO web with the admin console; the
+simulated Play subscription; hardening and release readiness. There is no phase 7. What is real
+and what is simulated is listed in [Real vs simulated](#real-vs-simulated).
+
+The final run in [`docs/handoffs/phase-6-report.md`](docs/handoffs/phase-6-report.md) records
+`dotnet test Patika.slnx` at 1,456 passed and 0 failed (Api 511, App 223, Domain 51, Security 480
+plus 2 skipped that pass against a migrated PostGIS, Web 123, Worker 68). The security
+verification matrix stands at 19 of 23 done and 4 partial (see [Security](#security)).
 
 ## Features
 
@@ -88,7 +104,7 @@ Patika is a portfolio project: there is no hosted service, no store account and 
 
 ## Running locally
 
-Requirements: .NET SDK 10.0.402 (`global.json`), Docker, and for the app the MAUI Android workload, JDK 21 and an Android emulator.
+Requirements: .NET SDK 10.0.400 or a later 10.0.4xx patch (`global.json`), Docker, and for the app the MAUI Android workload, JDK 21 and an Android emulator.
 
 ```sh
 cp .env.example .env              # Development by default; no secrets needed locally
@@ -116,9 +132,23 @@ Configuration keys are listed in [`docs/ops/env.md`](docs/ops/env.md).
 
 All 23 checklist items are mapped in the [verification matrix](docs/security/verification-matrix.md): 19 done, 4 partial (HTTPS, the Play webhook, backups and the attacker-style testing item, each because part of the proof needs a real domain, a Play account or cloud storage). Further reading: [pentest report](docs/security/pentest-report.md), [threat model](docs/security/threat-model.md), [authorization matrix](docs/security/authorization-matrix.md), [hardening notes](docs/security/hardening.md), [ZAP](docs/security/scans/zap.md) and [MobSF](docs/security/scans/mobsf.md) results, [history-purge runbook](docs/security/history-purge-runbook.md). Operations: [backup and restore](docs/ops/backup-restore.md), [cost alerts](docs/ops/cost-alerts.md), [logging](docs/ops/logging.md). Release documents: [Play listing](docs/release/play-listing.md), [Data Safety](docs/release/data-safety.md), [signing](docs/release/signing.md).
 
-## Status
+## CI
 
-Phases 0 to 5 are merged; phase 6 (hardening, scans and release readiness) is the last one. The final report is [`docs/handoffs/phase-6-report.md`](docs/handoffs/phase-6-report.md).
+- `Patika CI`: backend (restore, build, unfinished-marker grep, `dotnet test`, `dotnet format`),
+  Android (vulnerable-package check, CycloneDX inventory, Release build, merged release manifest
+  check), Compose validation, a ZAP baseline on the Web and the admin sign-in, and a full-history
+  gitleaks scan. A gate job requires every job to pass when `patika/` changes.
+- `Patika restore drill` (PostGIS 17, MinIO, age): scheduled weekly; no run on GitHub Actions is
+  recorded yet. The same drill runs locally with `ops/backup/drill.sh`.
+
+## Documentation
+
+- Product specification: [`03-patika-swift-ios.md`](03-patika-swift-ios.md) (first written for Swift and iOS; its notice records the move to .NET MAUI on Android, see [ADR-0001](docs/adr/0001-stack-and-versions.md))
+- Architecture decisions: [`docs/adr/`](docs/adr/) (ADR-0001 to ADR-0010)
+- Phase reports: [`docs/handoffs/`](docs/handoffs/), final one [`phase-6-report.md`](docs/handoffs/phase-6-report.md)
+- Public web data rules: [`docs/public-web-data.md`](docs/public-web-data.md)
+- Design and screenshots: [`docs/design/`](docs/design/); simulated billing demo: [`docs/demo/destekci.md`](docs/demo/destekci.md)
+- Contributor rules: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## License
 
