@@ -40,7 +40,7 @@ Passwords are not a Play data type but for completeness: stored only as Argon2id
 
 - Google sign-in: when the Credential Manager adapter replaces `NotConfiguredGoogleSignIn`, keep "User IDs" and check that no extra profile field (photo, name) is stored.
 - Maps: if the Google Maps street layer is added (ADR-0007), Google receives map tile requests; declare per Google's SDK guidance.
-- The purchase token hash is kept for 90 days after the subscription ends (or after the account purge, once nothing is running), then deleted by the Worker's hourly maintenance job ([`BillingTokenRetention.cs`](../../src/Patika.Worker/Jobs/Maintenance/BillingTokenRetention.cs), `BillingTokenRetentionTests`). The Data safety answer for purchase history stays "kept for fraud prevention", now with that bound.
+- The purchase token hash is kept for 90 days after the subscription ends in a terminal state (canceled, expired, revoked; or after the account purge, once nothing is running), then deleted by the Worker's hourly maintenance job, together with any copy of it that a successor subscription holds as its predecessor link. Paused and on-hold subscriptions are kept, because Play can still resume them ([`BillingTokenRetention.cs`](../../src/Patika.Worker/Jobs/Maintenance/BillingTokenRetention.cs), `BillingTokenRetentionTests`). The Data safety answer for purchase history stays "kept for fraud prevention", now with that bound.
 
 ## KVKK aydınlatma metni and privacy policy
 
