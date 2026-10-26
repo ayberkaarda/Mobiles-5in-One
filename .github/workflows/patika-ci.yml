@@ -50,7 +50,7 @@ jobs:
           if [ -z "$base" ]; then
             patika=true
           else
-            if git diff --quiet --no-renames "$base" "$head" -- patika/ .github/workflows/patika-ci.yml .gitleaks.toml; then
+            if git diff --quiet --no-renames "$base" "$head" -- patika/ .github/workflows/patika-ci.yml .github/dependabot.yml .gitleaks.toml; then
               status=0
             else
               status=$?
@@ -91,6 +91,15 @@ jobs:
           for project in src/*/*.csproj tests/*/*.csproj; do
             dotnet build "$project" -c Release --no-restore
           done
+      - name: Reject unfinished code markers
+        run: |
+          if git grep -n -I -E 'TODO|FIXME|lorem|YOUR_' -- src app; then
+            echo 'Unfinished code markers found.'
+            exit 1
+          else
+            status=$?
+            [ "$status" = 1 ] || exit "$status"
+          fi
       - name: Test
         run: |
           for project in tests/*/*.csproj; do
@@ -126,11 +135,59 @@ jobs:
       - name: Install MAUI Android workload
         working-directory: patika
         run: dotnet workload install maui-android
+      - name: Check vulnerable packages
+        working-directory: patika
+        shell: bash
+        run: |
+          dotnet restore Patika.slnx
+          dotnet list Patika.slnx package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/patika-vulnerabilities.json"
+          python3 - "$RUNNER_TEMP/patika-vulnerabilities.json" <<'PY'
+          import json, sys
+          report = json.load(open(sys.argv[1]))
+          def inspect(value):
+              if isinstance(value, dict):
+                  if str(value.get('severity', '')).lower() in ('high', 'critical'):
+                      raise SystemExit('High/Critical package vulnerability found')
+                  for child in value.values(): inspect(child)
+              elif isinstance(value, list):
+                  for child in value: inspect(child)
+          if report.get('problems'): raise SystemExit('Package audit did not complete')
+          inspect(report)
+          PY
+      - name: Create CycloneDX inventory
+        working-directory: patika
+        run: |
+          dotnet tool install CycloneDX --version 6.3.1 --tool-path "$RUNNER_TEMP/patika-tools"
+          "$RUNNER_TEMP/patika-tools/dotnet-CycloneDX" Patika.slnx -o "$RUNNER_TEMP/patika-sbom" --output-format Json
+      - name: Upload package inventory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: patika-sbom
+          path: ${{ runner.temp }}/patika-sbom/*.json
+          if-no-files-found: error
       - name: Verify Android formatting
         run: dotnet format patika/app/Patika.App/Patika.App.csproj --verify-no-changes
       - name: Build Android
         working-directory: patika
         run: dotnet build app/Patika.App/Patika.App.csproj -f net10.0-android -c Release
+      - name: Check merged Android release manifest
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          manifests = list(Path('patika/app/Patika.App/obj/Release/net10.0-android').glob('**/android/AndroidManifest.xml'))
+          if not manifests: raise SystemExit('Release manifest missing')
+          android = '{http://schemas.android.com/apk/res/android}'
+          for manifest in manifests:
+              app = ET.parse(manifest).getroot().find('application')
+              assert app is not None
+              assert app.get(android + 'allowBackup') == 'false'
+              assert app.get(android + 'usesCleartextTraffic') == 'false'
+              assert app.get(android + 'debuggable', 'false') == 'false'
+              for component in app:
+                  if component.tag in ('activity', 'activity-alias', 'service', 'receiver', 'provider'):
+                      assert component.get(android + 'exported') in ('true', 'false'), component.get(android + 'name')
+          PY
 
   compose:
     name: Patika Compose validation
