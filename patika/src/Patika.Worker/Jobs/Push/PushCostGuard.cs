@@ -1,6 +1,8 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Patika.Infrastructure.Persistence;
+using Patika.Worker.Jobs.Ops;
 
 namespace Patika.Worker.Jobs.Push;
 
@@ -69,6 +71,9 @@ public sealed record CostGuardStatus(DateOnly Day, int Sent, int DailyCap, int C
     public bool NonCriticalPaused => Sent >= DailyCap;
 
     public bool CriticalPaused => Sent >= CriticalDailyCap;
+    public int EmailsSent { get; init; }
+    public int EmailCap { get; init; } = 5_000;
+    public bool EmailsPaused => EmailsSent >= EmailCap;
 }
 
 /// <summary>
@@ -96,23 +101,40 @@ public sealed class PushCostGuard(IPushCounterStore counters, IOptions<PushSetti
     {
         var settings = options.Value.CostGuard;
         var day = Today(clock.GetUtcNow());
-        return new CostGuardStatus(day, await counters.CountAsync(day, Channel, cancellationToken), settings.DailyCap, settings.CriticalDailyCap);
+        return new CostGuardStatus(day, await counters.CountAsync(day, Channel, cancellationToken), settings.DailyCap, settings.CriticalDailyCap)
+        {
+            EmailsSent = await counters.CountAsync(day, "email", cancellationToken),
+            EmailCap = settings.MaxEmailsPerDay
+        };
     }
 }
 
-/// <summary>Raised once per day when the soft cap is crossed; the email sender plugs in here.</summary>
+public enum CostAlertKind { Push, Email }
+
+/// <summary>Raised at most once per local day and kind when a daily cap is reached.</summary>
 public interface ICostAlertNotifier
 {
-    Task AlertAsync(CostGuardStatus status, CancellationToken cancellationToken);
+    Task AlertAsync(CostGuardStatus status, CostAlertKind kind, CancellationToken cancellationToken);
 }
 
-public sealed class LoggingCostAlertNotifier(ILogger<LoggingCostAlertNotifier> logger) : ICostAlertNotifier
+/// <summary>Writes the masked, count-only alert line and mails the same text to <c>Ops:AlertEmail</c>.</summary>
+public sealed class CostAlertNotifier(ILogger<CostAlertNotifier> logger, IOpsAlerts alerts) : ICostAlertNotifier
 {
-    public Task AlertAsync(CostGuardStatus status, CancellationToken cancellationToken)
+    public Task AlertAsync(CostGuardStatus status, CostAlertKind kind, CancellationToken cancellationToken)
     {
-        logger.LogWarning(
-            "cost.guard: {Sent} pushes on {Day} reached the daily cap {Cap}; non-critical sends are paused",
-            status.Sent, status.Day, status.DailyCap);
-        return Task.CompletedTask;
+        if (kind == CostAlertKind.Push)
+        {
+            logger.LogWarning("cost.guard: {Sent} pushes on {Day} reached the daily cap {Cap}; non-critical sends are paused",
+                status.Sent, status.Day, status.DailyCap);
+            return alerts.RaiseAsync("cost.guard: push cap reached", string.Create(CultureInfo.InvariantCulture,
+                $"{status.Sent} pushes on {status.Day:yyyy-MM-dd} reached the daily cap {status.DailyCap}; non-critical sends are paused."),
+                cancellationToken);
+        }
+
+        logger.LogWarning("cost.guard: {Count} emails on {Day} reached the daily cap {Cap}; email sends are paused",
+            status.EmailsSent, status.Day, status.EmailCap);
+        return alerts.RaiseAsync("cost.guard: email cap reached", string.Create(CultureInfo.InvariantCulture,
+            $"{status.EmailsSent} emails on {status.Day:yyyy-MM-dd} reached the daily cap {status.EmailCap}; email sends are paused until the next local day."),
+            cancellationToken);
     }
 }

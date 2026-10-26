@@ -2,6 +2,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Patika.Worker.Jobs.Push;
@@ -11,6 +13,41 @@ namespace Patika.Worker.Tests;
 
 public sealed class CostGuardTests
 {
+    [Fact]
+    public async Task TopLevelCapsAreBoundAndEnforcedWithoutAProvider()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["CostGuard:MaxPushesPerDay"] = "1",
+            ["CostGuard:MaxEmailsPerDay"] = "2"
+        }).Build();
+        var services = new ServiceCollection();
+        services.AddPushServices(config);
+        services.AddSingleton<IPushCounterStore>(new InMemoryPushCounters());
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var guard = scope.ServiceProvider.GetRequiredService<PushCostGuard>();
+        Assert.Equal(1, await guard.ReserveAsync(10, false, Ct));
+        Assert.Equal(0, await guard.ReserveAsync(1, false, Ct));
+        Assert.Equal(2, (await guard.StatusAsync(Ct)).EmailCap);
+    }
+
+    [Fact]
+    public async Task EmailBudgetAlsoRaisesTheMaskedCostAlert()
+    {
+        var counters = new InMemoryPushCounters();
+        var guard = Guard(counters);
+        var notifier = new RecordingAlertNotifier();
+        var job = new CostGuardJob(guard, notifier, new CostGuardAlertState());
+        var day = PushCostGuard.Today(new DateTimeOffset(2026, 10, 25, 12, 0, 0, TimeSpan.Zero));
+        await counters.ReserveAsync(day, "email", 5_000, 5_000, Ct);
+        var status = await job.RunOnceAsync(Ct);
+        Assert.True(status.EmailsPaused);
+        Assert.False(status.NonCriticalPaused);
+        Assert.Equal(5_000, status.EmailsSent);
+        Assert.Single(notifier.Alerts);
+    }
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static PushCostGuard Guard(IPushCounterStore counters, int soft = 100, int hard = 250) =>

@@ -74,6 +74,9 @@ public sealed class FcmSettings
 
 public sealed class CostGuardSettings
 {
+    /// <summary>Daily emails across the API (top-level <c>CostGuard:MaxEmailsPerDay</c>, shared with the API).</summary>
+    public int MaxEmailsPerDay { get; set; } = 5_000;
+
     /// <summary>Daily pushes after which non-critical sends pause and an alert is raised.</summary>
     public int DailyCap { get; set; } = 5_000;
 

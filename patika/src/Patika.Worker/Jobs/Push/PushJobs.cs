@@ -12,7 +12,7 @@ public sealed class UrgentFanoutJob(UrgentFanout fanout) : IJob
     public Task Execute(IJobExecutionContext context) => fanout.RunOnceAsync(context.CancellationToken);
 }
 
-/// <summary><c>cost.guard</c>: alerts once per local day when the soft push cap has been reached.</summary>
+/// <summary><c>cost.guard</c>: alerts once per local day and kind when the soft push cap or the email cap is reached.</summary>
 [DisallowConcurrentExecution]
 public sealed class CostGuardJob(PushCostGuard guard, ICostAlertNotifier notifier, CostGuardAlertState state) : IJob
 {
@@ -23,31 +23,36 @@ public sealed class CostGuardJob(PushCostGuard guard, ICostAlertNotifier notifie
     public async Task<CostGuardStatus> RunOnceAsync(CancellationToken cancellationToken)
     {
         var status = await guard.StatusAsync(cancellationToken);
-        if (status.NonCriticalPaused && state.TryMarkAlerted(status.Day))
+        if (status.NonCriticalPaused && state.TryMarkAlerted(status.Day, CostAlertKind.Push))
         {
-            await notifier.AlertAsync(status, cancellationToken);
+            await notifier.AlertAsync(status, CostAlertKind.Push, cancellationToken);
+        }
+
+        if (status.EmailsPaused && state.TryMarkAlerted(status.Day, CostAlertKind.Email))
+        {
+            await notifier.AlertAsync(status, CostAlertKind.Email, cancellationToken);
         }
 
         return status;
     }
 }
 
-/// <summary>Remembers the last alerted day for this worker process.</summary>
+/// <summary>Remembers, per alert kind, the last alerted day for this worker process.</summary>
 public sealed class CostGuardAlertState
 {
-    private DateOnly? alerted;
+    private readonly Dictionary<CostAlertKind, DateOnly> alerted = [];
     private readonly Lock gate = new();
 
-    public bool TryMarkAlerted(DateOnly day)
+    public bool TryMarkAlerted(DateOnly day, CostAlertKind kind)
     {
         lock (gate)
         {
-            if (alerted == day)
+            if (alerted.TryGetValue(kind, out var last) && last == day)
             {
                 return false;
             }
 
-            alerted = day;
+            alerted[kind] = day;
             return true;
         }
     }
@@ -57,9 +62,13 @@ public static class PushJobsSetup
 {
     public static IServiceCollection AddPushServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<PushSettings>().Bind(configuration.GetSection(PushSettings.SectionName));
+        services.AddOptions<PushSettings>().Bind(configuration.GetSection(PushSettings.SectionName)).PostConfigure(settings =>
+        {
+            settings.CostGuard.DailyCap = configuration.GetValue("CostGuard:MaxPushesPerDay", settings.CostGuard.DailyCap);
+            settings.CostGuard.MaxEmailsPerDay = configuration.GetValue("CostGuard:MaxEmailsPerDay", settings.CostGuard.MaxEmailsPerDay);
+        });
         services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton<ICostAlertNotifier, LoggingCostAlertNotifier>();
+        services.TryAddSingleton<ICostAlertNotifier, CostAlertNotifier>();
         services.AddSingleton<CostGuardAlertState>();
         services.AddSingleton<IPushSender>(provider =>
         {

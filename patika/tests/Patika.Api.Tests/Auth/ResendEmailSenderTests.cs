@@ -121,9 +121,11 @@ public sealed class ResendEmailSenderTests
             AccountEmails.DeletionScheduled(To, at),
         };
 
-        Assert.Equal(Enum.GetValues<EmailKind>(), messages.Select(m => m.Kind));
+        // Every user-facing kind has a template; OpsAlert is the Worker's operator mail and never reaches users.
+        Assert.Equal(Enum.GetValues<EmailKind>().Where(k => k != EmailKind.OpsAlert), messages.Select(m => m.Kind));
         Assert.All(messages, m => Assert.StartsWith("Patika: ", m.Subject, StringComparison.Ordinal));
-        Assert.Equal(4, messages.Select(m => ResendEmailSender.TagValue(m.Kind)).Distinct().Count());
+        Assert.Equal(Enum.GetValues<EmailKind>().Length, Enum.GetValues<EmailKind>().Select(ResendEmailSender.TagValue).Distinct().Count());
+        Assert.DoesNotContain("other", Enum.GetValues<EmailKind>().Select(ResendEmailSender.TagValue));
         Assert.Contains("1 Kasım 2026 12:00", messages[3].Body, StringComparison.Ordinal);
     }
 
@@ -135,7 +137,7 @@ public sealed class ResendEmailSenderTests
         var services = new ServiceCollection().AddLogging();
         services.AddPatikaEmail(configuration, new FakeEnvironment(environment));
         using var provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<IEmailSender>();
+        return Assert.IsType<BudgetedEmailSender>(provider.GetRequiredService<IEmailSender>()).Transport;
     }
 
     private static ResendEmailSender CreateSender(RecordingHandler handler, ListLogger logs) => new(

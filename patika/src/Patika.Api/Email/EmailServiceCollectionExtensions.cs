@@ -22,14 +22,14 @@ public static class EmailServiceCollectionExtensions
                 provider.GetRequiredService<IOptions<EmailSettings>>().Value.DevelopmentOutbox
                     ?? Path.Combine(Path.GetTempPath(), "patika-dev-mail"),
                 provider.GetRequiredService<ILogger<DevelopmentFolderEmailSender>>()));
-            return services;
+            return AddBudget(services, configuration);
         }
 
         var resend = configuration.GetSection(ResendSettings.SectionName).Get<ResendSettings>() ?? new ResendSettings();
         if (!resend.IsConfigured)
         {
             services.AddSingleton<IEmailSender, UnconfiguredEmailSender>();
-            return services;
+            return AddBudget(services, configuration);
         }
 
         services.AddHttpClient(ResendEmailSender.HttpClientName, client =>
@@ -41,6 +41,21 @@ public static class EmailServiceCollectionExtensions
             provider.GetRequiredService<IHttpClientFactory>(),
             provider.GetRequiredService<IOptions<ResendSettings>>(),
             provider.GetRequiredService<ILogger<ResendEmailSender>>()));
+        return AddBudget(services, configuration);
+    }
+    private static IServiceCollection AddBudget(IServiceCollection services, IConfiguration configuration)
+    {
+        var registration = services.Last(d => d.ServiceType == typeof(IEmailSender));
+        services.Remove(registration);
+        services.AddScoped<Patika.Infrastructure.Security.IDailyEmailBudget, Patika.Infrastructure.Security.DailySendBudget>();
+        services.AddSingleton<IEmailSender>(provider =>
+        {
+            var inner = registration.ImplementationFactory is { } factory
+                ? (IEmailSender)factory(provider)
+                : (IEmailSender)ActivatorUtilities.CreateInstance(provider, registration.ImplementationType!);
+            return new BudgetedEmailSender(inner, provider.GetRequiredService<IServiceScopeFactory>(), configuration,
+                provider.GetService<TimeProvider>() ?? TimeProvider.System, provider.GetRequiredService<ILogger<BudgetedEmailSender>>());
+        });
         return services;
     }
 }

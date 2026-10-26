@@ -114,9 +114,12 @@ public sealed class RecordingAlertNotifier : ICostAlertNotifier
 {
     public List<CostGuardStatus> Alerts { get; } = [];
 
-    public Task AlertAsync(CostGuardStatus status, CancellationToken cancellationToken)
+    public List<CostAlertKind> Kinds { get; } = [];
+
+    public Task AlertAsync(CostGuardStatus status, CostAlertKind kind, CancellationToken cancellationToken)
     {
         Alerts.Add(status);
+        Kinds.Add(kind);
         return Task.CompletedTask;
     }
 }

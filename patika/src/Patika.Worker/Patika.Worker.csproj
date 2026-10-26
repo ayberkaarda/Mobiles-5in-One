@@ -12,5 +12,7 @@
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <Compile Include="../Patika.Api/Features/Adoptions/AdoptionClosureService.cs" LinkBase="Jobs/Adoptions/Linked" />
+    <!-- The email transport the API uses, for operator alerts (Jobs/Ops). -->
+    <Compile Include="../Patika.Api/Email/EmailSender.cs;../Patika.Api/Email/ResendEmailSender.cs" LinkBase="Jobs/Ops/Linked" />
   </ItemGroup>
 </Project>

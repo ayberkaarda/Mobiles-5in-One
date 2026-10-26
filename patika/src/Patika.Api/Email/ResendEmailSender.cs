@@ -92,6 +92,7 @@ public sealed class ResendEmailSender(
         EmailKind.RegistrationAttempt => "registration_attempt",
         EmailKind.PasswordReset => "password_reset",
         EmailKind.DeletionScheduled => "deletion_scheduled",
+        EmailKind.OpsAlert => "ops_alert",
         _ => "other",
     };
 }

@@ -9,6 +9,9 @@ public enum EmailKind
     RegistrationAttempt,
     PasswordReset,
     DeletionScheduled,
+
+    /// <summary>Operator alert from the Worker (cost guard, stale backup); never sent to users.</summary>
+    OpsAlert,
 }
 
 /// <summary>An outgoing message. <see cref="Body"/> may contain a one-time token and is never logged.</summary>
