@@ -1,7 +1,5 @@
 @{
     var signedIn = User.Identity?.IsAuthenticated == true;
-    var current = Context.Request.Path.Value;
-    string? Active(string path) => current == path ? "page" : null;
 }
 <!DOCTYPE html>
 <html lang="tr">
@@ -22,19 +20,13 @@
         <aside class="admin-sidebar">
             <a href="/admin" aria-label="Patika yönetim"><img src="~/img/patika-lockup-kar.svg" alt="Patika" width="120" height="36" /></a>
             <p>Yönetim alanı</p>
-            <nav aria-label="Yönetim menüsü">
-                <a href="/admin" aria-current="@Active("/admin")">Moderasyon</a>
-                @if (User.IsInRole("Admin"))
-                {
-                    <a href="/admin/csv" aria-current="@Active("/admin/csv")">Bakım yeri içe aktar</a>
-                    <a href="/admin/kullanicilar" aria-current="@Active("/admin/kullanicilar")">Kullanıcılar</a>
-                    <a href="/admin/denetim" aria-current="@Active("/admin/denetim")">Denetim kaydı</a>
-                }
-            </nav>
-            <div class="admin-session">
-                <p>@(User.IsInRole("Admin") ? "Yönetici" : "Moderatör")</p>
-                <form method="post" asp-area="Admin" asp-page="/Logout"><button class="admin-link" type="submit">Çıkış yap</button></form>
+            <div class="admin-desktop-menu">
+                <partial name="_AdminMenu" />
             </div>
+            <details class="admin-menu">
+                <summary>Menü</summary>
+                <partial name="_AdminMenu" />
+            </details>
         </aside>
     }
     <main id="icerik" class="admin-main">

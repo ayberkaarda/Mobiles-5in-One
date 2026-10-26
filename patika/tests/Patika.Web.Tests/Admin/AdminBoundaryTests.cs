@@ -12,6 +12,19 @@ namespace Patika.Web.Tests.Admin;
 
 public sealed class AdminBoundaryTests
 {
+    [Fact]
+    public async Task SignedInLayoutHasAClosedNativeMobileMenuBeforeTheContent()
+    {
+        await using var factory = Factory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Add("Cookie", AdminBrowser.Cookie(factory, DateTimeOffset.UtcNow));
+        var html = await client.GetStringAsync("/admin/cikis", TestContext.Current.CancellationToken);
+        Assert.Contains("<details class=\"admin-menu\">", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<details class=\"admin-menu\" open", html, StringComparison.Ordinal);
+        Assert.True(html.IndexOf("<details", StringComparison.Ordinal) < html.IndexOf("<main", StringComparison.Ordinal));
+        Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static WebApplicationFactory<Program> Factory(AdminClock? clock = null, HttpMessageHandler? handler = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
     {
         builder.UseEnvironment("Testing");
