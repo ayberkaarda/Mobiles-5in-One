@@ -89,18 +89,18 @@ The workflow starts these containers itself instead of declaring `services:`, so
 
 ## Last drill
 
-Local run on Windows 11 with Git Bash and Docker Desktop, from the committed scripts, on 2026-10-26. Real output, unedited:
+Local run on Windows 11 with Git Bash and Docker Desktop, from the committed scripts, on 2026-10-26, after the review fixes (password moved into a temporary PGPASSFILE, checked by the pg_dump and pg_restore shims). Real output, unedited:
 
 ```text
-commit: b778ac96
-started: 2026-10-26T03:01:38Z
+commit: d10cf215
+started: 2026-10-26T04:58:12Z
 Docker version 29.7.2, build a7dcaa6
 
-== containers (patika-drill-030139-3023)
+== containers (patika-drill-045813-427)
 pg_dump (PostgreSQL) 17.11 (Debian 17.11-1.pgdg12+2)
 1.1.1
 aws-cli/2.9.19 Python/3.11.2 Linux/6.18.33.2-microsoft-standard-WSL2 source/x86_64.debian.12 prompt/off
-source PostGIS on 127.0.0.1:55742; restore target patika-drill-030139-3023-dst has no host port
+source PostGIS on 127.0.0.1:64663; restore target patika-drill-045813-427-dst has no host port
 
 == migrate source with the EF migrations
 Applying migration '20261025143121_InitialSchema'.
@@ -110,6 +110,7 @@ Applying migration '20261025201331_Phase4Data'.
 Applying migration '20261025224833_Phase4Admin'.
 Applying migration '20261025232223_Phase4AdminHardening'.
 Applying migration '20261026005827_Phase5Subscriptions'.
+Applying migration '20261026041906_Phase6FanoutDeferral'.
 Done.
 
 == seed synthetic data and fingerprint the source
@@ -122,25 +123,28 @@ urgent_posts|1
 users|2
 totp_ciphertext_rows|1
 districts|39
-migrations|7
-latest_migration|20261026005827_Phase5Subscriptions
+migrations|8
+latest_migration|20261026041906_Phase6FanoutDeferral
 postgis_version|3.5.2
 
 == keys and bucket
-recipient age1ahqur2w6... (identity file stays inside the tools container)
+recipient age1wlx8pej6... (identity file stays inside the tools container)
 versioning: Enabled
 
-== backup.sh (with an expired local file to prune)
-backup: wrote patika-20261026T030151Z.dump.age (91996 bytes, sha256 d2f1b94e9babccac61a6fcf33f8ae392930e29398fef7013e6012c35223c299c)
-backup: uploaded patika-20261026T030151Z.dump.age to s3://patika-backups/db/
+== password-recording shims for pg_dump and pg_restore
+
+== backup.sh with a password-bearing URL (and an expired local file to prune)
+backup: wrote patika-20261026T045826Z.dump.age (92592 bytes, sha256 b85bffe00c6d801066d4f59fe500189cb7ab1e441cba096ed65ae04585be72a9)
+backup: uploaded patika-20261026T045826Z.dump.age to s3://patika-backups/db/
 backup: pruned 2 local files older than 30 days
+pg_dump: password in neither argv nor environment; PGPASSFILE set; no pgpass file left in /tmp
 encrypted file header: age-encryption.org/v1; no plaintext seed markers
-2026-10-26 03:01:51      91996 patika-20261026T030151Z.dump.age
-2026-10-26 03:01:52         99 patika-20261026T030151Z.dump.age.sha256
+2026-10-26 04:58:26      92592 patika-20261026T045826Z.dump.age
+2026-10-26 04:58:27         99 patika-20261026T045826Z.dump.age.sha256
 
 == download from the bucket and restore.sh into the second server
-restore: checksum ok (d2f1b94e9babccac61a6fcf33f8ae392930e29398fef7013e6012c35223c299c)
-restore: decrypted; archive lists 244 TOC lines
+restore: checksum ok (b85bffe00c6d801066d4f59fe500189cb7ab1e441cba096ed65ae04585be72a9)
+restore: decrypted; archive lists 245 TOC lines
 restore: restored into patika_restore
 restore: smoke stations|4
 restore: smoke stations_within_2km_of_moda|3
@@ -151,14 +155,15 @@ restore: smoke urgent_posts|1
 restore: smoke users|2
 restore: smoke totp_ciphertext_rows|1
 restore: smoke districts|39
-restore: smoke migrations|7
-restore: smoke latest_migration|20261026005827_Phase5Subscriptions
+restore: smoke migrations|8
+restore: smoke latest_migration|20261026041906_Phase6FanoutDeferral
 restore: smoke postgis_version|3.5.2
 restore: smoke rows match expected.txt
 restore: OK
+pg_restore: password in neither argv nor environment; PGPASSFILE set; no pgpass file left in /tmp
 
 == negative runs
-negative wrong-identity     exit 1: restore: FAIL age could not decrypt patika-20261026T030151Z.dump.age: age: error: no identity matched any of the recipients
+negative wrong-identity     exit 1: restore: FAIL age could not decrypt patika-20261026T045826Z.dump.age: age: error: no identity matched any of the recipients
 negative corrupted-file     exit 1: restore: FAIL checksum mismatch for corrupt.dump.age
 negative corrupted-no-sum   exit 1: restore: FAIL age could not decrypt corrupt.dump.age: age: error: failed to decrypt and authenticate payload chunk
 negative smoke-mismatch     exit 1: restore: FAIL smoke mismatch against /drill/wrong-expected.txt
@@ -166,5 +171,4 @@ negative existing-target    exit 1: restore: FAIL target database exists: patika
 
 RESULT: restore drill passed
 exit: 0
-finished: 2026-10-26T03:01:58Z
 ```
