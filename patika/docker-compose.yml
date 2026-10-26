@@ -138,6 +138,8 @@ services:
       <<: *app-env
       ASPNETCORE_HTTP_PORTS: "8080"
       Admin__ApiBaseUrl: http://api:8080
+      # Photo URLs and the CSP img-src origin for a browser on this machine (the API signs for the emulator alias).
+      Storage__PublicEndpoint: ${Web__StoragePublicEndpoint:-http://localhost:9000}
       Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key-for-compose-only}
       # The Web's own key ring (admin cookie, antiforgery), never the API/Worker ring.
       DataProtection__KeysPath: /keys
