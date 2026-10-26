@@ -14,6 +14,7 @@ public static class ErrorCodes
     public const string RefreshInvalid = "refresh_invalid";
     public const string RefreshReused = "refresh_reused";
     public const string RateLimited = "rate_limited";
+    public const string EmailUnavailable = "email_unavailable";
     public const string ResetInvalid = "reset_invalid";
     public const string FeedingCooldown = "feeding_cooldown";
     public const string UrgentDailyCap = "urgent_daily_cap";
@@ -62,6 +63,7 @@ public static class ErrorMessages
         [ErrorCodes.RefreshInvalid] = SignInRequired,
         [ErrorCodes.RefreshReused] = SignInRequired,
         [ErrorCodes.RateLimited] = "Çok fazla deneme yapıldı. Biraz bekleyip yeniden dene.",
+        [ErrorCodes.EmailUnavailable] = "Şu an e-posta gönderemiyoruz. Biraz sonra yeniden dene.",
         [ErrorCodes.ResetInvalid] = "Şifre sıfırlama bağlantısı geçersiz ya da süresi dolmuş.",
         [ErrorCodes.FeedingCooldown] = "Bu istasyonu yakın zamanda besledin. 30 dakika sonra yeniden kaydedebilirsin.",
         [ErrorCodes.UrgentDailyCap] = "Bugün en fazla 3 acil çağrı açabilirsin.",

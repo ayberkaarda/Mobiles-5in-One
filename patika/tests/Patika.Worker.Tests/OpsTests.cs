@@ -115,7 +115,7 @@ public sealed class OpsAlertTests
         await job.RunOnceAsync(Ct);
         await job.RunOnceAsync(Ct);
         // The email cap is reached later the same day: it still gets its own alert.
-        await counters.ReserveAsync(day, "email", 3, 3, Ct);
+        await counters.ReserveAsync(day, PushCostGuard.EmailChannel, 3, 3, Ct);
         await job.RunOnceAsync(Ct);
         await job.RunOnceAsync(Ct);
 
@@ -126,8 +126,8 @@ public sealed class OpsAlertTests
             Assert.Equal(EmailKind.OpsAlert, m.Kind);
             Assert.DoesNotContain("@", m.Body, StringComparison.Ordinal);
         });
-        Assert.Contains("push cap", mail.Messages[0].Subject, StringComparison.Ordinal);
-        Assert.Contains("3 emails on 2026-10-26 reached the daily cap 3", mail.Messages[1].Body, StringComparison.Ordinal);
+        Assert.Contains("non-critical pushes cap reached", mail.Messages[0].Subject, StringComparison.Ordinal);
+        Assert.Contains("3 of 3 non-critical emails used on 2026-10-26", mail.Messages[1].Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -150,16 +150,16 @@ public sealed class OpsAlertTests
     {
         public List<EmailMessage> Messages { get; } = [];
 
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+        public Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken)
         {
             Messages.Add(message);
-            return Task.CompletedTask;
+            return Task.FromResult(EmailSendResult.Sent);
         }
     }
 
     private sealed class ThrowingEmailSender : IEmailSender
     {
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken) => throw new HttpRequestException("down");
+        public Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken) => throw new HttpRequestException("down");
     }
 }
 

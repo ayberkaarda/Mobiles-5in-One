@@ -100,4 +100,7 @@ public static class AuthErrorCodes
     public const string RefreshInvalid = "refresh_invalid";
     public const string RefreshReused = "refresh_reused";
     public const string RateLimited = "rate_limited";
+
+    /// <summary>503 with <c>Retry-After</c>: the email budget is used up, so no code or notice can be sent now.</summary>
+    public const string EmailUnavailable = "email_unavailable";
 }

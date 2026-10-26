@@ -45,4 +45,4 @@ CI (`patika-ci.yml`): `dotnet list package --vulnerable --include-transitive --f
 
 ## Worker safety nets
 
-`cost.guard` (push and email caps, one alert per local day and kind, mailed to `Ops:AlertEmail`), `backup.verify` (newest `patika-*.dump.age` older than 26 h alerts), purchase token retention (subscription rows 90 days after they end or after the account purge, notification token hashes after 90 days). Details in [cost-alerts.md](../ops/cost-alerts.md) and [backup-restore.md](../ops/backup-restore.md).
+`cost.guard` (non-critical and urgent push budgets, non-critical and security email budgets; alerts at 80 percent and at the cap, once per local day, budget and level, mailed to `Ops:AlertEmail`), `backup.verify` (newest `patika-*.dump.age` older than 26 h alerts), purchase token retention (subscription rows 90 days after they end or after the account purge, notification token hashes after 90 days). Details in [cost-alerts.md](../ops/cost-alerts.md) and [backup-restore.md](../ops/backup-restore.md).

@@ -12,6 +12,12 @@ public sealed class UrgentPost : Entity
     public string? HiddenReason { get; set; }
     public DateTimeOffset? FanoutAt { get; set; }
     public int NotifiedCount { get; set; }
+
+    /// <summary>Recipients (in fan-out order) already handled when a capped fan-out was deferred.</summary>
+    public int FanoutOffset { get; set; }
+
+    /// <summary>Set while the rest of a capped fan-out waits for the next budget window.</summary>
+    public DateTimeOffset? FanoutRetryAt { get; set; }
 }
 
 public sealed class CarePlace : Entity

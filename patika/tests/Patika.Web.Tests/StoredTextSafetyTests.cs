@@ -227,10 +227,10 @@ public sealed class StoredTextSafetyTests(AdminFlowFixture fixture) : IClassFixt
     private sealed class Mailbox : Mail.IEmailSender
     {
         public List<Mail.EmailMessage> Messages { get; } = [];
-        public Task SendAsync(Mail.EmailMessage message, CancellationToken cancellationToken)
+        public Task<Mail.EmailSendResult> SendAsync(Mail.EmailMessage message, CancellationToken cancellationToken)
         {
             Messages.Add(message);
-            return Task.CompletedTask;
+            return Task.FromResult(Mail.EmailSendResult.Sent);
         }
     }
 

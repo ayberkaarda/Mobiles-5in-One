@@ -65,7 +65,7 @@ public sealed class FanoutPostgisTests(WorkerPostgisFixture database) : IClassFi
         await using var db = database.CreateContext();
         var store = new PgUrgentFanoutStore(db);
         var post = new FanoutPost(Guid.CreateVersion7(), author.UserId, lat, lng, "Injured");
-        var recipients = await store.RecipientsAsync(post, 2000, 500, DateTimeOffset.UtcNow.AddDays(-60), Ct);
+        var recipients = await store.RecipientsAsync(post, 2000, 500, 0, DateTimeOffset.UtcNow.AddDays(-60), Ct);
 
         var only = Assert.Single(recipients);
         Assert.Equal(inside.DeviceId, only.DeviceId);
@@ -85,7 +85,7 @@ public sealed class FanoutPostgisTests(WorkerPostgisFixture database) : IClassFi
         await using var db = database.CreateContext();
         var store = new PgUrgentFanoutStore(db);
         var post = new FanoutPost(Guid.CreateVersion7(), Guid.CreateVersion7(), lat, lng, "Trapped");
-        var recipients = await store.RecipientsAsync(post, 2000, 500, DateTimeOffset.UtcNow.AddDays(-60), Ct);
+        var recipients = await store.RecipientsAsync(post, 2000, 500, 0, DateTimeOffset.UtcNow.AddDays(-60), Ct);
 
         Assert.Equal(500, recipients.Count);
         Assert.Equal(devices.Take(500).ToHashSet(), recipients.Select(r => r.DeviceId).ToHashSet());
@@ -169,7 +169,7 @@ public sealed class FanoutPostgisTests(WorkerPostgisFixture database) : IClassFi
 
         await using var claim = database.CreateContext();
         var claimed = await new PgUrgentFanoutStore(claim).ClaimAsync(
-            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(-1), 100, Ct);
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow.AddHours(-24), 100, Ct);
 
         Assert.Contains(claimed, p => p.Id == visible);
         Assert.DoesNotContain(claimed, p => p.Id == hidden);
@@ -195,6 +195,76 @@ public sealed class FanoutPostgisTests(WorkerPostgisFixture database) : IClassFi
         Assert.Equal(0, await counters.ReserveAsync(day, "push-test", 1, 600, Ct));
         await counters.ReleaseAsync(day, "push-test", 10, Ct);
         Assert.Equal(10, await counters.ReserveAsync(day, "push-test", 25, 600, Ct));
+    }
+
+    [Fact]
+    public async Task ACappedFanoutStaysPendingAndTheNextWindowSendsTheRest()
+    {
+        const double lat = 40.1885;
+        const double lng = 29.0610;
+        var devices = new List<Guid>();
+        for (var i = 0; i < 30; i++)
+        {
+            devices.Add((await VolunteerAsync(North(lat, 15 + i * 3), lng)).DeviceId);
+        }
+
+        var author = (await VolunteerAsync(null, lng, optIn: false)).UserId;
+        Guid id;
+        await using (var db = database.CreateContext())
+        {
+            var post = new UrgentPost
+            {
+                Location = new GeoPoint(lng, lat),
+                Category = UrgentCategory.Trapped,
+                Description = "Mazgala sıkışmış bir yavru kedi",
+                PhotoKey = "urgent/" + Guid.CreateVersion7().ToString("D"),
+                State = UrgentPostState.Open,
+                CreatedBy = author,
+            };
+            db.UrgentPosts.Add(post);
+            await db.SaveChangesAsync(Ct);
+            id = post.Id;
+        }
+
+        var sender = new FakePushSender();
+        var clock = new FixedClock(DateTimeOffset.UtcNow);
+        var settings = new PushSettings { CostGuard = new CostGuardSettings { CriticalDailyCap = 20 } };
+        var counters = new InMemoryPushCounters();
+
+        var first = Assert.Single(await RunFanoutAsync(sender, clock, settings, counters), s => s.PostId == id);
+        Assert.Equal(20, first.Sent);
+        Assert.NotNull(first.DeferredUntil);
+        Assert.DoesNotContain(await RunFanoutAsync(sender, clock, settings, counters), s => s.PostId == id);
+
+        await using (var check = database.CreateContext())
+        {
+            var row = await check.UrgentPosts.Where(p => p.Id == id)
+                .Select(p => new { p.NotifiedCount, p.FanoutOffset, p.FanoutRetryAt }).SingleAsync(Ct);
+            Assert.Equal((20, 20), (row.NotifiedCount, row.FanoutOffset));
+            Assert.Equal(first.DeferredUntil, row.FanoutRetryAt);
+        }
+
+        clock.Now = first.DeferredUntil!.Value;
+        var second = Assert.Single(await RunFanoutAsync(sender, clock, settings, counters), s => s.PostId == id);
+        Assert.Equal(10, second.Sent);
+        Assert.Null(second.DeferredUntil);
+        Assert.Equal(30, sender.Sent.Select(m => m.Token).Distinct(StringComparer.Ordinal).Count());
+
+        await using var done = database.CreateContext();
+        var final = await done.UrgentPosts.Where(p => p.Id == id).Select(p => new { p.NotifiedCount, p.FanoutRetryAt }).SingleAsync(Ct);
+        Assert.Equal(30, final.NotifiedCount);
+        Assert.Null(final.FanoutRetryAt);
+        Assert.DoesNotContain(await RunFanoutAsync(sender, clock, settings, counters), s => s.PostId == id);
+    }
+
+    private async Task<IReadOnlyList<FanoutSummary>> RunFanoutAsync(
+        IPushSender sender, TimeProvider clock, PushSettings settings, IPushCounterStore counters)
+    {
+        await using var db = database.CreateContext();
+        var options = Options.Create(settings);
+        var fanout = new UrgentFanout(new PgUrgentFanoutStore(db), sender, new PushCostGuard(counters, options, clock), options, clock,
+            NullLogger<UrgentFanout>.Instance);
+        return await fanout.RunOnceAsync(Ct);
     }
 
     private async Task<IReadOnlyList<FanoutSummary>> RunFanoutAsync(IPushSender sender)

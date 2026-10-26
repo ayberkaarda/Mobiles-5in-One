@@ -64,6 +64,25 @@ public sealed class AccountDeletionTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WhenTheConfirmationCannotBeSentNothingIsScheduled()
+    {
+        using var client = factory.CreateApiClient("192.0.2.9");
+        await client.RegisterAsync(factory, NewEmail());
+        var user = factory.Store.Users.Single();
+        factory.Outbox.PausedFor = TimeSpan.FromMinutes(5);
+        var http = new DefaultHttpContext();
+
+        var result = await DeleteAsync(Principal(user, PatikaClaims.PasswordMethod, TimeSpan.FromMinutes(1)), http);
+
+        var problem = Assert.IsType<ProblemHttpResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, problem.StatusCode);
+        Assert.Equal(AuthErrorCodes.EmailUnavailable, problem.ProblemDetails.Extensions["code"]);
+        Assert.Equal("300", http.Response.Headers.RetryAfter.ToString());
+        Assert.True(factory.Store.Users.Single().IsActive);
+        Assert.Null(store.DeletionFor(user.Id));
+    }
+
+    [Fact]
     public async Task DeletionDeactivatesAtOnceRevokesSessionsAndSendsConfirmation()
     {
         using var client = factory.CreateApiClient("192.0.2.2");
@@ -191,11 +210,13 @@ public sealed class AccountDeletionTests : IAsyncLifetime
         Assert.All(factory.Store.Users, u => Assert.True(u.IsActive));
     }
 
-    private async Task<IResult> DeleteAsync(ClaimsPrincipal principal)
+    private async Task<IResult> DeleteAsync(ClaimsPrincipal principal, DefaultHttpContext? context = null)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
-        var http = new DefaultHttpContext { User = principal, RequestServices = services };
+        var http = context ?? new DefaultHttpContext();
+        http.User = principal;
+        http.RequestServices = services;
         return await AccountEndpoints.DeleteMeAsync(http, services.GetRequiredService<IAuthStore>(),
             services.GetRequiredService<IAccountDeletionStore>(), services.GetRequiredService<IAuthorizationService>(),
             services.GetRequiredService<IEmailSender>(), TimeProvider.System, services.GetRequiredService<ILoggerFactory>(), Ct);

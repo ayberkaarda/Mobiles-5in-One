@@ -17,6 +17,7 @@ using Patika.Api.Security.Authorization;
 using Patika.Api.Security.Passwords;
 using Patika.Api.Security.RateLimiting;
 using Patika.Api.Security.Tokens;
+using Patika.Contracts.Auth;
 using Patika.Infrastructure.Logging;
 using Patika.Infrastructure.Security;
 using Serilog;
@@ -44,7 +45,15 @@ public static class PatikaApiServices
         {
             var problem = context.ProblemDetails;
             var status = problem.Status ?? context.HttpContext.Response.StatusCode;
-            if (status >= StatusCodes.Status500InternalServerError)
+            if (status >= StatusCodes.Status500InternalServerError
+                && problem.Extensions.TryGetValue("code", out var code) && code is AuthErrorCodes.EmailUnavailable)
+            {
+                // A deliberate, documented 503 the client acts on; its title and code carry no internals.
+                problem.Detail = null;
+                problem.Type = null;
+                problem.Instance = null;
+            }
+            else if (status >= StatusCodes.Status500InternalServerError)
             {
                 // Nothing about the failure leaves the process: generic title, machine code, trace id.
                 problem.Title = GenericErrorTitle;

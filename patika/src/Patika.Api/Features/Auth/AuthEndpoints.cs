@@ -20,7 +20,8 @@ public static class AuthEndpoints
             .Validate<RegisterRequest>()
             .RequirePermission(Permission.AuthSession)
             .RequireRateLimiting(RateLimitPolicies.Auth)
-            .Produces<RegisterAcceptedResponse>(StatusCodes.Status202Accepted);
+            .Produces<RegisterAcceptedResponse>(StatusCodes.Status202Accepted)
+            .Produces<ApiProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemJson);
 
         auth.MapPost("/verify-email", (VerifyEmailRequest request, AuthHandlers handlers, CancellationToken ct) =>
                 handlers.VerifyEmailAsync(request, ct))
@@ -36,14 +37,16 @@ public static class AuthEndpoints
             .RequirePermission(Permission.AuthSession)
             .RequireRateLimiting(RateLimitPolicies.Auth)
             .Produces<RegisterAcceptedResponse>(StatusCodes.Status202Accepted)
-            .Produces<ApiProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson);
+            .Produces<ApiProblemDetails>(StatusCodes.Status429TooManyRequests, ProblemJson)
+            .Produces<ApiProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemJson);
 
         auth.MapPost("/forgot", (HttpContext http, ForgotPasswordRequest request, AuthHandlers handlers, CancellationToken ct) =>
                 handlers.ForgotPasswordAsync(http, request, ct))
             .Validate<ForgotPasswordRequest>()
             .RequirePermission(Permission.AuthSession)
             .RequireRateLimiting(RateLimitPolicies.Auth)
-            .Produces<ForgotPasswordAcceptedResponse>(StatusCodes.Status202Accepted);
+            .Produces<ForgotPasswordAcceptedResponse>(StatusCodes.Status202Accepted)
+            .Produces<ApiProblemDetails>(StatusCodes.Status503ServiceUnavailable, ProblemJson);
 
         auth.MapPost("/reset", (ResetPasswordRequest request, AuthHandlers handlers, CancellationToken ct) =>
                 handlers.ResetPasswordAsync(request, ct))

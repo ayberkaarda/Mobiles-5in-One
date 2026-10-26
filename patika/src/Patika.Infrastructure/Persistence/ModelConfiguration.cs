@@ -175,8 +175,14 @@ public sealed class UrgentPostConfiguration : IEntityTypeConfiguration<UrgentPos
             .HasFilter("fanout_at IS NULL");
         // Backfill existing urgent posts in migration Up() after adding fanout_at:
         // migrationBuilder.Sql("UPDATE urgent_posts SET fanout_at = created_at WHERE fanout_at IS NULL;");
-        entity.ToTable("urgent_posts", table => table.HasCheckConstraint(
-            "ck_urgent_posts_notified_count", "notified_count BETWEEN 0 AND 500"));
+        entity.Property(row => row.FanoutRetryAt).HasColumnType("timestamptz");
+        entity.HasIndex(row => row.FanoutRetryAt).HasDatabaseName("ix_urgent_posts_fanout_retry")
+            .HasFilter("fanout_retry_at IS NOT NULL");
+        entity.ToTable("urgent_posts", table =>
+        {
+            table.HasCheckConstraint("ck_urgent_posts_notified_count", "notified_count BETWEEN 0 AND 500");
+            table.HasCheckConstraint("ck_urgent_posts_fanout_offset", "fanout_offset BETWEEN 0 AND 500");
+        });
     }
 }
 

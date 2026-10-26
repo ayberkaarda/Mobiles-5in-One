@@ -45,13 +45,13 @@ public sealed class ResendEmailSender(
 {
     public const string HttpClientName = "resend";
 
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    public async Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
         var settings = options.Value;
         if (!settings.IsConfigured)
         {
             logger.LogError("Resend is not configured; dropped a message of kind {Kind}", message.Kind);
-            return;
+            return EmailSendResult.NotDelivered;
         }
 
         var body = new ResendEmailRequest(settings.From, [message.To], message.Subject, message.Body, settings.ReplyTo,
@@ -70,12 +70,12 @@ public sealed class ResendEmailSender(
             if (response.IsSuccessStatusCode)
             {
                 logger.LogInformation("Email of kind {Kind} accepted by Resend", message.Kind);
+                return EmailSendResult.Sent;
             }
-            else
-            {
-                logger.LogError("Resend rejected an email of kind {Kind} with status {StatusCode}",
-                    message.Kind, (int)response.StatusCode);
-            }
+
+            logger.LogError("Resend rejected an email of kind {Kind} with status {StatusCode}",
+                message.Kind, (int)response.StatusCode);
+            return EmailSendResult.NotDelivered;
         }
         catch (Exception exception) when (exception is HttpRequestException
             || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested))
@@ -83,6 +83,7 @@ public sealed class ResendEmailSender(
             // The exception object is not logged: transport messages can echo request details.
             logger.LogError("Sending an email of kind {Kind} through Resend failed ({Failure})",
                 message.Kind, exception.GetType().Name);
+            return EmailSendResult.NotDelivered;
         }
     }
 

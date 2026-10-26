@@ -28,7 +28,8 @@ Columns: **Prod** = must be set in Production (the app refuses to start, or the 
 | `Network:TrustedProxies` (array) | Reverse proxy IPs or CIDRs whose `X-Forwarded-For` / `X-Forwarded-Proto` is processed (one hop); empty processes none. Replaces the old `Network:KnownProxies` / `KnownNetworks`, which are no longer read | yes behind a proxy | no | `Network__TrustedProxies__0=10.0.0.2`, `Network__TrustedProxies__1=10.0.0.0/24` |
 | `Network:BffAddress` | Socket address of the Web admin console; only that peer may send `X-Patika-Client-Ip` (docs/security/hardening.md) | with the admin console | no | `172.30.57.10` |
 | `Network:BffSharedKey` | Shared key the Web sends in `X-Patika-Bff-Key`; compared as SHA-256 digests in fixed time. Same value in the Web | with the admin console | yes | 32+ random bytes, base64 |
-| `CostGuard:MaxEmailsPerDay` | Daily email cap across all kinds (local day, UTC+3); at the cap sends are skipped with a warning and the Worker alerts | no | no | `5000` |
+| `CostGuard:MaxEmailsPerDay` | Daily cap for non-critical email kinds (local day, UTC+3); at the cap they are skipped with a warning and the Worker alerts. Security mail never counts against it | no | no | `5000` |
+| `CostGuard:MaxCriticalEmailsPerDay` | Separate emergency budget for security mail (verification and reset codes, registration-attempt notice, deletion confirmation); at the cap those endpoints answer 503 `email_unavailable` with `Retry-After` (docs/ops/cost-alerts.md) | no | no | `20000` |
 | `Cors:Enabled` | CORS is off by default (no browser client) | no | no | `false` |
 | `Cors:AllowedOrigins` (array) | Allowlist when CORS is enabled | no | no | `https://patika.app` |
 | `Email:DevelopmentOutbox` | Folder for the Development email sender | no (Development only) | no | `/tmp/patika-dev-mail` |
@@ -70,9 +71,12 @@ Sources: [`PatikaApiServices.cs`](../../src/Patika.Api/PatikaApiServices.cs), [`
 | `Push:Fcm:ProjectId` | Firebase project for FCM HTTP v1; empty means the logging sender (no pushes) | yes for push | no | `patika-prod` |
 | `Push:Fcm:ServiceAccountJson` | FCM service-account JSON, single line | yes for push | yes | `{"type":"service_account",...}` |
 | `CostGuard:MaxPushesPerDay` | Soft daily push cap; non-critical sends pause. Overrides `Push:CostGuard:DailyCap` when set | no | no | `5000` |
-| `CostGuard:MaxEmailsPerDay` | The API's email cap, read here for the `cost.guard` email alert; keep it equal to the API value | no | no | `5000` |
+| `CostGuard:MaxEmailsPerDay` | The API's non-critical email cap, read here for the `cost.guard` alerts; keep it equal to the API value | no | no | `5000` |
+| `CostGuard:MaxCriticalEmailsPerDay` | The API's security email budget, read here for the `cost.guard` alerts; keep it equal to the API value | no | no | `20000` |
 | `Push:CostGuard:DailyCap` | Same soft cap under the push section (older key) | no | no | `5000` |
-| `Push:CostGuard:CriticalDailyCap` | Hard daily push cap | no | no | `20000` |
+| `Push:CostGuard:CriticalDailyCap` | Daily urgent push budget, its own counter (`push_urgent`); past it the rest of a fan-out is deferred to the next local day | no | no | `20000` |
+| `Push:MaxDevicesPerAuthorPerDay` | Urgent devices one author's posts may reach per local day; the rest is deferred | no | no | `1000` |
+| `Push:DeferredFanoutHours` | A deferred fan-out is retried while the post is open and younger than this | no | no | `24` |
 | `Push:MaxDevicesPerPost` | Urgent fan-out per post (clamped to 500 in code) | no | no | `500` |
 | `Push:MaxRadiusMeters` | Fan-out radius ceiling | no | no | `2000` |
 | `Push:StaleDeviceDays` | Skip registrations older than this | no | no | `60` |
