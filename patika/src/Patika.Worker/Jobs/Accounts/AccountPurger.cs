@@ -170,10 +170,12 @@ public sealed class AccountPurger(
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.ReplacedById, (Guid?)null), cancellationToken);
         await db.RefreshTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(cancellationToken);
 
-        // The transaction id hash stays for refund and fraud handling; only the link to the person goes.
+        // The purchase token hash stays for refund and fraud handling; the link to the person and the
+        // encrypted token (only needed to re-query Play for that person) go.
         await db.Subscriptions.Where(s => s.UserId == userId)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.UserId, (Guid?)null)
+                .SetProperty(x => x.ProtectedPurchaseToken, "")
                 .SetProperty(x => x.UpdatedAt, now), cancellationToken);
 
         await db.Users.Where(u => u.Id == userId)
