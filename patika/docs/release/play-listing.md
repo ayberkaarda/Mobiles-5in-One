@@ -127,7 +127,7 @@ Screenshots, in listing order (all in [`docs/design/screenshots/`](../design/scr
 
 ## Content rating (IARC questionnaire)
 
-IARC app category: **"Social networking, forums, blogs and user-generated content sharing"**, because users post content that other users see. Answers:
+IARC app category: **"Social networking, forums, blogs and UGC sharing"**, because users post content that other users see. Answers:
 
 | Question | Answer | Reason |
 | --- | --- | --- |

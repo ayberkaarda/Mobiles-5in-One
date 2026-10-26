@@ -81,7 +81,7 @@ CI (`patika-ci.yml`) builds Release unsigned (`dotnet build ... -c Release`) to 
 ## Internal testing track (not executed)
 
 1. Play Console → create app `Patika`, default language Turkish, app type App, free, with the declarations (ads: no, and so on; see [play-listing.md](play-listing.md)).
-2. Setup → App integrity → Play App Signing: accept Google-generated app signing and register the upload certificate (`keytool -export -rfc -keystore patika-upload.keystore -alias patika-upload -file upload_cert.pem`).
+2. Setup → App integrity → Play App Signing: let Google create and hold the app signing key, and register the upload certificate (`keytool -export -rfc -keystore patika-upload.keystore -alias patika-upload -file upload_cert.pem`).
 3. Monetize → Products → Subscriptions: create `patika_destekci` with base plans `aylik` and `yillik` (ADR-0010), then add license testers.
 4. Testing → Internal testing → Create release: upload `app.patika.android-Signed.aab`, add release notes in tr-TR, and add the tester list (email list or Google Group).
 5. Fill in the Data safety form from [data-safety.md](data-safety.md), the content rating questionnaire, the target audience (18+) and the privacy policy URL.
