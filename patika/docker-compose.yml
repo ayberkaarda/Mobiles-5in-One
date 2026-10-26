@@ -107,7 +107,7 @@ services:
       # The admin console (web) forwards the real client address for per-IP sign-in limits; the API accepts it
       # only from the web container's fixed address with the shared key (docs/ops/env.md, "Network").
       Network__BffAddress: 172.30.57.10
-      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key}
+      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key-for-compose-only}
     healthcheck:
       test: [CMD-SHELL, "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.0\r\n\r\n\" >&3 && grep -q \"200 OK\" <&3'"]
       interval: 5s
@@ -138,7 +138,7 @@ services:
       <<: *app-env
       ASPNETCORE_HTTP_PORTS: "8080"
       Admin__ApiBaseUrl: http://api:8080
-      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key}
+      Network__BffSharedKey: ${Network__BffSharedKey:-patika-local-bff-key-for-compose-only}
       # The Web's own key ring (admin cookie, antiforgery), never the API/Worker ring.
       DataProtection__KeysPath: /keys
     ports:

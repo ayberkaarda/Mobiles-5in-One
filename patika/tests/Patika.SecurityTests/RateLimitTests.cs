@@ -14,12 +14,12 @@ public sealed class RateLimitTests
     [Theory]
     [InlineData(null, Proxy)]
     [InlineData("wrong", Proxy)]
-    [InlineData("shared-test-key", "198.51.100.77")]
+    [InlineData("shared-test-key-for-the-rate-limit-tests", "198.51.100.77")]
     public async Task UnauthenticatedBffClaimsCannotRotateTheClientBucket(string? key, string peer)
     {
         await using var factory = new PatikaApiFactory();
         factory.Settings["Network:BffAddress"] = Proxy;
-        factory.Settings["Network:BffSharedKey"] = "shared-test-key";
+        factory.Settings["Network:BffSharedKey"] = "shared-test-key-for-the-rate-limit-tests";
         using var client = factory.CreateApiClient(peer: peer);
         for (var i = 0; i < 6; i++)
         {
@@ -33,19 +33,19 @@ public sealed class RateLimitTests
     {
         await using var factory = new PatikaApiFactory();
         factory.Settings["Network:BffAddress"] = Proxy;
-        factory.Settings["Network:BffSharedKey"] = "shared-test-key";
+        factory.Settings["Network:BffSharedKey"] = "shared-test-key-for-the-rate-limit-tests";
         factory.Settings["Network:TrustedProxies:0"] = Proxy;
         using var client = factory.CreateApiClient(peer: Proxy);
         for (var i = 0; i < 5; i++)
         {
-            using var first = await SendBff(client, "192.0.2.1", "shared-test-key");
-            using var second = await SendBff(client, "192.0.2.2", "shared-test-key");
+            using var first = await SendBff(client, "192.0.2.1", "shared-test-key-for-the-rate-limit-tests");
+            using var second = await SendBff(client, "192.0.2.2", "shared-test-key-for-the-rate-limit-tests");
             Assert.Equal(HttpStatusCode.Unauthorized, first.StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
         }
-        using var limited = await SendBff(client, "192.0.2.1", "shared-test-key");
+        using var limited = await SendBff(client, "192.0.2.1", "shared-test-key-for-the-rate-limit-tests");
         await AssertThrottledAsync(limited);
-        using var other = await SendBff(client, "192.0.2.3", "shared-test-key");
+        using var other = await SendBff(client, "192.0.2.3", "shared-test-key-for-the-rate-limit-tests");
         Assert.Equal(HttpStatusCode.Unauthorized, other.StatusCode);
     }
 

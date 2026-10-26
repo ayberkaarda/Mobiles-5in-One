@@ -100,6 +100,25 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseOutputCache();
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).CacheOutput(policy => policy.NoCache());
+// Ops only (Development, or a request from the host itself): does the API accept this console's client address claims?
+app.MapGet("/healthz/bff", async (HttpContext context, BffSelfCheck check, CancellationToken ct) =>
+{
+    var peer = context.Connection.RemoteIpAddress;
+    if (!app.Environment.IsDevelopment() && (peer is null || !System.Net.IPAddress.IsLoopback(peer)))
+    {
+        return Results.NotFound();
+    }
+
+    try
+    {
+        var accepted = await check.CheckAsync(ct);
+        return Results.Ok(new { configured = accepted is not null, apiReachable = accepted is not null, bffClaimAccepted = accepted == true });
+    }
+    catch (HttpRequestException)
+    {
+        return Results.Ok(new { configured = true, apiReachable = false, bffClaimAccepted = false });
+    }
+}).CacheOutput(policy => policy.NoCache());
 app.MapSeo();
 app.MapRazorPages();
 app.Run();

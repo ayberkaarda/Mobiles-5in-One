@@ -33,12 +33,18 @@ public static class AdminSession
 
     public static IServiceCollection AddAdminConsole(this IServiceCollection services, IConfiguration configuration)
     {
+        // A key that is set but too short stops the host here, not at the first sign-in.
+        _ = Patika.Infrastructure.Security.TrustedNetwork.ReadBffKey(configuration);
         services.AddHttpContextAccessor();
+        services.AddTransient<BffClientAddressHandler>();
         services.AddHttpClient("PatikaAdmin", client =>
         {
             client.BaseAddress = new Uri(configuration["Admin:ApiBaseUrl"] ?? "https://localhost:7001");
             client.Timeout = TimeSpan.FromSeconds(30);
-        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false });
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false })
+            .AddHttpMessageHandler<BffClientAddressHandler>();
+        services.AddSingleton<BffSelfCheck>();
+        services.AddHostedService<BffStartupCheck>();
         services.AddSingleton<AdminRefresh>();
         services.AddScoped<AdminApi>();
         services.AddAuthentication(Scheme).AddCookie(Scheme, options =>
