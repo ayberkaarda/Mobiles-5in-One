@@ -2,7 +2,10 @@
 
 # İnecek Var
 
-Slogan: "Dolmuş nereden geçer? Mahalle bilir."
+[![Inecek Var CI](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-ci.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-ci.yml)
+[![Inecek Var Security](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-security.yml/badge.svg)](https://github.com/ayberkaarda/Mobiles-5in-One/actions/workflows/inecekvar-security.yml)
+
+"Dolmuş nereden geçer? Mahalle bilir."
 
 <img src="docs/screenshots/route-sign/web-home.png" alt="Inecek Var web ana sayfası: ad, kırmızı nereden-nereye panosu, dolmuşlu sokak çizimi, etiketli örnek şehir ve hat çizgisi üzerinde üç adım, yerel derleme, örnek veri" width="100%">
 
@@ -12,7 +15,40 @@ Yerel derlemeden web ana sayfası ve `Pixel_8` emülatöründen Android ekranlar
 
 ## Ürün özeti
 
-İnecek Var, resmî verisi çoğu zaman bulunmayan dolmuş, minibüs ve servis hatlarını mahallelinin birlikte haritaladığı bir hat rehberi. Yolcular hat, durak, ücret ve saatlere bakabilir, aktarmalı A→B rota planlayabilir ve çevrimdışı şehir paketleri indirebilir. Katkıcılar yolculuğu GPS izi olarak kaydeder, hat önerir ya da düzenler; moderatörler inceleyip yayınlar. Ad, yolcuların dolmuşu durdurmak için bağırdığı sözden geliyor. Dil sokak ağzına yakın, esprili ve net.
+İnecek Var, resmî verinin çoğu zaman eksik olduğu Türkiye şehirlerinde dolmuş, minibüs ve servis
+hatları için kitle kaynaklı bir güzergâh haritası. Yolcular hatlara, duraklara, ücretlere ve
+saatlere bakar, aktarmalı A'dan B'ye yolculuk planlar, çevrimdışı şehir paketleri indirir; mahalle
+katkıcıları yolculuklarını GPS iziyle kaydeder, hat önerir ya da düzenler, moderatörler inceleyip
+yayınlar. Adı, yolcunun dolmuşu durdurmak için seslendiği sözden gelir. Dil sokaktan, esprili ve
+net. Proje, FastAPI backend'li bir Nx workspace'idir (Ionic ve Angular uygulaması ile PWA, Angular
+SSR web).
+
+## Durum
+
+Portföy projesi. Planlanan yedi fazın hepsi (0 ile 6) `main`'e birleşti (pull request #118 ile
+#128 arası): temel kurulum; veri modeli, çift kimlik doğrulama ve güvenlik temeli; domain,
+moderasyon, izler, planlayıcı, şehir paketleri, dışa aktarma ve hesap silme; Ionic uygulaması ve
+PWA; TOTP step-up arkasında moderasyon ve yönetim arayüzüyle Angular SSR SEO ve GEO sayfaları;
+yetkiler ve gece işleriyle RevenueCat ve Resend webhook'ları; sertleştirme ve yayına hazırlık.
+Fazlardan sonra bir test flake düzeltmesi, galeri ve web ana sayfası, görsel yeniden tasarım
+(ADR-0059) ve onun güzergâh tabelası düzenlemesi (#138) geldi.
+
+| Alan                                               | Durum                                                                                                                                      |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| API, web, uygulama ve PWA, moderasyon, yönetim     | Gerçek kod; web e2e ve mobil e2e paketleri gerçek yerel yığına karşı çalışır                                                             |
+| Android                                            | Capacitor kabuğu; ekran görüntüleri için `Pixel_8` emülatöründe çalıştırıldı; Android CI işi elle tetiklenir                              |
+| Plus aboneliği (RevenueCat), e-posta (Resend)      | Webhook'lar, mutabakat ve engelleme listesi fixture'larla test edildi; gerçek hesap yok, mağaza satın alımı yok                          |
+| Haritalar                                          | PMTiles ile MapLibre; barındırılan bir harita altlığı yapılandırılmadığı için uygulama ve web önce durak şemasını gösterir (ADR-0059)     |
+| Yedekler                                           | Şifreli yedekler ve `Inecek Var restore drill` iş akışı (GitHub Actions'taki son koşu 2026-10-20'de geçti); R2 bucket'ı yok              |
+| Barındırma, alan adı, TLS ve HSTS preload, Sentry, iOS | Kurulmadı; üretim Caddyfile'ı denenmedi                                                                                                |
+| Hukuki metinler                                    | Örnek metinler; açık maddeler [`docs/release/legal-open-items.md`](docs/release/legal-open-items.md) dosyasında                          |
+
+Nihai doğrulama matrisinde ([`docs/security/verification-matrix.md`](docs/security/verification-matrix.md))
+15 satır tamam, 8 satır kısmi, 0 satır başlanmamış; kısmi satırlar barındırma, alan adı ve TLS, R2,
+sağlayıcı hesapları, iş akışlarının GitHub'da koşması, iOS ve sahip kararları gerektirir. Phase 6
+kapısı ([ADR-0058](docs/adr/0058-phase-6-gate.md)) 0 atlanan testle 1195 geçen API testi kaydetti;
+yeniden tasarımdan sonra ([ADR-0059](docs/adr/0059-visual-redesign.md)) gerçek yığında web e2e
+paketi 65, mobil e2e paketi 11 geçen test gösterir.
 
 ## MVP özellikleri
 
@@ -28,62 +64,83 @@ Yerel derlemeden web ana sayfası ve `Pixel_8` emülatöründen Android ekranlar
 - Uygulama içinden ve web'den hesap silme; katkılar lisans kapsamında anonimleştirilerek kalır.
 - Web: şehir sayfaları, hat ve durak sayfaları, rehber yazıları, yasal sayfalar ve moderasyon/admin arayüzü.
 
-## Kapsam dışı
+Kapsam dışı: gerçek zamanlı araç takibi, bilet satışı, araç çağırma, resmî veri iddiası, reklam,
+sürücü hesapları, push bildirimleri (v2'de düşünülüyor), şehirler arası rota.
 
-- Gerçek zamanlı araç takibi
-- Bilet satışı
-- Araç çağırma
-- Resmî veri iddiası
-- Reklam
-- Sürücü hesapları
-- Push bildirimleri (v2'de düşünülüyor)
-- Şehirler arası rota
+## Teknoloji yığını
 
-## Planlanan teknoloji yığını
+| Katman            | Teknoloji                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Mobil ve PWA      | Ionic 9.0.7, Angular 22.2, Capacitor 8.5 (Android kabuğu)                                 |
+| Web               | Express üzerinde Angular SSR 22.2                                                         |
+| Haritalar         | PMTiles 4.5 ile MapLibre GL JS 6.11; herkese açık sayfalarda sunucuda çizilen SVG haritalar |
+| Monorepo araçları | Nx 23.3, pnpm 12, Vitest, Playwright, ESLint, Prettier                                    |
+| Backend API       | Python 3.12 üzerinde FastAPI 0.143, Pydantic 2.14                                         |
+| Veritabanı        | PostGIS 3.5'li PostgreSQL 16, SQLAlchemy 2.1, Alembic 1.20                                |
+| Önbellek ve işler | Redis 7.4, arq 0.25 worker'ları                                                           |
+| Nesne depolama    | S3 uyumlu (yerelde MinIO, Cloudflare R2 planlandı)                                        |
+| Abonelik          | RevenueCat (yalnızca native)                                                              |
 
-| Katman | Teknoloji |
-|---|---|
-| Mobil ve PWA | Ionic 9, Angular, Capacitor |
-| Web | Angular SSR |
-| Harita | MapLibre GL JS + PMTiles |
-| Monorepo araçları | Nx, pnpm |
-| Backend API | FastAPI (Python 3.12+), Pydantic v2 |
-| Veritabanı | PostgreSQL + PostGIS, SQLAlchemy 2, Alembic |
-| Önbellek ve işler | Redis, arq worker'ları |
-| Nesne depolama | S3 uyumlu (Cloudflare R2) |
-| Abonelik | RevenueCat (yalnızca native) |
+Çözümlenen sürümler ve gerekçeleri [`docs/adr/0001-stack-and-versions.md`](docs/adr/0001-stack-and-versions.md) dosyasında.
 
-## Planlanan mimari
+## Mimari
 
-Bir Nx workspace: `apps/mobile` (Ionic ve Angular, aynı zamanda PWA olarak sunulur), `apps/web` (Angular SSR) ve arayüz, domain tipleri ile API istemcisi için ortak `libs/`; bunların yanında ayrı bir Python `api/` projesi. Rota planlayıcı, yayın sırasında şehir başına bellekte bir graf kurar ve sonuçları önbelleğe alır. Web ve PWA istemcileri cookie oturumu, native istemciler bearer token kullanır; ikisi tek bir auth arayüzü arkasındadır. Herkese açık hat, durak ve şehir sayfaları sunucuda render edilir; güzergâh haritaları SVG olarak çizildiği için istemci tarafında harita kodu gerekmez. Ham GPS izleri yalnızca sahibine ve moderatörlere görünür; türetilen hat sürümü yayınlandıktan 30 gün sonra silinir.
-
-## Durum
-
-Faz 0-6 kuruldu ve `main`'e birleşti (çekme istekleri #118, #119, #120 ve #121, #123, #126, #127 ve #128); ardından bir test kararsızlığı düzeltmesi (#129), galeri ve web ana sayfası (#130) ile uygulama ve webin görsel yeniden tasarımı (#131, ADR-0059) geldi. Faz 6 (sertleştirme ve yayına hazırlık) şunları ekledi: saldırı takımı ve kayıtlı XSS taraması, ZAP ve MobSF taramaları, bir güvenlik iş akışında bağımlılık denetimleri ve statik taramalar, haftalık geri yükleme tatbikatı ve kurcalama denetimleriyle şifreli yedekler, planlayıcı düşük kipiyle maliyet korumaları ve log temizleme, mağaza metinleri, gizlilik etiketleri ve yayın kontrol listesi, geçmiş temizleme el kitabı (çalıştırılmadı), web'den hesap silme paneli ve ilk kurulum komutu, bağımsız inceleme düzeltmeleri. Kapı `docs/adr/0058-phase-6-gate.md`, son rapor `docs/handoffs/final-report.md`, son matris `docs/security/verification-matrix.md`: 23 maddenin 15'i tamam, 8'i kısmi, 0 başlanmamış, yani 23/23 değil; kısmi satırlar barındırma, alan adı ve TLS, R2, sağlayıcı hesapları, iş akışlarının GitHub çalıştırmaları, iOS ve sahip kararları gerektiriyor. Faz 6 kapısı gerçek yığında API 1195 geçti (0 atlandı), web e2e 64 ve mobil e2e 10, temiz taramalar ve denetimler ve altı olumsuz çalıştırmalı bir geri yükleme tatbikatı kaydetti; yeniden tasarımdan sonra workspace testleri domain 4, data-access 110, ui 55, web 801 ve mobil 475, web e2e 65 ve mobil e2e 11 (ADR-0059). Denenmeyenler: gerçek barındırma, TLS ve HSTS preload, R2, RevenueCat, Resend ve Sentry hesapları, iOS ve macOS, üretim Caddyfile'ı, hukuki metinler ve sahip kararları. Son rapor `docs/handoffs/final-report.md`. Statik bir web demo görüntüsü https://ayberkaarda.github.io/Mobiles-5in-One/inecekvar/ adresinde yayında. Faz 5 (yalnızca API), çekme isteği #127: gece REST mutabakatlı RevenueCat webhook'u ve ilk şehirden sonraki paketler için sunucu tarafında Plus hakkı, hesap silmede RevenueCat abonesinin silinmesi, e-posta göndericinin baktığı karma değerli engel listesiyle Resend webhook'u ve deneme kipli, tekrar çalıştırılabilir gece işleri. Kapı `docs/adr/0050-webhooks-and-entitlements.md`, rapor `docs/handoffs/phase-5-report.md`. Faz 5'te denenmeyenler: gerçek RevenueCat ve Resend hesapları ve onların imzaladığı istekler, mağaza satın alımı, gerçek zamanda tetiklenen zamanlanmış işler. Faz 4 `main`'e birleşti (çekme isteği #126): şehir, hat, durak ve rota sayfaları sunucuda çizilen SVG haritalarla Angular SSR web, beş rehber, SSS, açık veri ve yasal sayfalar, site haritaları, robots, JSON-LD, SVG Open Graph görselleri, `llms.txt`, uygulama ilişkilendirme dosyaları ve TOTP adım doğrulamalı, yalnızca istemcide çalışan `/admin` moderasyon ve yönetim alanı (API tarafı: TOTP kaydı, oturuma bağlı adım doğrulama, yönetim rotaları). Faz 4 kapısı `docs/adr/0042-phase-4-gate.md`, raporu `docs/handoffs/phase-4-report.md`: gerçek API'ye karşı moderasyon e2e yeşil, JSON-LD 8 sayfa türünde geçerli, Lighthouse 5 sayfada performans, erişilebilirlik ve en iyi uygulamalarda 100, SEO 2 sayfada 100, tasarım gereği `noindex` olan 3 örnek şehir sayfasında 66. Faz 4'te denenmeyenler: gerçek TLS ve HSTS preload, Search Console ve Rich Results, iOS evrensel bağlantıları, gerçek bir doğrulayıcı uygulaması, barındırılan Caddy, CDN. Faz 0-3 kuruldu: çift kimlik doğrulamalı API çekirdeği (faz 1), alan modeli, moderasyon, planlayıcı, şehir paketleri, dışa aktarım ve hesap silme (faz 2), Ionic uygulama ve PWA (faz 3: arama ve harita, hat ve durak sayfaları, planlayıcı, çevrimdışı paketler, giriş ve katkı araçları, favoriler, hesap silmeli ayarlar, mağaza adaptörü arkasında Plus ekranı, uygulama bağlantıları, Türkçe ve İngilizce). Faz 3 kapısı `docs/adr/0036-phase-3-gate.md`, raporu `docs/handoffs/phase-3-report.md`. Faz 3'te denenmeyenler: iOS (macOS makine yok), gerçek RevenueCat hesabı ve mağaza satın alımı, doğrulanmış uygulama bağlantıları (yayında `assetlinks.json` yok), emülatörde çalışan bir API'ye bağlı uygulama, gerçek PMTiles altlığı. Faz 0 (temel) altyapıyı kurdu. Klasörde şunlar var: `apps/mobile` (Capacitor üzerinde Ionic 9, Android projesi depoda), `apps/web` (Angular SSR) ve `libs/` altındaki ui, domain ve data-access kütüphaneleriyle Nx workspace; `/v1/health` uç noktası ve PostGIS bağlantı testi olan `api/` FastAPI projesi; yerel Docker Compose yığını (PostGIS, Redis, MinIO, Mailpit, Caddy); marka token'ları ve logo seti; `docs/` altında ADR'ler, ortam değişkenleri rehberi ve güvenlik taslakları; `inecekvar-ci.yml` iş akışı. Çözümlenen sürümler ve Faz 0 kanıtları `docs/adr/0001-stack-and-versions.md` dosyasında.
-
-Şimdiye kadar denenmeyenler: iOS (macOS makine yok), GitHub Actions üzerinde CI iş akışı (dal push edilmedi), lefthook kancalarının kendisi, APK'nın emülatörde veya cihazda çalıştırılması, Caddy arkasındaki geliştirme sunucuları ve marka ikonlarının SSR favicon'una ve Android başlatıcı ikonuna bağlanması.
+`apps/mobile` (Ionic ve Angular, aynı zamanda PWA olarak sunulur), `apps/web` (Angular SSR) ve UI,
+domain tipleri ile API istemcisi için ortak `libs/` içeren bir Nx workspace'i; yanında ayrı bir
+Python `api/` projesi. Rota planlayıcı, yayın sırasında şehir başına bellekte bir graf kurar ve
+sonuçları önbelleğe alır. Web ve PWA istemcileri çerez oturumu, native istemciler bearer token
+kullanır; ikisi de tek bir kimlik doğrulama arayüzünün arkasındadır. Herkese açık hat, durak ve
+şehir sayfaları sunucuda render edilir; güzergâh haritaları SVG olarak çizildiği için istemci
+tarafında harita kodu gerekmez. Ham GPS izleri yalnızca sahibine ve moderatörlere açıktır ve
+türetilen hat sürümü yayınlandıktan 30 gün sonra silinir.
 
 ## Kurulum
 
-Ürün ve teknik tanım bu klasörde `05-inecekvar-ionic-angular.md` dosyasında duruyor. Gerekenler: Node 22, pnpm 12, uv, Docker; Android derlemesi için JDK 21. Faz 0 kapıları ADR-0001'deki gibi `inecekvar/` içinden çalışır:
+Gereksinimler: Node 22, pnpm 12, uv, Docker; Android derlemesi için JDK 21. `inecekvar/` içinden
+(Compose yalnızca veri ve proxy servislerini çalıştırır: PostGIS, Redis, MinIO, Mailpit, Caddy):
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm exec prettier --check .
-pnpm nx run-many -t lint test build --skip-nx-cache
 docker compose up -d
+pnpm exec prettier --check .
+pnpm nx run-many -t lint test build
+pnpm nx serve web        # ya da: pnpm nx serve mobile
 ```
 
-ve `inecekvar/api/` içinden:
+`inecekvar/api/` içinden:
 
 ```sh
 uv sync --locked
-uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests
+uv run alembic upgrade head
+uv run ruff check . && uv run ruff format --check . && uv run mypy --strict app tests alembic
 uv run pytest
 uv run uvicorn app.main:app --host 127.0.0.1 --port 57800 --no-proxy-headers --forwarded-allow-ips 127.0.0.1
 ```
 
-Compose yalnızca veri ve proxy servislerini çalıştırır; API ve geliştirme sunucuları makinede çalışır. Portlar ve ortam değişkenleri `docs/ops/env.md` dosyasında.
+Caddy `/api/*` isteklerini 57800 portuna iletir; portlar, ortam değişkenleri ve ilk kurulum
+(`python -m app.ops.bootstrap`) [`docs/ops/env.md`](docs/ops/env.md) dosyasında. Katkı kuralları
+[`CONTRIBUTING.md`](CONTRIBUTING.md) dosyasında.
+
+## CI
+
+- `Inecek Var CI`: workspace (marka token'ları, Prettier, `nx run-many -t lint test build`), API
+  (ruff, mypy, pytest, OpenAPI sözleşmesi), kontroller (Compose doğrulaması, tüm geçmişte gitleaks)
+  ve elle tetiklenen Android debug derlemesi.
+- `Inecek Var Security`: tüm geçmişte gitleaks, `pnpm audit` ve `pip-audit` (yüksek ve kritik), iki
+  kilit dosyası için OSV taraması, Bandit, Semgrep proje kuralları ve CycloneDX SBOM.
+- `Inecek Var restore drill`: şifreli bir yedeğin MinIO ve age ile yeni bir PostGIS 16'ya geri
+  yüklenmesi.
+
+## Dokümantasyon
+
+- Ürün ve teknik tanım: [`05-inecekvar-ionic-angular.md`](05-inecekvar-ionic-angular.md)
+- Mimari kararlar: [`docs/adr/`](docs/adr/); faz kapıları ADR-0036, ADR-0042, ADR-0050 ve ADR-0058
+- Raporlar: [nihai rapor](docs/handoffs/final-report.md) ve [faz raporları](docs/handoffs/)
+- API: [`docs/api/openapi.json`](docs/api/openapi.json)
+- Güvenlik: [doğrulama matrisi](docs/security/verification-matrix.md), [tehdit modeli](docs/security/threat-model.md), [yetkilendirme matrisi](docs/security/authorization-matrix.md), [saldırı raporu](docs/security/attack-report.md), [pentest raporu](docs/security/pentest-report.md), [XSS taraması](docs/security/xss-sweep.md), [tarama raporları](docs/security/scan-reports/), [bağımlılık denetimi](docs/security/dependency-audit.md), [geçmiş temizleme runbook'u](docs/security/history-purge-runbook.md)
+- Operasyon: [ortam](docs/ops/env.md), [arka plan işleri](docs/ops/background-jobs.md), [yedekleme ve geri yükleme](docs/ops/backup-restore.md), [maliyet uyarıları](docs/ops/cost-alerts.md), [loglama](docs/ops/logging.md)
+- Yayın: [yayın kontrol listesi](docs/release/release-checklist.md), [mağaza metni](docs/release/store-listing.tr.md), [gizlilik etiketleri](docs/release/privacy-labels.md), [imzalama](docs/release/signing.md), [PMTiles tarifi](docs/release/pmtiles-recipe.md)
+- SEO ve GEO: [kontrol listesi](docs/seo/checklist.md), [ASO](docs/seo/aso.md)
 
 ## Lisans
 
