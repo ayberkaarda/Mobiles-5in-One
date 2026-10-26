@@ -24,9 +24,10 @@ challenges (used, expired, stale session version, suspended or demoted user) are
 budget of 20 verifications per 15 minutes, keyed by the bearer subject or, on `/auth/mfa`, by the user
 the challenge belongs to, plus a loose ceiling of 100 per 15 minutes per client IP. They no longer
 share the 5-per-15-minutes login bucket. The Patika.Web BFF calls the API server-side from one
-address, so that ceiling is shared by every admin unless the API trusts the Web host as a proxy
-(`Network:KnownProxies`) and Web forwards the browser address in `X-Forwarded-For`; without that,
-the per-user budget and the persisted lockout are the effective controls.
+address; since phase 6 it forwards the browser address in `X-Patika-Client-Ip`, which the API accepts
+only from `Network:BffAddress` with the matching `Network:BffSharedKey`, so each admin has their own
+per-IP buckets (docs/security/hardening.md). Without that configuration the ceiling is shared and the
+per-user budget and the persisted lockout are the effective controls.
 
 Use opaque 256-bit MFA and step-up tokens, storing SHA-256 digests in `admin_access_tokens`.
 Both expire in five minutes and carry user, session id and session version bindings. MFA tokens

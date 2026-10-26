@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Patika.Infrastructure.Logging;
 using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
+using Patika.Infrastructure.Security;
 using Patika.Web.Seo;
 using Patika.Web.Services;
 using Patika.Web.Services.Admin;
@@ -10,6 +11,13 @@ using Patika.Web.Services.PublicQueries;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPatikaLogging();
 builder.Services.AddRazorPages();
+builder.Services.AddTrustedNetwork(builder.Configuration);
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(730);
+    options.IncludeSubDomains = true;
+    options.Preload = true;
+});
 builder.Services.AddAdminConsole(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddResponseCompression();
@@ -19,7 +27,9 @@ builder.Services.Configure<RouteOptions>(options =>
     options.AppendTrailingSlash = false;
 });
 // The API runs in another process, so moderation cannot evict these entries: short lifetimes bound how long
-// a withdrawn or expired post stays visible (docs/public-web-data.md, "Caching").
+// a withdrawn or expired post stays visible (docs/public-web-data.md, "Caching"). Public HTML carries no
+// per-request value (no CSP nonce: the pages have no inline script, docs/security/hardening.md), so one cached
+// body is valid for every visitor.
 builder.Services.AddOutputCache(options =>
 {
     options.AddBasePolicy(policy => policy
@@ -49,6 +59,7 @@ builder.Services.AddScoped<ISitemapQueries, SitemapQueries>();
 builder.Services.AddSeo(builder.Configuration);
 
 var app = builder.Build();
+app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler();
@@ -58,13 +69,14 @@ app.UseResponseCompression();
 app.UseAdminPrivacy();
 app.Use(async (context, next) =>
 {
+    context.Response.Headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()";
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     var media = builder.Configuration["Storage:PublicBaseUrl"] ?? builder.Configuration["Storage:PublicEndpoint"]
         ?? builder.Configuration["Storage:Endpoint"];
     var origin = Uri.TryCreate(media, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
         ? " " + uri.GetLeftPart(UriPartial.Authority) : "";
-    context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; script-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
     await next(context);
 });
 app.UseWhen(context => !context.Request.Path.StartsWithSegments("/admin"), branch => branch.UseStatusCodePagesWithReExecute("/404"));

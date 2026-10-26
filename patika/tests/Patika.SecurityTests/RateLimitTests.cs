@@ -11,6 +11,56 @@ public sealed class RateLimitTests
 {
     private const string Proxy = "10.20.30.40";
 
+    [Theory]
+    [InlineData(null, Proxy)]
+    [InlineData("wrong", Proxy)]
+    [InlineData("shared-test-key", "198.51.100.77")]
+    public async Task UnauthenticatedBffClaimsCannotRotateTheClientBucket(string? key, string peer)
+    {
+        await using var factory = new PatikaApiFactory();
+        factory.Settings["Network:BffAddress"] = Proxy;
+        factory.Settings["Network:BffSharedKey"] = "shared-test-key";
+        using var client = factory.CreateApiClient(peer: peer);
+        for (var i = 0; i < 6; i++)
+        {
+            using var response = await SendBff(client, $"192.0.2.{i + 1}", key);
+            Assert.Equal(i < 5 ? HttpStatusCode.Unauthorized : HttpStatusCode.TooManyRequests, response.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task VerifiedBffClientsHaveIndependentBucketsEvenWhenForwardedForIsSpoofed()
+    {
+        await using var factory = new PatikaApiFactory();
+        factory.Settings["Network:BffAddress"] = Proxy;
+        factory.Settings["Network:BffSharedKey"] = "shared-test-key";
+        factory.Settings["Network:TrustedProxies:0"] = Proxy;
+        using var client = factory.CreateApiClient(peer: Proxy);
+        for (var i = 0; i < 5; i++)
+        {
+            using var first = await SendBff(client, "192.0.2.1", "shared-test-key");
+            using var second = await SendBff(client, "192.0.2.2", "shared-test-key");
+            Assert.Equal(HttpStatusCode.Unauthorized, first.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        }
+        using var limited = await SendBff(client, "192.0.2.1", "shared-test-key");
+        await AssertThrottledAsync(limited);
+        using var other = await SendBff(client, "192.0.2.3", "shared-test-key");
+        Assert.Equal(HttpStatusCode.Unauthorized, other.StatusCode);
+    }
+
+    private static Task<HttpResponseMessage> SendBff(HttpClient client, string address, string? key)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/v1/auth/login")
+        {
+            Content = JsonContent.Create(new LoginRequest(NewEmail(), "wrong-password-123"))
+        };
+        request.Headers.Add("X-Patika-Client-Ip", address);
+        request.Headers.Add("X-Forwarded-For", "192.0.2.200");
+        if (key is not null) request.Headers.Add("X-Patika-Bff-Key", key);
+        return client.SendAsync(request, Ct);
+    }
+
     [Fact]
     public async Task SixthLoginFromOneAddressWithinFifteenMinutesIs429WithRetryAfter()
     {
@@ -32,7 +82,7 @@ public sealed class RateLimitTests
     public async Task SpoofedForwardedForFromAnUntrustedPeerDoesNotBypassTheLimit()
     {
         await using var factory = new PatikaApiFactory();
-        factory.Settings["Network:KnownProxies:0"] = Proxy;
+        factory.Settings["Network:TrustedProxies:0"] = Proxy;
         using var client = factory.CreateApiClient(peer: "198.51.100.77");
 
         for (var i = 1; i <= 5; i++)
@@ -55,7 +105,7 @@ public sealed class RateLimitTests
         await using var factory = new PatikaApiFactory();
         if (blankEnvEntry)
         {
-            factory.Settings["Network:KnownProxies:0"] = "";
+            factory.Settings["Network:TrustedProxies:0"] = "";
         }
 
         using var client = factory.CreateApiClient(peer: "198.51.100.77");
@@ -113,7 +163,7 @@ public sealed class RateLimitTests
     public async Task ForwardedForIsHonouredOnlyFromAConfiguredProxy()
     {
         await using var factory = new PatikaApiFactory();
-        factory.Settings["Network:KnownProxies:0"] = Proxy;
+        factory.Settings["Network:TrustedProxies:0"] = Proxy;
         using var client = factory.CreateApiClient(peer: Proxy);
 
         // Six distinct real clients behind the trusted proxy each get their own budget.
@@ -138,7 +188,7 @@ public sealed class RateLimitTests
     public async Task NormalizedEmailIsLimitedAcrossAddresses()
     {
         await using var factory = new PatikaApiFactory();
-        factory.Settings["Network:KnownProxies:0"] = Proxy;
+        factory.Settings["Network:TrustedProxies:0"] = Proxy;
         using var client = factory.CreateApiClient(peer: Proxy);
         var email = NewEmail("hedef");
 

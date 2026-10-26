@@ -5,7 +5,7 @@ using Patika.Contracts.Admin;
 
 namespace Patika.Web.Services.Admin;
 
-public sealed class AdminApi(IHttpClientFactory clients, IHttpContextAccessor accessor)
+public sealed class AdminApi(IHttpClientFactory clients, IHttpContextAccessor accessor, IConfiguration configuration)
 {
     public async Task<T> GetAsync<T>(string path, CancellationToken ct) =>
         (await SendAsync<T>(HttpMethod.Get, path, null, null, ct))!;
@@ -33,6 +33,12 @@ public sealed class AdminApi(IHttpClientFactory clients, IHttpContextAccessor ac
     {
         using var client = clients.CreateClient("PatikaAdmin");
         using var request = new HttpRequestMessage(method, "v1" + path) { Content = content };
+        if (configuration["Network:BffSharedKey"] is { Length: > 0 } key
+            && accessor.HttpContext?.Connection.RemoteIpAddress is { } address)
+        {
+            request.Headers.Add("X-Patika-Client-Ip", address.ToString());
+            request.Headers.Add("X-Patika-Bff-Key", key);
+        }
         var ticket = await accessor.HttpContext!.AuthenticateAsync(AdminSession.Scheme);
         var token = ticket.Properties?.GetTokenValue("access_token");
         if (token is not null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

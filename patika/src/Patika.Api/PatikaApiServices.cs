@@ -11,13 +11,14 @@ using Patika.Api.Features.Auth;
 using Patika.Api.Features.Devices;
 using Patika.Api.Features.Media;
 using Patika.Api.Features.Urgent;
-using Patika.Infrastructure.Logging;
 using Patika.Api.OpenApi;
 using Patika.Api.Security;
 using Patika.Api.Security.Authorization;
 using Patika.Api.Security.Passwords;
 using Patika.Api.Security.RateLimiting;
 using Patika.Api.Security.Tokens;
+using Patika.Infrastructure.Logging;
+using Patika.Infrastructure.Security;
 using Serilog;
 
 namespace Patika.Api;
@@ -63,6 +64,9 @@ public static class PatikaApiServices
         services.Configure<JsonOptions>(options =>
         {
             options.SerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+            // Turkish letters stay readable, but HTML-significant characters (< > & ' " +) are escaped, so stored
+            // text is inert even if a client ever embeds a response in a page (the default here is the relaxed encoder).
+            options.SerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
         services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = false);
@@ -155,10 +159,9 @@ public static class PatikaApiServices
     public static WebApplication UsePatikaApi(this WebApplication app)
     {
         app.UseApiSecurityHeaders();
-        if (HttpHardening.HasTrustedProxies(app.Configuration))
-        {
-            app.UseForwardedHeaders();
-        }
+        app.UseBffClientAddress(app.Configuration);
+        app.UseForwardedHeaders();
+        app.UseVerifiedClientAddress();
 
         app.UseExceptionHandler();
         app.UseStatusCodePages();
