@@ -198,6 +198,32 @@ jobs:
           cp patika/.env.example patika/.env
           docker compose -f patika/docker-compose.yml config --quiet
 
+  zap:
+    name: Patika ZAP baseline
+    needs: changes
+    if: needs.changes.outputs.patika == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: patika
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run ZAP baseline on the Web and the admin sign-in
+        env:
+          ZAP_OUT: ${{ runner.temp }}/patika-zap
+        run: bash ops/ci/zap/zap-baseline.sh
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: patika-zap
+          path: ${{ runner.temp }}/patika-zap/zap-*
+          if-no-files-found: warn
+
   gitleaks:
     name: Patika secret scan
     needs: changes
@@ -223,7 +249,7 @@ jobs:
 
   gate:
     name: Patika CI gate
-    needs: [changes, backend, android, compose, gitleaks]
+    needs: [changes, backend, android, compose, zap, gitleaks]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -235,6 +261,7 @@ jobs:
           BACKEND_RESULT: ${{ needs.backend.result }}
           ANDROID_RESULT: ${{ needs.android.result }}
           COMPOSE_RESULT: ${{ needs.compose.result }}
+          ZAP_RESULT: ${{ needs.zap.result }}
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
         run: |
           [ "$CHANGES_RESULT" = "success" ] || exit 1
@@ -243,7 +270,7 @@ jobs:
             false) expected=skipped ;;
             *) exit 1 ;;
           esac
-          for result in "$BACKEND_RESULT" "$ANDROID_RESULT" "$COMPOSE_RESULT" "$GITLEAKS_RESULT"; do
+          for result in "$BACKEND_RESULT" "$ANDROID_RESULT" "$COMPOSE_RESULT" "$ZAP_RESULT" "$GITLEAKS_RESULT"; do
             if [ "$result" != "$expected" ]; then
               echo "Patika CI failed: patika=$PATIKA_CHANGED requires every job to be $expected."
               exit 1

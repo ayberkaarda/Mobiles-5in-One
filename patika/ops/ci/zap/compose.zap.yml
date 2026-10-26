@@ -1,0 +1,19 @@
+# ZAP baseline run (ops/ci/zap/zap-baseline.sh): the compose stack without host ports, in Staging (no developer
+# pages, HSTS and the exception handler on), with sample rows shown so the spider has pages to walk.
+services:
+  postgres:
+    ports: !reset []
+  minio:
+    ports: !reset []
+  api:
+    ports: !reset []
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      Jwt__SigningKey: ${ZAP_JWT_SIGNING_KEY:?set by zap-baseline.sh}
+  web:
+    ports: !reset []
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      ConnectionStrings__PatikaRead: "Host=postgres;Port=5432;Database=patika;Username=patika;Password=${POSTGRES_PASSWORD:-patika-local-db}"
+      Web__ShowSamples: "true"
+      Web__PublicBaseUrl: http://web:8080
