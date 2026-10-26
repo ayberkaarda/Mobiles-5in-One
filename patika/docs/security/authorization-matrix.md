@@ -39,3 +39,46 @@ Legend: **Allow** = generally permitted; **Own** = only the caller's resource or
 | `GET|POST|PATCH admin/**` | — | — | — | Moderate | Admin |
 
 Additional constraints: moderators can review adoption, urgent, photo, and report queues and verify care places; moderators cannot manage user roles, delete users, or read user email addresses. Only admins manage roles, perform care-place imports, and take administrative user actions. A user may only edit owned resources except that `Trusted` users may edit any station under the trusted-station policy. Webhook authorization uses signature and environment validation rather than an interactive role.
+
+## Admin API (P4-D)
+
+### Admin console (Web BFF)
+
+| Web page / action | Guest / User / Trusted | Moderator with MFA | Admin with MFA |
+| --- | --- | --- | --- |
+| `/admin/giris` | Login form; no console session for User/Trusted | Password then TOTP | Password then TOTP |
+| `/admin` queue, decisions, published-content takedown | Deny | Allow | Allow |
+| Urgent restore | Deny | Bound step-up | Bound step-up |
+| `/admin/csv` preview / commit | Deny | 403 | Allow / bound step-up |
+| `/admin/kullanicilar` search | Deny | 403 | Allow; masked email |
+| Role, suspend, unsuspend | Deny | 403 | Bound step-up |
+| `/admin/denetim` | Deny | 403 | Allow |
+| `/admin/cikis` | Login redirect | POST with antiforgery | POST with antiforgery |
+
+Unenrolled Moderator/Admin accounts receive enrolment instructions instead of a console cookie.
+Manage navigation is hidden from moderators and server policy still returns 403 for direct URLs.
+All writes use antiforgery and the API's current authorization checks; no Web database writes occur.
+
+All paths below start with `/v1`. Anonymous callers get 401; User and Trusted get 403.
+Moderator/Admin without MFA get 403 `mfa_required`. The bearer handler reads the current DB role
+on every request, making demotion immediate. Every write also re-reads the caller under the admin
+advisory lock (role, suspension, deactivation, session version) and answers 403
+`admin_access_revoked` if any changed after authorization. All responses use `Cache-Control: no-store`.
+
+| Endpoint | Moderator with MFA | Admin with MFA | Extra requirement |
+| --- | --- | --- | --- |
+| `GET /admin/queue` | Allow | Allow | type adoption/urgent/photo/report; 25-item keyset page |
+| `POST /admin/decisions` | Allow | Allow | Valid transition (incl. takedown Published/Approved to Rejected); reason for Rejected/Hidden; step-up for urgent Restored |
+| `POST /admin/step-up` | Allow | Allow | Fresh TOTP, reason 10..300, action and target id; per-user TOTP budget |
+| `GET /admin/users` | Deny | Allow | Exact email or id prefix; masked email only |
+| `POST /admin/users/{id}/role` | Deny | Allow | Single-use step-up; no own-role change; keep last active Admin; promotion requires target TOTP |
+| `POST /admin/users/{id}/suspend` | Deny | Allow | Single-use step-up and reason; suspended accounts cannot sign in/refresh; cannot shorten a running suspension |
+| `POST /admin/users/{id}/unsuspend` | Deny | Allow | Single-use step-up and reason; 409 if not suspended |
+| `GET /admin/audit` | Deny | Allow | Append-only; 25-item keyset page |
+| `POST /admin/care-places/csv/preview` | Deny | Allow | Multipart, 1 MiB, 2000 rows; no writes |
+| `POST /admin/care-places/csv/commit` | Deny | Allow | Exact preview hash and single-use step-up |
+
+`POST /me/totp/enrol`, `/confirm`, `/disable` require authentication; enrol requires sign-in
+within ten minutes. Moderator/Admin cannot disable TOTP. `/auth/mfa` consumes a five-minute
+single-use challenge after TOTP or a single-use recovery code. All verification paths share
+the persisted per-user five-failure lockout and the existing per-IP auth policy.

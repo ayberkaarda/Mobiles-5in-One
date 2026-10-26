@@ -149,6 +149,51 @@ public sealed class HardDeleteLeavesNoPersonalDataTests(AccountDatabaseFixture d
     }
 
     [Fact]
+    public async Task PurgeClearsTheSecondFactorAndSuspensionState()
+    {
+        var person = await SeedPersonAsync("ikinci");
+        var now = DateTimeOffset.UtcNow;
+        await using (var db = database.CreateContext())
+        {
+            await db.Users.Where(u => u.Id == person.UserId).ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.TotpSecretEnc, "protected-secret")
+                .SetProperty(u => u.TotpEnabledAt, now)
+                .SetProperty(u => u.TotpLastStep, 42L)
+                .SetProperty(u => u.TotpFailedAttempts, 3)
+                .SetProperty(u => u.TotpFailureWindowAt, now)
+                .SetProperty(u => u.TotpLockedUntil, now.AddDays(30))
+                .SetProperty(u => u.SuspendedUntil, now.AddDays(30)), Ct);
+            db.TotpRecoveryCodes.Add(new TotpRecoveryCode { UserId = person.UserId, CodeHash = new byte[32] });
+            db.AdminAccessTokens.Add(new AdminAccessToken
+            {
+                UserId = person.UserId,
+                SessionId = Guid.NewGuid(),
+                Purpose = "step_up",
+                TokenHash = RefreshTokens.Hash(RefreshTokens.NewToken()),
+                AuthTime = now,
+                ExpiresAt = now.AddDays(30),
+            });
+            await db.SaveChangesAsync(Ct);
+            Assert.True((await new EfAccountDeletionStore(db).RequestDeletionAsync(person.UserId, now, TimeSpan.FromDays(7), Ct))!.Created);
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            Assert.Equal(1, await Purger(db, new RecordingRemovalQueue(), now.AddDays(8)).PurgeDueAsync(Ct));
+            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == person.UserId, Ct);
+            Assert.Null(user.TotpSecretEnc);
+            Assert.Null(user.TotpEnabledAt);
+            Assert.Equal(-1, user.TotpLastStep);
+            Assert.Equal(0, user.TotpFailedAttempts);
+            Assert.Null(user.TotpFailureWindowAt);
+            Assert.Null(user.TotpLockedUntil);
+            Assert.Null(user.SuspendedUntil);
+            Assert.False(await db.TotpRecoveryCodes.AnyAsync(c => c.UserId == person.UserId, Ct));
+            Assert.False(await db.AdminAccessTokens.AnyAsync(t => t.UserId == person.UserId, Ct));
+        }
+    }
+
+    [Fact]
     public async Task UnverifiedAccountsOlderThanSevenDaysAreRemoved()
     {
         await using var db = database.CreateContext();

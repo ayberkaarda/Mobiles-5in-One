@@ -1,0 +1,7 @@
+<fieldset class="admin-step">
+    <legend>Kimliğini yeniden doğrula</legend>
+    <p>Bu işlem yetki veriyor. Devam etmek için doğrulama kodunu gir ve gerekçeni yaz.</p>
+    <label>Gerekçe<textarea name="Reason" rows="2" minlength="10" maxlength="300" required></textarea></label>
+    <label>Doğrulama kodu<input name="Code" class="admin-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /></label>
+    <p class="admin-muted">Kod tek işlem için kullanılır. Yeni bir işlem için yeni kodu bekle.</p>
+</fieldset>

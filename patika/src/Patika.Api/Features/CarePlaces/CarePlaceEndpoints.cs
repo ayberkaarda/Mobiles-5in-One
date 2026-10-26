@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 
 using Patika.Api.Security.Authorization;
@@ -16,8 +15,6 @@ public static class CarePlaceEndpoints
     public static RouteGroupBuilder MapCarePlaceEndpoints(this RouteGroupBuilder v1)
     {
         v1.MapGet("/care-places", List).RequirePermission(Permission.CarePlacesRead).Produces<CarePlaceResponse[]>();
-        v1.MapPost("/admin/care-places/import", Import).RequirePermission(Permission.CarePlacesImport)
-            .Accepts<string>("text/csv").Produces<CarePlaceImportResponse>();
         return v1;
     }
 
@@ -63,42 +60,4 @@ public static class CarePlaceEndpoints
     }
 
     private static IResult Invalid() => Results.Problem(statusCode: 400, title: "İstek geçersiz.");
-
-    private static async Task<IResult> Import(HttpContext http, PatikaDbContext db, CancellationToken ct)
-    {
-        if (http.Request.ContentLength > CarePlaceCsv.MaxBytes) return Results.StatusCode(413);
-        if (!string.Equals(http.Request.ContentType?.Split(';')[0].Trim(), "text/csv", StringComparison.OrdinalIgnoreCase))
-            return Results.StatusCode(415);
-        using var buffer = new MemoryStream();
-        var bytes = new byte[8192];
-        while (true)
-        {
-            var count = await http.Request.Body.ReadAsync(bytes, ct);
-            if (count == 0) break;
-            if (buffer.Length + count > CarePlaceCsv.MaxBytes) return Results.StatusCode(413);
-            buffer.Write(bytes, 0, count);
-        }
-        IReadOnlyList<CarePlace> places;
-        try { places = CarePlaceCsv.Parse(new UTF8Encoding(false, true).GetString(buffer.ToArray())); }
-        catch (Exception exception) when (exception is FormatException or DecoderFallbackException) { return Invalid(); }
-        var districts = new DistrictResolver(db);
-        foreach (var place in places) place.DistrictId = await districts.ResolveAsync(place.District, ct);
-        db.CarePlaces.AddRange(places);
-        db.AuditLogs.Add(new AuditLog
-        {
-            ActorId = ActorFactory.FromPrincipal(http.User).UserId,
-            Action = "care_places.import",
-            TargetType = "care_place"
-        });
-        try
-        {
-            await db.SaveChangesWithSlugRetryAsync(ct);
-        }
-        catch (SlugConflictException)
-        {
-            return Results.Problem(statusCode: 409, title: "Aynı anda çok fazla benzer kayıt oluşturuldu; lütfen tekrar deneyin.",
-                extensions: new Dictionary<string, object?> { ["code"] = "slug_conflict" });
-        }
-        return Results.Ok(new CarePlaceImportResponse(places.Count));
-    }
 }

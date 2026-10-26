@@ -1,0 +1,18 @@
+@page "/admin/denetim"
+@model AuditModel
+@{ ViewData["Title"] = "Denetim kaydı"; }
+<header class="admin-heading"><h1>Denetim kaydı</h1><p>Girişler, kararlar ve yetki değişiklikleri. Kayıtlar değiştirilemez.</p></header>
+<form method="get" class="admin-filters">
+    <label>Yapan (kimlik)<input asp-for="Actor" /></label><label>İşlem<input asp-for="Action" maxlength="100" /></label>
+    <label>Hedef (tür / kimlik)<input asp-for="Target" maxlength="100" /></label>
+    <label>Başlangıç (UTC)<input asp-for="From" type="datetime-local" /></label><label>Bitiş (UTC)<input asp-for="To" type="datetime-local" /></label><button>Filtrele</button>
+</form>
+<div class="admin-table"><table><thead><tr><th scope="col">Zaman (UTC)</th><th scope="col">Yapan</th><th scope="col">İşlem</th><th scope="col">Hedef</th><th scope="col">Ayrıntı</th></tr></thead><tbody>
+@foreach (var entry in Model.Entries.Items)
+{
+    <tr><td data-label="Zaman">@entry.CreatedAt.ToString("dd.MM.yyyy HH:mm:ss")</td><td data-label="Yapan"><code title="@entry.ActorId">@AdminText.Short(entry.ActorId)</code></td><td data-label="İşlem"><code>@entry.Action</code></td><td data-label="Hedef">@entry.TargetType <code title="@entry.TargetId">@AdminText.Short(entry.TargetId)</code></td><td data-label="Ayrıntı"><details><summary>Gerekçe ve ayrıntı</summary><pre>@entry.DetailsJson</pre></details></td></tr>
+}
+</tbody></table></div>
+@if (Model.Entries.Items.Count == 0) { <p>Kayıt bulunamadı.</p> }
+@if (Model.Entries.NextCursor is not null)
+{ <a asp-page="/Audit" asp-route-actor="@Model.Actor" asp-route-action="@Model.Action" asp-route-target="@Model.Target" asp-route-from="@Model.From" asp-route-to="@Model.To" asp-route-cursor="@Model.Entries.NextCursor">Daha fazla</a> }

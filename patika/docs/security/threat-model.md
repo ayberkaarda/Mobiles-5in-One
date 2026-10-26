@@ -33,7 +33,47 @@ The system includes the .NET MAUI mobile client, Minimal API, Razor Pages site a
 - Subscription forgery, webhook replay, or sandbox/production confusion.
 - Refresh-token theft and reuse, including on a compromised mobile device.
 - Moderation privilege escalation or unauthorized care-place changes.
+- MFA replay and parallel guesses: user-row locking, monotonic accepted steps, persisted five-failure
+  lockout across all TOTP paths, and single-use recovery-code hashes. MFA and step-up challenge hashes
+  expire in five minutes and bind to the user and session; a step-up token also binds to one action and
+  one target id, and action transactions consume it once. TOTP routes have a per-user budget (20 per
+  15 minutes) apart from the per-IP login bucket, so admins behind the Web BFF do not share one bucket.
+- Stolen privileged password: enrolled Moderator/Admin sign-in returns only a challenge; admin policies
+  require MFA. Unenrolled elevated users can only enrol. Current DB role is checked on every bearer
+  request; role changes/suspensions revoke refresh families and increment session versions. Each admin
+  write re-reads the caller under the admin advisory lock, so a request admitted before a demotion,
+  suspension or sign-out cannot write afterwards. The last active admin cannot be demoted, suspended
+  or self-deleted.
+- Credential-stuffing role disclosure: a correct password for an enrolled Moderator/Admin returns 202
+  instead of 200, which reveals elevation to whoever holds the password. Accepted; the second factor
+  still stands.
+- Administrative repudiation and CSV tampering: entity change, moderation decision and audit commit
+  atomically; SaveChanges refuses audit modifications/deletions. Step-up reasons are preserved in audit.
+  CSV commit revalidates the byte hash, rejects erroneous/formula cells, and deduplicates exact files.
+- Queue disclosure: keyed opaque author ids, account age/rejection count only, no moderator emails;
+  admin email search is exact and results are masked. Pending-photo links expire after two minutes
+  and require processed media. Hidden urgent rows are visible only in explicit management queries.
 - Oversized or misleading media upload and resource exhaustion through map queries.
+
+## Admin console
+
+The Web console is a BFF: API access/refresh tokens stay inside an encrypted Data Protection
+authentication ticket (`PatikaAdmin`, HttpOnly, Secure, SameSite Strict, `/admin`). Thirty-minute
+sliding sessions have an independently checked eight-hour absolute lifetime; refresh failures and
+`admin_access_revoked` end the local session. Deployments must persist the Web key ring. Pending
+MFA challenges live in server memory for five minutes behind random browser handles.
+
+Web policies require Moderator/Admin and MFA; users, audit and CSV additionally require Admin.
+The API remains authoritative for current role, session version and every write. All POSTs require
+antiforgery. Sensitive forms send TOTP and a reason to the BFF, which obtains action/target-bound
+step-up and uses it only server-side in the same request. Re-uploaded CSV bytes must match the
+preview hash and are revalidated by the API; no temporary uploads are retained.
+
+All admin responses are no-store, noindex/nofollow and frame-denied; output caching excludes the
+path. A self-only CSP and Razor encoding prevent stored content from becoming executable markup.
+No API data uses raw HTML. Private photos are HTTPS links with noreferrer. Existing robots rules
+exclude `/admin`; admin pages are never sitemap entries. BFF-originated TOTP traffic shares the
+API's per-IP ceiling unless a separately reviewed trusted proxy configuration forwards client IPs.
 
 ## Required verification
 

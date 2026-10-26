@@ -15,5 +15,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <ProjectReference Include="../../src/Patika.Web/Patika.Web.csproj" />
+    <ProjectReference Include="../../src/Patika.Api/Patika.Api.csproj" Aliases="Api" />
+    <Compile Include="../Patika.Api.Tests/Urgent/FeaturePostgisFixture.cs" Link="Admin/FeaturePostgisFixture.cs" />
   </ItemGroup>
 </Project>

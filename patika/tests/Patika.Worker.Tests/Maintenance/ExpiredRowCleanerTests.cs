@@ -46,7 +46,7 @@ public sealed class ExpiredRowCleanerTests(WorkerPostgisFixture database) : ICla
         }
 
         await using var db = database.CreateContext();
-        var (keys, _) = await Cleaner(db).CleanAsync(Ct);
+        var (keys, _, _) = await Cleaner(db).CleanAsync(Ct);
 
         Assert.Equal(2500, keys);
         await using var check = database.CreateContext();
@@ -87,6 +87,40 @@ public sealed class ExpiredRowCleanerTests(WorkerPostgisFixture database) : ICla
         Assert.Contains(usedRecent, left);
         Assert.Contains(expiredRecent, left);
         Assert.Contains(live, left);
+    }
+
+    [Fact]
+    public async Task RemovesAdminAccessTokensExpiredOverADayAgoOnly()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = await UserAsync();
+        AdminAccessToken Admin(string purpose, DateTimeOffset expires) => new()
+        {
+            UserId = user,
+            SessionId = Guid.NewGuid(),
+            Purpose = purpose,
+            TokenHash = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32),
+            AuthTime = expires.AddMinutes(-5),
+            ExpiresAt = expires,
+        };
+        var oldChallenge = Admin("mfa", now.AddDays(-2));
+        var oldStepUp = Admin("step_up", now.AddHours(-25));
+        var recent = Admin("mfa", now.AddHours(-2));
+        var live = Admin("step_up", now.AddMinutes(4));
+        await using (var seed = database.CreateContext())
+        {
+            seed.AdminAccessTokens.AddRange(oldChallenge, oldStepUp, recent, live);
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        await using (var db = database.CreateContext())
+        {
+            Assert.Equal(2, (await Cleaner(db).CleanAsync(Ct)).AdminAccessTokens);
+        }
+
+        await using var check = database.CreateContext();
+        var left = await check.AdminAccessTokens.Where(t => t.UserId == user).Select(t => t.Id).ToListAsync(Ct);
+        Assert.Equal(new[] { recent.Id, live.Id }.Order(), left.Order());
     }
 
     private static EmailToken Token(Guid userId, DateTimeOffset expires, DateTimeOffset? used) => new()

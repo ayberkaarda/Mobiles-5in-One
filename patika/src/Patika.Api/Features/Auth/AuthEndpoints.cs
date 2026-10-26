@@ -59,6 +59,7 @@ public static class AuthEndpoints
             .RequirePermission(Permission.AuthSession)
             .RequireRateLimiting(RateLimitPolicies.Auth)
             .Produces<TokenResponse>()
+            .Produces<MfaRequiredResponse>(StatusCodes.Status202Accepted)
             .Produces<ApiProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson);
 
         auth.MapPost("/google", (GoogleSignInRequest request, AuthHandlers handlers, CancellationToken ct) =>
@@ -67,6 +68,7 @@ public static class AuthEndpoints
             .RequirePermission(Permission.AuthSession)
             .RequireRateLimiting(RateLimitPolicies.External)
             .Produces<TokenResponse>()
+            .Produces<MfaRequiredResponse>(StatusCodes.Status202Accepted)
             .Produces<ApiProblemDetails>(StatusCodes.Status401Unauthorized, ProblemJson)
             .Produces<ApiProblemDetails>(StatusCodes.Status409Conflict, ProblemJson);
 

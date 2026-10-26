@@ -3,10 +3,12 @@ using Patika.Infrastructure.Media;
 using Patika.Infrastructure.Persistence;
 using Patika.Web.Seo;
 using Patika.Web.Services;
+using Patika.Web.Services.Admin;
 using Patika.Web.Services.PublicQueries;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
+builder.Services.AddAdminConsole(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddResponseCompression();
 builder.Services.Configure<RouteOptions>(options =>
@@ -19,7 +21,7 @@ builder.Services.Configure<RouteOptions>(options =>
 builder.Services.AddOutputCache(options =>
 {
     options.AddBasePolicy(policy => policy
-        .With(context => HttpMethods.IsGet(context.HttpContext.Request.Method) && !(context.HttpContext.User.Identity?.IsAuthenticated ?? false))
+        .With(context => !context.HttpContext.Request.Path.StartsWithSegments("/admin") && HttpMethods.IsGet(context.HttpContext.Request.Method) && !(context.HttpContext.User.Identity?.IsAuthenticated ?? false))
         .Expire(TimeSpan.FromMinutes(5)).SetVaryByQuery("*").Tag("public-data"));
     options.AddPolicy(CachePolicies.AdoptionDetail, policy => policy.Expire(TimeSpan.FromSeconds(60)));
     options.AddPolicy(CachePolicies.Listing, policy => policy.Expire(TimeSpan.FromMinutes(2)));
@@ -51,6 +53,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseResponseCompression();
+app.UseAdminPrivacy();
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions = "nosniff";
@@ -62,9 +65,11 @@ app.Use(async (context, next) =>
     context.Response.Headers.ContentSecurityPolicy = $"default-src 'self'; img-src 'self'{origin}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
     await next(context);
 });
-app.UseStatusCodePagesWithReExecute("/404");
+app.UseWhen(context => !context.Request.Path.StartsWithSegments("/admin"), branch => branch.UseStatusCodePagesWithReExecute("/404"));
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseOutputCache();
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).CacheOutput(policy => policy.NoCache());
 app.MapSeo();

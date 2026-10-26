@@ -161,6 +161,9 @@ public sealed class AccountPurger(
         await db.Reports.Where(r => r.ReporterId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.EmailTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.ExternalLogins.Where(l => l.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        // The tombstone keeps no second factor: recovery codes, MFA challenges and step-up tokens go too.
+        await db.TotpRecoveryCodes.Where(c => c.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await db.AdminAccessTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(cancellationToken);
 
         // replaced_by_id points within the user's own tokens; clear it first so the delete never trips the FK.
         await db.RefreshTokens.Where(t => t.UserId == userId)
@@ -186,6 +189,12 @@ public sealed class AccountPurger(
                 .SetProperty(u => u.UrgentOptIn, false)
                 .SetProperty(u => u.UrgentRadiusM, DefaultUrgentRadiusM)
                 .SetProperty(u => u.TotpSecretEnc, (string?)null)
+                .SetProperty(u => u.TotpEnabledAt, (DateTimeOffset?)null)
+                .SetProperty(u => u.TotpLastStep, -1L)
+                .SetProperty(u => u.TotpFailedAttempts, 0)
+                .SetProperty(u => u.TotpFailureWindowAt, (DateTimeOffset?)null)
+                .SetProperty(u => u.TotpLockedUntil, (DateTimeOffset?)null)
+                .SetProperty(u => u.SuspendedUntil, (DateTimeOffset?)null)
                 .SetProperty(u => u.UpdatedAt, now), cancellationToken);
 
         await db.DeletionRequests.Where(r => r.Id == requestId)

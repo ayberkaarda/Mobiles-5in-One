@@ -72,7 +72,7 @@ public sealed class CommunityHttpTests
         await using var app = CreateApp();
         await app.StartAsync(TestContext.Current.CancellationToken);
         var endpoints = ((IEndpointRouteBuilder)app).DataSources.SelectMany(x => x.Endpoints).ToArray();
-        Assert.Equal(29, endpoints.Length);
+        Assert.Equal(28, endpoints.Length);
         foreach (var endpoint in endpoints)
         {
             var policy = endpoint.Metadata.GetOrderedMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>();

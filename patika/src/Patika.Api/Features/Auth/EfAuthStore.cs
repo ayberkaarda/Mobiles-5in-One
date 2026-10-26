@@ -160,7 +160,7 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         return token is null
             ? null
             : new RefreshTokenRecord(token.Id, token.UserId, token.FamilyId, token.TokenHash, token.CreatedAt,
-                token.ExpiresAt, token.RevokedAt, token.ReplacedById);
+                token.ExpiresAt, token.RevokedAt, token.ReplacedById, token.Mfa, token.AuthTime);
     }
 
     public async Task<bool> TryRotateRefreshTokenAsync(
@@ -307,6 +307,7 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
             .SqlQuery<SessionRow>($"""
                 SELECT session_version AS "Version", password_hash AS "PasswordHash"
                 FROM users WHERE id = {token.UserId} AND deactivated_at IS NULL
+                    AND (suspended_until IS NULL OR suspended_until <= {token.CreatedAt})
                 FOR UPDATE
                 """)
             .ToListAsync(cancellationToken);
@@ -413,11 +414,14 @@ public sealed class EfAuthStore(PatikaDbContext db) : IAuthStore
         ExpiresAt = token.ExpiresAt,
         RevokedAt = token.RevokedAt,
         ReplacedById = token.ReplacedById,
+        Mfa = token.Mfa,
+        AuthTime = token.AuthTime,
     };
 
     private static AuthUser ToAuthUser(User user) => new(
         user.Id, user.Email, user.PasswordHash, user.DisplayName, ToActorRole(user.Role), user.EmailVerifiedAt,
-        user.DeactivatedAt);
+        user.DeactivatedAt)
+    { TotpEnabledAt = user.TotpEnabledAt, SuspendedUntil = user.SuspendedUntil, SessionVersion = user.SessionVersion };
 
     internal static ActorRole ToActorRole(UserRole role) => role switch
     {

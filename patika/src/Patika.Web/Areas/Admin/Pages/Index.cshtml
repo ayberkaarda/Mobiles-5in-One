@@ -1,0 +1,68 @@
+@page "/admin"
+@model IndexModel
+@{ ViewData["Title"] = "Moderasyon kuyruğu"; }
+<header class="admin-heading"><h1>Moderasyon kuyruğu</h1><p class="admin-muted">Kararlar ve gerekçeler denetim kaydına yazılır.</p></header>
+<nav class="admin-tabs" aria-label="Kuyruk türü">
+    @foreach (var tab in new[] { ("adoption", "Sahiplendirme"), ("urgent", "Acil"), ("photo", "Fotoğraflar"), ("report", "Bildirimler") })
+    { <a asp-page="/Index" asp-route-type="@tab.Item1" aria-current="@(Model.Type == tab.Item1 ? "page" : null)">@tab.Item2</a> }
+</nav>
+<div class="admin-queue">
+    <section class="admin-card admin-list" aria-label="Kuyruk">
+        @foreach (var item in Model.Queue.Items)
+        {
+            <a asp-page="/Index" asp-route-type="@Model.Type" asp-route-cursor="@Model.Cursor" asp-route-selected="@item.Id" aria-current="@(Model.Item?.Id == item.Id ? "true" : null)">
+                <strong title="@item.Id">@AdminText.Short(item.Id)</strong><span>@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                <span>@AdminText.State(item.State) @(item.Hidden ? "· Gizli" : "")</span>
+            </a>
+        }
+        @if (Model.Queue.Items.Count == 0) { <p>Kuyrukta bekleyen içerik yok.</p> }
+        @if (Model.Queue.NextCursor is not null) { <a asp-page="/Index" asp-route-type="@Model.Type" asp-route-cursor="@Model.Queue.NextCursor">Daha fazla</a> }
+    </section>
+    @if (Model.Item is { } selected)
+    {
+        <section class="admin-card" aria-labelledby="selected-heading">
+            <h2 id="selected-heading">İçerik incelemesi</h2>
+            <p class="admin-muted">@selected.Id · @AdminText.State(selected.State)</p>
+            @if (Uri.TryCreate(selected.PhotoUrl, UriKind.Absolute, out var photo) && photo.Scheme == "https")
+            { <a href="@photo.AbsoluteUri" rel="noreferrer" target="_blank">Fotoğrafı güvenli bağlantıda aç</a> }
+            <p class="admin-content">@selected.Content</p>
+            @if (selected.Author is { } author) { <p class="admin-muted">Açan: #@author.Id · Hesap yaşı: @author.AccountAgeDays gün · Önceki ret: @author.PriorRejectionCount</p> }
+            <form method="post" class="admin-form">
+                <input type="hidden" name="Type" value="@Model.Type" /><input type="hidden" name="TargetType" value="@selected.Type" /><input type="hidden" name="TargetId" value="@selected.Id" />
+                <fieldset><legend>Karar</legend>
+                    <label>İlan sahibine not / gerekçe<textarea name="Reason" rows="3" maxlength="500"></textarea></label>
+                    <p class="admin-muted">Ret ve gizleme gerekçesi en az 10 karakter olmalı.</p>
+                    <div class="admin-actions">
+                    @if (selected.Type == "urgent")
+                    {
+                        @if (selected.Hidden)
+                        {
+                            <fieldset class="admin-step"><legend>Kimliğini yeniden doğrula</legend>
+                                <label>Gerekçe<textarea name="StepReason" minlength="10" maxlength="300" required></textarea></label>
+                                <label>Doğrulama kodu<input name="Code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required /></label>
+                            </fieldset>
+                            <button name="Decision" value="Restored">Doğrula ve geri getir</button>
+                        }
+                        else { <button class="admin-danger" name="Decision" value="Hidden">Gizle</button> }
+                    }
+                    else
+                    {
+                        <button class="admin-approve" name="Decision" value="Approved">@(selected.Type == "report" ? "İncelendi" : "Onayla ve yayınla")</button>
+                        <button class="admin-danger" name="Decision" value="Rejected">@(selected.Type == "report" ? "Bildirimi reddet" : "Reddet")</button>
+                    }
+                    </div>
+                </fieldset>
+            </form>
+        </section>
+    }
+</div>
+<details class="admin-card"><summary>Yayındaki içeriği kaldır</summary>
+    <p>Bildirimdeki sahiplendirme ilanı veya fotoğraf kimliğini gir. Bu işlem geri alınamaz.</p>
+    <form method="post" class="admin-form">
+        <input type="hidden" name="Type" value="@Model.Type" /><input type="hidden" name="Decision" value="Rejected" />
+        <label>İçerik türü<select name="TargetType"><option value="adoption">Sahiplendirme</option><option value="photo">Fotoğraf</option></select></label>
+        <label>İçerik kimliği<input name="TargetId" required /></label>
+        <label>Ret gerekçesi<textarea name="Reason" minlength="10" maxlength="500" required></textarea></label>
+        <button class="admin-danger">Yayından kaldır</button>
+    </form>
+</details>

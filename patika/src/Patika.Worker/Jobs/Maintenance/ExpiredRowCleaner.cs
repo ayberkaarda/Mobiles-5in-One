@@ -6,16 +6,18 @@ using Quartz;
 namespace Patika.Worker.Jobs.Maintenance;
 
 /// <summary>
-/// Removes rows that can no longer matter: idempotency keys older than 24 hours (the replay window) and
-/// email tokens used or expired more than 7 days ago. Deletes in batches so no statement holds locks for long.
+/// Removes rows that can no longer matter: idempotency keys older than 24 hours (the replay window),
+/// email tokens used or expired more than 7 days ago and admin access tokens (MFA challenges, step-up tokens)
+/// expired more than a day ago. Deletes in batches so no statement holds locks for long.
 /// </summary>
 public sealed class ExpiredRowCleaner(PatikaDbContext db, TimeProvider clock, ILogger<ExpiredRowCleaner> logger)
 {
     public const int BatchSize = 1000;
     public static readonly TimeSpan IdempotencyRetention = TimeSpan.FromHours(24);
     public static readonly TimeSpan EmailTokenRetention = TimeSpan.FromDays(7);
+    public static readonly TimeSpan AdminAccessTokenRetention = TimeSpan.FromDays(1);
 
-    public async Task<(int IdempotencyKeys, int EmailTokens)> CleanAsync(CancellationToken cancellationToken)
+    public async Task<(int IdempotencyKeys, int EmailTokens, int AdminAccessTokens)> CleanAsync(CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
         var idempotencyCutoff = now - IdempotencyRetention;
@@ -38,12 +40,23 @@ public sealed class ExpiredRowCleaner(PatikaDbContext db, TimeProvider clock, IL
                 """,
                 cancellationToken));
 
-        if (keys + tokens > 0)
+        // MFA challenges and step-up tokens live five minutes; a day of expired rows is kept for investigation.
+        var adminCutoff = now - AdminAccessTokenRetention;
+        var adminTokens = await DeleteInBatchesAsync(
+            () => db.Database.ExecuteSqlAsync(
+                $"""
+                DELETE FROM admin_access_tokens WHERE id IN (
+                    SELECT id FROM admin_access_tokens WHERE expires_at < {adminCutoff} ORDER BY expires_at LIMIT {BatchSize})
+                """,
+                cancellationToken));
+
+        if (keys + tokens + adminTokens > 0)
         {
-            logger.LogInformation("Maintenance removed {Keys} idempotency keys and {Tokens} email tokens", keys, tokens);
+            logger.LogInformation("Maintenance removed {Keys} idempotency keys, {Tokens} email tokens and {AdminTokens} admin access tokens",
+                keys, tokens, adminTokens);
         }
 
-        return (keys, tokens);
+        return (keys, tokens, adminTokens);
     }
 
     private static async Task<int> DeleteInBatchesAsync(Func<Task<int>> deleteBatch)

@@ -29,4 +29,4 @@ Text colors meet WCAG AA on their surfaces (see `brand/brand.md`). Visible focus
 
 ## Screenshots
 
-`screenshots/` holds real captures: the web home at 1440 and 390 px (full page and hero), and the Android app on a Pixel 8 emulator (`android-harita`, `android-sahiplen`, `android-acil`, `android-profil`).
+`screenshots/` holds real captures: the web home at 1440 and 390 px (full page and hero), and the Android app on a Pixel 8 emulator (`android-harita`, `android-sahiplen`, `android-acil`, `android-profil`). The `admin-*` captures show the admin console (TOTP step, moderation queue, CSV preview with row errors, user actions with step-up) against a local API with seeded sample data.

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Patika.Api.Features.Admin;
 using Patika.Api.Features.Auth;
 using Patika.Domain.Entities;
 using Patika.Infrastructure.Persistence;
@@ -7,7 +8,13 @@ using Patika.Infrastructure.Persistence;
 namespace Patika.Api.Features.Account;
 
 /// <summary>Outcome of a deletion request: when the hard delete may run, and whether this call created it.</summary>
-public sealed record DeletionSchedule(Guid RequestId, DateTimeOffset ExecuteAfter, bool Created);
+public sealed record DeletionSchedule(Guid RequestId, DateTimeOffset ExecuteAfter, bool Created)
+{
+    /// <summary>Refused because the account is the last active admin; nothing was changed.</summary>
+    public bool LastAdminProtected { get; init; }
+
+    public static DeletionSchedule LastAdmin { get; } = new(Guid.Empty, default, false) { LastAdminProtected = true };
+}
 
 public static class AccountAuditActions
 {
@@ -22,7 +29,8 @@ public interface IAccountDeletionStore
     /// <paramref name="grace"/>), revokes every refresh token, deletes device tokens and follows,
     /// closes the user's open adoption posts and writes an audit row without personal data.
     /// Idempotent: a second call returns the pending schedule with <see cref="DeletionSchedule.Created"/> false.
-    /// Returns null when the account does not exist or is deactivated for another reason.
+    /// Returns null when the account does not exist or is deactivated for another reason, and
+    /// <see cref="DeletionSchedule.LastAdmin"/> when the account is the last active admin.
     /// </summary>
     Task<DeletionSchedule?> RequestDeletionAsync(Guid userId, DateTimeOffset now, TimeSpan grace, CancellationToken cancellationToken);
 }
@@ -51,6 +59,15 @@ public sealed class EfAccountDeletionStore(PatikaDbContext db) : IAccountDeletio
         Guid userId, DateTimeOffset now, TimeSpan grace, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Same lock as admin role changes and suspensions, so the last active admin cannot disappear in a race.
+        await AdminWriteLock.AcquireAsync(db, cancellationToken);
+        var user = await db.Users.FromSql($"SELECT * FROM users WHERE id = {userId} FOR UPDATE").AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        if (user is not null && await AdminWriteLock.IsLastActiveAdminAsync(db, user, now, cancellationToken))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return DeletionSchedule.LastAdmin;
+        }
+
         var deactivated = await db.Users
             .Where(u => u.Id == userId && u.DeactivatedAt == null)
             .ExecuteUpdateAsync(setters => setters

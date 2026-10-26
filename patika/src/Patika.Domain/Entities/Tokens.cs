@@ -2,6 +2,8 @@ namespace Patika.Domain.Entities;
 
 public sealed class RefreshToken : Entity
 {
+    public bool Mfa { get; set; }
+    public DateTimeOffset? AuthTime { get; set; }
     public Guid UserId { get; set; }
     public Guid FamilyId { get; set; }
     public required byte[] TokenHash { get; set; }

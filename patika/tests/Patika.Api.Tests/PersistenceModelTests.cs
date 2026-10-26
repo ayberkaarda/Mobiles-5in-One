@@ -21,11 +21,11 @@ public sealed class PersistenceModelTests
             .ToArray();
         string[] expected =
         [
-            "adoption_posts", "adoption_requests", "animal_photos", "animals",
-            "app_store_notifications", "audit_logs", "care_places", "deletion_requests",
+            "admin_access_tokens", "adoption_posts", "adoption_requests", "animal_photos", "animals",
+            "app_store_notifications", "audit_logs", "care_place_imports", "care_places", "deletion_requests",
             "device_tokens", "districts", "email_tokens", "external_logins", "feedings", "follows", "idempotency_keys",
             "moderation_decisions", "provinces", "push_daily_counters", "refresh_tokens",
-            "reports", "sightings", "stations", "subscriptions", "uploads", "urgent_posts", "users"
+            "reports", "sightings", "stations", "subscriptions", "totp_recovery_codes", "uploads", "urgent_posts", "users"
         ];
 
         Assert.Equal(expected, tables);

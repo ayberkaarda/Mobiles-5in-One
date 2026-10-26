@@ -36,7 +36,7 @@ public sealed class PersistenceTests
             "animals", "animal_photos", "sightings", "follows", "adoption_posts", "adoption_requests",
             "urgent_posts", "care_places", "device_tokens", "subscriptions", "app_store_notifications",
             "reports", "audit_logs", "deletion_requests", "uploads", "push_daily_counters", "idempotency_keys",
-            "provinces", "districts", "moderation_decisions"
+            "provinces", "districts", "moderation_decisions", "admin_access_tokens", "totp_recovery_codes", "care_place_imports"
         ];
         Assert.Equal(tables.Order(), context.Model.GetEntityTypes().Select(entity => entity.GetTableName()!).Order());
         foreach (var entity in context.Model.GetEntityTypes())

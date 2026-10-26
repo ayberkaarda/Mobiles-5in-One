@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using Patika.Api.Email;
@@ -115,6 +116,21 @@ public static class PatikaApiServices
         services.AddSingleton<IExternalIdentityVerifier, GoogleIdTokenVerifier>();
         services.AddScoped<IAuthStore, EfAuthStore>();
         services.AddScoped<AuthHandlers>();
+        // TOTP secrets are encrypted with this key ring; losing it makes every enrolled authenticator unusable.
+        var dataProtection = services.AddDataProtection().SetApplicationName("Patika.Api");
+        if (configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+        else if (builder.Environment.IsProduction())
+        {
+            throw new InvalidOperationException("DataProtection:KeysPath must point to persistent storage shared by every API instance.");
+        }
+
+        services.AddScoped<TotpService>();
+        services.AddScoped<Patika.Api.Features.Admin.AdminHandlers>();
+        services.AddSingleton<Patika.Api.Features.Admin.AdminPhotoUrls>();
+        services.AddAdminAuthorization();
         services.AddPatikaEmail(configuration, builder.Environment);
         services.AddPatikaAccount();
         services.AddPatikaSessionVersionCheck();
@@ -138,7 +154,8 @@ public static class PatikaApiServices
                         var actor = ActorFactory.FromPrincipal(context.Principal);
                         var store = context.HttpContext.RequestServices.GetRequiredService<IAuthStore>();
                         var user = actor.UserId is { } id ? await store.FindUserByIdAsync(id, context.HttpContext.RequestAborted) : null;
-                        if (user is null || !user.IsActive || user.Role != actor.Role)
+                        var clock = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
+                        if (user is null || !user.IsActive || user.Role != actor.Role || user.SuspendedUntil > clock.GetUtcNow())
                         {
                             context.Fail("Account is not active.");
                         }
