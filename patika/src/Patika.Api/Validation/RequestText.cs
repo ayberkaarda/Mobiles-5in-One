@@ -78,11 +78,40 @@ public sealed class RequestTextFilter : IEndpointFilter
 {
     public ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
+        // PostgreSQL text cannot hold U+0000: a NUL in a query or route value would reach the database and fail
+        // there as a 500 (found by the ZAP API scan with district=%00). It is never valid input, so refuse it here.
+        if (NulField(context.HttpContext.Request) is { } field)
+        {
+            return ValueTask.FromResult<object?>(ValidationFilter<object>.ValidationProblem(
+                new Dictionary<string, string[]> { [field] = ["The value must not contain a NUL character."] }));
+        }
+
         foreach (var argument in context.Arguments)
         {
             RequestText.Clean(argument);
         }
 
         return next(context);
+    }
+
+    private static string? NulField(HttpRequest request)
+    {
+        foreach (var (key, values) in request.Query)
+        {
+            if (key.Contains('\0', StringComparison.Ordinal) || values.Any(value => value?.Contains('\0', StringComparison.Ordinal) == true))
+            {
+                return key.Contains('\0', StringComparison.Ordinal) ? "query" : key;
+            }
+        }
+
+        foreach (var (key, value) in request.RouteValues)
+        {
+            if (value is string text && text.Contains('\0', StringComparison.Ordinal))
+            {
+                return key;
+            }
+        }
+
+        return null;
     }
 }

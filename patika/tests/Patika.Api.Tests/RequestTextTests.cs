@@ -13,6 +13,24 @@ namespace Patika.Api.Tests;
 
 public sealed class RequestTextTests
 {
+    [Theory]
+    [InlineData("/v1/adoptions?district=%00", "district")]
+    [InlineData("/v1/adoptions?district=Moda%00Kad%C4%B1k%C3%B6y", "district")]
+    [InlineData("/v1/care-places?district=%00", "district")]
+    public async Task ANulInAQueryValueIsAValidationErrorNotAServerError(string path, string field)
+    {
+        // Found by the ZAP API scan: district=%00 reached PostgreSQL and came back as a 500.
+        await using var factory = new PatikaApiFactory();
+        using var client = factory.CreateApiClient();
+
+        using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("\"validation_failed\"", body, StringComparison.Ordinal);
+        Assert.Contains("\"" + field + "\"", body, StringComparison.Ordinal);
+    }
+
     private const string Dirty = "a\u202Eb\U000E0001c\r\nd";
     private const string Clean = "abc d";
 
