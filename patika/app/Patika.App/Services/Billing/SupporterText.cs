@@ -27,7 +27,9 @@ public static class SupporterText
     /// <summary>Maps verification failures to text the person can act on.</summary>
     public static string Failure(string? code) => code switch
     {
-        "purchase_owned_elsewhere" => "Bu satın alım başka bir Patika hesabına bağlı. O hesapla giriş yapıp geri yükleyebilirsin.",
+        "purchase_owned_elsewhere" => "Bu satın alım başka bir Patika hesabına bağlı. O hesapla giriş yapıp geri yükleyebilirsin; hesap silindiyse aboneliği Google Play'den iptal et.",
+        "purchase_not_found" => "Google Play bu satın alımı bulamadı. Satın alımları geri yüklemeyi dene.",
+        "test_purchase_not_allowed" => "Test ödemeleri burada Destekçi hakkı vermez.",
         "purchase_superseded" => "Bu satın alımın yerini yenisi aldı. Satın alımları geri yüklemeyi dene.",
         "account_inactive" => "Hesabın şu an abonelik doğrulayamıyor.",
         _ => "Satın alım doğrulanamadı. Tekrar dene ya da satın alımları geri yükle.",

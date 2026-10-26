@@ -9,7 +9,8 @@ public interface IBillingClient
 {
     event EventHandler<BillingPurchase>? PurchaseUpdated;
     Task<IReadOnlyList<BillingProduct>> QueryProducts();
-    Task<BillingPurchase> LaunchPurchase(BillingProduct product);
+    /// <param name="accountId">Passed to Play as obfuscatedExternalAccountId; the server issues it in /me/entitlement.</param>
+    Task<BillingPurchase> LaunchPurchase(BillingProduct product, string accountId);
     Task<IReadOnlyList<BillingPurchase>> QueryPurchases();
 }
 public interface IBillingPurchaseStore
@@ -39,13 +40,13 @@ public sealed class FakeBillingClient(PatikaApiClient api, IBillingPurchaseStore
     public Task<IReadOnlyList<BillingProduct>> QueryProducts() => Task.FromResult<IReadOnlyList<BillingProduct>>([
         new("patika_destekci", "aylik", "Aylık", "₺49,99 / ay"),
         new("patika_destekci", "yillik", "Yıllık", "₺449,99 / yıl")]);
-    public async Task<BillingPurchase> LaunchPurchase(BillingProduct product)
+    public async Task<BillingPurchase> LaunchPurchase(BillingProduct product, string accountId)
     {
         var session = api.Tokens.Bind() ?? throw new InvalidOperationException("Önce giriş yap.");
         var userId = session.UserId;
         // The typed client resolves paths relative to /v1/.
         var response = await api.SendAsync<FakePurchaseResponse>(HttpMethod.Post, "../dev/billing/purchases",
-            new FakePurchaseRequest(product.BasePlanId), AuthMode.Required, session: session) ?? throw new InvalidOperationException("Test ödemesi alınamadı.");
+            new FakePurchaseRequest(product.BasePlanId, accountId), AuthMode.Required, session: session) ?? throw new InvalidOperationException("Test ödemesi alınamadı.");
         var purchase = new BillingPurchase(product.ProductId, product.BasePlanId, response.PurchaseToken);
         var previous = await store.ReadAsync(userId);
         await store.WriteAsync(userId, [.. previous, purchase]);
@@ -61,6 +62,6 @@ public sealed class PlayBillingClient : IBillingClient
 {
     public event EventHandler<BillingPurchase>? PurchaseUpdated { add { } remove { } }
     public Task<IReadOnlyList<BillingProduct>> QueryProducts() => throw new NotSupportedException();
-    public Task<BillingPurchase> LaunchPurchase(BillingProduct product) => throw new NotSupportedException();
+    public Task<BillingPurchase> LaunchPurchase(BillingProduct product, string accountId) => throw new NotSupportedException();
     public Task<IReadOnlyList<BillingPurchase>> QueryPurchases() => throw new NotSupportedException();
 }

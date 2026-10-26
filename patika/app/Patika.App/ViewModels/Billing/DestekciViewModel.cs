@@ -64,7 +64,9 @@ public sealed partial class DestekciViewModel(IBillingClient billing, ISubscript
     private Task PurchaseAsync() => ExecuteAsync("purchasing", async () =>
     {
         if (SelectedProduct is null) throw new InvalidOperationException("Bir plan seç.");
-        Show(await api.Verify(await billing.LaunchPurchase(SelectedProduct)));
+        // Play records this server-issued id with the purchase, which binds it to this Patika account.
+        var account = (await api.Entitlement()).BillingAccountId ?? throw new InvalidOperationException("Satın alma şu an başlatılamıyor.");
+        Show(await api.Verify(await billing.LaunchPurchase(SelectedProduct, account)));
         Notice = Supporter ? "Teşekkürler! Destekçi rozetin profilinde." : null;
         State = "success";
     });

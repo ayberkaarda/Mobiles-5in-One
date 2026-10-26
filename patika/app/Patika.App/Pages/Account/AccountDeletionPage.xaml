@@ -23,6 +23,9 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="20" Spacing="16">
                 <Label Text="Hesabın hemen kapanır ama 7 gün boyunca geri dönebilirsin. Sonrası kalıcıdır." LineHeight="1.5" />
+                <Border Style="{StaticResource Panel}" Padding="18,14" AutomationId="DeleteSupporterNotice">
+                    <Label Text="Patika Destekçi aboneliğin varsa önce Google Play&apos;den iptal et. Hesabını silmek aboneliği durdurmaz ve silinen hesabın aboneliği yeni bir hesaba taşınamaz." Style="{StaticResource StepText}" />
+                </Border>
 
                 <Grid ColumnDefinitions="16,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="18">
                     <Ellipse Fill="{StaticResource Kaldirim}" WidthRequest="16" HeightRequest="16" VerticalOptions="Start" Margin="0,3,0,0" />
